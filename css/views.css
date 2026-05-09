@@ -769,3 +769,18 @@
   text-align:center;
   padding:10px 0;
 }
+
+/* 返車ビュー：カレンダー上のイベント色（緑系で入庫と区別） */
+.reserve-month-event.return,
+.reserve-week-event.return{
+  background:rgba(29,185,122,.15);
+  border-left-color:var(--green);
+}
+.reserve-month-event.return:hover,
+.reserve-week-event.return:hover{
+  background:var(--green);
+  color:#fff;
+}
+.pit-card.return{
+  border-left-color:var(--green) !important;
+}

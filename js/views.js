@@ -16,6 +16,7 @@ function showView(viewId){
 
   if (viewId === 'today')   renderToday();
   if (viewId === 'reserve') renderReserve();
+  if (viewId === 'return')  renderReturn();
   if (viewId === 'task')    renderTask();
   if (viewId === 'work')    renderWork();
   if (viewId === 'result')  renderResult();
@@ -30,13 +31,11 @@ function toggleTheme(){
   document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
 }
 
-/* ===== カード詳細モーダル ===== */
 function openDetail(cardId){
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
 
-  document.getElementById('md-title').textContent =
-    card.customer + ' 様 / ' + card.car;
+  document.getElementById('md-title').textContent = card.customer + ' 様 / ' + card.car;
 
   const wt = state.workTypes ? state.workTypes.find(w => w.id === card.workType) : null;
   const dt = state.dropTypes ? state.dropTypes.find(d => d.id === card.dropType) : null;
@@ -68,7 +67,6 @@ function closeDetail(){
   document.getElementById('modal-detail').classList.remove('show');
 }
 
-/* ===== 共通ヘルパー ===== */
 function statusLabel(s){
   const map = {
     reserved: '予約',
@@ -79,18 +77,15 @@ function statusLabel(s){
     work:     '作業待ち',
     workDone: '作業完了',
     returned: '返車完了',
+    scrap:    '廃車・乗替',
   };
   return map[s] || s;
 }
 
-function ymd(d){
-  return d.toISOString().slice(0,10);
-}
-function addDays(d, n){
-  const x = new Date(d); x.setDate(x.getDate()+n); return x;
-}
+function ymd(d){ return d.toISOString().slice(0,10); }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return x; }
 
-/* ===== 各種プレースホルダ ===== */
 function openNewReserve(){
   alert('新規予約フォームは次フェーズで実装予定です。');
 }

@@ -6,8 +6,13 @@
 window.state = {
   currentView: 'today',
 
+  // 予約ビュー
   reserveRange: 'day',
   reserveDate: new Date(),
+
+  // 返車ビュー
+  returnRange: 'day',
+  returnDate: new Date(),
 
   currentBoardId: 'default',
   boards: [

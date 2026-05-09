@@ -4,28 +4,33 @@
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 初期ビューを描画（朝イチで開く想定なので当日ビュー）
   showView('today');
 
-  // モーダル背景クリックで閉じる
   document.getElementById('modal-detail').addEventListener('click', (e) => {
     if (e.target.id === 'modal-detail') closeDetail();
   });
 
-  // ESCで閉じる
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDetail();
   });
 
-  // レンジタブ
-  document.querySelectorAll('.range-tabs button').forEach(b => {
-    b.addEventListener('click', () => {
-      document.querySelectorAll('.range-tabs button').forEach(x => x.classList.remove('active'));
-      b.classList.add('active');
-      state.reserveRange = b.dataset.range;
-      renderReserve();
+  // レンジタブ（予約・返車それぞれ独立）
+  document.querySelectorAll('.range-tabs').forEach(tabs => {
+    const mode = tabs.dataset.mode || 'reserve';
+    tabs.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        tabs.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        if (mode === 'reserve'){
+          state.reserveRange = b.dataset.range;
+          renderReserve();
+        } else if (mode === 'return'){
+          state.returnRange = b.dataset.range;
+          renderReturn();
+        }
+      });
     });
   });
 
-  console.log('PitFlow v0.0.4 ready');
+  console.log('PitFlow v0.0.5 ready');
 });

@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>PitFlow - 整備入庫管理</title>
-<link rel="stylesheet" href="css/base.css?v=4">
-<link rel="stylesheet" href="css/layout.css?v=4">
-<link rel="stylesheet" href="css/views.css?v=4">
+<link rel="stylesheet" href="css/base.css?v=5">
+<link rel="stylesheet" href="css/layout.css?v=5">
+<link rel="stylesheet" href="css/views.css?v=5">
 </head>
 <body>
 
@@ -17,7 +17,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.0.4</span>
+      <span class="ver">v0.0.5</span>
     </div>
     <div class="spacer"></div>
     <button class="tb-btn primary" onclick="openNewReserve()">＋ 新規予約</button>
@@ -33,6 +33,9 @@
     </div>
     <div class="si-item" data-view="reserve" onclick="showView('reserve')">
       <span class="icon">📅</span><span>予約</span>
+    </div>
+    <div class="si-item" data-view="return" onclick="showView('return')">
+      <span class="icon">📤</span><span>返車</span>
     </div>
     <div class="si-item" data-view="task" onclick="showView('task')">
       <span class="icon">📋</span><span>タスク</span>
@@ -59,7 +62,7 @@
   <!-- ===== メイン領域 ===== -->
   <div id="main">
 
-    <!-- ===== 当日ビュー（朝イチの段取り紙） ===== -->
+    <!-- ===== 当日ビュー ===== -->
     <section id="view-today" class="view active">
       <div class="view-header">
         <div class="view-title"><span class="icon">🌅</span>当日</div>
@@ -74,7 +77,7 @@
     <section id="view-reserve" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">📅</span>予約</div>
-        <div class="range-tabs">
+        <div class="range-tabs" data-mode="reserve">
           <button class="active" data-range="day">当日</button>
           <button data-range="week">週</button>
           <button data-range="month">月</button>
@@ -95,7 +98,31 @@
       <div id="reserve-2month" class="reserve-2month" style="display:none"></div>
     </section>
 
-    <!-- ===== タスクビュー（看板） ===== -->
+    <!-- ===== 返車ビュー ===== -->
+    <section id="view-return" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">📤</span>返車</div>
+        <div class="range-tabs" data-mode="return">
+          <button class="active" data-range="day">当日</button>
+          <button data-range="week">週</button>
+          <button data-range="month">月</button>
+          <button data-range="2month">2ヶ月</button>
+        </div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="returnPrev()">◀</button>
+          <span id="return-label" style="font-size:14px;font-weight:600;min-width:200px;text-align:center"></span>
+          <button class="vh-btn" onclick="returnNext()">▶</button>
+          <button class="vh-btn" onclick="returnToday()">今日</button>
+        </div>
+      </div>
+
+      <div id="return-day-list" class="reserve-day-list"></div>
+      <div id="return-week" class="reserve-week" style="display:none"></div>
+      <div id="return-month" class="reserve-month" style="display:none"></div>
+      <div id="return-2month" class="reserve-2month" style="display:none"></div>
+    </section>
+
+    <!-- ===== タスクビュー ===== -->
     <section id="view-task" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">📋</span>タスク</div>
@@ -169,16 +196,17 @@
 </div>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=4"></script>
-<script src="js/sample-data.js?v=4"></script>
-<script src="js/views.js?v=4"></script>
-<script src="js/today.js?v=4"></script>
-<script src="js/reserve.js?v=4"></script>
-<script src="js/task.js?v=4"></script>
-<script src="js/work.js?v=4"></script>
-<script src="js/result.js?v=4"></script>
-<script src="js/loaner.js?v=4"></script>
-<script src="js/main.js?v=4"></script>
+<script src="js/state.js?v=5"></script>
+<script src="js/sample-data.js?v=5"></script>
+<script src="js/views.js?v=5"></script>
+<script src="js/today.js?v=5"></script>
+<script src="js/reserve.js?v=5"></script>
+<script src="js/return.js?v=5"></script>
+<script src="js/task.js?v=5"></script>
+<script src="js/work.js?v=5"></script>
+<script src="js/result.js?v=5"></script>
+<script src="js/loaner.js?v=5"></script>
+<script src="js/main.js?v=5"></script>
 
 </body>
 </html>
