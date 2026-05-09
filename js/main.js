@@ -4,8 +4,8 @@
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  // 初期ビューを描画
-  showView('reserve');
+  // 初期ビューを描画（朝イチで開く想定なので当日ビュー）
+  showView('today');
 
   // モーダル背景クリックで閉じる
   document.getElementById('modal-detail').addEventListener('click', (e) => {
@@ -27,5 +27,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  console.log('PitFlow v0.0.1 ready');
+  console.log('PitFlow v0.0.3 ready');
 });

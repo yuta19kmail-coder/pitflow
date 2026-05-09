@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>PitFlow - 整備入庫管理</title>
-<link rel="stylesheet" href="css/base.css?v=2">
-<link rel="stylesheet" href="css/layout.css?v=2">
-<link rel="stylesheet" href="css/views.css?v=2">
+<link rel="stylesheet" href="css/base.css?v=3">
+<link rel="stylesheet" href="css/layout.css?v=3">
+<link rel="stylesheet" href="css/views.css?v=3">
 </head>
 <body>
 
@@ -17,7 +17,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.0.2</span>
+      <span class="ver">v0.0.3</span>
     </div>
     <div class="spacer"></div>
     <button class="tb-btn primary" onclick="openNewReserve()">＋ 新規予約</button>
@@ -28,7 +28,10 @@
   <div id="sidebar">
 
     <div class="si-section-title">ビュー</div>
-    <div class="si-item active" data-view="reserve" onclick="showView('reserve')">
+    <div class="si-item active" data-view="today" onclick="showView('today')">
+      <span class="icon">🌅</span><span>当日</span>
+    </div>
+    <div class="si-item" data-view="reserve" onclick="showView('reserve')">
       <span class="icon">📅</span><span>予約</span>
     </div>
     <div class="si-item" data-view="task" onclick="showView('task')">
@@ -56,8 +59,19 @@
   <!-- ===== メイン領域 ===== -->
   <div id="main">
 
+    <!-- ===== 当日ビュー（朝イチの段取り紙） ===== -->
+    <section id="view-today" class="view active">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🌅</span>当日</div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="renderToday()">🔄 更新</button>
+        </div>
+      </div>
+      <div id="view-today-body"></div>
+    </section>
+
     <!-- ===== 予約ビュー ===== -->
-    <section id="view-reserve" class="view active">
+    <section id="view-reserve" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">📅</span>予約</div>
         <div class="range-tabs">
@@ -135,7 +149,7 @@
         <div class="view-title"><span class="icon">⚙️</span>設定</div>
       </div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;color:var(--text2);">
-        定休日・スポット定休・スタッフシフト・受付終了・看板の列構成・PIT枠レイアウト・代車管理 など、ここに集約予定。<br>
+        定休日・スポット定休・スタッフシフト・受付終了・看板の列構成・PIT枠レイアウト・代車管理・当日担当 など、ここに集約予定。<br>
         現在は枠だけ。次フェーズで中身を作り込みます。
       </div>
     </section>
@@ -155,15 +169,16 @@
 </div>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=2"></script>
-<script src="js/sample-data.js?v=2"></script>
-<script src="js/views.js?v=2"></script>
-<script src="js/reserve.js?v=2"></script>
-<script src="js/task.js?v=2"></script>
-<script src="js/work.js?v=2"></script>
-<script src="js/result.js?v=2"></script>
-<script src="js/loaner.js?v=2"></script>
-<script src="js/main.js?v=2"></script>
+<script src="js/state.js?v=3"></script>
+<script src="js/sample-data.js?v=3"></script>
+<script src="js/views.js?v=3"></script>
+<script src="js/today.js?v=3"></script>
+<script src="js/reserve.js?v=3"></script>
+<script src="js/task.js?v=3"></script>
+<script src="js/work.js?v=3"></script>
+<script src="js/result.js?v=3"></script>
+<script src="js/loaner.js?v=3"></script>
+<script src="js/main.js?v=3"></script>
 
 </body>
 </html>
