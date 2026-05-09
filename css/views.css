@@ -744,3 +744,28 @@
   .today-cols{grid-template-columns:1fr}
   .today-counts{margin-left:0}
 }
+
+/* タスクボード：終端列・サイド列のスタイル */
+#view-task .kanban-col.terminal{
+  background:var(--bg);
+}
+#view-task .kanban-col.terminal .kanban-col-head{
+  color:var(--green);
+  background:linear-gradient(0deg, transparent, rgba(29,185,122,0.06));
+}
+#view-task .kanban-col.side{
+  flex:0 0 200px;
+  margin-left:8px;
+  border-color:var(--border2);
+  background:repeating-linear-gradient(45deg,var(--bg2),var(--bg2) 8px,var(--bg) 8px,var(--bg) 16px);
+}
+#view-task .kanban-col.side .kanban-col-head{
+  color:var(--text3);
+  background:none;
+}
+#view-task .kanban-empty{
+  color:var(--text3);
+  font-size:11px;
+  text-align:center;
+  padding:10px 0;
+}

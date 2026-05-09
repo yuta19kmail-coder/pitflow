@@ -27,5 +27,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  console.log('PitFlow v0.0.3 ready');
+  console.log('PitFlow v0.0.4 ready');
 });
