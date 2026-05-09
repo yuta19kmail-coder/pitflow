@@ -1,0 +1,23 @@
+# 資料は GitHub に上げない（社内メモ）
+資料/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
+
+# Logs / Temp
+*.log
+*.tmp
+*.tail
+
+# Firebase（将来用）
+.firebase/
+firebase-debug.log
+.runtimeconfig.json
+
+# Node（将来用）
+node_modules/

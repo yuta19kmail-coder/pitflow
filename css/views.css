@@ -1,0 +1,361 @@
+/* ========================================
+   views.css
+   各ビュー個別のスタイル
+   ======================================== */
+
+/* ===== カード共通（全ビューで使う1台=1カード） ===== */
+.pit-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--brand);
+  border-radius:var(--r);
+  padding:8px 10px;
+  cursor:grab;
+  user-select:none;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  box-shadow:var(--shadow-card);
+  transition:transform .08s, box-shadow .08s;
+}
+.pit-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.pit-card:active{cursor:grabbing}
+.pit-card .pc-line1{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text2);
+}
+.pit-card .pc-time{font-weight:600;color:var(--brand)}
+.pit-card .pc-customer{
+  font-size:13px;font-weight:600;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pit-card .pc-car{
+  font-size:11px;color:var(--text2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pit-card .pc-tags{
+  display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;
+}
+.pit-card .pc-tag{
+  font-size:10px;
+  padding:1px 6px;
+  border-radius:8px;
+  background:var(--bg3);
+  color:var(--text2);
+  border:1px solid var(--border);
+}
+.pit-card .pc-tag.staff{background:var(--brand-soft);color:var(--brand);border-color:var(--brand)}
+.pit-card .pc-tag.urgent{background:rgba(239,68,68,.15);color:var(--red);border-color:var(--red)}
+
+/* ===== 予約ビュー ===== */
+#view-reserve .reserve-grid{
+  display:grid;
+  grid-template-columns:60px 1fr;
+  gap:0;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+#view-reserve .reserve-time-col{
+  background:var(--bg3);
+  border-right:1px solid var(--border);
+}
+#view-reserve .reserve-time-cell{
+  height:48px;
+  padding:4px 8px;
+  font-size:11px;
+  color:var(--text3);
+  border-bottom:1px solid var(--border);
+}
+#view-reserve .reserve-day-col{
+  position:relative;
+  border-bottom:1px solid var(--border);
+}
+#view-reserve .reserve-day-cell{
+  height:48px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+}
+#view-reserve .reserve-day-cell.closed{
+  background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 10px,var(--bg2) 10px,var(--bg2) 20px);
+  color:var(--text3);
+}
+#view-reserve .reserve-day-cell.cutoff{
+  background:rgba(239,68,68,.05);
+}
+#view-reserve .reserve-event{
+  position:absolute;
+  left:4px;right:4px;
+  background:var(--brand-soft);
+  border-left:3px solid var(--brand);
+  border-radius:4px;
+  padding:4px 6px;
+  font-size:11px;
+  cursor:pointer;
+  overflow:hidden;
+}
+#view-reserve .reserve-event:hover{background:var(--brand)}
+
+/* 予約ビュー：シンプルな日表示モック */
+.reserve-day-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:12px;
+}
+.reserve-slot{
+  display:grid;
+  grid-template-columns:80px 1fr;
+  gap:8px;
+  padding:8px;
+  border-bottom:1px solid var(--border);
+}
+.reserve-slot:last-child{border-bottom:none}
+.reserve-slot-time{
+  color:var(--text3);
+  font-size:12px;
+  padding-top:4px;
+}
+.reserve-slot-cards{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.reserve-slot.closed .reserve-slot-time::after{
+  content:" 定休";
+  color:var(--red);
+  font-weight:600;
+}
+
+/* ===== タスクビュー（看板） ===== */
+#view-task .board-tabs{
+  display:flex;gap:4px;
+  margin-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+#view-task .board-tab{
+  padding:8px 16px;
+  font-size:13px;
+  color:var(--text2);
+  border-bottom:2px solid transparent;
+}
+#view-task .board-tab.active{
+  color:var(--brand);
+  border-bottom-color:var(--brand);
+  font-weight:600;
+}
+#view-task .kanban{
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+  align-items:flex-start;
+  padding-bottom:12px;
+  min-height:400px;
+}
+#view-task .kanban-col{
+  flex:0 0 260px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  display:flex;
+  flex-direction:column;
+  max-height:calc(100dvh - 220px);
+}
+#view-task .kanban-col-head{
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;
+  font-weight:600;
+}
+#view-task .kanban-col-head .count{
+  margin-left:auto;
+  font-size:11px;
+  color:var(--text3);
+  background:var(--bg3);
+  padding:1px 8px;
+  border-radius:10px;
+}
+#view-task .kanban-col-body{
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  overflow-y:auto;
+  flex:1;
+}
+
+/* ===== 作業ビュー（PIT枠にカードがハマる） ===== */
+#view-work .pit-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:16px;
+}
+#view-work .pit-bay{
+  background:var(--bg2);
+  border:2px dashed var(--border2);
+  border-radius:var(--r2);
+  padding:12px;
+  min-height:200px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  position:relative;
+}
+#view-work .pit-bay-head{
+  display:flex;align-items:center;gap:8px;
+  padding-bottom:8px;
+  border-bottom:1px dashed var(--border);
+  font-weight:600;
+}
+#view-work .pit-bay-head .bay-icon{
+  font-size:18px;
+  color:var(--brand);
+}
+#view-work .pit-bay-head .bay-meta{
+  margin-left:auto;
+  font-size:11px;
+  color:var(--text3);
+}
+#view-work .pit-bay-empty{
+  color:var(--text3);
+  font-size:12px;
+  text-align:center;
+  padding:30px 0;
+}
+
+/* ===== 実績ビュー ===== */
+#view-result .result-cal{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+#view-result .result-cell{
+  background:var(--bg2);
+  min-height:100px;
+  padding:6px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+#view-result .result-cell.dow{
+  background:var(--bg3);
+  min-height:0;
+  text-align:center;
+  padding:6px;
+  font-size:11px;
+  color:var(--text3);
+  font-weight:600;
+}
+#view-result .result-cell .day-num{
+  font-size:11px;
+  color:var(--text3);
+  margin-bottom:2px;
+}
+#view-result .result-card{
+  font-size:11px;
+  background:var(--brand-soft);
+  border-left:2px solid var(--brand);
+  padding:2px 4px;
+  border-radius:3px;
+  cursor:pointer;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#view-result .result-card.returned{
+  background:rgba(29,185,122,.15);
+  border-left-color:var(--green);
+}
+
+/* ===== 代車ビュー ===== */
+#view-loaner .loaner-grid{
+  display:grid;
+  grid-template-columns:140px repeat(14,minmax(60px,1fr));
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:auto;
+  font-size:12px;
+}
+#view-loaner .loaner-cell{
+  background:var(--bg2);
+  padding:4px 6px;
+  min-height:36px;
+  position:relative;
+}
+#view-loaner .loaner-head{
+  background:var(--bg3);
+  font-weight:600;
+  text-align:center;
+}
+#view-loaner .loaner-car-name{
+  background:var(--bg3);
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#view-loaner .loaner-bar{
+  background:var(--brand);
+  color:#fff;
+  border-radius:4px;
+  padding:2px 6px;
+  font-size:10px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ===== モーダル（カード詳細） ===== */
+.modal-backdrop{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;justify-content:center;
+  z-index:100;
+}
+.modal-backdrop.show{display:flex}
+.modal-box{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  width:min(640px,92vw);
+  max-height:85dvh;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+}
+.modal-head{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.modal-title{font-size:16px;font-weight:700;flex:1}
+.modal-close{
+  width:30px;height:30px;
+  border-radius:6px;
+  background:var(--bg3);
+}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.modal-row{
+  display:grid;grid-template-columns:100px 1fr;gap:8px;
+  font-size:13px;
+}
+.modal-row label{color:var(--text3)}
+
+/* ===== レスポンシブ ===== */
+@media (max-width:768px){
+  #view-task .kanban-col{flex:0 0 220px}
+  #view-work .pit-grid{grid-template-columns:1fr}
+  #view-loaner .loaner-grid{grid-template-columns:120px repeat(7,minmax(50px,1fr))}
+}

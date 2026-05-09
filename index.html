@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>PitFlow - 整備入庫管理</title>
+<link rel="stylesheet" href="css/base.css?v=1">
+<link rel="stylesheet" href="css/layout.css?v=1">
+<link rel="stylesheet" href="css/views.css?v=1">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== トップバー ===== -->
+  <div id="topbar">
+    <div class="logo">
+      <span>🔧</span>
+      <span><span class="pit">Pit</span>Flow</span>
+      <span class="ver">v0.0.1</span>
+    </div>
+    <div class="spacer"></div>
+    <button class="tb-btn primary" onclick="openNewReserve()">＋ 新規予約</button>
+    <button class="theme-toggle" onclick="toggleTheme()" title="テーマ切替">🌙</button>
+  </div>
+
+  <!-- ===== サイドバー ===== -->
+  <div id="sidebar">
+
+    <div class="si-section-title">ビュー</div>
+    <div class="si-item active" data-view="reserve" onclick="showView('reserve')">
+      <span class="icon">📅</span><span>予約</span>
+    </div>
+    <div class="si-item" data-view="task" onclick="showView('task')">
+      <span class="icon">📋</span><span>タスク</span>
+    </div>
+    <div class="si-item" data-view="work" onclick="showView('work')">
+      <span class="icon">🔧</span><span>作業</span>
+    </div>
+    <div class="si-item" data-view="result" onclick="showView('result')">
+      <span class="icon">✅</span><span>実績</span>
+    </div>
+
+    <div class="si-section-title">サブ</div>
+    <div class="si-item" data-view="loaner" onclick="showView('loaner')">
+      <span class="icon">🚙</span><span>代車</span>
+    </div>
+
+    <div class="si-section-title">管理</div>
+    <div class="si-item" data-view="settings" onclick="showView('settings')">
+      <span class="icon">⚙️</span><span>設定</span>
+    </div>
+
+  </div>
+
+  <!-- ===== メイン領域 ===== -->
+  <div id="main">
+
+    <!-- ===== 予約ビュー ===== -->
+    <section id="view-reserve" class="view active">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">📅</span>予約</div>
+        <div class="range-tabs">
+          <button class="active" data-range="day">当日</button>
+          <button data-range="week">週</button>
+          <button data-range="month">月</button>
+          <button data-range="2month">2ヶ月</button>
+        </div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="goToday()">今日</button>
+          <button class="vh-btn primary" onclick="openNewReserve()">＋ 予約追加</button>
+        </div>
+      </div>
+
+      <!-- 当日のタイムスロット表示（モック） -->
+      <div id="reserve-day-list" class="reserve-day-list">
+        <!-- JSで描画 -->
+      </div>
+    </section>
+
+    <!-- ===== タスクビュー（看板） ===== -->
+    <section id="view-task" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">📋</span>タスク</div>
+        <div class="board-tabs" id="board-tabs">
+          <!-- JSで描画 -->
+        </div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="addBoard()">＋ 看板を追加</button>
+        </div>
+      </div>
+      <div class="kanban" id="kanban-cols">
+        <!-- JSで描画 -->
+      </div>
+    </section>
+
+    <!-- ===== 作業ビュー ===== -->
+    <section id="view-work" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🔧</span>作業</div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="editBays()">PIT枠を編集</button>
+        </div>
+      </div>
+      <div class="pit-grid" id="pit-grid">
+        <!-- JSで描画 -->
+      </div>
+    </section>
+
+    <!-- ===== 実績ビュー ===== -->
+    <section id="view-result" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">✅</span>実績</div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="prevMonth()">◀</button>
+          <span id="result-month-label" style="font-size:14px;font-weight:600;min-width:90px;text-align:center"></span>
+          <button class="vh-btn" onclick="nextMonth()">▶</button>
+          <button class="vh-btn" onclick="closeMonth()">この月を締める</button>
+        </div>
+      </div>
+      <div class="result-cal" id="result-cal">
+        <!-- JSで描画 -->
+      </div>
+    </section>
+
+    <!-- ===== 代車ビュー ===== -->
+    <section id="view-loaner" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🚙</span>代車</div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="editLoaners()">代車を編集</button>
+        </div>
+      </div>
+      <div class="loaner-grid" id="loaner-grid">
+        <!-- JSで描画：左列=代車、上行=日付、セル=使用者バー -->
+      </div>
+    </section>
+
+    <!-- ===== 設定ビュー（プレースホルダ） ===== -->
+    <section id="view-settings" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">⚙️</span>設定</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;color:var(--text2);">
+        定休日・スポット定休・スタッフシフト・受付終了・看板の列構成・PIT枠レイアウト・代車管理 など、ここに集約予定。<br>
+        現在は枠だけ。次フェーズで中身を作り込みます。
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ===== モーダル：カード詳細 ===== -->
+<div class="modal-backdrop" id="modal-detail">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="md-title">入庫カード詳細</div>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="modal-body" id="md-body">
+      <!-- JSで描画 -->
+    </div>
+  </div>
+</div>
+
+<!-- ===== JS（読み込み順） ===== -->
+<script src="js/state.js?v=1"></script>
+<script src="js/sample-data.js?v=1"></script>
+<script src="js/views.js?v=1"></script>
+<script src="js/reserve.js?v=1"></script>
+<script src="js/task.js?v=1"></script>
+<script src="js/work.js?v=1"></script>
+<script src="js/result.js?v=1"></script>
+<script src="js/loaner.js?v=1"></script>
+<script src="js/main.js?v=1"></script>
+
+</body>
+</html>
