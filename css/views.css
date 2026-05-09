@@ -131,6 +131,146 @@
   font-weight:600;
 }
 
+/* 予約ビュー：週グリッド（7日×時間） */
+.reserve-week{
+  display:grid;
+  grid-template-columns:60px repeat(7, 1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.reserve-week-cell{
+  background:var(--bg2);
+  padding:4px 6px;
+  font-size:11px;
+  min-height:36px;
+}
+.reserve-week-head{
+  background:var(--bg3);
+  font-weight:600;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:6px;
+}
+.reserve-week-head .dow{font-size:10px;color:var(--text3)}
+.reserve-week-head .day{font-size:14px}
+.reserve-week-head.today .day{color:var(--brand)}
+.reserve-week-head.closed{color:var(--red)}
+.reserve-week-time{
+  background:var(--bg3);
+  text-align:right;
+  color:var(--text3);
+  padding-top:6px;
+}
+.reserve-week-cell.closed{
+  background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 8px,var(--bg2) 8px,var(--bg2) 16px);
+}
+.reserve-week-event{
+  background:var(--brand-soft);
+  border-left:2px solid var(--brand);
+  border-radius:3px;
+  padding:2px 4px;
+  font-size:10px;
+  cursor:pointer;
+  margin-bottom:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reserve-week-event:hover{background:var(--brand)}
+.reserve-week-event.urgent{
+  background:rgba(239,68,68,.15);
+  border-left-color:var(--red);
+  color:var(--red);
+}
+
+/* 予約ビュー：月カレンダー */
+.reserve-month{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.reserve-month-cell{
+  background:var(--bg2);
+  min-height:90px;
+  padding:6px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.reserve-month-cell.dow{
+  background:var(--bg3);
+  min-height:0;
+  text-align:center;
+  padding:6px;
+  font-size:11px;
+  color:var(--text3);
+  font-weight:600;
+}
+.reserve-month-cell.other-month{opacity:.35}
+.reserve-month-cell.today .day-num{
+  background:var(--brand);color:#fff;
+  width:22px;height:22px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;
+}
+.reserve-month-cell.closed{
+  background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 10px,var(--bg2) 10px,var(--bg2) 20px);
+}
+.reserve-month-cell .day-num{
+  font-size:11px;color:var(--text2);font-weight:600;
+  margin-bottom:2px;
+}
+.reserve-month-cell.sun .day-num{color:var(--red)}
+.reserve-month-cell.sat .day-num{color:var(--blue)}
+.reserve-month-event{
+  background:var(--brand-soft);
+  border-left:2px solid var(--brand);
+  border-radius:3px;
+  padding:1px 4px;
+  font-size:10px;
+  cursor:pointer;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reserve-month-event:hover{background:var(--brand)}
+.reserve-month-event.urgent{
+  background:rgba(239,68,68,.15);
+  border-left-color:var(--red);
+  color:var(--red);
+}
+.reserve-month-more{
+  font-size:10px;
+  color:var(--text3);
+  text-align:right;
+  padding-right:2px;
+}
+
+/* 予約ビュー：2ヶ月（月カレンダー2連） */
+.reserve-2month{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+.reserve-2month .month-block-title{
+  font-size:14px;font-weight:600;
+  margin-bottom:6px;
+  color:var(--text);
+}
+@media (max-width:768px){
+  .reserve-2month{grid-template-columns:1fr}
+}
+
 /* ===== タスクビュー（看板） ===== */
 #view-task .board-tabs{
   display:flex;gap:4px;
