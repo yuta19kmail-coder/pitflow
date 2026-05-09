@@ -1,6 +1,7 @@
 /* ========================================
    views.js
-   ビュー切替、共通ユーティリティ、カード詳細モーダル
+   ビュー切替、共通ユーティリティ
+   ※ openDetail/closeDetail は card-detail.js に分離
    ======================================== */
 
 function showView(viewId){
@@ -31,42 +32,6 @@ function toggleTheme(){
   document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
 }
 
-function openDetail(cardId){
-  const card = state.cards.find(c => c.id === cardId);
-  if (!card) return;
-
-  document.getElementById('md-title').textContent = card.customer + ' 様 / ' + card.car;
-
-  const wt = state.workTypes ? state.workTypes.find(w => w.id === card.workType) : null;
-  const dt = state.dropTypes ? state.dropTypes.find(d => d.id === card.dropType) : null;
-
-  let h = '';
-  h += '<div class="modal-row"><label>予約日時</label><div>' + card.reserveDate + ' ' + card.reserveTime + '</div></div>';
-  h += '<div class="modal-row"><label>返車予定</label><div>' + (card.returnDate || '-') + '</div></div>';
-  h += '<div class="modal-row"><label>状態</label><div>' + statusLabel(card.status) + '</div></div>';
-  h += '<div class="modal-row"><label>お客様</label><div>' + card.customer + ' 様</div></div>';
-  h += '<div class="modal-row"><label>車両</label><div>' + card.car + '</div></div>';
-  h += '<div class="modal-row"><label>ナンバー</label><div>' + (card.plate || '-') + '</div></div>';
-  h += '<div class="modal-row"><label>整備内容</label><div>' + card.menu + '</div></div>';
-  h += '<div class="modal-row"><label>作業タイプ</label><div>' + (wt ? wt.label : '-') + '</div></div>';
-  h += '<div class="modal-row"><label>受付タイプ</label><div>' + (dt ? dt.label + '（' + dt.desc + '）' : '-') + '</div></div>';
-  h += '<div class="modal-row"><label>担当</label><div>' + (card.staff || '-') + '</div></div>';
-  h += '<div class="modal-row"><label>代車</label><div>' + (card.needLoaner ? '🚙 必要' : 'なし') + '</div></div>';
-  h += '<div class="modal-row"><label>洗車</label><div>' + (card.needWash ? '💧 必要' : 'なし') + '</div></div>';
-  h += '<div class="modal-row"><label>メモ</label><div>' + (card.memo || '-') + '</div></div>';
-  h += '<div class="modal-row"><label>緊急</label><div>' + (card.urgent ? '🔴 緊急対応' : '通常') + '</div></div>';
-  h += '<div style="margin-top:8px;color:var(--text3);font-size:12px;">';
-  h += '※ 詳細編集・進捗操作・写真・チェックリストなどは次フェーズで実装';
-  h += '</div>';
-
-  document.getElementById('md-body').innerHTML = h;
-  document.getElementById('modal-detail').classList.add('show');
-}
-
-function closeDetail(){
-  document.getElementById('modal-detail').classList.remove('show');
-}
-
 function statusLabel(s){
   const map = {
     reserved: '予約',
@@ -87,7 +52,7 @@ function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return 
 function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return x; }
 
 function openNewReserve(){
-  alert('新規予約フォームは次フェーズで実装予定です。');
+  alert('新規予約フォームは段階3で実装予定です。\n\n（既存カードをクリックすると新フォームが開きます）');
 }
 function goToday(){
   state.reserveDate = new Date();

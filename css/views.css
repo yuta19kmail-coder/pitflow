@@ -784,3 +784,148 @@
 .pit-card.return{
   border-left-color:var(--green) !important;
 }
+
+/* ========================================
+   カード詳細フォーム
+   ======================================== */
+.modal-box{
+  width:min(760px, 94vw) !important;
+  max-height:90dvh !important;
+}
+
+.cf-section{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  margin-bottom:10px;
+}
+.cf-section-head{
+  padding:8px 12px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--brand);
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  border-radius:var(--r) var(--r) 0 0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.cf-section-body{
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.cf-row{
+  display:flex;
+  gap:10px;
+  align-items:flex-end;
+}
+.cf-field{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.cf-label{
+  font-size:10px;
+  color:var(--text3);
+  font-weight:600;
+}
+
+.cf-input{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 8px;
+  font-size:13px;
+  color:var(--text);
+  font-family:inherit;
+  width:100%;
+}
+.cf-input:focus{
+  outline:none;
+  border-color:var(--brand);
+  background:var(--bg);
+}
+.cf-input[type="date"],
+.cf-input[type="number"]{
+  font-family:inherit;
+}
+textarea.cf-input{
+  resize:vertical;
+  min-height:38px;
+}
+select.cf-input{
+  cursor:pointer;
+}
+
+.cf-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.cf-chip{
+  padding:4px 12px;
+  font-size:12px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  color:var(--text2);
+  cursor:pointer;
+  transition:all .1s;
+  font-family:inherit;
+}
+.cf-chip:hover{
+  background:var(--bg3);
+}
+.cf-chip.active{
+  background:var(--brand);
+  color:#fff;
+  border-color:var(--brand);
+  font-weight:600;
+}
+
+.cf-toggle{
+  display:flex;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  width:fit-content;
+}
+.cf-tg{
+  padding:5px 14px;
+  font-size:12px;
+  background:transparent;
+  color:var(--text2);
+  border:none;
+  cursor:pointer;
+  font-family:inherit;
+}
+.cf-tg.active{
+  background:var(--brand);
+  color:#fff;
+  font-weight:600;
+}
+.cf-tg + .cf-tg{
+  border-left:1px solid var(--border);
+}
+
+.cf-loaner-detail{
+  margin-top:6px;
+  padding:8px 10px;
+  background:var(--bg2);
+  border-radius:6px;
+  border-left:3px solid var(--brand);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+@media (max-width:768px){
+  .cf-row{flex-direction:column;align-items:stretch}
+}

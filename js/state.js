@@ -6,11 +6,9 @@
 window.state = {
   currentView: 'today',
 
-  // 予約ビュー
   reserveRange: 'day',
   reserveDate: new Date(),
 
-  // 返車ビュー
   returnRange: 'day',
   returnDate: new Date(),
 
@@ -69,6 +67,40 @@ window.state = {
     cleaning:'蓮沼',
   },
 
+  // スタッフ一覧（select用）
+  staff: [
+    { id: 'shacho',  name: '社長',   role: 'owner' },
+    { id: 'shiina',  name: '椎名',   role: 'staff' },
+    { id: 'ichiya',  name: '壱谷',   role: 'staff' },
+    { id: 'fukumitsu',name:'福光',   role: 'staff' },
+    { id: 'hasunuma',name: '蓮沼',   role: 'staff' },
+    { id: 'hakozaki',name: '箱崎',   role: 'staff' },
+    { id: 'sugaya',  name: '菅谷',   role: 'staff' },
+    { id: 'hayashi', name: '林',     role: 'staff' },
+    { id: 'takagi',  name: '高橋',   role: 'staff' },
+  ],
+
+  divisions: [
+    { id: 'div1', label: '1課' },
+    { id: 'div2', label: '2課' },
+  ],
+
+  paymentMethods: [
+    { id: 'cash',     label: '現金' },
+    { id: 'card',     label: 'カード' },
+    { id: 'transfer', label: '振込' },
+    { id: 'collect',  label: '集金' },
+    { id: 'finance',  label: 'ローン' },
+    { id: 'later',    label: '後払い' },
+  ],
+
+  loanerConditions: [
+    { id: 'etc',    label: 'ETC' },
+    { id: 'navi',   label: 'ナビ' },
+    { id: 'height', label: '高さ' },
+    { id: 'iso',    label: 'ISO' },
+  ],
+
   settings: {
     closedDow:   [0],
     spotClosed:  [],
@@ -78,19 +110,26 @@ window.state = {
   },
 
   workTypes: [
-    { id: 'shaken',  label: '車検',  color: '#ef4444' },
-    { id: 'general', label: '一般',  color: '#84cc16' },
-    { id: 'oil',     label: 'オイル', color: '#eab308' },
-    { id: '12pt',    label: '12点',  color: '#f97316' },
-    { id: 'used',    label: '中古',  color: '#3b82f6' },
-    { id: 'bp',      label: 'B.P',   color: '#ec4899' },
-    { id: '3m',      label: '3M',    color: '#a855f7' },
+    { id: 'shaken',  label: '車検',         color: '#ef4444' },
+    { id: 'general', label: '一般',         color: '#84cc16' },
+    { id: 'oil',     label: 'オイル',       color: '#eab308' },
+    { id: '12pt',    label: '12点',         color: '#f97316' },
+    { id: 'used',    label: '中古',         color: '#3b82f6' },
+    { id: 'bp',      label: 'B.P',          color: '#ec4899' },
+    { id: '3m',      label: '3M',           color: '#a855f7' },
+    { id: 'bring',   label: '持込',         color: '#06b6d4' },
+    { id: 'coat1y',  label: 'コーティング1Y', color: '#8b5cf6' },
+    { id: 'coat3m',  label: 'コーティング3M', color: '#a855f7' },
   ],
 
   dropTypes: [
     { id: 'wait',    label: '待', desc: 'お客様待ち' },
     { id: 'sameDay', label: '当', desc: '当日返車' },
     { id: 'drop',    label: '預', desc: '預かり' },
-    { id: 'first',   label: '初', desc: '初来店' },
+  ],
+
+  repeatTypes: [
+    { id: 'first',   label: '初回' },
+    { id: 'repeater',label: 'リピーター' },
   ],
 };

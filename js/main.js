@@ -32,5 +32,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  console.log('PitFlow v0.0.5 ready');
+  console.log('PitFlow v0.0.6 ready');
 });
