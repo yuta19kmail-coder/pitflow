@@ -1,7 +1,7 @@
 /* ========================================
    base.css
-   PitFlow v0.0.1 - 兄弟感のあるテーマ（CarFlow流用＋ブランド色だけ別）
-   ブランドアクセント: ティール #14b8a6（CarFlowは青 #378ADD）
+   PitFlow - 兄弟感のあるテーマ（CarFlow流用＋ブランド色だけ別）
+   ブランドアクセント: コーポレートグリーン #1f7a4d（自社カラー）／ CarFlow=青 #378ADD ／ StockFlow=紫
    ======================================== */
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -16,11 +16,11 @@
   /* 警告3段（CarFlow と揃える） */
   --green:#1db97a;--blue:#378ADD;--orange:#f59e0b;--red:#ef4444;
 
-  /* PitFlowブランド色：ティール */
-  --brand:#14b8a6;
-  --brand-deep:#0d9488;
-  --brand-soft:rgba(20,184,166,.15);
-  --accent:#14b8a6;
+  /* PitFlowブランド色：コーポレートグリーン（自社カラー） */
+  --brand:#26a269;
+  --brand-deep:#1f7a4d;
+  --brand-soft:rgba(38,162,105,.15);
+  --accent:#26a269;
 
   /* レイアウト変数 */
   --sidebar:220px;--topbar:54px;--tabs:46px;--action:56px;
@@ -28,7 +28,7 @@
   --shadow-card:0 3px 12px rgba(0,0,0,.35);
 }
 
-/* ===== ライトテーマ（CarFlowのベージュ系を踏襲・アクセントだけティール） ===== */
+/* ===== ライトテーマ（CarFlowのベージュ系を踏襲・アクセントだけコーポレートグリーン） ===== */
 :root[data-theme="light"]{
   --bg:#f5f1ea;--bg1:#f5f1ea;--bg2:#fffdf8;--bg3:#ece5d6;--bg4:#ddd4bf;
   --border:#c8bfa8;--border2:#a89d80;
@@ -36,10 +36,10 @@
 
   --green:#057a5b;--blue:#1e5fc2;--orange:#9a4a05;--red:#a31818;
 
-  --brand:#0d9488;
-  --brand-deep:#0f766e;
-  --brand-soft:rgba(13,148,136,.12);
-  --accent:#0d9488;
+  --brand:#1f7a4d;
+  --brand-deep:#155e3a;
+  --brand-soft:rgba(31,122,77,.12);
+  --accent:#1f7a4d;
 
   --sidebar:220px;--topbar:54px;--tabs:46px;--action:56px;
   --r:8px;--r2:12px;
