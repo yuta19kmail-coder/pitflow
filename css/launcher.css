@@ -1,0 +1,161 @@
+/* ============================================
+   CoreFlow アプリランチャー（共通：全Flow系アプリで同一）
+   - サイドバー底の <div data-cf-launcher data-current="..."></div> に挿入
+   - 全てのオーバーレイは body 直下に launcher.js が動的に注入
+   - クラス接頭辞は cf- で固定（衝突回避）
+   - 5アプリ対応（CoreFlow / PitFlow / ScheduleFlow / CarFlow / StockFlow）
+   ============================================ */
+
+/* === マウント要素（flex列のサイドバー内では最下部に貼り付け） === */
+[data-cf-launcher]{margin-top:auto}
+
+/* === トリガー（サイドバー底に置かれる） === */
+.cf-launcher-trigger{
+  margin: 0 10px 12px;
+  background: var(--bg3, rgba(255,255,255,.04));
+  border: 1px solid var(--border, rgba(127,127,127,.25));
+  border-radius:10px;
+  padding:9px 11px;
+  display:flex;align-items:center;gap:10px;
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease;
+  position:relative;z-index:2;
+  color: var(--text, #e8ecf2);    /* テーマ対応：ライトでは黒系、ダークでは白系 */
+  font-family:inherit;
+  user-select:none;
+}
+.cf-launcher-trigger:hover{
+  background: var(--bg4, var(--bg3, rgba(255,255,255,.08)));
+  border-color: rgba(127,127,127,.45);
+}
+.cf-lg-logo{
+  width:26px;height:26px;border-radius:50%;
+  background-color:#fff;
+  background-image: linear-gradient(#fff,#fff), conic-gradient(#ff0040,#ff8800,#ffe600,#00d048,#00c8ff,#5e3bff,#ff00aa,#ff0040);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  border:2px solid transparent;
+  box-sizing: border-box;
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1a1a;font-size:11px;
+  flex:0 0 auto;
+}
+.cf-lg-text{display:flex;flex-direction:column;line-height:1.2}
+.cf-lg-text .cf-l1{font-size:12.5px;font-weight:700;color: var(--text, #e8ecf2)}
+.cf-lg-text .cf-l2{font-size:10.5px;color: var(--text2, var(--text3, rgba(127,127,127,.7)));margin-top:2px}
+.cf-lg-arrow{margin-left:auto;color: var(--text2, var(--text3, rgba(127,127,127,.7)));font-size:14px;transition:transform .2s ease}
+body.cf-open .cf-lg-arrow{transform:rotate(-90deg);color: var(--text, #e8ecf2)}
+
+/* === 暗転（背景シャドー） === */
+.cf-lo-backdrop{
+  position:fixed;inset:0;
+  background:rgba(6,8,12,.72);
+  opacity:0;pointer-events:none;
+  transition:opacity .22s ease;
+  z-index:9050;
+}
+body.cf-open .cf-lo-backdrop{opacity:1;pointer-events:auto}
+
+/* === 色フラッド（球ホバーで色が画面いっぱいに広がる） === */
+.cf-lo-flood{
+  position:fixed;inset:0;pointer-events:none;
+  z-index:9051;overflow:hidden;
+}
+.cf-lo-flood::before{
+  content:"";position:absolute;
+  left:var(--cf-fx, 0);top:var(--cf-fy, 100vh);
+  width:80px;height:80px;border-radius:50%;
+  background:var(--cf-fcolor, transparent);
+  transform:translate(-50%,-50%) scale(0);opacity:0;
+  /* class が無いとき＝引く動き */
+  transition:transform .35s ease-out, opacity .25s ease-out;
+}
+body.cf-flooding .cf-lo-flood::before{
+  animation:cf-flood-grow 2.0s cubic-bezier(.32,.08,.28,1) forwards;
+}
+@keyframes cf-flood-grow{
+  0%   { transform:translate(-50%,-50%) scale(0);  opacity:0; }
+  5%   { opacity:1; }
+  100% { transform:translate(-50%,-50%) scale(90); opacity:1; }
+}
+
+/* === 背景クリック検出 === */
+.cf-lo-catcher{position:fixed;inset:0;z-index:9055;display:none}
+body.cf-open .cf-lo-catcher{display:block}
+
+/* === ホバー領域（トリガー＋軌道を内包・mouseleaveを安定化） === */
+.cf-lo-hotzone{
+  position:fixed;left:0;bottom:0;
+  width:400px;height:420px;
+  z-index:9061;pointer-events:none;
+}
+body.cf-open .cf-lo-hotzone{pointer-events:auto}
+
+/* === 軌道ステージ＝トリガー中心点（左36px・下46pxあたり） === */
+.cf-lo-stage{
+  position:absolute;left:36px;bottom:46px;
+  width:0;height:0;z-index:1;pointer-events:none;
+}
+
+/* === 各球のラッパー（位置と展開アニメ） === */
+.cf-lo-item{
+  position:absolute;left:0;top:0;width:0;height:0;
+  transform:translate(0,0) scale(.35);
+  opacity:0;
+  transition:transform .28s cubic-bezier(.18,.85,.25,1), opacity .18s ease-out;
+  pointer-events:none;
+}
+/* 半径 R=165px、右上1/4 を5等分配置（top→right） */
+body.cf-open .cf-lo-item.p1{transform:translate(9px,  -165px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p2{transform:translate(67px, -151px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p3{transform:translate(117px,-117px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p4{transform:translate(151px,-67px)  scale(1); opacity:1}
+body.cf-open .cf-lo-item.p5{transform:translate(165px,-9px)   scale(1); opacity:1}
+body.cf-open .cf-lo-item.p1{transition-delay:0s, 0s}
+body.cf-open .cf-lo-item.p2{transition-delay:.04s, .04s}
+body.cf-open .cf-lo-item.p3{transition-delay:.08s, .08s}
+body.cf-open .cf-lo-item.p4{transition-delay:.12s, .12s}
+body.cf-open .cf-lo-item.p5{transition-delay:.16s, .16s}
+
+/* === 球本体 === */
+.cf-lo-ball{
+  position:absolute;left:0;top:0;
+  width:42px;height:42px;border-radius:50%;
+  transform:translate(-50%,-50%);
+  pointer-events:auto;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;color:#fff;text-decoration:none;
+  border:1.5px solid rgba(255,255,255,.22);
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.cf-lo-ball:hover{transform:translate(-50%,-50%) scale(1.18);box-shadow:0 6px 18px rgba(0,0,0,.6);text-decoration:none}
+
+/* ラベル（球の下に常時表示） */
+.cf-lo-label{
+  position:absolute;left:0;top:0;
+  transform:translate(-50%, 28px);
+  font-size:10.5px;font-weight:700;color:#fff;
+  letter-spacing:.04em;white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.7);
+  pointer-events:none;
+}
+
+/* 各アプリの色（CSS変数化で他CSSの ID変数と衝突しないよう固定値） */
+.cf-lo-ball.cf-coreflow{
+  background-color:#fff;
+  background-image: linear-gradient(#fff,#fff), conic-gradient(#ff0040,#ff8800,#ffe600,#00d048,#00c8ff,#5e3bff,#ff00aa,#ff0040);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  border:3px solid transparent;
+  box-sizing: border-box;
+  color:#1a1a1a;
+}
+.cf-lo-ball.cf-carflow{background:#378ADD}
+.cf-lo-ball.cf-stockflow{background:#7c3aed}
+.cf-lo-ball.cf-pitflow{background:#1db97a}
+.cf-lo-ball.cf-scheduleflow{background:#dc2626}
+
+/* 現在地（自分のアプリ）：薄表示＋クリック無効 */
+body.cf-open .cf-lo-item.cf-current{opacity:.6}
+.cf-lo-ball[aria-disabled="true"]{cursor:default}
+.cf-lo-ball[aria-disabled="true"]:hover{transform:translate(-50%,-50%) scale(1);box-shadow:0 2px 8px rgba(0,0,0,.5)}

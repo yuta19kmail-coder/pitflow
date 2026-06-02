@@ -21,6 +21,8 @@ function openDetail(cardId){
 function closeDetail(){
   _editingCardId = null;
   document.getElementById('modal-detail').classList.remove('show');
+  // 編集内容を保存（localStorage 永続化）
+  if (window.PitDB) PitDB.save();
   // 表示中のビューを再描画して反映
   if (state.currentView) showView(state.currentView);
 }
