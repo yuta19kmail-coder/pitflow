@@ -72,7 +72,7 @@ function renderReserveDay(){
     html += '<div class="reserve-slot-time">' + time;
     if (isCutoff) html += ' <span style="color:var(--red);font-size:10px;">受付終了</span>';
     html += '</div>';
-    html += '<div class="reserve-slot-cards">';
+    html += '<div class="reserve-slot-cards" data-drop="reserveTime" data-drop-val="' + time + '">';
     if (inSlot.length === 0){
       html += '<span style="color:var(--text3);font-size:11px;align-self:center;">空き</span>';
     } else {
@@ -260,7 +260,7 @@ function cardHtml(c, opts){
   const dt = state.dropTypes.find(d => d.id === c.dropType);
   const accent = wt ? wt.color : 'var(--brand)';
   let html = '';
-  html += '<div class="pit-card' + (c.urgent ? ' is-urgent' : '') + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent + ';">';
+  html += '<div class="pit-card' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent + ';">';
   html += '<div class="pc-line1">';
   html += '<span class="pc-time">' + (c.reserveTime || '') + '</span>';
   html += '<span class="pc-status" style="--sc:' + statusColor(c.status) + ';">' + statusLabel(c.status) + '</span>';

@@ -105,6 +105,21 @@
 .view-header .view-title{ letter-spacing:.01em; }
 .vh-btn:hover, .tb-btn:hover{ border-color:var(--brand); }
 
+/* ===== ドラッグ＆ドロップ ===== */
+.pit-card[draggable="true"]{ cursor:grab; }
+.pit-card[draggable="true"]:active{ cursor:grabbing; }
+.pit-card.dnd-dragging{ opacity:.45; transform:scale(.98); }
+/* ドロップ先のハイライト */
+[data-drop].dnd-over{
+  outline:2px dashed var(--brand);
+  outline-offset:-3px;
+  background:var(--brand-soft);
+  border-radius:var(--r);
+}
+#view-task .kanban-col-body[data-drop]{ min-height:48px; }
+#view-work .pit-bay.dnd-over,
+[data-drop].dnd-over{ transition:background .08s; }
+
 /* ===== レスポンシブ補正 ===== */
 @media (max-width:768px){
   .today-counts{ margin-left:0; }

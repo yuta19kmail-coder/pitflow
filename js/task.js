@@ -31,7 +31,7 @@ function renderTask(){
     html += '<span>' + col.name + '</span>';
     html += '<span class="count">' + inCol.length + '</span>';
     html += '</div>';
-    html += '<div class="kanban-col-body">';
+    html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
     if (inCol.length === 0){
       html += '<div class="kanban-empty">なし</div>';
     } else {

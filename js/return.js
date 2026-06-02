@@ -65,20 +65,24 @@ function renderReturnDay(){
   if (todays.length === 0){
     html += '<div style="text-align:center;color:var(--text3);padding:30px;">本日の返車予定はありません</div>';
   } else {
+    const tkey = c => (c.returnTime || c.reserveTime || '');
     slots.forEach(time => {
       const hh = time.slice(0,2);
-      const inSlot = todays.filter(c => (c.reserveTime || '').startsWith(hh));
-      if (inSlot.length === 0) return;
+      const inSlot = todays.filter(c => tkey(c).startsWith(hh));
       html += '<div class="reserve-slot' + (isClosed ? ' closed' : '') + '">';
       html += '<div class="reserve-slot-time">' + time + '〜</div>';
-      html += '<div class="reserve-slot-cards">';
-      html += inSlot.map(c => returnCardHtml(c)).join('');
+      html += '<div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="' + time + '">';
+      if (inSlot.length === 0){
+        html += '<span style="color:var(--text3);font-size:11px;align-self:center;">空き</span>';
+      } else {
+        html += inSlot.map(c => returnCardHtml(c)).join('');
+      }
       html += '</div></div>';
     });
-    // 時刻なしのカードを末尾に
-    const noTime = todays.filter(c => !(c.reserveTime || '').match(/^\d/));
+    // 時刻未定のカードを末尾に（ここへドロップで時刻を未定に戻せる）
+    const noTime = todays.filter(c => !tkey(c).match(/^\d/));
     if (noTime.length > 0){
-      html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards">';
+      html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
       html += noTime.map(c => returnCardHtml(c)).join('');
       html += '</div></div>';
     }
@@ -262,7 +266,7 @@ function returnCardHtml(c){
   const wt = state.workTypes.find(w => w.id === c.workType);
   const dt = state.dropTypes.find(d => d.id === c.dropType);
   let html = '';
-  html += '<div class="pit-card return" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:var(--green);">';
+  html += '<div class="pit-card return" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:var(--green);">';
   html += '<div class="pc-line1">';
   html += '<span style="color:var(--green);font-weight:600;">' + (c.reserveTime || '時刻未定') + '</span>';
   html += '<span style="color:var(--text3);">' + statusLabel(c.status) + '</span>';

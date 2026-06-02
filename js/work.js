@@ -16,7 +16,7 @@ function renderWork(){
   grid.innerHTML = state.bays.map(bay => {
     const inBay = targets.filter(c => c.bayId === bay.id);
     return `
-      <div class="pit-bay">
+      <div class="pit-bay" data-drop="bay" data-drop-val="${bay.id}">
         <div class="pit-bay-head">
           <span class="bay-icon">${bay.icon}</span>
           <span>${bay.name}</span>
@@ -34,7 +34,7 @@ function renderWork(){
   const unassigned = targets.filter(c => !c.bayId);
   if (unassigned.length > 0){
     grid.innerHTML += `
-      <div class="pit-bay" style="grid-column:1 / -1;border-style:solid;border-color:var(--border);">
+      <div class="pit-bay" data-drop="bay" data-drop-val="" style="grid-column:1 / -1;border-style:solid;border-color:var(--border);">
         <div class="pit-bay-head">
           <span class="bay-icon">📥</span>
           <span>未割当（PIT枠未指定）</span>

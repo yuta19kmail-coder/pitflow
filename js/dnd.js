@@ -1,0 +1,86 @@
+/* ========================================
+   dnd.js  -  カードのドラッグ＆ドロップ移動（PitFlow v0.2.0）
+   ----------------------------------------
+   ネイティブ HTML5 ドラッグ＆ドロップ（デスクトップ主体）。
+   ・ドラッグできるカード：`.pit-card[data-card-id]`
+   ・ドロップ先：`[data-drop][data-drop-val]`
+       data-drop="status"      … タスク看板：工程(c.status)を変更
+       data-drop="bay"         … 作業ビュー：PIT枠(c.bayId)を変更（空文字＝未割当）
+       data-drop="reserveTime" … 予約・当日：入庫時刻(c.reserveTime)を変更
+       data-drop="returnTime"  … 返車・当日：返車時刻(c.returnTime)を変更
+   ・クリック（openDetail）はネイティブ仕様でドラッグと両立（ドラッグ中はclick不発）。
+   ======================================== */
+(function () {
+
+  function applyCardDrop(cardId, kind, val) {
+    const c = state.cards.find(x => x.id === cardId);
+    if (!c) return;
+
+    if (kind === 'status') {
+      if (c.status === val) return;
+      c.status = val;
+    } else if (kind === 'bay') {
+      const nv = val || null;
+      if (c.bayId === nv) return;
+      c.bayId = nv;
+    } else if (kind === 'reserveTime') {
+      c.reserveTime = val;
+      if (state.reserveDate) c.reserveDate = ymd(state.reserveDate);
+    } else if (kind === 'returnTime') {
+      c.returnTime = val;
+      if (state.returnDate) c.returnDate = ymd(state.returnDate);
+    } else {
+      return;
+    }
+
+    if (window.PitDB) PitDB.save();
+    if (state.currentView) showView(state.currentView);
+  }
+  window.applyCardDrop = applyCardDrop;
+
+  let draggingId = null;
+
+  document.addEventListener('dragstart', function (e) {
+    const card = e.target.closest('.pit-card[data-card-id]');
+    if (!card) return;
+    draggingId = card.dataset.cardId;
+    card.classList.add('dnd-dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', draggingId); } catch (_) {}
+    }
+  });
+
+  document.addEventListener('dragend', function () {
+    document.querySelectorAll('.dnd-dragging').forEach(el => el.classList.remove('dnd-dragging'));
+    document.querySelectorAll('.dnd-over').forEach(z => z.classList.remove('dnd-over'));
+    draggingId = null;
+  });
+
+  document.addEventListener('dragover', function (e) {
+    const zone = e.target.closest('[data-drop]');
+    if (!zone) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    if (!zone.classList.contains('dnd-over')) {
+      document.querySelectorAll('.dnd-over').forEach(z => z.classList.remove('dnd-over'));
+      zone.classList.add('dnd-over');
+    }
+  });
+
+  document.addEventListener('dragleave', function (e) {
+    const zone = e.target.closest('[data-drop]');
+    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('dnd-over');
+  });
+
+  document.addEventListener('drop', function (e) {
+    const zone = e.target.closest('[data-drop]');
+    if (!zone) return;
+    e.preventDefault();
+    let id = draggingId;
+    if (!id && e.dataTransfer) { try { id = e.dataTransfer.getData('text/plain'); } catch (_) {} }
+    zone.classList.remove('dnd-over');
+    if (id) applyCardDrop(id, zone.dataset.drop, zone.dataset.dropVal || '');
+  });
+
+})();
