@@ -59,6 +59,8 @@ function renderReserveDay(){
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html += '<div style="font-size:13px;color:var(--text2);">';
   if (isClosed) html += '<span style="color:var(--red);">🔴 定休日</span>　';
+  const holDay = (window.Holidays && Holidays.name(dateStr)) || null;
+  if (holDay) html += '<span class="hol-badge">🎌 ' + holDay + '</span>　';
   html += '受付 ' + state.settings.openTime + ' 〜 ' + state.settings.cutoffTime + '　／　予約 ' + todays.length + ' 件';
   html += '</div></div>';
 
@@ -102,9 +104,11 @@ function renderReserveWeek(){
     const dow = '日月火水木金土'[d.getDay()];
     const isToday = dStr === todayStr;
     const isClosed = state.settings.closedDow.includes(d.getDay());
-    html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + '">';
+    const hol = (window.Holidays && Holidays.name(dStr)) || null;
+    html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + '">';
     html += '<span class="dow">' + dow + '</span>';
     html += '<span class="day">' + (d.getMonth()+1) + '/' + d.getDate() + '</span>';
+    if (hol) html += '<span class="hol" title="' + hol + '">' + hol + '</span>';
     html += '</div>';
   });
 
@@ -119,9 +123,9 @@ function renderReserveWeek(){
         c.reserveTime.startsWith(hh) &&
         c.status !== 'returned' && c.status !== 'workDone'
       );
-      html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '">';
+      html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="reserveDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
       inCell.forEach(c => {
-        html += '<div class="reserve-week-event' + (c.urgent ? ' urgent' : '') + '"';
+        html += '<div class="reserve-week-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
         html += ' onclick="openDetail(\'' + c.id + '\')"';
         html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + c.menu + '">';
         html += c.reserveTime + ' ' + c.customer;
@@ -202,10 +206,12 @@ function monthGridCells(refDate){
     const visible = cardsOfDay.slice(0, 3);
     const remaining = cardsOfDay.length - visible.length;
 
-    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + dowClass + '">';
+    const hol = (window.Holidays && Holidays.name(dateStr)) || null;
+    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="reserveDate" data-drop-val="' + dateStr + '">';
     html += '<div class="day-num">' + dd + '</div>';
+    if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
-      html += '<div class="reserve-month-event' + (c.urgent ? ' urgent' : '') + '"';
+      html += '<div class="reserve-month-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       html += ' onclick="openDetail(\'' + c.id + '\')"';
       html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + c.menu + '">';
       html += c.reserveTime + ' ' + c.customer;

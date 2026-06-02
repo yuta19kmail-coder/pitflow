@@ -62,7 +62,11 @@ function statusColor(s){
   return map[s] || '#64748b';
 }
 
-function ymd(d){ return d.toISOString().slice(0,10); }
+function ymd(d){
+  return d.getFullYear() + '-' +
+         String(d.getMonth() + 1).padStart(2, '0') + '-' +
+         String(d.getDate()).padStart(2, '0');
+}
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return x; }
 

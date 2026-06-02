@@ -59,6 +59,8 @@ function renderReturnDay(){
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html += '<div style="font-size:13px;color:var(--text2);">';
   if (isClosed) html += '<span style="color:var(--red);">🔴 定休日</span>　';
+  const holDay = (window.Holidays && Holidays.name(dateStr)) || null;
+  if (holDay) html += '<span class="hol-badge">🎌 ' + holDay + '</span>　';
   html += '本日の返車予定 ' + todays.length + ' 件';
   html += '</div></div>';
 
@@ -112,9 +114,11 @@ function renderReturnWeek(){
     const cnt = state.cards.filter(c =>
       c.returnDate === dStr && c.status !== 'returned'
     ).length;
-    html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + '">';
+    const hol = (window.Holidays && Holidays.name(dStr)) || null;
+    html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + '">';
     html += '<span class="dow">' + dow + '</span>';
     html += '<span class="day">' + (d.getMonth()+1) + '/' + d.getDate() + '</span>';
+    if (hol) html += '<span class="hol" title="' + hol + '">' + hol + '</span>';
     if (cnt > 0) html += '<span style="font-size:10px;color:var(--green);font-weight:600;">' + cnt + '台</span>';
     html += '</div>';
   });
@@ -130,9 +134,9 @@ function renderReturnWeek(){
         (c.reserveTime || '').startsWith(hh) &&
         c.status !== 'returned'
       );
-      html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '">';
+      html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
       inCell.forEach(c => {
-        html += '<div class="reserve-week-event return' + (c.urgent ? ' urgent' : '') + '"';
+        html += '<div class="reserve-week-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
         html += ' onclick="openDetail(\'' + c.id + '\')"';
         html += ' title="' + c.customer + '様 / ' + c.menu + '">';
         html += c.customer;
@@ -212,10 +216,12 @@ function monthGridCellsReturn(refDate){
     const visible = cardsOfDay.slice(0, 3);
     const remaining = cardsOfDay.length - visible.length;
 
-    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + dowClass + '">';
+    const hol = (window.Holidays && Holidays.name(dateStr)) || null;
+    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="returnDate" data-drop-val="' + dateStr + '">';
     html += '<div class="day-num">' + dd + '</div>';
+    if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
-      html += '<div class="reserve-month-event return' + (c.urgent ? ' urgent' : '') + '"';
+      html += '<div class="reserve-month-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       html += ' onclick="openDetail(\'' + c.id + '\')"';
       html += ' title="' + c.customer + '様 / ' + c.menu + '">';
       html += c.customer;

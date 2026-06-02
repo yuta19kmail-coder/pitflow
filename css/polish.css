@@ -108,7 +108,9 @@
 /* ===== ドラッグ＆ドロップ ===== */
 .pit-card[draggable="true"]{ cursor:grab; }
 .pit-card[draggable="true"]:active{ cursor:grabbing; }
+.dnd-dragging{ opacity:.45; }
 .pit-card.dnd-dragging{ opacity:.45; transform:scale(.98); }
+.reserve-month-event[draggable="true"], .reserve-week-event[draggable="true"]{ cursor:grab; }
 /* ドロップ先のハイライト */
 [data-drop].dnd-over{
   outline:2px dashed var(--brand);
@@ -119,6 +121,24 @@
 #view-task .kanban-col-body[data-drop]{ min-height:48px; }
 #view-work .pit-bay.dnd-over,
 [data-drop].dnd-over{ transition:background .08s; }
+
+/* ===== 祝日表示 ===== */
+.reserve-month-cell.holiday .day-num{ color:var(--red); }
+.reserve-month-cell .hol-name{
+  font-size:9px; line-height:1.15; color:var(--red); font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px;
+}
+.reserve-week-head.holiday .day{ color:var(--red); }
+.reserve-week-head .hol{
+  font-size:9px; color:var(--red); font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;
+}
+#view-result .result-cell.holiday .day-num{ color:var(--red); }
+#view-result .result-cell .hol-name{
+  font-size:9px; color:var(--red); font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:2px;
+}
+.hol-badge{ color:var(--red); font-weight:600; }
 
 /* ===== レスポンシブ補正 ===== */
 @media (max-width:768px){

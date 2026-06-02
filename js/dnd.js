@@ -29,6 +29,20 @@
     } else if (kind === 'returnTime') {
       c.returnTime = val;
       if (state.returnDate) c.returnDate = ymd(state.returnDate);
+    } else if (kind === 'reserveDate') {        // 月カレンダー：日付だけ変更
+      if (c.reserveDate === val) return;
+      c.reserveDate = val;
+    } else if (kind === 'returnDate') {
+      if (c.returnDate === val) return;
+      c.returnDate = val;
+    } else if (kind === 'reserveDateTime') {     // 週カレンダー：日付＋時刻
+      const p = val.split('|');
+      c.reserveDate = p[0];
+      if (p[1]) c.reserveTime = p[1];
+    } else if (kind === 'returnDateTime') {
+      const p = val.split('|');
+      c.returnDate = p[0];
+      if (p[1]) c.returnTime = p[1];
     } else {
       return;
     }
@@ -41,7 +55,7 @@
   let draggingId = null;
 
   document.addEventListener('dragstart', function (e) {
-    const card = e.target.closest('.pit-card[data-card-id]');
+    const card = e.target.closest('[data-card-id][draggable="true"]');
     if (!card) return;
     draggingId = card.dataset.cardId;
     card.classList.add('dnd-dragging');

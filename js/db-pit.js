@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v1';
+  const LS_KEY = 'pitflow_data_v2';   // v2: 日付をローカルタイム基準に是正したため再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'

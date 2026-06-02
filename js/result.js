@@ -38,9 +38,11 @@ function renderResult(){
       (c.completedAt === dateStr) &&
       (c.status === 'workDone' || c.status === 'returned')
     );
+    const hol = (window.Holidays && Holidays.name(dateStr)) || null;
     html += `
-      <div class="result-cell">
+      <div class="result-cell${hol ? ' holiday' : ''}">
         <div class="day-num">${d}</div>
+        ${hol ? `<div class="hol-name" title="${hol}">${hol}</div>` : ''}
         ${cardsOfDay.map(c => `
           <div class="result-card${c.status === 'returned' ? ' returned' : ''}"
                onclick="openDetail('${c.id}')"
