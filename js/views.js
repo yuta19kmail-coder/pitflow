@@ -47,6 +47,21 @@ function statusLabel(s){
   return map[s] || s;
 }
 
+function statusColor(s){
+  const map = {
+    reserved: '#64748b',
+    check:    '#3b82f6',
+    estim:    '#f59e0b',
+    contact:  '#a855f7',
+    parts:    '#06b6d4',
+    work:     '#26a269',
+    workDone: '#1db97a',
+    returned: '#10b981',
+    scrap:    '#6b7280',
+  };
+  return map[s] || '#64748b';
+}
+
 function ymd(d){ return d.toISOString().slice(0,10); }
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return x; }

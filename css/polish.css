@@ -1,0 +1,112 @@
+/* ========================================
+   polish.css  -  5ビューの見た目・操作感 底上げ（v0.1.1）
+   ----------------------------------------
+   既存 views.css を壊さず、後から上書き・追加する層。
+   ・カードの色分け（作業タイプ）／ステータスピル
+   ・看板の工程カラー＋工程送りボタン
+   ・PIT枠・実績・代車・当日の質感アップ
+   ======================================== */
+
+/* ===== 共通カード（pit-card）強化 ===== */
+.pit-card{ border-left-width:4px; transition:transform .1s ease, box-shadow .1s ease, border-color .1s ease; }
+.pit-card:hover{ transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.4); }
+.pit-card.is-urgent{ box-shadow:0 0 0 1px rgba(239,68,68,.45), var(--shadow-card); }
+
+.pit-card .pc-line1{ align-items:center; }
+.pit-card .pc-status{
+  margin-left:auto; font-size:10px; font-weight:700; padding:1px 8px; border-radius:999px; white-space:nowrap;
+  color:var(--sc,#64748b);
+  background:color-mix(in srgb, var(--sc,#64748b) 16%, transparent);
+  border:1px solid color-mix(in srgb, var(--sc,#64748b) 42%, transparent);
+}
+.pit-card .pc-urg{
+  font-size:9px; font-weight:800; padding:1px 6px; border-radius:6px;
+  color:#fff; background:var(--red);
+}
+.pit-card .pc-customer{ font-size:13.5px; }
+.pit-card .pc-tag.drop{ background:var(--bg3); color:var(--text2); }
+.pit-card .pc-tag.soft.loaner{ background:rgba(38,162,105,.12); color:var(--brand); border-color:var(--brand); }
+.pit-card .pc-tag.soft.wash{ background:rgba(59,130,246,.12); color:#3b82f6; border-color:#3b82f6; }
+.pit-card .tag-work{ font-size:10px; font-weight:700; padding:1px 7px; border-radius:6px; border:1px solid; }
+
+/* 工程送りボタン（看板カード） */
+.pit-card .pc-kbtns{ display:flex; gap:6px; margin-top:7px; }
+.pc-kbtn{
+  font-size:11px; padding:4px 8px; border-radius:7px; cursor:pointer;
+  background:var(--bg3); border:1px solid var(--border); color:var(--text2);
+  transition:filter .1s, background .1s;
+}
+.pc-kbtn:hover{ filter:brightness(1.12); }
+.pc-kbtn.next{ flex:1; background:var(--brand-soft); color:var(--brand); border-color:var(--brand); font-weight:700; }
+
+/* ===== タスク看板 ===== */
+#view-task .kanban-col{
+  border-top:3px solid var(--stage, var(--brand));
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
+}
+#view-task .kanban-col-head{ font-size:13.5px; }
+#view-task .kanban-col-head .count{
+  background:color-mix(in srgb, var(--stage,#64748b) 18%, transparent);
+  color:var(--stage, var(--text2));
+  font-weight:700;
+}
+#view-task .kanban-col.side{ box-shadow:none; }
+#view-task .kanban-empty{
+  border:1px dashed var(--border); border-radius:var(--r);
+  padding:14px 0; color:var(--text3);
+}
+
+/* ===== 作業ビュー（PIT枠） ===== */
+#view-work .pit-bay{
+  border:1px solid var(--border);
+  border-top:3px solid var(--brand);
+  border-radius:var(--r2);
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
+}
+#view-work .pit-bay-head{ border-bottom:1px solid var(--border); }
+#view-work .pit-bay-head .bay-icon{ font-size:20px; }
+#view-work .pit-bay-empty{ border:1px dashed var(--border); border-radius:var(--r); }
+#view-work .pit-bay-empty::before{ content:"🅿️ "; }
+
+/* ===== 当日ビュー ===== */
+.today-head{
+  background:linear-gradient(180deg, var(--brand-soft), transparent), var(--bg2);
+  box-shadow:0 2px 10px rgba(0,0,0,.15);
+}
+.today-col{ box-shadow:0 2px 10px rgba(0,0,0,.15); }
+.today-row{ transition:background .1s ease, transform .05s ease; }
+.today-row:hover{ background:var(--bg3); }
+.today-row.is-urgent{ background:rgba(239,68,68,.06); }
+.count-chip{ box-shadow:0 1px 6px rgba(38,162,105,.18); }
+
+/* ===== 実績ビュー（月） ===== */
+#view-result .result-cell{ transition:background .1s; }
+#view-result .result-cell:not(.dow):hover{ background:var(--bg3); }
+#view-result .result-card{ transition:filter .1s; }
+#view-result .result-card:hover{ filter:brightness(1.12); }
+
+/* ===== 代車ガント ===== */
+#view-loaner .loaner-bar{
+  background:linear-gradient(180deg, var(--brand), var(--brand-deep));
+  box-shadow:0 1px 4px rgba(0,0,0,.3);
+  cursor:pointer; transition:filter .1s;
+}
+#view-loaner .loaner-bar:hover{ filter:brightness(1.12); }
+#view-loaner .loaner-car-name span{ font-size:16px; }
+
+/* ===== 予約・返車カレンダー ===== */
+.reserve-month-cell:not(.dow):not(.other-month):hover{ background:var(--bg3); }
+.reserve-month-event, .reserve-week-event{ transition:filter .1s; }
+.reserve-month-event:hover, .reserve-week-event:hover{ filter:brightness(1.1); }
+.reserve-slot{ border-radius:var(--r); transition:background .1s; }
+.reserve-slot:hover{ background:var(--bg3); }
+
+/* ===== ビュー見出しの軽い強調（共通） ===== */
+.view-header .view-title{ letter-spacing:.01em; }
+.vh-btn:hover, .tb-btn:hover{ border-color:var(--brand); }
+
+/* ===== レスポンシブ補正 ===== */
+@media (max-width:768px){
+  .today-counts{ margin-left:0; }
+  .pit-card .pc-kbtns{ margin-top:8px; }
+}

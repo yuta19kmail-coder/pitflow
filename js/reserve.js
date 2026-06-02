@@ -254,19 +254,34 @@ function reserveNext(){
   renderReserve();
 }
 
-function cardHtml(c){
+function cardHtml(c, opts){
+  opts = opts || {};
+  const wt = state.workTypes.find(w => w.id === c.workType);
+  const dt = state.dropTypes.find(d => d.id === c.dropType);
+  const accent = wt ? wt.color : 'var(--brand)';
   let html = '';
-  html += '<div class="pit-card" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;">';
+  html += '<div class="pit-card' + (c.urgent ? ' is-urgent' : '') + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent + ';">';
   html += '<div class="pc-line1">';
-  html += '<span class="pc-time">' + c.reserveTime + '</span>';
-  html += '<span style="color:var(--text3);">' + statusLabel(c.status) + '</span>';
+  html += '<span class="pc-time">' + (c.reserveTime || '') + '</span>';
+  html += '<span class="pc-status" style="--sc:' + statusColor(c.status) + ';">' + statusLabel(c.status) + '</span>';
+  if (c.urgent) html += '<span class="pc-urg">緊急</span>';
   html += '</div>';
-  html += '<div class="pc-customer">' + c.customer + ' 様</div>';
-  html += '<div class="pc-car">' + c.car + ' ／ ' + c.menu + '</div>';
+  html += '<div class="pc-customer">' + (c.customer || '（未入力）') + ' 様</div>';
+  html += '<div class="pc-car">' + (c.car || '') + (c.menu ? ' ／ ' + c.menu : '') + '</div>';
   html += '<div class="pc-tags">';
-  if (c.staff)  html += '<span class="pc-tag staff">' + c.staff + '</span>';
-  if (c.urgent) html += '<span class="pc-tag urgent">緊急</span>';
-  html += '</div></div>';
+  if (wt) html += '<span class="tag-work" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + ';">' + wt.label + '</span>';
+  if (dt) html += '<span class="pc-tag drop">' + dt.label + '</span>';
+  if (c.needLoaner) html += '<span class="pc-tag soft loaner">代車</span>';
+  if (c.needWash)   html += '<span class="pc-tag soft wash">洗車</span>';
+  if (c.staff)      html += '<span class="pc-tag staff">' + c.staff + '</span>';
+  html += '</div>';
+  if (opts.kanban){
+    html += '<div class="pc-kbtns" onclick="event.stopPropagation()">';
+    html += '<button class="pc-kbtn" title="前の工程へ" onclick="advanceCard(\'' + c.id + '\',-1)">◀</button>';
+    html += '<button class="pc-kbtn next" title="次の工程へ" onclick="advanceCard(\'' + c.id + '\',1)">次へ ▶</button>';
+    html += '</div>';
+  }
+  html += '</div>';
   return html;
 }
 window.cardHtml = cardHtml;

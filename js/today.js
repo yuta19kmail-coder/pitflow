@@ -75,8 +75,9 @@ function renderToday(){
 function todayRow(c, isReturn){
   const wt = state.workTypes.find(w => w.id === c.workType);
   const dt = state.dropTypes.find(d => d.id === c.dropType);
+  const accent = wt ? wt.color : 'var(--brand)';
   let html = '';
-  html += '<div class="today-row" onclick="openDetail(\'' + c.id + '\')">';
+  html += '<div class="today-row' + (c.urgent ? ' is-urgent' : '') + '" onclick="openDetail(\'' + c.id + '\')" style="box-shadow:inset 3px 0 0 ' + accent + ';">';
   html += '<div class="tr-time">' + c.reserveTime + '</div>';
   html += '<div class="tr-main">';
   html += '<div class="tr-customer">' + c.customer + ' 様</div>';
