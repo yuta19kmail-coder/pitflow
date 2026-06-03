@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.4.0</div>
+    <div class="pl-ver">PitFlow v0.4.1</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.4.0</span>
+      <span class="ver">v0.4.1</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -235,6 +235,8 @@
       <div class="view-header">
         <div class="view-title"><span class="icon">👤</span>顧客 <span style="font-size:12px;color:var(--text3);font-weight:400">控え（入力補助）</span></div>
         <div class="view-actions">
+          <button class="vh-btn" onclick="seedSampleCustomers(500,true)">🎲 サンプル500件</button>
+          <button class="vh-btn" onclick="clearCustomers()">🗑 全削除</button>
           <button class="vh-btn primary" onclick="openNewReserve()">＋ 新規入庫</button>
         </div>
       </div>
@@ -285,6 +287,7 @@
 <script src="js/views.js?v=11"></script>
 <script src="js/card-detail.js?v=9"></script>
 <script src="js/customers.js?v=1"></script>
+<script src="js/sample-customers.js?v=1"></script>
 <script src="js/today.js?v=9"></script>
 <script src="js/reserve.js?v=11"></script>
 <script src="js/return.js?v=10"></script>
