@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=4">
+<link rel="stylesheet" href="css/polish.css?v=5">
 <link rel="stylesheet" href="css/launcher.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.4.1</div>
+    <div class="pl-ver">PitFlow v0.4.2</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.4.1</span>
+      <span class="ver">v0.4.2</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -112,6 +112,11 @@
     </div>
     <div class="si-item" data-view="settings" onclick="showView('settings')">
       <span class="icon">⚙️</span><span>設定</span>
+    </div>
+
+    <div class="si-section-title">たたき台（今だけ）</div>
+    <div class="si-item" data-view="samplepat" onclick="showView('samplepat')">
+      <span class="icon">🧪</span><span>カード設計サンプル</span>
     </div>
 
     <!-- CoreFlow アプリランチャー（共通） -->
@@ -260,6 +265,14 @@
       </div>
     </section>
 
+    <!-- ===== カード設計サンプル（今だけ・たたき台） ===== -->
+    <section id="view-samplepat" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🧪</span>カード設計サンプル <span style="font-size:11px;color:var(--text3);font-weight:400">どこまで持たせるか・チームで見比べ用</span></div>
+      </div>
+      <div id="view-samplepat-body"></div>
+    </section>
+
   </div>
 </div>
 
@@ -284,10 +297,11 @@
 <script src="js/sample-data.js?v=9"></script>
 <script src="js/firebase-init.js?v=8"></script>
 <script src="js/db-pit.js?v=10"></script>
-<script src="js/views.js?v=11"></script>
+<script src="js/views.js?v=12"></script>
 <script src="js/card-detail.js?v=9"></script>
 <script src="js/customers.js?v=1"></script>
 <script src="js/sample-customers.js?v=1"></script>
+<script src="js/sample-patterns.js?v=1"></script>
 <script src="js/today.js?v=9"></script>
 <script src="js/reserve.js?v=11"></script>
 <script src="js/return.js?v=10"></script>

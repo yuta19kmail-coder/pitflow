@@ -23,6 +23,7 @@ function showView(viewId){
   if (viewId === 'result')  renderResult();
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
+  if (viewId === 'samplepat' && window.renderSamplePatterns) renderSamplePatterns();
 }
 
 function toggleTheme(){

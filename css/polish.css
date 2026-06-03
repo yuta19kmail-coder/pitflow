@@ -149,6 +149,53 @@
 .cust-del{ background:var(--bg3); border:1px solid var(--border); border-radius:7px; padding:5px 9px; cursor:pointer; color:var(--text2); }
 .cust-del:hover{ border-color:var(--red); color:var(--red); }
 
+/* ===== カード設計サンプル（今だけ・たたき台） ===== */
+.sp-banner{ background:rgba(124,58,237,.10); border:1px solid rgba(124,58,237,.35); border-radius:10px; padding:11px 14px; font-size:12.5px; line-height:1.6; color:var(--text); margin-bottom:12px; }
+.sp-tabs{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+.sp-tab{ width:40px; height:40px; border-radius:10px; border:1px solid var(--border); background:var(--bg2); color:var(--text2); font-size:16px; font-weight:800; cursor:pointer; }
+.sp-tab:hover{ border-color:var(--brand); }
+.sp-tab.on{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.sp-grid{ display:grid; grid-template-columns:minmax(260px,360px) 1fr; gap:16px; align-items:start; }
+@media(max-width:880px){ .sp-grid{ grid-template-columns:1fr; } }
+.sp-desc{ background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; }
+.sp-desc h3{ font-size:16px; margin-bottom:4px; }
+.sp-tagline{ font-size:12.5px; color:var(--text2); line-height:1.6; margin-bottom:12px; }
+.sp-block{ margin-top:12px; }
+.sp-bt{ font-size:12px; font-weight:700; color:var(--text2); margin-bottom:5px; }
+.sp-block ul{ margin:0; padding-left:18px; }
+.sp-block li{ font-size:12.5px; line-height:1.7; }
+.sp-pros .sp-bt{ color:var(--brand); }
+.sp-cons .sp-bt{ color:var(--orange); }
+.sp-mock{ background:var(--bg); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.sp-mock-head{ background:var(--bg3); padding:9px 14px; font-size:12px; font-weight:700; color:var(--text2); border-bottom:1px solid var(--border); }
+.sp-mock-body{ padding:14px; max-height:62vh; overflow-y:auto; }
+.sp-mock-body .cf-section{ margin-bottom:10px; }
+.sp-row{ display:flex; gap:10px; flex-wrap:wrap; }
+.sp-fld{ flex:1; min-width:120px; }
+.sp-fl{ font-size:10px; color:var(--text3); font-weight:600; }
+.sp-fv{ font-size:13px; color:var(--text); margin-top:2px; }
+.sp-checks{ display:flex; flex-direction:column; gap:6px; }
+.sp-chk{ display:flex; align-items:center; gap:9px; padding:7px 9px; border:1px solid var(--border); border-radius:8px; background:var(--bg2); cursor:pointer; }
+.sp-chk.on{ border-color:var(--brand); background:var(--brand-soft); }
+.sp-box{ width:20px; height:20px; border-radius:5px; border:1.5px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--brand); flex:0 0 auto; }
+.sp-chk.on .sp-box{ border-color:var(--brand); }
+.sp-cl{ flex:1; font-size:13px; }
+.sp-who{ font-size:11px; color:var(--text2); }
+.sp-who.sp-none{ color:var(--text3); }
+.sp-meass{ display:flex; flex-wrap:wrap; gap:8px; }
+.sp-meas{ display:flex; align-items:baseline; gap:4px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; }
+.sp-ml{ font-size:11px; color:var(--text3); }
+.sp-mv{ font-size:15px; font-weight:700; color:var(--text); }
+.sp-mu{ font-size:10px; color:var(--text3); }
+.sp-hint{ font-size:11px; color:var(--text3); margin-top:8px; line-height:1.6; }
+.sp-paper{ background:var(--bg2); border:1px dashed var(--border2); border-radius:10px; padding:12px 14px; font-size:12.5px; color:var(--text2); line-height:1.6; }
+.sp-warn{ background:rgba(239,68,68,.10); border:1px solid rgba(239,68,68,.3); border-radius:10px; padding:11px 14px; font-size:12.5px; color:var(--text); }
+.sp-tbl{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.sp-tbl th,.sp-tbl td{ border:1px solid var(--border); padding:5px 8px; text-align:left; }
+.sp-tbl th{ background:var(--bg3); color:var(--text2); font-size:11px; }
+.sp-photos{ display:flex; gap:8px; }
+.sp-photo{ width:54px; height:54px; border:1px dashed var(--border2); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--text3); }
+
 /* ===== 祝日表示 ===== */
 .reserve-month-cell.holiday .day-num{ color:var(--red); }
 .reserve-month-cell .hol-name{
