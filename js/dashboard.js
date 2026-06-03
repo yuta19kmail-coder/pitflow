@@ -23,6 +23,29 @@ function dashOccupancy(dStr, todayStr){
   }).length;
 }
 
+// チーム別の預かり台数（boardId: default＝国産 / import＝輸入）
+function _dashHeldOnTeam(board, dStr, todayStr){
+  return state.cards.filter(function(c){
+    if (!_dashHeld(c) || c.boardId !== board || !c.reserveDate) return false;
+    if (c.reserveDate > dStr) return false;
+    if (c.returnDate) return c.returnDate >= dStr;
+    return dStr <= todayStr;
+  }).length;
+}
+// 代車の最短空き（4台のうち1台でも空く最初の日）
+function dashLoanerEarliestFree(today){
+  const loaners = state.loaners || [];
+  if (!loaners.length) return null;
+  for (let i = 0; i < 120; i++){
+    const dStr = ymd(addDays(today, i));
+    const free = loaners.some(function(l){
+      return !(state.loanerAssigns || []).some(function(a){ return a.loanerId === l.id && a.fromDate <= dStr && a.toDate >= dStr; });
+    });
+    if (free) return addDays(today, i);
+  }
+  return null;
+}
+
 // 混雑レベル → 色/ラベル
 function _dashLevel(ratio){
   if (ratio >= 1)    return { c:'#ef4444', t:'満杯' };
@@ -81,6 +104,18 @@ function renderDashboard(){
   h += dashKpi('🟢', '置き場の空き', free, '台');
   h += '</div>';
 
+  // チーム別の状況（国産／輸入）
+  const teams = [{ key:'default', name:'🚗 国産車チーム' }, { key:'import', name:'🌍 輸入車チーム' }];
+  h += '<div class="dash-card"><div class="dash-h"><span>👥 チーム別の状況</span><span class="dash-note">国産 : 輸入 ＝ ざっくり 6 : 4</span></div><div class="dash-teams">';
+  teams.forEach(function(t){
+    const held = _dashHeldOnTeam(t.key, tStr, tStr);
+    const tin  = state.cards.filter(function(c){ return c.boardId === t.key && c.reserveDate === tStr && _dashHeld(c); }).length;
+    const tout = state.cards.filter(function(c){ return c.boardId === t.key && c.returnDate === tStr && _dashHeld(c); }).length;
+    h += '<div class="dash-team"><div class="dash-team-n">' + t.name + '</div>'
+       + '<div class="dash-team-stats"><span class="big"><b>' + held + '</b>台 預かり</span><span>本日入庫 ' + tin + '</span><span>本日返車 ' + tout + '</span></div></div>';
+  });
+  h += '</div></div>';
+
   // 今日の混雑度ゲージ
   const pct = Math.round(todayRatio * 100);
   h += '<div class="dash-card">';
@@ -93,7 +128,10 @@ function renderDashboard(){
   h += '<div class="dash-card dash-earliest' + (earliestToday ? ' ok' : '') + '">';
   h += '<div class="dash-h"><span>⏱ 最短で入庫できる日</span></div>';
   h += '<div class="dash-earliest-main">' + (earliestToday ? '✅ 今日OK' : earliestStr) + '</div>';
-  h += '<div class="dash-sub">' + holdDays + '日預かり想定で、置き場が溢れない最初の日。<br>※オイル等の当日仕上げ（預かりなし）は基本いつでもOK（置き場をほぼ使わない）。</div>';
+  const loanerFree = dashLoanerEarliestFree(today);
+  const loanerStr = loanerFree ? ((loanerFree.getMonth()+1) + '/' + loanerFree.getDate() + '（' + '日月火水木金土'[loanerFree.getDay()] + '）') : '空きなし';
+  h += '<div class="dash-loaner">🚙 代車の最短空き：<b>' + loanerStr + '</b><span>　代車予約が先行して埋まっています</span></div>';
+  h += '<div class="dash-sub">' + holdDays + '日預かり想定で、置き場が溢れない最初の日。<br>※オイル等の当日仕上げ（預かりなし）は基本いつでもOK（置き場をほぼ使わない）。<br>※<b>代車が要る預かり</b>は「代車の最短空き」が実際のボトルネックになります。</div>';
   h += '</div>';
 
   // 2週間の混雑バー

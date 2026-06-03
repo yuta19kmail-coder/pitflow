@@ -227,8 +227,12 @@
 
 /* ===== カード内タブ ===== */
 .cf-tabs{ display:flex; gap:2px; margin-bottom:14px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
-.card-modal{ width:min(760px,94vw); }
-.card-modal .modal-body{ max-height:calc(88dvh - 56px); overflow-y:auto; }
+/* ポップアップは固定高さ＝タブ切替で箱が伸び縮みして上端がブレない */
+.card-modal{ width:min(760px,94vw); height:min(88dvh,840px); display:flex; flex-direction:column; }
+.card-modal .modal-head{ flex:0 0 auto; }
+.card-modal .modal-body{ flex:1 1 auto; overflow-y:auto; }
+/* ポップアップ内ではタブを上端に固定 */
+.card-modal .cf-tabs{ position:sticky; top:0; background:var(--bg2); z-index:3; padding-top:2px; }
 .cf-tab{ padding:9px 13px; font-size:13px; color:var(--text2); background:none; border:0; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; }
 .cf-tab:hover{ color:var(--text); }
 .cf-tab.on{ color:var(--brand); border-bottom-color:var(--brand); font-weight:700; }

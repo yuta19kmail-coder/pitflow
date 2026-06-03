@@ -12,9 +12,13 @@ function cfTabBtn(id, label){
 
 function switchCardTab(id){
   _cardTab = id;
-  const host = document.getElementById(typeof _cardBodyId !== 'undefined' ? _cardBodyId : 'md-body') || document;
+  const hostId = (typeof _cardBodyId !== 'undefined') ? _cardBodyId : 'md-body';
+  const host = document.getElementById(hostId) || document;
   host.querySelectorAll('.cf-tab').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-tab') === id); });
   host.querySelectorAll('.cf-panel').forEach(function(p){ p.hidden = (p.getAttribute('data-tab') !== id); });
+  // 切替時は上端へ（ブレ防止）
+  const scroller = (hostId === 'md-body-modal') ? (host.closest('.modal-body') || host) : document.getElementById('main');
+  if (scroller) scroller.scrollTop = 0;
 }
 
 /* ===== フロー（進捗ログ） ===== */
