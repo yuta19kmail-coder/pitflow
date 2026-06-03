@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=3">
+<link rel="stylesheet" href="css/polish.css?v=4">
 <link rel="stylesheet" href="css/launcher.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.3.1</div>
+    <div class="pl-ver">PitFlow v0.4.0</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.3.1</span>
+      <span class="ver">v0.4.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -107,6 +107,9 @@
     </div>
 
     <div class="si-section-title">管理</div>
+    <div class="si-item" data-view="customers" onclick="showView('customers')">
+      <span class="icon">👤</span><span>顧客</span>
+    </div>
     <div class="si-item" data-view="settings" onclick="showView('settings')">
       <span class="icon">⚙️</span><span>設定</span>
     </div>
@@ -227,6 +230,17 @@
       <div class="loaner-grid" id="loaner-grid"></div>
     </section>
 
+    <!-- ===== 顧客ビュー（控え・入力補助） ===== -->
+    <section id="view-customers" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">👤</span>顧客 <span style="font-size:12px;color:var(--text3);font-weight:400">控え（入力補助）</span></div>
+        <div class="view-actions">
+          <button class="vh-btn primary" onclick="openNewReserve()">＋ 新規入庫</button>
+        </div>
+      </div>
+      <div id="view-customers-body"></div>
+    </section>
+
     <!-- ===== 設定ビュー（プレースホルダ） ===== -->
     <section id="view-settings" class="view">
       <div class="view-header">
@@ -264,12 +278,13 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=9"></script>
+<script src="js/state.js?v=10"></script>
 <script src="js/sample-data.js?v=9"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=9"></script>
-<script src="js/views.js?v=10"></script>
-<script src="js/card-detail.js?v=8"></script>
+<script src="js/db-pit.js?v=10"></script>
+<script src="js/views.js?v=11"></script>
+<script src="js/card-detail.js?v=9"></script>
+<script src="js/customers.js?v=1"></script>
 <script src="js/today.js?v=9"></script>
 <script src="js/reserve.js?v=11"></script>
 <script src="js/return.js?v=10"></script>

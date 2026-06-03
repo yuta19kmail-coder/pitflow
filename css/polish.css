@@ -122,6 +122,33 @@
 #view-work .pit-bay.dnd-over,
 [data-drop].dnd-over{ transition:background .08s; }
 
+/* ===== 顧客呼び出し（カード詳細） ===== */
+.cf-recall{ position:relative; margin-bottom:10px; }
+#cf-recall-input{ background:var(--bg2); border:1px dashed var(--brand); }
+.cf-recall-list{ position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px;
+  background:var(--bg2); border:1px solid var(--border); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,.45);
+  overflow-y:auto; max-height:240px; }
+.cf-recall-item{ display:block; width:100%; text-align:left; padding:8px 10px; border:0; border-bottom:1px solid var(--border);
+  background:none; color:var(--text); cursor:pointer; font-size:13px; }
+.cf-recall-item:last-child{ border-bottom:0; }
+.cf-recall-item:hover{ background:var(--bg3); }
+.cf-recall-item span{ color:var(--text3); font-size:11.5px; margin-left:4px; }
+
+/* ===== 顧客リスト ビュー ===== */
+.cust-head{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.cust-search{ flex:1; background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 11px; font-size:13px; font-family:inherit; }
+.cust-search:focus{ outline:none; border-color:var(--brand); }
+.cust-count{ font-size:12px; color:var(--text3); white-space:nowrap; }
+.cust-note{ font-size:12px; color:var(--text3); background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:12px; line-height:1.6; }
+.cust-empty{ color:var(--text3); font-size:13px; text-align:center; padding:30px; }
+.cust-list{ display:flex; flex-direction:column; gap:8px; }
+.cust-row{ display:flex; align-items:center; gap:10px; background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--brand); border-radius:8px; padding:10px 12px; }
+.cust-main{ flex:1; min-width:0; }
+.cust-name{ font-size:14px; font-weight:600; }
+.cust-sub{ font-size:11.5px; color:var(--text2); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cust-del{ background:var(--bg3); border:1px solid var(--border); border-radius:7px; padding:5px 9px; cursor:pointer; color:var(--text2); }
+.cust-del:hover{ border-color:var(--red); color:var(--red); }
+
 /* ===== 祝日表示 ===== */
 .reserve-month-cell.holiday .day-num{ color:var(--red); }
 .reserve-month-cell .hol-name{

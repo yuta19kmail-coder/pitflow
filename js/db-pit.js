@@ -32,6 +32,7 @@
             state.cards = d.cards;
             if (Array.isArray(d.loanerAssigns)) state.loanerAssigns = d.loanerAssigns;
             if (Array.isArray(d.loaners))       state.loaners       = d.loaners;
+            if (Array.isArray(d.customers))     state.customers     = d.customers;
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
           }
         } else {
@@ -55,6 +56,7 @@
             cards: state.cards,
             loanerAssigns: state.loanerAssigns,
             loaners: state.loaners,
+            customers: state.customers,
             savedAt: Date.now(),
           }));
           if (self.mode === 'cloud' && self._cloudSave) self._cloudSave();

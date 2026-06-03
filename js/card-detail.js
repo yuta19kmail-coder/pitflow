@@ -19,6 +19,9 @@ function openDetail(cardId){
 }
 
 function closeDetail(){
+  // 閉じる前に、このカードから顧客控えを更新（入力補助用）
+  const _c = state.cards.find(x => x.id === _editingCardId);
+  if (_c && window.upsertCustomerFromCard) upsertCustomerFromCard(_c);
   _editingCardId = null;
   document.getElementById('modal-detail').classList.remove('show');
   // 編集内容を保存（localStorage 永続化）
@@ -30,6 +33,12 @@ function closeDetail(){
 function renderCardForm(c){
   const body = document.getElementById('md-body');
   let h = '';
+
+  /* === 顧客呼び出し（入力補助・整備ソフトとは別の控え） === */
+  h += '<div class="cf-recall">';
+  h += '<input id="cf-recall-input" class="cf-input" placeholder="🔍 過去の顧客・ナンバーから呼び出し（名前/ナンバー）" oninput="custSuggest(this.value)" autocomplete="off">';
+  h += '<div id="cf-recall-list" class="cf-recall-list" style="display:none"></div>';
+  h += '</div>';
 
   /* === 基本情報 === */
   h += sec('基本情報', '👤');

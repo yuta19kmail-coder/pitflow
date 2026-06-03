@@ -60,6 +60,7 @@ window.state = {
 
   cards: [],
   loanerAssigns: [],
+  customers: [],   // 顧客控え（車両ごと・入力補助／整備ソフトが正式台帳）
 
   todayDuty: {
     safe:    '林',

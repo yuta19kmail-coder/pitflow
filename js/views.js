@@ -22,6 +22,7 @@ function showView(viewId){
   if (viewId === 'work')    renderWork();
   if (viewId === 'result')  renderResult();
   if (viewId === 'loaner')  renderLoaner();
+  if (viewId === 'customers' && window.renderCustomers) renderCustomers();
 }
 
 function toggleTheme(){
@@ -71,7 +72,17 @@ function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return 
 function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return x; }
 
 function openNewReserve(){
-  alert('新規予約フォームは段階3で実装予定です。\n\n（既存カードをクリックすると新フォームが開きます）');
+  const id = 'c' + Date.now();
+  const card = {
+    id, status: 'reserved', boardId: state.currentBoardId || 'default', bayId: null,
+    customer: '', tel: '', car: '', plate: '',
+    reserveDate: ymd(new Date()), reserveTime: '', returnDate: '',
+    menu: '', workType: null, dropType: null,
+    needLoaner: false, needWash: false, urgent: false, memo: ''
+  };
+  state.cards.push(card);
+  if (window.PitDB) PitDB.save();
+  openDetail(id);
 }
 function goToday(){
   state.reserveDate = new Date();
