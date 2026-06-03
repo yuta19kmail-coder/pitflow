@@ -221,6 +221,19 @@
 .dash-bar-fill{ width:100%; border-radius:6px 6px 0 0; transition:height .3s; }
 .dash-bar-cap{ position:absolute; left:0; right:0; height:0; border-top:1.5px dashed var(--text3); opacity:.7; }
 .dash-bar.today .dash-bar-track{ outline:2px solid var(--brand); outline-offset:-2px; }
+.dash-bar.is-forecast .dash-bar-fill{ opacity:.45; background-image:repeating-linear-gradient(45deg, rgba(255,255,255,.35), rgba(255,255,255,.35) 3px, transparent 3px, transparent 6px); }
+.dash-bar.is-forecast .dash-bar-n{ color:var(--text3); }
+/* 予約の埋まり（チーム別） */
+.dash-cap{ display:flex; flex-direction:column; gap:6px; }
+.dash-cap-row{ display:flex; align-items:center; gap:8px; }
+.dash-cap-name{ width:54px; font-size:12px; font-weight:700; color:var(--text2); flex:0 0 auto; }
+.dash-cap-axis{ height:1px; }
+.dash-cap-cells{ display:flex; gap:4px; flex:1; overflow-x:auto; }
+.dash-cap-cell{ flex:1; min-width:24px; text-align:center; font-size:11px; font-weight:700; padding:4px 0; border-radius:5px; background:var(--bg3); color:var(--text2); }
+.dash-cap-cell.near{ background:rgba(234,179,8,.22); color:#a16207; }
+.dash-cap-cell.full{ background:var(--red); color:#fff; }
+.dash-cap-cell.today{ outline:2px solid var(--brand); outline-offset:-2px; }
+.dash-cap-d{ flex:1; min-width:24px; text-align:center; font-size:9.5px; color:var(--text3); }
 .dash-bar-d{ font-size:10.5px; color:var(--text2); margin-top:4px; }
 .dash-bar-w{ font-size:10px; color:var(--text3); }
 .dash-foot{ font-size:11px; color:var(--text3); line-height:1.6; }

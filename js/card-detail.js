@@ -102,6 +102,10 @@ function renderCardForm(c){
   h += field('入庫時刻', textIn(c, 'reserveTime', 'placeholder="例 09:30 / 09:00-10:00"'));
   h += field('予約受付日', dateIn(c, 'bookedAt'));
   h += '</div>';
+  h += '<div class="cf-row">';
+  h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
+  h += '</div>';
+  h += '<div class="cf-hint" style="margin-top:0">※「だいたい何日預かるか」の概算。ダッシュボードの“予想（不確定）”の混雑に使う。診断後に直せばOK。</div>';
   h += secEnd();
 
   /* === 作業内容 === */

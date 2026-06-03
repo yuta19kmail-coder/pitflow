@@ -34,6 +34,8 @@
   const timeSlot = () => pad(ri(9,17)) + ':' + rnd(['00','30']);
 
   function baseCard(id, imp){
+    const workType = rnd(WORK);
+    const dropType = rnd(DROP);
     return {
       id: 'f' + id,
       boardId: imp ? 'import' : 'default',
@@ -41,10 +43,11 @@
       tel: '0' + rnd(['90','80','70']) + '-' + d4() + '-' + d4(),
       car: imp ? rnd(YUNYU) : (rnd(KOKU_MK) + ' ' + rnd(KOKU)),
       plate: plate(),
-      workType: rnd(WORK),
-      dropType: rnd(DROP),
+      workType: workType,
+      dropType: dropType,
       staff: rnd(STAFF),
       reserveTime: timeSlot(),
+      estHoldDays: (window.pitEstHold ? pitEstHold(workType, dropType) : 5),  // 概算預かり日数
       needLoaner: false, needWash: Math.random() < 0.4, urgent: Math.random() < 0.06, memo: ''
     };
   }
@@ -80,17 +83,20 @@
     }
 
     // 3) これからの予約 約1ヶ月先まで（1日1〜3台）
+    //    ※未来は返車日を確定させず「概算預かり日数(estHoldDays)」だけ＝予想（不確定）として扱う
     for (let day = 1; day <= 31; day++){
       const n = ri(1, 3);
       for (let k = 0; k < n; k++){
         id++; const imp = isImp();
         const inD = add(today, day);
-        const dur = (Math.random() < 0.3) ? 0 : ri(1, 4);
-        const out = add(inD, dur);
         const c = baseCard(id, imp);
         c.status = 'reserved';
-        c.reserveDate = ymdL(inD); c.returnDate = ymdL(out);
-        c.needLoaner = dur > 0 && Math.random() < 0.55;
+        c.reserveDate = ymdL(inD);
+        if (c.estHoldDays === 0){
+          c.returnDate = ymdL(inD);          // 当日仕上げは確定
+        } else {
+          c.needLoaner = Math.random() < 0.55; // 預かりは代車要かも・返車日は未確定
+        }
         cards.push(c);
       }
     }

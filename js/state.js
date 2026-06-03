@@ -108,8 +108,9 @@ window.state = {
     spotHoliday: [],
     cutoffTime:  '17:00',
     openTime:    '09:00',
-    lotCapacity: 28,      // 同時に預かれる台数（置き場・代車待ち含む）＝混雑度の基準
+    lotCapacity: 28,      // 同時に預かれる台数（置き場・代車）＝共有・混雑度の基準
     holdDaysDefault: 3,   // 最短入庫の計算で使う「預かり想定日数」
+    reserveCap: { default: 5, import: 3 },   // 1日の予約上限（default＝国産 / import＝輸入・人が別なのでチーム別）
   },
 
   workTypes: [
@@ -136,3 +137,11 @@ window.state = {
     { id: 'repeater',label: 'リピーター' },
   ],
 };
+
+/* 概算預かり日数の既定（入庫予約時の初期値・後で手で調整できる） */
+function pitEstHold(workType, dropType){
+  if (dropType === 'wait' || dropType === 'sameDay') return 0;   // 待ち・当日仕上げ＝置き場を使わない
+  const map = { shaken:5, general:6, bp:12, '3m':2, used:3, oil:0, '12pt':0, coat1y:3, coat3m:2, bring:4 };
+  return (map[workType] != null) ? map[workType] : 5;
+}
+window.pitEstHold = pitEstHold;

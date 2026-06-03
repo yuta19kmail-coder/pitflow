@@ -13,23 +13,31 @@ function _dashCap(){ return (state.settings && state.settings.lotCapacity) || 20
 // その車が置き場を占有しているか（返車・廃車は除く）
 function _dashHeld(c){ return c.status !== 'returned' && c.status !== 'scrap'; }
 
-// 指定日(YYYY-MM-DD)の預かり台数
-function dashOccupancy(dStr, todayStr){
+// YYYY-MM-DD をローカル日付に
+function _pd(s){ const p = String(s).split('-'); return new Date(+p[0], (+p[1]) - 1, +p[2]); }
+// 占有の終了日：返車日が確定していればそれ／無ければ概算預かり日数での「見込み」
+function _dashEnd(c){
+  if (c.returnDate) return c.returnDate;
+  const est = (c.estHoldDays != null) ? c.estHoldDays : (window.pitEstHold ? pitEstHold(c.workType, c.dropType) : 3);
+  return ymd(addDays(_pd(c.reserveDate), est));
+}
+// 指定日(YYYY-MM-DD)の預かり台数（未来は概算日数での見込み＝予想）
+function dashOccupancy(dStr){
   return state.cards.filter(function(c){
-    if (!_dashHeld(c) || !c.reserveDate) return false;
-    if (c.reserveDate > dStr) return false;                       // まだ入庫していない
-    if (c.returnDate) return c.returnDate >= dStr;                // 返車日まで占有
-    return dStr <= todayStr;                                      // 返車日未定は今日まで（先は数えない）
+    if (!_dashHeld(c) || !c.reserveDate || c.reserveDate > dStr) return false;
+    return _dashEnd(c) >= dStr;
   }).length;
+}
+// チーム別 その日の入庫（予約）台数
+function dashIntake(team, dStr){
+  return state.cards.filter(function(c){ return c.boardId === team && c.reserveDate === dStr && _dashHeld(c); }).length;
 }
 
 // チーム別の預かり台数（boardId: default＝国産 / import＝輸入）
-function _dashHeldOnTeam(board, dStr, todayStr){
+function _dashHeldOnTeam(board, dStr){
   return state.cards.filter(function(c){
-    if (!_dashHeld(c) || c.boardId !== board || !c.reserveDate) return false;
-    if (c.reserveDate > dStr) return false;
-    if (c.returnDate) return c.returnDate >= dStr;
-    return dStr <= todayStr;
+    if (!_dashHeld(c) || c.boardId !== board || !c.reserveDate || c.reserveDate > dStr) return false;
+    return _dashEnd(c) >= dStr;
   }).length;
 }
 // 代車の最短空き（4台のうち1台でも空く最初の日）
@@ -136,14 +144,14 @@ function renderDashboard(){
 
   // 2週間の混雑バー
   h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>📅 これから2週間の混み具合</span><span class="dash-note">バー＝預かり台数／点線＝置ける ' + cap + ' 台</span></div>';
+  h += '<div class="dash-h"><span>📅 これから2週間の混み具合（置き場）</span><span class="dash-note">点線＝置ける ' + cap + ' 台／薄いバー＝予想（概算日数）</span></div>';
   h += '<div class="dash-bars">';
   days.forEach(function(x){
     const ratio = x.occ / cap;
     const lvi = _dashLevel(ratio);
     const hpx = Math.round((x.occ / maxOcc) * 84);
     const isToday = ymd(x.d) === tStr;
-    h += '<div class="dash-bar' + (isToday ? ' today' : '') + '">';
+    h += '<div class="dash-bar' + (isToday ? ' today' : '') + (ymd(x.d) > tStr ? ' is-forecast' : '') + '">';
     h += '<div class="dash-bar-n">' + x.occ + '</div>';
     h += '<div class="dash-bar-track"><div class="dash-bar-fill" style="height:' + Math.max(3, hpx) + 'px;background:' + lvi.c + '"></div><div class="dash-bar-cap" style="bottom:' + Math.round((cap / maxOcc) * 84) + 'px"></div></div>';
     h += '<div class="dash-bar-d">' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '</div>';
@@ -153,7 +161,27 @@ function renderDashboard(){
   h += '</div>';
   h += '</div>';
 
-  h += '<div class="dash-foot">混雑度は「置き場スペース × 預かり期間」で算出（整備士の工数・PIT枠は将来の補助指標）。置ける台数は設定で変更できるようにする予定（今は ' + cap + ' 台）。</div>';
+  // 予約の埋まり（チーム別・1日の上限）
+  const rc = (state.settings && state.settings.reserveCap) || { default:5, import:3 };
+  const capD = rc.default || 5, capI = rc.import || 3;
+  h += '<div class="dash-card"><div class="dash-h"><span>🗓 予約の埋まり（チーム別・1日の上限）</span><span class="dash-note">満＝打ち止め｜国産 ' + capD + ' ／ 輸入 ' + capI + '</span></div>';
+  h += '<div class="dash-cap">';
+  [{ key:'default', name:'🚗 国産', cap:capD }, { key:'import', name:'🌍 輸入', cap:capI }].forEach(function(t){
+    h += '<div class="dash-cap-row"><div class="dash-cap-name">' + t.name + '</div><div class="dash-cap-cells">';
+    days.forEach(function(x){
+      const cnt = dashIntake(t.key, ymd(x.d));
+      const full = cnt >= t.cap;
+      const near = !full && cnt >= t.cap - 1;
+      h += '<div class="dash-cap-cell' + (full ? ' full' : (near ? ' near' : '')) + (ymd(x.d) === tStr ? ' today' : '') + '" title="' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '：' + cnt + '/' + t.cap + '">' + (full ? '満' : cnt) + '</div>';
+    });
+    h += '</div></div>';
+  });
+  h += '<div class="dash-cap-row"><div class="dash-cap-name dash-cap-axis"></div><div class="dash-cap-cells">';
+  days.forEach(function(x){ h += '<div class="dash-cap-d">' + x.d.getDate() + '</div>'; });
+  h += '</div></div>';
+  h += '</div></div>';
+
+  h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は後で設定から変更できるようにする。</div>';
 
   wrap.innerHTML = h;
 }

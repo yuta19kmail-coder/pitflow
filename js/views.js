@@ -79,7 +79,7 @@ function openNewReserve(){
     id, status: 'reserved', boardId: state.currentBoardId || 'default', bayId: null,
     log: [{ label: '予約作成', at: Date.now() }],
     customer: '', tel: '', car: '', plate: '',
-    reserveDate: ymd(new Date()), reserveTime: '', returnDate: '',
+    reserveDate: ymd(new Date()), reserveTime: '', returnDate: '', estHoldDays: 5,
     menu: '', workType: null, dropType: null,
     needLoaner: false, needWash: false, urgent: false, memo: ''
   };
