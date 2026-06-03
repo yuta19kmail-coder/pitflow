@@ -6,10 +6,6 @@
 document.addEventListener('DOMContentLoaded', () => {
   showView('today');
 
-  document.getElementById('modal-detail').addEventListener('click', (e) => {
-    if (e.target.id === 'modal-detail') closeDetail();
-  });
-
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDetail();
   });

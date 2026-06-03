@@ -4,30 +4,31 @@
    ======================================== */
 
 let _editingCardId = null;
+let _returnView = 'today';   // カード画面を閉じたとき戻る先
 
 function openDetail(cardId){
-  _editingCardId = cardId;
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
+  _editingCardId = cardId;
+  if (state.currentView && state.currentView !== 'card') _returnView = state.currentView;
 
-  document.getElementById('md-title').innerHTML =
+  document.getElementById('card-title').innerHTML =
     '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span><br>' +
     (card.customer || '（未入力）') + ' 様 / ' + (card.car || '（車種未入力）');
 
   renderCardForm(card);
-  document.getElementById('modal-detail').classList.add('show');
+  showView('card');
+  const main = document.getElementById('main'); if (main) main.scrollTop = 0;
 }
 
 function closeDetail(){
+  if (state.currentView !== 'card') return;   // カード画面でなければ何もしない（ESC誤爆防止）
   // 閉じる前に、このカードから顧客控えを更新（入力補助用）
   const _c = state.cards.find(x => x.id === _editingCardId);
   if (_c && window.upsertCustomerFromCard) upsertCustomerFromCard(_c);
   _editingCardId = null;
-  document.getElementById('modal-detail').classList.remove('show');
-  // 編集内容を保存（localStorage 永続化）
   if (window.PitDB) PitDB.save();
-  // 表示中のビューを再描画して反映
-  if (state.currentView) showView(state.currentView);
+  showView(_returnView || 'today');
 }
 
 function renderCardForm(c){
