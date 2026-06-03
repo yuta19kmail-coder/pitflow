@@ -4,35 +4,62 @@
    ======================================== */
 
 let _editingCardId = null;
-let _returnView = 'today';   // カード画面を閉じたとき戻る先
+let _returnView = 'today';   // 全画面カードを閉じたとき戻る先
+let _cardTab = 'basic';      // カード内タブの現在地（card-tabs.js が参照）
+let _cardMode = 'page';      // 'page'＝新規入庫(全画面) / 'modal'＝各ビューから(ポップアップ)
+let _cardBodyId = 'md-body'; // フォームの描画先（card-tabs.js も参照）
 
-function openDetail(cardId){
+function _cardTitleHtml(card){
+  return '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span><br>' +
+    (card.customer || '（未入力）') + ' 様 / ' + (card.car || '（車種未入力）');
+}
+
+/* mode: 'page'＝全画面（新規入庫予約） / 'modal'＝ポップアップ（各ビューから開く） */
+function openCard(cardId, mode){
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
   _editingCardId = cardId;
-  if (state.currentView && state.currentView !== 'card') _returnView = state.currentView;
+  _cardTab = 'basic';
+  _cardMode = (mode === 'page') ? 'page' : 'modal';
 
-  document.getElementById('card-title').innerHTML =
-    '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span><br>' +
-    (card.customer || '（未入力）') + ' 様 / ' + (card.car || '（車種未入力）');
-
-  renderCardForm(card);
-  showView('card');
-  const main = document.getElementById('main'); if (main) main.scrollTop = 0;
+  if (_cardMode === 'modal'){
+    _cardBodyId = 'md-body-modal';
+    document.getElementById('card-title-modal').innerHTML = _cardTitleHtml(card);
+    renderCardForm(card);
+    document.getElementById('modal-detail').classList.add('show');
+  } else {
+    _cardBodyId = 'md-body';
+    if (state.currentView && state.currentView !== 'card') _returnView = state.currentView;
+    document.getElementById('card-title').innerHTML = _cardTitleHtml(card);
+    renderCardForm(card);
+    showView('card');
+    const main = document.getElementById('main'); if (main) main.scrollTop = 0;
+  }
 }
 
+// 各ビューのカードをクリック＝ポップアップで開く
+function openDetail(cardId){ openCard(cardId, 'modal'); }
+
 function closeDetail(){
-  if (state.currentView !== 'card') return;   // カード画面でなければ何もしない（ESC誤爆防止）
+  const modal = document.getElementById('modal-detail');
+  const modalOpen = modal && modal.classList.contains('show');
+  if (!modalOpen && state.currentView !== 'card') return;   // 何も開いていなければ無視（ESC誤爆防止）
   // 閉じる前に、このカードから顧客控えを更新（入力補助用）
   const _c = state.cards.find(x => x.id === _editingCardId);
   if (_c && window.upsertCustomerFromCard) upsertCustomerFromCard(_c);
   _editingCardId = null;
   if (window.PitDB) PitDB.save();
-  showView(_returnView || 'today');
+  if (modalOpen){
+    modal.classList.remove('show');
+    if (state.currentView) showView(state.currentView);   // 背後のビューを更新して反映
+  } else {
+    showView(_returnView || 'today');
+  }
 }
 
 function renderCardForm(c){
-  const body = document.getElementById('md-body');
+  const body = document.getElementById(_cardBodyId || 'md-body');
+  if (!body) return;
   let h = '';
 
   /* === 顧客呼び出し（入力補助・整備ソフトとは別の控え） === */
@@ -40,6 +67,18 @@ function renderCardForm(c){
   h += '<input id="cf-recall-input" class="cf-input" placeholder="🔍 過去の顧客・ナンバーから呼び出し（名前/ナンバー）" oninput="custSuggest(this.value)" autocomplete="off">';
   h += '<div id="cf-recall-list" class="cf-recall-list" style="display:none"></div>';
   h += '</div>';
+
+  /* === タブ === */
+  if (!_cardTab) _cardTab = 'basic';
+  h += '<div class="cf-tabs">'
+     + cfTabBtn('basic',  '📋 基本情報')
+     + cfTabBtn('flow',   '🕒 フロー')
+     + cfTabBtn('maint',  '🔧 整備')
+     + cfTabBtn('office', '🗂 バックオフィス')
+     + '</div>';
+
+  /* === 基本情報パネル === */
+  h += '<div class="cf-panel" data-tab="basic"' + (_cardTab === 'basic' ? '' : ' hidden') + '>';
 
   /* === 基本情報 === */
   h += sec('基本情報', '👤');
@@ -164,6 +203,11 @@ function renderCardForm(c){
   h += field('緊急対応', toggle(c, 'urgent', '緊急', '通常'));
   h += '</div>';
   h += secEnd();
+
+  h += '</div>'; // /基本情報パネル
+  h += '<div class="cf-panel" data-tab="flow"'   + (_cardTab === 'flow'   ? '' : ' hidden') + '>' + cfFlowHtml(c)   + '</div>';
+  h += '<div class="cf-panel" data-tab="maint"'  + (_cardTab === 'maint'  ? '' : ' hidden') + '>' + cfMaintHtml(c)  + '</div>';
+  h += '<div class="cf-panel" data-tab="office"' + (_cardTab === 'office' ? '' : ' hidden') + '>' + cfOfficeHtml(c) + '</div>';
 
   body.innerHTML = h;
 

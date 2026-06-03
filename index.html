@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=6">
+<link rel="stylesheet" href="css/polish.css?v=9">
 <link rel="stylesheet" href="css/launcher.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.5.0</div>
+    <div class="pl-ver">PitFlow v0.7.0</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.5.0</span>
+      <span class="ver">v0.7.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -82,7 +82,10 @@
   <div id="sidebar">
 
     <div class="si-section-title">ビュー</div>
-    <div class="si-item active" data-view="today" onclick="showView('today')">
+    <div class="si-item active" data-view="dashboard" onclick="showView('dashboard')">
+      <span class="icon">🏠</span><span>ダッシュボード</span>
+    </div>
+    <div class="si-item" data-view="today" onclick="showView('today')">
       <span class="icon">🌅</span><span>当日</span>
     </div>
     <div class="si-item" data-view="reserve" onclick="showView('reserve')">
@@ -127,8 +130,17 @@
   <!-- ===== メイン領域 ===== -->
   <div id="main">
 
+    <!-- ===== ダッシュボード ===== -->
+    <section id="view-dashboard" class="view active">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🏠</span>ダッシュボード</div>
+        <div class="view-actions"><button class="vh-btn" onclick="renderDashboard()">🔄 更新</button></div>
+      </div>
+      <div id="view-dashboard-body"></div>
+    </section>
+
     <!-- ===== 当日ビュー ===== -->
-    <section id="view-today" class="view active">
+    <section id="view-today" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">🌅</span>当日</div>
         <div class="view-actions">
@@ -286,33 +298,46 @@
   </div>
 </div>
 
+<!-- ===== カード詳細ポップアップ（各ビューからカードを開く時） ===== -->
+<div class="modal-backdrop" id="modal-detail" onclick="if(event.target.id==='modal-detail')closeDetail()">
+  <div class="modal-box card-modal">
+    <div class="modal-head">
+      <div class="modal-title" id="card-title-modal">入庫カード</div>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="modal-body" id="md-body-modal"></div>
+  </div>
+</div>
+
 <!-- ===== Firebase SDK（クラウド保存の足場・現状は初期化のみ／認証は後日） ===== -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=10"></script>
+<script src="js/state.js?v=11"></script>
 <script src="js/sample-data.js?v=9"></script>
 <script src="js/firebase-init.js?v=8"></script>
 <script src="js/db-pit.js?v=10"></script>
-<script src="js/views.js?v=12"></script>
-<script src="js/card-detail.js?v=10"></script>
+<script src="js/views.js?v=15"></script>
+<script src="js/card-detail.js?v=12"></script>
+<script src="js/card-tabs.js?v=2"></script>
 <script src="js/customers.js?v=1"></script>
 <script src="js/sample-customers.js?v=1"></script>
 <script src="js/sample-patterns.js?v=2"></script>
+<script src="js/dashboard.js?v=1"></script>
 <script src="js/today.js?v=9"></script>
 <script src="js/reserve.js?v=11"></script>
 <script src="js/return.js?v=10"></script>
-<script src="js/task.js?v=10"></script>
+<script src="js/task.js?v=11"></script>
 <script src="js/work.js?v=9"></script>
 <script src="js/result.js?v=9"></script>
 <script src="js/loaner.js?v=8"></script>
 <script src="js/auth-pit.js?v=8"></script>
 <script src="js/launcher.js?v=1"></script>
 <script src="js/holidays.js?v=1"></script>
-<script src="js/dnd.js?v=2"></script>
-<script src="js/main.js?v=9"></script>
+<script src="js/dnd.js?v=3"></script>
+<script src="js/main.js?v=10"></script>
 
 </body>
 </html>

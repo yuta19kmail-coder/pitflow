@@ -108,6 +108,8 @@ window.state = {
     spotHoliday: [],
     cutoffTime:  '17:00',
     openTime:    '09:00',
+    lotCapacity: 20,      // 同時に預かれる台数（置き場・代車待ち含む）＝混雑度の基準
+    holdDaysDefault: 3,   // 最短入庫の計算で使う「預かり想定日数」
   },
 
   workTypes: [

@@ -196,6 +196,63 @@
 .sp-photos{ display:flex; gap:8px; }
 .sp-photo{ width:54px; height:54px; border:1px dashed var(--border2); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:18px; color:var(--text3); }
 
+/* ===== ダッシュボード ===== */
+.dash-date{ font-size:14px; color:var(--text2); margin-bottom:14px; }
+.dash-kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:14px; }
+@media(max-width:680px){ .dash-kpis{ grid-template-columns:repeat(2,1fr); } }
+.dash-kpi{ background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:14px; }
+.dash-kpi-ic{ font-size:18px; }
+.dash-kpi-num{ font-size:28px; font-weight:800; line-height:1.1; margin-top:6px; }
+.dash-kpi-num span{ font-size:13px; font-weight:600; color:var(--text3); margin-left:3px; }
+.dash-kpi-l{ font-size:12px; color:var(--text2); margin-top:2px; }
+.dash-card{ background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:14px; }
+.dash-h{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:14px; font-weight:700; margin-bottom:12px; }
+.dash-note{ font-size:11px; color:var(--text3); font-weight:400; }
+.dash-lv{ font-size:12px; font-weight:700; color:#fff; padding:3px 10px; border-radius:999px; }
+.dash-gauge{ height:14px; background:var(--bg3); border-radius:999px; overflow:hidden; }
+.dash-gauge-fill{ height:100%; border-radius:999px; transition:width .3s; }
+.dash-sub{ font-size:11.5px; color:var(--text3); margin-top:8px; line-height:1.6; }
+.dash-earliest .dash-earliest-main{ font-size:22px; font-weight:800; color:var(--text); }
+.dash-earliest.ok .dash-earliest-main{ color:var(--brand); }
+.dash-bars{ display:flex; gap:6px; align-items:flex-end; overflow-x:auto; padding-top:6px; }
+.dash-bar{ flex:1; min-width:34px; text-align:center; }
+.dash-bar-n{ font-size:11px; font-weight:700; color:var(--text2); margin-bottom:3px; }
+.dash-bar-track{ position:relative; height:90px; background:var(--bg3); border-radius:6px; display:flex; align-items:flex-end; overflow:hidden; }
+.dash-bar-fill{ width:100%; border-radius:6px 6px 0 0; transition:height .3s; }
+.dash-bar-cap{ position:absolute; left:0; right:0; height:0; border-top:1.5px dashed var(--text3); opacity:.7; }
+.dash-bar.today .dash-bar-track{ outline:2px solid var(--brand); outline-offset:-2px; }
+.dash-bar-d{ font-size:10.5px; color:var(--text2); margin-top:4px; }
+.dash-bar-w{ font-size:10px; color:var(--text3); }
+.dash-foot{ font-size:11px; color:var(--text3); line-height:1.6; }
+
+/* ===== カード内タブ ===== */
+.cf-tabs{ display:flex; gap:2px; margin-bottom:14px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.card-modal{ width:min(760px,94vw); }
+.card-modal .modal-body{ max-height:calc(88dvh - 56px); overflow-y:auto; }
+.cf-tab{ padding:9px 13px; font-size:13px; color:var(--text2); background:none; border:0; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap; }
+.cf-tab:hover{ color:var(--text); }
+.cf-tab.on{ color:var(--brand); border-bottom-color:var(--brand); font-weight:700; }
+.cf-panel[hidden]{ display:none; }
+
+/* チェックリスト（整備・バックオフィス） */
+.cf-checks{ display:flex; flex-direction:column; gap:6px; }
+.cf-chk{ display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--border); border-radius:8px; background:var(--bg2); cursor:pointer; transition:border-color .1s, background .1s; }
+.cf-chk.on{ border-color:var(--brand); background:var(--brand-soft); }
+.cf-chkbox{ width:21px; height:21px; border-radius:5px; border:1.5px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:var(--brand); flex:0 0 auto; }
+.cf-chk.on .cf-chkbox{ border-color:var(--brand); }
+.cf-chkl{ font-size:13.5px; }
+.cf-hint{ font-size:11px; color:var(--text3); margin-top:10px; line-height:1.6; }
+
+/* フロー（進捗ログ・タイムライン） */
+.cf-flow{ display:flex; flex-direction:column; }
+.cf-flowrow{ display:flex; gap:12px; padding:7px 0; position:relative; }
+.cf-flowdot{ width:11px; height:11px; border-radius:50%; background:var(--border2); margin-top:3px; flex:0 0 auto; box-shadow:0 0 0 3px var(--bg2); position:relative; z-index:1; }
+.cf-flowrow.now .cf-flowdot{ background:var(--brand); }
+.cf-flow .cf-flowrow:not(:last-child)::before{ content:""; position:absolute; left:5px; top:15px; bottom:-7px; width:1px; background:var(--border); }
+.cf-flowt{ font-size:13.5px; font-weight:600; }
+.cf-flowrow.now .cf-flowt{ color:var(--brand); }
+.cf-flowd{ font-size:11.5px; color:var(--text3); margin-top:1px; }
+
 /* ===== 入庫カード 全画面ページ（新規予約／編集 共通） ===== */
 .card-page-head{ position:sticky; top:0; z-index:5; background:var(--bg); padding-bottom:12px; margin-bottom:4px; border-bottom:1px solid var(--border); align-items:center; }
 .card-page-body{ max-width:860px; }

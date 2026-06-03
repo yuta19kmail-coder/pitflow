@@ -4,7 +4,7 @@
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
-  showView('today');
+  showView('dashboard');
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeDetail();

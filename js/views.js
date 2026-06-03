@@ -24,6 +24,7 @@ function showView(viewId){
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
   if (viewId === 'samplepat' && window.renderSamplePatterns) renderSamplePatterns();
+  if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
 }
 
 function toggleTheme(){
@@ -76,6 +77,7 @@ function openNewReserve(){
   const id = 'c' + Date.now();
   const card = {
     id, status: 'reserved', boardId: state.currentBoardId || 'default', bayId: null,
+    log: [{ label: '予約作成', at: Date.now() }],
     customer: '', tel: '', car: '', plate: '',
     reserveDate: ymd(new Date()), reserveTime: '', returnDate: '',
     menu: '', workType: null, dropType: null,
@@ -83,7 +85,7 @@ function openNewReserve(){
   };
   state.cards.push(card);
   if (window.PitDB) PitDB.save();
-  openDetail(id);
+  openCard(id, 'page');   // 新規入庫予約＝全画面
 }
 function goToday(){
   state.reserveDate = new Date();

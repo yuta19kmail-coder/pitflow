@@ -60,12 +60,13 @@ function advanceCard(cardId, dir){
   const flow = board.cols.filter(col => !col.side).map(col => col.id);
   let i = flow.indexOf(c.status);
   if (i < 0){
-    if (dir > 0){ c.status = flow[0]; if (window.PitDB) PitDB.save(); renderTask(); }
+    if (dir > 0){ c.status = flow[0]; if (window.logFlow) logFlow(c, statusLabel(flow[0]) + 'へ'); if (window.PitDB) PitDB.save(); renderTask(); }
     return;
   }
   const ni = i + dir;
   if (ni < 0 || ni >= flow.length) return;
   c.status = flow[ni];
+  if (window.logFlow) logFlow(c, statusLabel(flow[ni]) + 'へ');
   if (window.PitDB) PitDB.save();
   renderTask();
 }

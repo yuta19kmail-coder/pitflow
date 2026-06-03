@@ -19,6 +19,7 @@
     if (kind === 'status') {
       if (c.status === val) return;
       c.status = val;
+      if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');
     } else if (kind === 'bay') {
       const nv = val || null;
       if (c.bayId === nv) return;
