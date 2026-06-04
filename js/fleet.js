@@ -126,25 +126,39 @@ function flMonthCalHtml(){
   return h;
 }
 
-/* 日モードのカレンダー（1列＝1日） */
+/* 日モードのカレンダー（1列＝1日・代車の利用状況を透かし表示） */
 function flDayCalHtml(y, mo){
   const last = new Date(y, mo+1, 0).getDate();
   const vehicles = _flAllVehicles();
-  let h = '<div class="fl-cal-wrap" id="fl-cal-scroll"><div class="fl-cal" style="grid-template-columns:120px repeat(' + last + ', minmax(56px,1fr))">';
-  h += '<div class="fl-cal-h fl-cal-corner">車両</div>';
+  const closedDow = (state.settings && state.settings.closedDow) || [];
+  const metas = [];
   for (let d = 1; d <= last; d++){
     const dt = new Date(y, mo, d);
     const dow = dt.getDay();
-    h += '<div class="fl-cal-h' + (dow === 0 ? ' sun' : (dow === 6 ? ' sat' : '')) + '">' + d + '<span>' + '日月火水木金土'[dow] + '</span></div>';
+    const ds = y + '-' + String(mo+1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    metas.push({ d: d, ds: ds, dow: dow, hol: (window.Holidays && Holidays.name(ds)) || null, closed: closedDow.indexOf(dow) >= 0 });
   }
+  let h = '<div class="fl-cal-wrap" id="fl-cal-scroll"><div class="fl-cal" style="grid-template-columns:120px repeat(' + last + ', minmax(56px,1fr))">';
+  h += '<div class="fl-cal-h fl-cal-corner">車両</div>';
+  metas.forEach(function(m){
+    h += '<div class="fl-cal-h' + (m.dow === 0 ? ' sun' : (m.dow === 6 ? ' sat' : '')) + (m.hol ? ' fl-holh' : '') + (m.closed ? ' fl-closedh' : '') + '"' + (m.hol ? ' title="' + _fleetEsc(m.hol) + '"' : '') + '>' + m.d + '<span>' + '日月火水木金土'[m.dow] + (m.closed ? '・休' : '') + (m.hol ? '・祝' : '') + '</span></div>';
+  });
   vehicles.forEach(function(v){
+    const isLoanerVeh = (state.loaners || []).some(function(l){ return l.id === v.id; });
     h += '<div class="fl-cal-name" title="' + _fleetEsc(v.model || '') + '">' + _fleetEsc(v.name) + '</div>';
-    for (let d = 1; d <= last; d++){
-      const ds = y + '-' + String(mo+1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    metas.forEach(function(m){
+      const ds = m.ds;
       const sh = v.shakenDate === ds;
       const tk = v.tenkenDate === ds;
       const evs = _flEvents().filter(function(e){ return e.vehicleId === v.id && e.fromDate <= ds && e.toDate >= ds; });
-      h += '<div class="fl-cal-cell fl-day" onclick="flOpenEventModal(\'' + v.id + '\',\'' + ds + '\')">';
+      // 代車の貸出状況（利用カレンダー）を透かして重ねる
+      let useCls = '', useTag = '';
+      if (isLoanerVeh){
+        const a = (state.loanerAssigns || []).find(function(x){ return x.loanerId === v.id && x.fromDate <= ds && x.toDate >= ds; });
+        if (a){ useCls = ' fl-use'; if (a.fromDate === ds) useTag = '<span class="fl-use-tag">' + _fleetEsc(a.customer || '貸出') + '</span>'; }
+      }
+      h += '<div class="fl-cal-cell fl-day' + useCls + (m.closed ? ' fl-closedc' : '') + (m.hol ? ' fl-holc' : '') + '" onclick="flOpenEventModal(\'' + v.id + '\',\'' + ds + '\')">';
+      h += useTag;
       if (sh) h += '<span class="fl-bdg shaken">車検</span>';
       if (tk) h += '<span class="fl-bdg tenken">12点</span>';
       evs.forEach(function(e){
@@ -152,7 +166,7 @@ function flDayCalHtml(y, mo){
         h += '<span class="fl-evt" style="background:' + t.color + '" onclick="event.stopPropagation();flOpenEventModal(null,null,\'' + e.id + '\')">' + _fleetEsc((e.label || t.label).slice(0, 4)) + '</span>';
       });
       h += '</div>';
-    }
+    });
   });
   h += '</div></div>';
   return h;

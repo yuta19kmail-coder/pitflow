@@ -128,7 +128,7 @@ window.state = {
   ],
 
   settings: {
-    closedDow:   [],   // 定休曜日（日曜も営業のため空。将来は会社カレンダー＝ScheduleFlowから取得予定）
+    closedDow:   [3],  // 定休曜日（仮＝水曜。日曜は営業。将来は会社カレンダー＝ScheduleFlowマスターから取得予定）
     spotClosed:  [],
     spotHoliday: [],
     cutoffTime:  '17:00',
