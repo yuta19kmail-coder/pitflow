@@ -17,8 +17,8 @@
     { key:'scheduleflow', url:'https://yuta19kmail-coder.github.io/scheduleflow/',icon:'📅', name:'ScheduleFlow',color:'#dc2626' },
     { key:'carflow',      url:'https://carflow.kobayashi-motors.com',             icon:'🚙', name:'CarFlow',     color:'#378ADD' },
     { key:'stockflow',    url:'https://stockflow.kobayashi-motors.com',           icon:'📦', name:'StockFlow',   color:'#7c3aed' },
-    { key:'coreboard',    url:'https://yuta19kmail-coder.github.io/coreboard/',   icon:'📋', name:'CoreBoard',   color:'#06b6d4' },
-    { key:'corenote',     url:'https://yuta19kmail-coder.github.io/corenote/',    icon:'📝', name:'CoreNote',    color:'#ec4899' },
+    { key:'coreboard',    url:'https://yuta19kmail-coder.github.io/CoreBoard/',   icon:'📋', name:'CoreBoard',   color:'#06b6d4' },
+    { key:'corenote',     url:'https://yuta19kmail-coder.github.io/CoreNote/',    icon:'📝', name:'CoreNote',    color:'#ec4899' },
   ];
 
   function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }
