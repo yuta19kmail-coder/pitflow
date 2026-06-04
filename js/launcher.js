@@ -14,7 +14,7 @@
   const APPS = [
     { key:'coreflow',     url:'https://coreflow.kobayashi-motors.com',           icon:'🏠', name:'CoreFlow',     color:'#e2e8f0' },
     { key:'pitflow',      url:'https://yuta19kmail-coder.github.io/pitflow/',     icon:'🔧', name:'PitFlow',     color:'#1db97a' },
-    { key:'scheduleflow', url:'https://yuta19kmail-coder.github.io/scheduleflow/',icon:'📅', name:'ScheduleFlow',color:'#dc2626' },
+    { key:'mhs',          url:'https://yuta19kmail-coder.github.io/mhs/',         icon:'📅', name:'MHS',        color:'#dc2626' },
     { key:'carflow',      url:'https://carflow.kobayashi-motors.com',             icon:'🚙', name:'CarFlow',     color:'#378ADD' },
     { key:'stockflow',    url:'https://stockflow.kobayashi-motors.com',           icon:'📦', name:'StockFlow',   color:'#7c3aed' },
     { key:'coreboard',    url:'https://yuta19kmail-coder.github.io/CoreBoard/',   icon:'📋', name:'CoreBoard',   color:'#06b6d4' },

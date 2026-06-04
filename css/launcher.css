@@ -3,7 +3,7 @@
    - サイドバー底の <div data-cf-launcher data-current="..."></div> に挿入
    - 全てのオーバーレイは body 直下に launcher.js が動的に注入
    - クラス接頭辞は cf- で固定（衝突回避）
-   - 7アプリ対応（CoreFlow / PitFlow / ScheduleFlow / CarFlow / StockFlow / CoreBoard / CoreNote）
+   - 7アプリ対応（CoreFlow / PitFlow / MHS / CarFlow / StockFlow / CoreBoard / CoreNote）
    ============================================ */
 
 /* === マウント要素（flex列のサイドバー内では最下部に貼り付け） === */
@@ -157,7 +157,7 @@ body.cf-open .cf-lo-item.p7{transition-delay:.18s, .18s}
 .cf-lo-ball.cf-carflow{background:#378ADD}
 .cf-lo-ball.cf-stockflow{background:#7c3aed}
 .cf-lo-ball.cf-pitflow{background:#1db97a}
-.cf-lo-ball.cf-scheduleflow{background:#dc2626}
+.cf-lo-ball.cf-mhs{background:#dc2626}
 .cf-lo-ball.cf-coreboard{background:#06b6d4}
 .cf-lo-ball.cf-corenote{background:#ec4899}
 
