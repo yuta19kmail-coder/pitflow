@@ -147,6 +147,9 @@ window.state = {
     // 🧩 ルール（ノーコード積み上げ式・rules.js）。rules=ルール配列／ruleDict=言葉→％の辞書
     rules: [],
     ruleDict: { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 },
+    // 🏖 長期休み（お盆・年末年始・GW等）。期間中は入庫受付を自動0（預かり継続は可）。
+    // 月目標は変わらないので「前1週間/明け1週間」ルールで補う運用。将来はMHS会社カレンダーから取得
+    longBreaks: [],   // [{ label:'お盆', from:'2026-08-11', to:'2026-08-16' }, ...]
   },
 
   workTypes: [

@@ -178,8 +178,8 @@ function renderDashboard(){
       const stop = capEff <= 0;
       const full = !stop && cnt >= capEff;
       const near = !stop && !full && cnt >= capEff - 1;
-      const ruleTip = eff.rules.length ? '｜🧩ルール' + eff.rules.map(function(n){ return '#' + n; }).join('・') + '（' + (eff.pct > 0 ? '+' : '') + eff.pct + '%）' : '';
-      h += '<div class="dash-cap-cell' + ((stop || full) ? ' full' : (near ? ' near' : '')) + (ds === tStr ? ' today' : '') + '" title="' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '：' + cnt + '/' + capEff + ruleTip + '">' + (stop ? '停' : (full ? '満' : cnt)) + '</div>';
+      const ruleTip = eff.closed ? ('｜' + eff.closed + '＝受付なし') : (eff.rules.length ? '｜🧩ルール' + eff.rules.map(function(n){ return '#' + n; }).join('・') + '（' + (eff.pct > 0 ? '+' : '') + eff.pct + '%）' : '');
+      h += '<div class="dash-cap-cell' + (eff.closed ? ' closed' : ((stop || full) ? ' full' : (near ? ' near' : ''))) + (ds === tStr ? ' today' : '') + '" title="' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '：' + (eff.closed ? eff.closed : cnt + '/' + capEff) + ruleTip + '">' + (eff.closed ? '休' : (stop ? '停' : (full ? '満' : cnt))) + '</div>';
     });
     h += '</div></div>';
   });

@@ -37,6 +37,8 @@
     { id: 'holiday',     label: '祝日' },
     { id: 'preHoliday',  label: '祝日の前日' },
     { id: 'postHoliday', label: '祝日の翌日' },
+    { id: 'preBreak',    label: '長期休みの前1週間' },
+    { id: 'postBreak',   label: '長期休み明け1週間' },
     { id: 'range',       label: '期間を指定…' },
   ];
   const TARGET = [
@@ -58,7 +60,7 @@
     { id: 'warn',     label: '⚠ 注意表示',      grp: 'warn' },
   ];
   const DICT_LABEL = { increase: '増やす', decrease: '減らす', careful: '気を付ける', minimize: 'できる限り無くす', allow: '許容する' };
-  const KEYS = ['reserveCap', 'target', 'unitPrice', 'rules', 'ruleDict'];
+  const KEYS = ['reserveCap', 'target', 'unitPrice', 'rules', 'ruleDict', 'longBreaks'];
 
   /* ===== 下書き（編集モード） ===== */
   let _draft = null;
@@ -73,7 +75,42 @@
       unitPrice:  s.unitPrice  || { default: 83000, import: 130000 },
       rules:      s.rules      || [],
       ruleDict:   s.ruleDict   || { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 },
+      longBreaks: s.longBreaks || [],
     }));
+  }
+
+  function _breaks(cfg) { return (cfg && cfg.longBreaks) || []; }
+
+  /* その日が長期休み中なら該当の休みを返す */
+  function _inBreak(cfg, dStr) {
+    const bs = _breaks(cfg);
+    for (let i = 0; i < bs.length; i++) {
+      const b = bs[i];
+      if (b.from && b.to && dStr >= b.from && dStr <= b.to) return b;
+    }
+    return null;
+  }
+  /* 長期休みの前nDays日間か（休み初日は含まない） */
+  function _nearBreak(cfg, dStr, side, nDays) {
+    const bs = _breaks(cfg);
+    for (let i = 0; i < bs.length; i++) {
+      const b = bs[i];
+      if (!b.from || !b.to) continue;
+      if (side === 'pre') {
+        const from = _addDaysStr(b.from, -nDays);
+        if (dStr >= from && dStr < b.from) return b;
+      } else {
+        const to = _addDaysStr(b.to, nDays);
+        if (dStr > b.to && dStr <= to) return b;
+      }
+    }
+    return null;
+  }
+  function _addDaysStr(ds, n) {
+    const p = String(ds).split('-');
+    const d = new Date(+p[0], +p[1] - 1, +p[2]);
+    d.setDate(d.getDate() + n);
+    return _ds(d);
   }
 
   function _rules() {
@@ -115,7 +152,7 @@
 
   /* ===== 判定エンジン（cfg指定版＝内部用） ===== */
 
-  function _match(r, d, dStr) {
+  function _match(r, d, dStr, cfg) {
     const dow = d.getDay(), day = d.getDate();
     const closed = (state.settings.closedDow || []);   // 定休は設定ページの本番値を常に使う
     switch (r.when) {
@@ -129,6 +166,8 @@
       case 'holiday':     return !!_holName(dStr);
       case 'preHoliday':  return !!_holName(_ds(_shift(d, 1)));
       case 'postHoliday': return !!_holName(_ds(_shift(d, -1)));
+      case 'preBreak':    return !!_nearBreak(cfg, dStr, 'pre', 7);
+      case 'postBreak':   return !!_nearBreak(cfg, dStr, 'post', 7);
       case 'range':       return !!(r.from && r.to && dStr >= r.from && dStr <= r.to);
       default:
         if (r.when && r.when.slice(0, 3) === 'dow') return dow === +r.when.slice(3);
@@ -143,7 +182,7 @@
     const out = { byTarget: {}, warns: [] };
     (cfg.rules || []).forEach(function (r, i) {
       if (r.on === false) return;
-      if (!_match(r, d, dateStr)) return;
+      if (!_match(r, d, dateStr, cfg)) return;
       if (r.action === 'warn') {
         out.warns.push({ no: i + 1, msg: r.note || '注意', target: r.target });
         return;
@@ -158,6 +197,17 @@
   }
 
   function _effC(cfg, dateStr, target, base) {
+    /* 入庫の枠（予約枠）は、長期休み・定休日＝営業していない日なので自動で0
+       ※置き場(lotNormal)は対象外＝休み中も預かり車は置き場を使い続ける */
+    if (target === 'capDefault' || target === 'capImport' || target === 'capBoth') {
+      const br = _inBreak(cfg, dateStr);
+      if (br) return { value: 0, pct: -100, zero: true, rules: [], closed: '🏖 ' + (br.label || '長期休み') };
+      const pp = String(dateStr).split('-');
+      const dw = new Date(+pp[0], +pp[1] - 1, +pp[2]).getDay();
+      if ((state.settings.closedDow || []).indexOf(dw) >= 0) {
+        return { value: 0, pct: -100, zero: true, rules: [], closed: '定休日' };
+      }
+    }
     const rs = _rulesForC(cfg, dateStr);
     let pct = 0, zero = false, rules = [];
     function acc(x) { if (!x) return; pct += x.pct; zero = zero || x.zero; rules = rules.concat(x.rules); }
@@ -174,6 +224,43 @@
   /* 公開版＝常に「反映済み（本番）」を読む。ダッシュボード等はこれを使う */
   window.pitRulesFor  = function (dateStr) { return _rulesForC(state.settings, dateStr); };
   window.pitEffective = function (dateStr, target, base) { return _effC(state.settings, dateStr, target, base); };
+
+  /* ===== 営業日ベースの期配分（2026-06-04 ゆうた設計）=====
+     理論値は「月 − 定休日 − 長期休み」の営業日数で算出し、期（月4分割）へ営業日数比で再振り分け。
+     ÷4の単純割りはしない。祝日は営業扱い（日曜営業の会社）。将来はMHS会社カレンダーに置換。
+     休み直前・直後の増減は自動でやらず、別途ルールで積む（パーツが来ない等の現場事情はルール側）。 */
+
+  function _isBizDay(cfg, dStr) {
+    const p = String(dStr).split('-');
+    const d = new Date(+p[0], +p[1] - 1, +p[2]);
+    if ((state.settings.closedDow || []).indexOf(d.getDay()) >= 0) return false;
+    if (_inBreak(cfg, dStr)) return false;
+    return true;
+  }
+
+  function _qAllocC(cfg, y, m) {   // m=1〜12
+    const tg = cfg.target || { monthMin: 15000000, monthMax: 20000000 };
+    const last = new Date(y, m, 0).getDate();
+    const qs = [{ f: 1, t: 7 }, { f: 8, t: 15 }, { f: 16, t: 23 }, { f: 24, t: last }];
+    let total = 0;
+    const out = qs.map(function (q) {
+      let days = 0;
+      for (let dd = q.f; dd <= q.t; dd++) {
+        const ds = y + '-' + String(m).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+        if (_isBizDay(cfg, ds)) days++;
+      }
+      total += days;
+      return { from: q.f, to: q.t, days: days };
+    });
+    out.forEach(function (q) {
+      q.min = total ? Math.round(tg.monthMin * q.days / total) : 0;
+      q.max = total ? Math.round(tg.monthMax * q.days / total) : 0;
+    });
+    return { total: total, q: out };
+  }
+
+  /* 公開版（本番設定で計算）：クォーター集計エンジン・ダッシュボードが使う */
+  window.pitQAlloc = function (y, m) { return _qAllocC(state.settings, y, m); };
 
   /* ===== 画面 ===== */
 
@@ -232,7 +319,7 @@
       h += '<div class="ps-grid" style="margin-top:12px">';
       h += '<label class="ps-lb">最低目標（月） <input type="number" class="ps-in ps-num" id="rb-tg-min" value="' + Math.round(tg.monthMin / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
       h += '<label class="ps-lb">最高目標＝天井（月） <input type="number" class="ps-in ps-num" id="rb-tg-max" value="' + Math.round(tg.monthMax / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
-      h += '<span class="ps-lb">→ 期換算 <b id="rb-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／期</span></span>';
+      h += '<span class="ps-lb">→ 目安(単純÷4) <b id="rb-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／期 ※実際は下の営業日配分</span></span>';
       h += '</div>';
       h += '<div class="ps-grid" style="margin-top:12px">';
       h += '<label class="ps-lb">🚗 国産の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-d" value="' + manStr(up.default) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
@@ -240,6 +327,47 @@
       h += '</div>';
       h += '<div class="ps-hint">※ 単価は初期値（実績：国産8.3万・輸入13万）。返車完了の確定金額が直近3ヶ月で10台以上貯まると実績平均に自動切替。</div>';
     }
+    h += '</div>';
+
+    /* 🏖 長期休み */
+    const brs = c.longBreaks || [];
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🏖 長期休み（お盆・年末年始・GWなど）'
+       + (ed ? '<button class="vh-btn" style="margin-left:auto" onclick="pitBreakAdd()">＋ 休みを追加</button>' : '')
+       + '</div>';
+    h += '<div class="ps-desc">期間中は<b>入庫受付が自動で0</b>（営業していないため。預かり継続は可＝置き場は使われたまま）。下の配分も営業日数から自動で除外。</div>';
+    if (!brs.length) {
+      h += '<div class="ps-hint">登録なし。' + (ed ? '「＋ 休みを追加」で登録してください。' : '「✏️ 編集する」から登録できます。') + '</div>';
+    }
+    brs.forEach(function (b, i) {
+      if (!ed) {
+        h += '<div class="rl-row rl-vw"><span class="rl-no" style="background:#0e7490">🏖</span><span class="rl-vtxt"><b>' + esc(b.label || '休み') + '</b>　' + esc(b.from || '?') + ' 〜 ' + esc(b.to || '?') + '</span></div>';
+      } else {
+        h += '<div class="rl-row">';
+        h += '<span class="rl-no" style="background:#0e7490">🏖</span>';
+        h += '<input type="text" class="ps-in rl-brk-lb" placeholder="名前（例：お盆）" value="' + esc(b.label || '') + '" onchange="pitBreakEdit(' + i + ',\'label\',this.value)">';
+        h += '<input type="date" class="ps-in" value="' + esc(b.from || '') + '" onchange="pitBreakEdit(' + i + ',\'from\',this.value)">';
+        h += '<span class="rl-jo">〜</span>';
+        h += '<input type="date" class="ps-in" value="' + esc(b.to || '') + '" onchange="pitBreakEdit(' + i + ',\'to\',this.value)">';
+        h += '<button class="rl-del" title="削除" onclick="pitBreakDel(' + i + ')">🗑</button>';
+        h += '</div>';
+      }
+    });
+    h += '<div class="ps-hint">⚠ <b>休みが始まる週は要注意</b>：預かってもパーツが届かず返せない（置き場が埋まりっぱなしになる）。定石＝「長期休みの前1週間」×「預かり入庫」を「気を付ける」＋⚠注意表示。補いは営業日配分が自動でやるので、さらに足すなら「長期休み明け1週間」×「増やす」をルールで。</div>';
+    h += '</div>';
+
+    /* 📐 今月の配分（営業日ベース・自動計算） */
+    const _now = new Date();
+    const alloc = _qAllocC(c, _now.getFullYear(), _now.getMonth() + 1);
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">📐 今月の配分（' + (_now.getMonth() + 1) + '月・営業日ベース・自動計算' + (ed ? '＝プレビュー' : '') + '）</div>';
+    h += '<div class="ps-desc">月の目標を<b>営業日数（月−定休日−長期休み）の比率</b>で各期へ再振り分け。÷4の単純割りではない。祝日は営業扱い。将来はMHSの会社カレンダー（全社営業日マスター）から取得。</div>';
+    h += '<table class="rl-alloc"><tr><th>期</th><th>営業日</th><th>目標</th><th>天井</th></tr>';
+    alloc.q.forEach(function (q, i) {
+      h += '<tr><td>' + (i + 1) + '期（' + q.from + '〜' + q.to + '日）</td><td>' + q.days + '日</td><td><b>' + Math.round(q.min / 10000) + '</b>万円</td><td><b>' + Math.round(q.max / 10000) + '</b>万円</td></tr>';
+    });
+    h += '<tr><td class="dim">合計</td><td class="dim">' + alloc.total + '日</td><td class="dim">' + Math.round((c.target || {}).monthMin / 10000 || 0) + '万円</td><td class="dim">' + Math.round((c.target || {}).monthMax / 10000 || 0) + '万円</td></tr>';
+    h += '</table>';
     h += '</div>';
 
     /* ② 積み上げルール */
@@ -419,6 +547,30 @@
     _flash('🟡 削除（未確定・OKで確定）');
   };
 
+  /* 長期休みの編集（下書きにだけ効く） */
+  window.pitBreakAdd = function () {
+    if (!_draft) return;
+    if (!_draft.longBreaks) _draft.longBreaks = [];
+    _draft.longBreaks.push({ label: '', from: '', to: '' });
+    renderRules();
+    _flash('🟡 追加（未確定）');
+  };
+  window.pitBreakEdit = function (i, field, val) {
+    if (!_draft) return;
+    const b = (_draft.longBreaks || [])[i];
+    if (!b) return;
+    b[field] = val;
+    if (b.from && b.to && b.to < b.from) b.to = b.from;   // 終わりが始まりより前なら補正
+    renderRules();
+    _flash('🟡 プレビューに反映（未確定）');
+  };
+  window.pitBreakDel = function (i) {
+    if (!_draft) return;
+    (_draft.longBreaks || []).splice(i, 1);
+    renderRules();
+    _flash('🟡 削除（未確定・OKで確定）');
+  };
+
   window.pitRuleDictApply = function () {
     if (!_draft) return;
     const dict = _dict();
@@ -461,20 +613,21 @@
       const ds = _ds(d);
       const hol = _holName(ds);
       const closed = (state.settings.closedDow || []).indexOf(d.getDay()) >= 0;
-      const cls = (d.getDay() === 0 || hol) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
-      g += '<div class="rl-g-h' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (closed ? '・休' : '') + '</div>';
+      const brk = _inBreak(c, ds);
+      const cls = (d.getDay() === 0 || hol || brk) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
+      g += '<div class="rl-g-h' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (brk ? '・連休' : (closed ? '・休' : '')) + '</div>';
     });
     g += '<div class="rl-g-n">🚗 国産枠</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const eff = _effC(c, ds, 'capDefault', rc.default != null ? rc.default : 5);
-      g += '<div class="rl-g-c' + cellCls(eff) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.zero ? '停' : eff.value) + '</div>';
+      g += '<div class="rl-g-c' + (eff.closed ? ' closed' : cellCls(eff)) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.closed ? '休' : (eff.zero ? '停' : eff.value)) + '</div>';
     });
     g += '<div class="rl-g-n">🌍 輸入枠</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const eff = _effC(c, ds, 'capImport', rc.import != null ? rc.import : 3);
-      g += '<div class="rl-g-c' + cellCls(eff) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.zero ? '停' : eff.value) + '</div>';
+      g += '<div class="rl-g-c' + (eff.closed ? ' closed' : cellCls(eff)) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.closed ? '休' : (eff.zero ? '停' : eff.value)) + '</div>';
     });
     g += '<div class="rl-g-n">⚠ 注意</div>';
     days.forEach(function (d) {
@@ -502,7 +655,8 @@
     function line(label, target, base, unit) {
       const e = _effC(c, dStr, target, base);
       let t = '<div class="rl-tl"><span class="rl-tl-n">' + label + '</span>';
-      if (e.zero) t += '<span class="rl-tl-v stop">停止(0' + unit + ')</span>';
+      if (e.closed) t += '<span class="rl-tl-v stop">休（' + esc(e.closed) + '＝受付なし）</span>';
+      else if (e.zero) t += '<span class="rl-tl-v stop">停止(0' + unit + ')</span>';
       else if (e.rules.length) t += '<span class="rl-tl-v">' + base + ' → <b>' + e.value + unit + '</b>(' + (e.pct > 0 ? '+' : '') + e.pct + '%)</span>';
       else t += '<span class="rl-tl-v">' + base + unit + '(基本のまま)</span>';
       if (e.rules.length) t += '<span class="rl-tl-r">ルール ' + e.rules.map(function (n) { return '#' + n; }).join('・') + ' が効いています</span>';
@@ -515,7 +669,9 @@
       return '<div class="rl-tl"><span class="rl-tl-n">' + label + '</span><span class="rl-tl-v">' + txt + '</span><span class="rl-tl-r">ルール ' + t.rules.map(function (n) { return '#' + n; }).join('・') + ' が効いています</span></div>';
     }
 
-    let h = '<div class="rl-day-t">📅 ' + (dd.getMonth() + 1) + '月' + dd.getDate() + '日（' + '日月火水木金土'[dd.getDay()] + '）' + (_holName(dStr) ? '・🎌' + esc(_holName(dStr)) : '') + (_editing() ? '<span class="rl-ebadge" style="margin-left:8px">プレビュー</span>' : '') + ' の中身</div>';
+    const dayBrk = _inBreak(c, dStr);
+    let h = '<div class="rl-day-t">📅 ' + (dd.getMonth() + 1) + '月' + dd.getDate() + '日（' + '日月火水木金土'[dd.getDay()] + '）' + (_holName(dStr) ? '・🎌' + esc(_holName(dStr)) : '') + (dayBrk ? '・🏖' + esc(dayBrk.label || '長期休み') : '') + (_editing() ? '<span class="rl-ebadge" style="margin-left:8px">プレビュー</span>' : '') + ' の中身</div>';
+    if (dayBrk) h += '<div class="ps-hint" style="margin:0 0 8px">🏖 長期休み中＝入庫受付なし。預かり中の車は置き場を使い続けます（置き場の通常枠は生きたまま）。</div>';
     h += line('予約枠（国産）', 'capDefault', rc.default != null ? rc.default : 5, '台');
     h += line('予約枠（輸入）', 'capImport', rc.import != null ? rc.import : 3, '台');
     h += line('置き場の通常枠', 'lotNormal', lotNormal, '台');
