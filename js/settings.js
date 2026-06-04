@@ -48,31 +48,10 @@
        + '<span class="ps-status" id="ps-status"></span>'
        + '<button class="vh-btn" onclick="pitSettingsReset()">↩ 初期値に戻す</button></div>';
 
-    /* ===== 予約の上限 ===== */
-    h += '<div class="ps-card">';
-    h += '<div class="ps-h">🗓 1日の予約上限（チーム別）</div>';
-    h += '<div class="ps-desc">1日に受けられる入庫予約の上限。国産と輸入で担当の人が別なので、それぞれで数えます。ダッシュボードの「予約の埋まり」（満＝打ち止め）の基準。</div>';
-    h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">🚗 国産車チーム ' + numIn('ps-cap-default', rc.default != null ? rc.default : 5, 0, 99) + '<span class="ps-unit">台／日</span></label>';
-    h += '<label class="ps-lb">🌍 輸入車チーム ' + numIn('ps-cap-import', rc.import != null ? rc.import : 3, 0, 99) + '<span class="ps-unit">台／日</span></label>';
-    h += '</div></div>';
-
-    /* ===== 売上目標と単価 ===== */
-    const tg = s.target || { monthMin: 15000000, monthMax: 20000000 };
-    const up = s.unitPrice || { default: 83000, import: 130000 };
-    h += '<div class="ps-card">';
-    h += '<div class="ps-h">📈 売上目標と平均単価（クォーター集計・受付終了判定の基準）</div>';
-    h += '<div class="ps-desc">月の<b>最低目標</b>と<b>最高目標（工場が回せる天井）</b>。クォーター（月4分割）の判定は÷4で自動換算。抱えている売上見込みが天井に届いたクォーターは「受付終了」になる予定。</div>';
-    h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">最低目標（月） ' + numIn('ps-tg-min', Math.round(tg.monthMin / 10000), 0, 99999) + '<span class="ps-unit">万円</span></label>';
-    h += '<label class="ps-lb">最高目標＝天井（月） ' + numIn('ps-tg-max', Math.round(tg.monthMax / 10000), 0, 99999) + '<span class="ps-unit">万円</span></label>';
-    h += '<span class="ps-lb">→ クォーター換算 <b id="ps-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／Q</span></span>';
-    h += '</div>';
-    h += '<div class="ps-grid" style="margin-top:12px">';
-    h += '<label class="ps-lb">🚗 国産の平均単価 ' + floatIn('ps-up-default', manStr(up.default), 0.1, 999) + '<span class="ps-unit">万円／台</span></label>';
-    h += '<label class="ps-lb">🌍 輸入の平均単価 ' + floatIn('ps-up-import', manStr(up.import), 0.1, 999) + '<span class="ps-unit">万円／台</span></label>';
-    h += '</div>';
-    h += '<div class="ps-hint">※ ここで入れる単価は<b>データが貯まるまでの初期値</b>（売上表4年分の実績：国産8.3万・輸入13万）。返車完了したカードの確定金額が直近3ヶ月で10台以上貯まると、<b>実績の平均単価に自動で切り替わります</b>（チーム別）。目標÷単価＝必要入庫台数の逆算に使用。</div>';
+    /* ===== 入庫まわりは🧩ルールページへ集約（2026-06-04 ゆうた指示） ===== */
+    h += '<div class="ps-card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
+    h += '<div style="font-size:13px;color:var(--text2);line-height:1.7;flex:1;min-width:240px">📥 <b>入庫に関する設定（予約枠・売上目標・平均単価・曜日ルールなど）は「🧩 ルール」ページに集約</b>しました。入庫のアルゴリズムはすべてそちらで調整します。</div>';
+    h += '<button class="vh-btn primary" onclick="showView(\'rules\')">🧩 ルールページを開く</button>';
     h += '</div>';
 
     /* ===== 置き場 ===== */
@@ -147,34 +126,7 @@
       return v;
     }
 
-    s.reserveCap = {
-      default: readNum('ps-cap-default', 5, 0, 99),
-      import:  readNum('ps-cap-import', 3, 0, 99),
-    };
-    function readFloat(id, fallback, min, max) {
-      const el = document.getElementById(id);
-      if (!el) return fallback;
-      let v = parseFloat(el.value);
-      if (isNaN(v)) v = fallback;
-      if (v < min) v = min;
-      if (v > max) v = max;
-      v = Math.round(v * 10) / 10;
-      el.value = v;
-      return v;
-    }
-
-    s.target = {
-      monthMin: readNum('ps-tg-min', 1500, 0, 99999) * 10000,
-      monthMax: readNum('ps-tg-max', 2000, 0, 99999) * 10000,
-    };
-    if (s.target.monthMax < s.target.monthMin) s.target.monthMax = s.target.monthMin;
-    const tgQ = document.getElementById('ps-tg-q');
-    if (tgQ) tgQ.textContent = Math.round(s.target.monthMin / 40000) + '〜' + Math.round(s.target.monthMax / 40000);
-
-    s.unitPrice = {
-      default: Math.round(readFloat('ps-up-default', 8.3, 0.1, 999) * 10000),
-      import:  Math.round(readFloat('ps-up-import', 13, 0.1, 999) * 10000),
-    };
+    /* ※ 予約枠・売上目標・平均単価は🧩ルールページ（rules.js）で保存する */
 
     s.lotCap = {
       pit:     readNum('ps-lot-pit', 4, 0, 99),
@@ -212,10 +164,18 @@
     pitSettingsFlash('✓ 保存しました');
   };
 
-  /* 初期値に戻す */
+  /* 初期値に戻す（このページの項目だけ。🧩ルールページの内容＝ルール・辞書・予約枠・目標・単価は保持） */
   window.pitSettingsReset = function () {
-    if (!confirm('設定を初期値に戻します。よろしいですか？\n（予約・カードなどのデータは消えません）')) return;
+    if (!confirm('設定を初期値に戻します。よろしいですか？\n（予約・カードのデータと、🧩ルールページの内容は消えません）')) return;
+    const keep = {
+      rules:      state.settings.rules,
+      ruleDict:   state.settings.ruleDict,
+      reserveCap: state.settings.reserveCap,
+      target:     state.settings.target,
+      unitPrice:  state.settings.unitPrice,
+    };
     state.settings = JSON.parse(JSON.stringify(window.PIT_DEFAULT_SETTINGS || state.settings));
+    Object.keys(keep).forEach(function (k) { if (keep[k] != null) state.settings[k] = keep[k]; });
     if (window.PitDB) PitDB.save(true);
     renderSettings();
     pitSettingsFlash('↩ 初期値に戻しました');

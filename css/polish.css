@@ -427,3 +427,28 @@
 .rl-tl-r{ font-size:11.5px; color:var(--text3); }
 .rl-tl.warn{ color:#eab308; }
 .rl-tl.warn .rl-tl-v{ color:var(--text); }
+
+/* ===== 🧩 入庫ルール v2（フロー・行アクセント・2週間グリッド） v0.18.0 ===== */
+.rl-flow{ display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.rl-fbox{ flex:1; min-width:150px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+.rl-fbox.dim{ opacity:.55; border-style:dashed; }
+.rl-fb-t{ font-size:13px; font-weight:700; margin-bottom:3px; }
+.rl-fb-s{ font-size:11.5px; color:var(--text3); line-height:1.5; }
+.rl-farr{ align-self:center; color:var(--text3); font-size:16px; }
+.rl-row{ border-left:4px solid var(--border); }
+.rl-row.act-up{ border-left-color:#1db97a; }
+.rl-row.act-down{ border-left-color:#ef4444; }
+.rl-row.act-warn{ border-left-color:#eab308; }
+.rl-grid{ display:grid; gap:3px; overflow-x:auto; }
+.rl-g-h{ font-size:11px; text-align:center; color:var(--text2); padding:4px 2px; line-height:1.4; cursor:pointer; border-radius:6px; }
+.rl-g-h.red{ color:#ef4444; }
+.rl-g-h.sat{ color:#3b82f6; }
+.rl-g-n{ font-size:12px; font-weight:600; padding:6px 4px; white-space:nowrap; }
+.rl-g-c{ text-align:center; font-size:13px; font-weight:600; padding:7px 2px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; cursor:pointer; transition:transform .1s; }
+.rl-g-c:hover{ transform:translateY(-1px); }
+.rl-g-c.up{ background:rgba(29,185,122,.16); border-color:#1db97a; color:#1db97a; }
+.rl-g-c.down{ background:rgba(249,115,22,.14); border-color:#f97316; color:#f97316; }
+.rl-g-c.stop{ background:rgba(239,68,68,.16); border-color:#ef4444; color:#ef4444; }
+.rl-g-c.wmark{ background:transparent; border-color:transparent; color:#eab308; font-size:12px; }
+.rl-g-c.sel, .rl-g-h.sel{ outline:2px solid #1db97a; }
+.rl-day-t{ font-size:13.5px; font-weight:700; margin-bottom:6px; }
