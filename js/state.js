@@ -52,10 +52,18 @@ window.state = {
   resultMonth: new Date(),
 
   loaners: [
-    { id: 'L01', name: '代車1', model: 'タント',     plate: '○○ 0001' },
-    { id: 'L02', name: '代車2', model: 'N-WGN',      plate: '○○ 0002' },
-    { id: 'L03', name: '代車3', model: 'デイズ',     plate: '○○ 0003' },
-    { id: 'L04', name: '代車4', model: 'ムーブ',     plate: '○○ 0004' },
+    { id: 'L01', name: '代車1', model: 'タント',     plate: '○○ 0001', shakenDate: '2026-09-14', tenkenDate: '2026-07-10' },
+    { id: 'L02', name: '代車2', model: 'N-WGN',      plate: '○○ 0002', shakenDate: '2027-01-22', tenkenDate: '2026-08-05' },
+    { id: 'L03', name: '代車3', model: 'デイズ',     plate: '○○ 0003', shakenDate: '2026-11-30', tenkenDate: '2026-06-18' },
+    { id: 'L04', name: '代車4', model: 'ムーブ',     plate: '○○ 0004', shakenDate: '2027-03-08', tenkenDate: '2026-10-02' },
+  ],
+
+  // 社用車（積載車・営業車など）＝代車・自社車両管理ページで管理
+  companyCars: [
+    { id: 'C01', name: '積載車',   model: 'キャンター', plate: '○○ 1001', shakenDate: '2026-08-20', tenkenDate: '2026-12-15' },
+    { id: 'C02', name: '社用バン', model: 'ハイエース', plate: '○○ 1002', shakenDate: '2026-10-11', tenkenDate: '2027-02-01' },
+    { id: 'C03', name: '軽トラ',   model: 'キャリイ',   plate: '○○ 1003', shakenDate: '2027-02-27', tenkenDate: '2026-09-09' },
+    { id: 'C04', name: '営業車',   model: 'アクア',     plate: '○○ 1004', shakenDate: '2026-07-19', tenkenDate: '2027-01-13' },
   ],
 
   cards: [],

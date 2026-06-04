@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v4';   // v4: 概算預かり日数(estHoldDays)対応で再シード
+  const LS_KEY = 'pitflow_data_v5';   // v5: 社用車(companyCars)・車検/12点期日 対応で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'
@@ -33,6 +33,7 @@
             if (Array.isArray(d.loanerAssigns)) state.loanerAssigns = d.loanerAssigns;
             if (Array.isArray(d.loaners))       state.loaners       = d.loaners;
             if (Array.isArray(d.customers))     state.customers     = d.customers;
+            if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
           }
         } else {
@@ -57,6 +58,7 @@
             loanerAssigns: state.loanerAssigns,
             loaners: state.loaners,
             customers: state.customers,
+            companyCars: state.companyCars,
             savedAt: Date.now(),
           }));
           if (self.mode === 'cloud' && self._cloudSave) self._cloudSave();

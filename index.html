@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=11">
+<link rel="stylesheet" href="css/polish.css?v=12">
 <link rel="stylesheet" href="css/launcher.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.9.0</div>
+    <div class="pl-ver">PitFlow v0.10.0</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.9.0</span>
+      <span class="ver">v0.10.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -112,6 +112,9 @@
     <div class="si-section-title">管理</div>
     <div class="si-item" data-view="customers" onclick="showView('customers')">
       <span class="icon">👤</span><span>顧客</span>
+    </div>
+    <div class="si-item" data-view="fleet" onclick="showView('fleet')">
+      <span class="icon">🚐</span><span>代車・車両管理</span>
     </div>
     <div class="si-item" data-view="settings" onclick="showView('settings')">
       <span class="icon">⚙️</span><span>設定</span>
@@ -236,15 +239,18 @@
       <div class="result-cal" id="result-cal"></div>
     </section>
 
-    <!-- ===== 代車ビュー ===== -->
+    <!-- ===== 代車ビュー（縦＝日付・横＝代車・無限スクロール） ===== -->
     <section id="view-loaner" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🚙</span>代車</div>
+        <div class="view-title"><span class="icon">🚙</span>代車 <span style="font-size:11px;color:var(--text3);font-weight:400">縦＝日付（下に無限）／横＝代車</span></div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="editLoaners()">代車を編集</button>
+          <button class="vh-btn" onclick="loScrollToday()">📍 今日へ</button>
+          <button class="vh-btn" onclick="showView('fleet')">🚐 車両管理へ</button>
         </div>
       </div>
-      <div class="loaner-grid" id="loaner-grid"></div>
+      <div id="loaner-scroll" class="lo-scroll">
+        <div class="lo-grid" id="loaner-grid"></div>
+      </div>
     </section>
 
     <!-- ===== 顧客ビュー（控え・入力補助） ===== -->
@@ -258,6 +264,17 @@
         </div>
       </div>
       <div id="view-customers-body"></div>
+    </section>
+
+    <!-- ===== 代車・自社車両管理 ===== -->
+    <section id="view-fleet" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🚐</span>代車・自社車両管理</div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="showView('loaner')">🚙 代車カレンダーへ</button>
+        </div>
+      </div>
+      <div id="view-fleet-body"></div>
     </section>
 
     <!-- ===== 設定ビュー（プレースホルダ） ===== -->
@@ -315,12 +332,12 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=13"></script>
+<script src="js/state.js?v=14"></script>
 <script src="js/sample-data.js?v=9"></script>
 <script src="js/sample-fleet.js?v=2"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=12"></script>
-<script src="js/views.js?v=15"></script>
+<script src="js/db-pit.js?v=13"></script>
+<script src="js/views.js?v=16"></script>
 <script src="js/card-detail.js?v=13"></script>
 <script src="js/card-tabs.js?v=3"></script>
 <script src="js/customers.js?v=1"></script>
@@ -333,7 +350,8 @@
 <script src="js/task.js?v=11"></script>
 <script src="js/work.js?v=9"></script>
 <script src="js/result.js?v=9"></script>
-<script src="js/loaner.js?v=8"></script>
+<script src="js/loaner.js?v=9"></script>
+<script src="js/fleet.js?v=1"></script>
 <script src="js/auth-pit.js?v=8"></script>
 <script src="js/launcher.js?v=1"></script>
 <script src="js/holidays.js?v=1"></script>
