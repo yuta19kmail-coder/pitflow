@@ -356,18 +356,41 @@
     h += '<div class="ps-hint">⚠ <b>休みが始まる週は要注意</b>：預かってもパーツが届かず返せない（置き場が埋まりっぱなしになる）。定石＝「長期休みの前1週間」×「預かり入庫」を「気を付ける」＋⚠注意表示。補いは営業日配分が自動でやるので、さらに足すなら「長期休み明け1週間」×「増やす」をルールで。</div>';
     h += '</div>';
 
-    /* 📐 今月の配分（営業日ベース・自動計算） */
+    /* 📐 今月の配分（営業日ベース・自動計算）＋枠とのつじつまチェック */
     const _now = new Date();
-    const alloc = _qAllocC(c, _now.getFullYear(), _now.getMonth() + 1);
+    const _nowY = _now.getFullYear(), _nowM = _now.getMonth() + 1;
+    const alloc = _qAllocC(c, _nowY, _nowM);
+    const upD = (up.default != null) ? up.default : 83000;
+    const upI = (up.import != null) ? up.import : 130000;
+    const rcD = (rc.default != null) ? rc.default : 5;
+    const rcI = (rc.import != null) ? rc.import : 3;
+    function _qCapSum(q) {   // 期内の予約枠の合計台数（休み・定休・ルール適用後の実数）
+      let s = 0;
+      for (let dd = q.from; dd <= q.to; dd++) {
+        const ds = _nowY + '-' + String(_nowM).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+        s += _effC(c, ds, 'capDefault', rcD).value + _effC(c, ds, 'capImport', rcI).value;
+      }
+      return s;
+    }
+    function _needCars(yen) {   // 目標金額→必要台数（国産:輸入＝50:50の売上を単価で割る）
+      return Math.round(yen / 2 / upD + yen / 2 / upI);
+    }
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📐 今月の配分（' + (_now.getMonth() + 1) + '月・営業日ベース・自動計算' + (ed ? '＝プレビュー' : '') + '）</div>';
-    h += '<div class="ps-desc">月の目標を<b>営業日数（月−定休日−長期休み）の比率</b>で各期へ再振り分け。÷4の単純割りではない。祝日は営業扱い。将来はMHSの会社カレンダー（全社営業日マスター）から取得。</div>';
-    h += '<table class="rl-alloc"><tr><th>期</th><th>営業日</th><th>目標</th><th>天井</th></tr>';
+    h += '<div class="ps-h">📐 今月の配分（' + _nowM + '月・営業日ベース・自動計算' + (ed ? '＝プレビュー' : '') + '）</div>';
+    h += '<div class="ps-desc">月の目標を<b>営業日数（月−定休日−長期休み）の比率</b>で各期へ再振り分け（÷4ではない）。祝日は営業扱い。将来はMHS会社カレンダーから取得。<br>「枠」＝その期の予約枠の合計台数（休み・ルール適用後）。<b>枠が必要台数より少ない期は警告</b>＝ルールで増やすか目標を見直す。</div>';
+    h += '<table class="rl-alloc"><tr><th>期</th><th>営業日</th><th>目標</th><th>天井</th><th>必要台数</th><th>枠</th><th>判定</th></tr>';
     alloc.q.forEach(function (q, i) {
-      h += '<tr><td>' + (i + 1) + '期（' + q.from + '〜' + q.to + '日）</td><td>' + q.days + '日</td><td><b>' + Math.round(q.min / 10000) + '</b>万円</td><td><b>' + Math.round(q.max / 10000) + '</b>万円</td></tr>';
+      const needMin = _needCars(q.min), needMax = _needCars(q.max);
+      const capSum = _qCapSum(q);
+      let judge;
+      if (capSum >= needMax)      judge = '<span style="color:#1db97a">✅ 余裕</span>';
+      else if (capSum >= needMin) judge = '<span style="color:#eab308">🟡 天井に届かない</span>';
+      else                        judge = '<span style="color:#ef4444">🔴 目標に足りない</span>';
+      h += '<tr><td>' + (i + 1) + '期（' + q.from + '〜' + q.to + '日）</td><td>' + q.days + '日</td><td><b>' + Math.round(q.min / 10000) + '</b>万</td><td><b>' + Math.round(q.max / 10000) + '</b>万</td><td>' + needMin + '〜' + needMax + '台</td><td><b>' + capSum + '</b>台</td><td>' + judge + '</td></tr>';
     });
-    h += '<tr><td class="dim">合計</td><td class="dim">' + alloc.total + '日</td><td class="dim">' + Math.round((c.target || {}).monthMin / 10000 || 0) + '万円</td><td class="dim">' + Math.round((c.target || {}).monthMax / 10000 || 0) + '万円</td></tr>';
+    h += '<tr><td class="dim">合計</td><td class="dim">' + alloc.total + '日</td><td class="dim">' + Math.round((c.target || {}).monthMin / 10000 || 0) + '万</td><td class="dim">' + Math.round((c.target || {}).monthMax / 10000 || 0) + '万</td><td class="dim"></td><td class="dim"></td><td class="dim"></td></tr>';
     h += '</table>';
+    h += '<div class="ps-hint">※ 基本値の5/3は<b>「普通の月（営業日26日前後）の天井ペース」＝フロントの処理能力</b>。営業日が減る月は枠が足りなくなる＝🔴/🟡が出る。そこで自動では上げず、<b>ゆうたがルール（◯期を増やす・長期休み明け1週間を増やす等）で足すか、目標側を調整するか決める</b>。必要台数は売上50:50を単価（国産' + manStr(upD) + '万・輸入' + manStr(upI) + '万）で割った値。</div>';
     h += '</div>';
 
     /* ② 積み上げルール */
