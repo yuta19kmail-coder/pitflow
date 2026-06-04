@@ -35,6 +35,7 @@
             if (Array.isArray(d.customers))     state.customers     = d.customers;
             if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
             if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
+            this._mergeSettings(d.settings);
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
           }
         } else {
@@ -61,6 +62,7 @@
             customers: state.customers,
             companyCars: state.companyCars,
             fleetEvents: state.fleetEvents,
+            settings: state.settings,
             savedAt: Date.now(),
           }));
           if (self.mode === 'cloud' && self._cloudSave) self._cloudSave();
@@ -78,6 +80,20 @@
       if (!confirm('サンプルデータに戻します。\n今の編集内容は消えます。よろしいですか？')) return;
       try { localStorage.removeItem(LS_KEY); } catch (e) {}
       location.reload();
+    },
+
+    /* 保存済み設定を初期値の上にマージ（将来 設定項目が増えても古い保存で欠けないように） */
+    _mergeSettings: function (saved) {
+      if (!saved || typeof saved !== 'object') return;
+      const cur = state.settings || {};
+      Object.keys(saved).forEach(function (k) {
+        if (k === 'reserveCap' || k === 'estHold') {
+          cur[k] = Object.assign({}, cur[k] || {}, saved[k] || {});
+        } else {
+          cur[k] = saved[k];
+        }
+      });
+      state.settings = cur;
     },
 
     _bindAutosave: function () {

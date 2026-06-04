@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=15">
+<link rel="stylesheet" href="css/polish.css?v=16">
 <link rel="stylesheet" href="css/launcher.css?v=3">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.13.1</div>
+    <div class="pl-ver">PitFlow v0.14.0</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.13.1</span>
+      <span class="ver">v0.14.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -278,20 +278,20 @@
       <div id="view-fleet-body"></div>
     </section>
 
-    <!-- ===== 設定ビュー（プレースホルダ） ===== -->
+    <!-- ===== 設定ビュー ===== -->
     <section id="view-settings" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">⚙️</span>設定</div>
       </div>
+      <div id="view-settings-body"></div>
       <div class="pit-devtools">
         <h4>🚧 開発用ツール（サンプル段階）</h4>
         <p>いまは「サンプルログイン＋この端末のブラウザ内に保存」で動いています。編集した内容はリロードしても残ります。<br>本物の Google ログインと会社の Firebase（carflow-9d500）へのクラウド保存は後日スイッチONします。</p>
         <button onclick="PitDB.resetSample()">🔄 サンプルデータに戻す</button>
         <button onclick="pitLogout()">↩️ ログアウト（サンプル）</button>
       </div>
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;color:var(--text2);">
-        定休日・スポット定休・スタッフシフト・受付終了・看板の列構成・PIT枠レイアウト・代車管理・当日担当 など、ここに集約予定。<br>
-        現在は枠だけ。次フェーズで中身を作り込みます。
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;color:var(--text2);font-size:12.5px;line-height:1.7">
+        スポット定休・スタッフシフト・看板の列構成・PIT枠レイアウト・当日担当 などは今後ここに追加予定。
       </div>
     </section>
 
@@ -392,18 +392,19 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=17"></script>
+<script src="js/state.js?v=18"></script>
 <script src="js/sample-data.js?v=9"></script>
 <script src="js/sample-fleet.js?v=4"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=15"></script>
-<script src="js/views.js?v=16"></script>
+<script src="js/db-pit.js?v=16"></script>
+<script src="js/views.js?v=17"></script>
 <script src="js/card-detail.js?v=13"></script>
 <script src="js/card-tabs.js?v=3"></script>
 <script src="js/customers.js?v=1"></script>
 <script src="js/sample-customers.js?v=1"></script>
 <script src="js/sample-patterns.js?v=2"></script>
-<script src="js/dashboard.js?v=3"></script>
+<script src="js/dashboard.js?v=4"></script>
+<script src="js/settings.js?v=1"></script>
 <script src="js/today.js?v=9"></script>
 <script src="js/reserve.js?v=11"></script>
 <script src="js/return.js?v=10"></script>

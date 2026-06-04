@@ -128,7 +128,7 @@ window.state = {
   ],
 
   settings: {
-    closedDow:   [3],  // 定休曜日（仮＝水曜。日曜は営業。将来は会社カレンダー＝ScheduleFlowマスターから取得予定）
+    closedDow:   [3],  // 定休曜日（仮＝水曜。日曜は営業。将来は会社カレンダー＝MHSマスターから取得予定）
     spotClosed:  [],
     spotHoliday: [],
     cutoffTime:  '17:00',
@@ -136,6 +136,8 @@ window.state = {
     lotCapacity: 28,      // 同時に預かれる台数（置き場・代車）＝共有・混雑度の基準
     holdDaysDefault: 3,   // 最短入庫の計算で使う「預かり想定日数」
     reserveCap: { default: 5, import: 3 },   // 1日の予約上限（default＝国産 / import＝輸入・人が別なのでチーム別）
+    // 概算預かり日数の既定（作業タイプ別・入庫予約時の初期値。_default＝表にないタイプ用）
+    estHold: { shaken:5, general:6, bp:12, '3m':2, used:3, oil:0, '12pt':0, coat1y:3, coat3m:2, bring:4, _default:5 },
   },
 
   workTypes: [
@@ -163,10 +165,15 @@ window.state = {
   ],
 };
 
-/* 概算預かり日数の既定（入庫予約時の初期値・後で手で調整できる） */
+/* 概算預かり日数の既定（入庫予約時の初期値・後で手で調整できる）
+   ※ 表は state.settings.estHold ＝ 設定画面から変更できる（v0.14.0〜） */
 function pitEstHold(workType, dropType){
   if (dropType === 'wait' || dropType === 'sameDay') return 0;   // 待ち・当日仕上げ＝置き場を使わない
-  const map = { shaken:5, general:6, bp:12, '3m':2, used:3, oil:0, '12pt':0, coat1y:3, coat3m:2, bring:4 };
-  return (map[workType] != null) ? map[workType] : 5;
+  const map = (state.settings && state.settings.estHold) || {};
+  if (map[workType] != null) return map[workType];
+  return (map._default != null) ? map._default : 5;
 }
 window.pitEstHold = pitEstHold;
+
+/* 設定の初期値スナップショット（設定画面の「初期値に戻す」用） */
+window.PIT_DEFAULT_SETTINGS = JSON.parse(JSON.stringify(state.settings));

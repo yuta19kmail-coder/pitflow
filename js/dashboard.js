@@ -181,7 +181,7 @@ function renderDashboard(){
   h += '</div></div>';
   h += '</div></div>';
 
-  h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は後で設定から変更できるようにする。</div>';
+  h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は <a href="javascript:showView(\'settings\')" style="color:inherit;font-weight:700">⚙️ 設定</a> から変更できます。</div>';
 
   wrap.innerHTML = h;
 }

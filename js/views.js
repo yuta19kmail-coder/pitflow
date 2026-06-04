@@ -26,6 +26,7 @@ function showView(viewId){
   if (viewId === 'samplepat' && window.renderSamplePatterns) renderSamplePatterns();
   if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();
+  if (viewId === 'settings' && window.renderSettings) renderSettings();
 }
 
 function toggleTheme(){
@@ -80,7 +81,8 @@ function openNewReserve(){
     id, status: 'reserved', boardId: state.currentBoardId || 'default', bayId: null,
     log: [{ label: '予約作成', at: Date.now() }],
     customer: '', tel: '', car: '', plate: '',
-    reserveDate: ymd(new Date()), reserveTime: '', returnDate: '', estHoldDays: 5,
+    reserveDate: ymd(new Date()), reserveTime: '', returnDate: '',
+    estHoldDays: (window.pitEstHold ? pitEstHold(null, null) : 5),   // 設定の「その他」初期値（作業タイプ選択後に手で調整）
     menu: '', workType: null, dropType: null,
     needLoaner: false, needWash: false, urgent: false, memo: ''
   };
