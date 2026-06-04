@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=13">
+<link rel="stylesheet" href="css/polish.css?v=14">
 <link rel="stylesheet" href="css/launcher.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.11.0</div>
+    <div class="pl-ver">PitFlow v0.12.0</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.11.0</span>
+      <span class="ver">v0.12.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -343,6 +343,38 @@
   </div>
 </div>
 
+<!-- ===== 車両イベント 追加・編集ポップアップ ===== -->
+<div class="modal-backdrop" id="fleet-event-modal" onclick="if(event.target.id==='fleet-event-modal')flEventClose()">
+  <div class="modal-box fl-modal">
+    <div class="modal-head">
+      <div class="modal-title" id="flev-title">＋ イベントを追加</div>
+      <button class="modal-close" onclick="flEventClose()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fl-mform">
+        <label class="fl-mlb">車両 <select id="flev-vehicle" class="fl-in"></select></label>
+        <label class="fl-mlb">種別
+          <select id="flev-type" class="fl-in">
+            <option value="shakenIn">🔴 車検入庫（この期間で車検をやる）</option>
+            <option value="tenken">🟠 12ヶ月点検</option>
+            <option value="lease">🟣 リースアップ／新車切替</option>
+            <option value="other">🔵 その他（タイヤ交換・修理など）</option>
+          </select>
+        </label>
+        <label class="fl-mlb">内容（任意） <input id="flev-label" class="fl-in" placeholder="例：代車5 車検入庫／リースアップ→切替"></label>
+        <label class="fl-mlb">開始日 <input id="flev-from" type="date" class="fl-in"></label>
+        <label class="fl-mlb">終了日 <input id="flev-to" type="date" class="fl-in"></label>
+        <div class="fl-note">※ ここで入れたイベントは<b>代車カレンダー（利用ビュー）にも重ねて表示</b>されます。例：「この3日で代車5の車検」を先に押さえる。</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+          <button class="vh-btn del" id="flev-del" style="display:none;margin-right:auto;border-color:var(--red);color:var(--red)" onclick="flEventDelete()">🗑 削除</button>
+          <button class="vh-btn" onclick="flEventClose()">キャンセル</button>
+          <button class="vh-btn primary" onclick="flEventSubmit()">💾 保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== カード詳細ポップアップ（各ビューからカードを開く時） ===== -->
 <div class="modal-backdrop" id="modal-detail" onclick="if(event.target.id==='modal-detail')closeDetail()">
   <div class="modal-box card-modal">
@@ -360,11 +392,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=15"></script>
+<script src="js/state.js?v=16"></script>
 <script src="js/sample-data.js?v=9"></script>
-<script src="js/sample-fleet.js?v=3"></script>
+<script src="js/sample-fleet.js?v=4"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=14"></script>
+<script src="js/db-pit.js?v=15"></script>
 <script src="js/views.js?v=16"></script>
 <script src="js/card-detail.js?v=13"></script>
 <script src="js/card-tabs.js?v=3"></script>
@@ -378,8 +410,8 @@
 <script src="js/task.js?v=11"></script>
 <script src="js/work.js?v=9"></script>
 <script src="js/result.js?v=9"></script>
-<script src="js/loaner.js?v=10"></script>
-<script src="js/fleet.js?v=2"></script>
+<script src="js/loaner.js?v=11"></script>
+<script src="js/fleet.js?v=3"></script>
 <script src="js/auth-pit.js?v=8"></script>
 <script src="js/launcher.js?v=1"></script>
 <script src="js/holidays.js?v=1"></script>

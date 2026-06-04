@@ -117,16 +117,28 @@
         const len = ri(3, 10);
         const to = add(cur, len - 1);
         aid++;
-        assigns.push({ id: 'a' + aid, loanerId: l.id, cardId: null, fromDate: ymdL(cur), toDate: ymdL(to) });
+        assigns.push({ id: 'a' + aid, loanerId: l.id, cardId: null, customer: rnd(SEI), car: rnd(KOKU), fromDate: ymdL(cur), toDate: ymdL(to) });
         cur = add(to, 1);
       }
     });
     return assigns;
   }
 
+  // 車両イベント（車検入庫・リースアップ等）のサンプル
+  function genFleetEvents(){
+    const today = new Date(); today.setHours(0,0,0,0);
+    return [
+      { id: 'ev1', vehicleId: 'L05', type: 'shakenIn', label: '代車5 車検入庫',        fromDate: ymdL(add(today, 18)), toDate: ymdL(add(today, 20)) },
+      { id: 'ev2', vehicleId: 'L12', type: 'lease',    label: 'リースアップ→新車切替', fromDate: ymdL(add(today, 38)), toDate: ymdL(add(today, 38)) },
+      { id: 'ev3', vehicleId: 'L17', type: 'shakenIn', label: '代車17 車検入庫',       fromDate: ymdL(add(today, 45)), toDate: ymdL(add(today, 47)) },
+      { id: 'ev4', vehicleId: 'C01', type: 'other',    label: '積載車 タイヤ交換',     fromDate: ymdL(add(today, 10)), toDate: ymdL(add(today, 10)) }
+    ];
+  }
+
   // 初期データとして差し替え（db-pit が localStorage を持っていれば後で上書きされる）
   if (Array.isArray(state.cards)){
     state.cards = gen();
     state.loanerAssigns = genLoaners();
+    state.fleetEvents = genFleetEvents();
   }
 })();

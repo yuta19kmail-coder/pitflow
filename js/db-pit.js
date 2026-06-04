@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v6';   // v6: 代車20台＋予約ID付与で再シード
+  const LS_KEY = 'pitflow_data_v7';   // v7: 車両イベント(fleetEvents)・代車予約の顧客/車種 対応で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'
@@ -34,6 +34,7 @@
             if (Array.isArray(d.loaners))       state.loaners       = d.loaners;
             if (Array.isArray(d.customers))     state.customers     = d.customers;
             if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
+            if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
           }
         } else {
@@ -59,6 +60,7 @@
             loaners: state.loaners,
             customers: state.customers,
             companyCars: state.companyCars,
+            fleetEvents: state.fleetEvents,
             savedAt: Date.now(),
           }));
           if (self.mode === 'cloud' && self._cloudSave) self._cloudSave();
