@@ -144,6 +144,9 @@ window.state = {
     target: { monthMin: 15000000, monthMax: 20000000 },
     // 平均単価の初期値（円・チーム別）。実績が貯まれば pitUnitPrice() が直近3ヶ月平均に自動切替
     unitPrice: { default: 83000, import: 130000 },
+    // 🧩 ルール（ノーコード積み上げ式・rules.js）。rules=ルール配列／ruleDict=言葉→％の辞書
+    rules: [],
+    ruleDict: { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 },
   },
 
   workTypes: [

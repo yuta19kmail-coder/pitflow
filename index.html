@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=8">
 <link rel="stylesheet" href="css/views.css?v=8">
-<link rel="stylesheet" href="css/polish.css?v=16">
+<link rel="stylesheet" href="css/polish.css?v=17">
 <link rel="stylesheet" href="css/launcher.css?v=3">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.16.0</div>
+    <div class="pl-ver">PitFlow v0.17.0</div>
   </div>
 </div>
 
@@ -70,7 +70,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.16.0</span>
+      <span class="ver">v0.17.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -115,6 +115,9 @@
     </div>
     <div class="si-item" data-view="fleet" onclick="showView('fleet')">
       <span class="icon">🚐</span><span>代車・車両管理</span>
+    </div>
+    <div class="si-item" data-view="rules" onclick="showView('rules')">
+      <span class="icon">🧩</span><span>ルール</span>
     </div>
     <div class="si-item" data-view="settings" onclick="showView('settings')">
       <span class="icon">⚙️</span><span>設定</span>
@@ -295,6 +298,14 @@
       </div>
     </section>
 
+    <!-- ===== ルールビュー（ノーコード積み上げ式） ===== -->
+    <section id="view-rules" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🧩</span>ルール <span style="font-size:11px;color:var(--text3);font-weight:400">いつ × なにを × どうする を積み上げて受付判定に効かせる</span></div>
+      </div>
+      <div id="view-rules-body"></div>
+    </section>
+
     <!-- ===== カード設計サンプル（今だけ・たたき台） ===== -->
     <section id="view-samplepat" class="view">
       <div class="view-header">
@@ -392,19 +403,20 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=20"></script>
+<script src="js/state.js?v=21"></script>
 <script src="js/sample-data.js?v=9"></script>
 <script src="js/sample-fleet.js?v=4"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=18"></script>
-<script src="js/views.js?v=17"></script>
+<script src="js/db-pit.js?v=19"></script>
+<script src="js/views.js?v=18"></script>
 <script src="js/card-detail.js?v=13"></script>
 <script src="js/card-tabs.js?v=3"></script>
 <script src="js/customers.js?v=1"></script>
 <script src="js/sample-customers.js?v=1"></script>
 <script src="js/sample-patterns.js?v=2"></script>
-<script src="js/dashboard.js?v=5"></script>
+<script src="js/dashboard.js?v=6"></script>
 <script src="js/settings.js?v=3"></script>
+<script src="js/rules.js?v=1"></script>
 <script src="js/today.js?v=9"></script>
 <script src="js/reserve.js?v=11"></script>
 <script src="js/return.js?v=10"></script>

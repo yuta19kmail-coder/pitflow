@@ -166,15 +166,20 @@ function renderDashboard(){
   // 予約の埋まり（チーム別・1日の上限）
   const rc = (state.settings && state.settings.reserveCap) || { default:5, import:3 };
   const capD = rc.default || 5, capI = rc.import || 3;
-  h += '<div class="dash-card"><div class="dash-h"><span>🗓 予約の埋まり（チーム別・1日の上限）</span><span class="dash-note">満＝打ち止め｜国産 ' + capD + ' ／ 輸入 ' + capI + '</span></div>';
+  h += '<div class="dash-card"><div class="dash-h"><span>🗓 予約の埋まり（チーム別・1日の上限）</span><span class="dash-note">満＝打ち止め｜基本 国産 ' + capD + ' ／ 輸入 ' + capI + '・🧩ルール適用後</span></div>';
   h += '<div class="dash-cap">';
-  [{ key:'default', name:'🚗 国産', cap:capD }, { key:'import', name:'🌍 輸入', cap:capI }].forEach(function(t){
+  [{ key:'default', name:'🚗 国産', cap:capD, tgt:'capDefault' }, { key:'import', name:'🌍 輸入', cap:capI, tgt:'capImport' }].forEach(function(t){
     h += '<div class="dash-cap-row"><div class="dash-cap-name">' + t.name + '</div><div class="dash-cap-cells">';
     days.forEach(function(x){
-      const cnt = dashIntake(t.key, ymd(x.d));
-      const full = cnt >= t.cap;
-      const near = !full && cnt >= t.cap - 1;
-      h += '<div class="dash-cap-cell' + (full ? ' full' : (near ? ' near' : '')) + (ymd(x.d) === tStr ? ' today' : '') + '" title="' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '：' + cnt + '/' + t.cap + '">' + (full ? '満' : cnt) + '</div>';
+      const ds = ymd(x.d);
+      const eff = window.pitEffective ? pitEffective(ds, t.tgt, t.cap) : { value: t.cap, pct: 0, rules: [] };
+      const capEff = eff.value;
+      const cnt = dashIntake(t.key, ds);
+      const stop = capEff <= 0;
+      const full = !stop && cnt >= capEff;
+      const near = !stop && !full && cnt >= capEff - 1;
+      const ruleTip = eff.rules.length ? '｜🧩ルール' + eff.rules.map(function(n){ return '#' + n; }).join('・') + '（' + (eff.pct > 0 ? '+' : '') + eff.pct + '%）' : '';
+      h += '<div class="dash-cap-cell' + ((stop || full) ? ' full' : (near ? ' near' : '')) + (ds === tStr ? ' today' : '') + '" title="' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '：' + cnt + '/' + capEff + ruleTip + '">' + (stop ? '停' : (full ? '満' : cnt)) + '</div>';
     });
     h += '</div></div>';
   });

@@ -27,6 +27,7 @@ function showView(viewId){
   if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();
   if (viewId === 'settings' && window.renderSettings) renderSettings();
+  if (viewId === 'rules' && window.renderRules) renderRules();
 }
 
 function toggleTheme(){
