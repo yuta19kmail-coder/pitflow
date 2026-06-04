@@ -25,6 +25,16 @@
       + ' min="' + min + '" max="' + max + '" onchange="pitSettingsApply()">';
   }
 
+  function floatIn(id, val, min, max) {
+    return '<input type="number" class="ps-in ps-num" id="' + id + '" value="' + val + '"'
+      + ' min="' + min + '" max="' + max + '" step="0.1" onchange="pitSettingsApply()">';
+  }
+
+  function manStr(yen) { // 円 → 万円表記（小数1桁・末尾の.0は省く）
+    const v = Math.round(yen / 1000) / 10;
+    return (v % 1 === 0) ? String(v) : v.toFixed(1);
+  }
+
   window.renderSettings = function () {
     const body = document.getElementById('view-settings-body');
     if (!body) return;
@@ -46,6 +56,24 @@
     h += '<label class="ps-lb">🚗 国産車チーム ' + numIn('ps-cap-default', rc.default != null ? rc.default : 5, 0, 99) + '<span class="ps-unit">台／日</span></label>';
     h += '<label class="ps-lb">🌍 輸入車チーム ' + numIn('ps-cap-import', rc.import != null ? rc.import : 3, 0, 99) + '<span class="ps-unit">台／日</span></label>';
     h += '</div></div>';
+
+    /* ===== 売上目標と単価 ===== */
+    const tg = s.target || { monthMin: 15000000, monthMax: 20000000 };
+    const up = s.unitPrice || { default: 83000, import: 130000 };
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">📈 売上目標と平均単価（クォーター集計・受付終了判定の基準）</div>';
+    h += '<div class="ps-desc">月の<b>最低目標</b>と<b>最高目標（工場が回せる天井）</b>。クォーター（月4分割）の判定は÷4で自動換算。抱えている売上見込みが天井に届いたクォーターは「受付終了」になる予定。</div>';
+    h += '<div class="ps-grid">';
+    h += '<label class="ps-lb">最低目標（月） ' + numIn('ps-tg-min', Math.round(tg.monthMin / 10000), 0, 99999) + '<span class="ps-unit">万円</span></label>';
+    h += '<label class="ps-lb">最高目標＝天井（月） ' + numIn('ps-tg-max', Math.round(tg.monthMax / 10000), 0, 99999) + '<span class="ps-unit">万円</span></label>';
+    h += '<span class="ps-lb">→ クォーター換算 <b id="ps-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／Q</span></span>';
+    h += '</div>';
+    h += '<div class="ps-grid" style="margin-top:12px">';
+    h += '<label class="ps-lb">🚗 国産の平均単価 ' + floatIn('ps-up-default', manStr(up.default), 0.1, 999) + '<span class="ps-unit">万円／台</span></label>';
+    h += '<label class="ps-lb">🌍 輸入の平均単価 ' + floatIn('ps-up-import', manStr(up.import), 0.1, 999) + '<span class="ps-unit">万円／台</span></label>';
+    h += '</div>';
+    h += '<div class="ps-hint">※ ここで入れる単価は<b>データが貯まるまでの初期値</b>（売上表4年分の実績：国産8.3万・輸入13万）。返車完了したカードの確定金額が直近3ヶ月で10台以上貯まると、<b>実績の平均単価に自動で切り替わります</b>（チーム別）。目標÷単価＝必要入庫台数の逆算に使用。</div>';
+    h += '</div>';
 
     /* ===== 置き場 ===== */
     const lc = s.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
@@ -123,6 +151,31 @@
       default: readNum('ps-cap-default', 5, 0, 99),
       import:  readNum('ps-cap-import', 3, 0, 99),
     };
+    function readFloat(id, fallback, min, max) {
+      const el = document.getElementById(id);
+      if (!el) return fallback;
+      let v = parseFloat(el.value);
+      if (isNaN(v)) v = fallback;
+      if (v < min) v = min;
+      if (v > max) v = max;
+      v = Math.round(v * 10) / 10;
+      el.value = v;
+      return v;
+    }
+
+    s.target = {
+      monthMin: readNum('ps-tg-min', 1500, 0, 99999) * 10000,
+      monthMax: readNum('ps-tg-max', 2000, 0, 99999) * 10000,
+    };
+    if (s.target.monthMax < s.target.monthMin) s.target.monthMax = s.target.monthMin;
+    const tgQ = document.getElementById('ps-tg-q');
+    if (tgQ) tgQ.textContent = Math.round(s.target.monthMin / 40000) + '〜' + Math.round(s.target.monthMax / 40000);
+
+    s.unitPrice = {
+      default: Math.round(readFloat('ps-up-default', 8.3, 0.1, 999) * 10000),
+      import:  Math.round(readFloat('ps-up-import', 13, 0.1, 999) * 10000),
+    };
+
     s.lotCap = {
       pit:     readNum('ps-lot-pit', 4, 0, 99),
       yard:    readNum('ps-lot-yard', 12, 0, 99),

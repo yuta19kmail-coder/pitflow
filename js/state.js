@@ -140,6 +140,10 @@ window.state = {
     reserveCap: { default: 5, import: 3 },   // 1日の予約上限（default＝国産 / import＝輸入・人が別なのでチーム別）
     // 概算預かり日数の既定（作業タイプ別・入庫予約時の初期値。_default＝表にないタイプ用）
     estHold: { shaken:5, general:6, bp:12, '3m':2, used:3, oil:0, '12pt':0, coat1y:3, coat3m:2, bring:4, _default:5 },
+    // 売上目標（円/月）＝最低目標〜最高目標(天井)。クォーター換算は÷4（売上表Excel 4年分の実績から）
+    target: { monthMin: 15000000, monthMax: 20000000 },
+    // 平均単価の初期値（円・チーム別）。実績が貯まれば pitUnitPrice() が直近3ヶ月平均に自動切替
+    unitPrice: { default: 83000, import: 130000 },
   },
 
   workTypes: [
@@ -176,6 +180,26 @@ function pitEstHold(workType, dropType){
   return (map._default != null) ? map._default : 5;
 }
 window.pitEstHold = pitEstHold;
+
+/* チーム別の平均単価（円）＝直近3ヶ月（92日）の返車完了カードに確定金額(amountFinal)が
+   10台以上あれば実績平均を自動計算。足りないうちは設定の初期単価を使う */
+function pitUnitPrice(team){
+  const s = state.settings || {};
+  const init = (s.unitPrice && s.unitPrice[team] != null) ? s.unitPrice[team] : 100000;
+  try {
+    const d = new Date(); d.setDate(d.getDate() - 92);
+    const since = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const done = (state.cards || []).filter(function(c){
+      return c.boardId === team && c.status === 'returned' && c.returnDate && c.returnDate >= since && c.amountFinal > 0;
+    });
+    if (done.length >= 10){
+      const sum = done.reduce(function(a, c){ return a + c.amountFinal; }, 0);
+      return Math.round(sum / done.length);
+    }
+  } catch (e) {}
+  return init;
+}
+window.pitUnitPrice = pitUnitPrice;
 
 /* 設定の初期値スナップショット（設定画面の「初期値に戻す」用） */
 window.PIT_DEFAULT_SETTINGS = JSON.parse(JSON.stringify(state.settings));
