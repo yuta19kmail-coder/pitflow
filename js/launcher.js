@@ -1,5 +1,5 @@
 /* ============================================
-   CoreFlow アプリランチャー（共通：全Flow系アプリで同一）
+   CoreFlow アプリランチャー（共通：全アプリで同一・7球）
 
    使い方：
      1) サイドバー底に
@@ -17,6 +17,8 @@
     { key:'scheduleflow', url:'https://yuta19kmail-coder.github.io/scheduleflow/',icon:'📅', name:'ScheduleFlow',color:'#dc2626' },
     { key:'carflow',      url:'https://carflow.kobayashi-motors.com',             icon:'🚙', name:'CarFlow',     color:'#378ADD' },
     { key:'stockflow',    url:'https://stockflow.kobayashi-motors.com',           icon:'📦', name:'StockFlow',   color:'#7c3aed' },
+    { key:'coreboard',    url:'https://yuta19kmail-coder.github.io/coreboard/',   icon:'📋', name:'CoreBoard',   color:'#06b6d4' },
+    { key:'corenote',     url:'https://yuta19kmail-coder.github.io/corenote/',    icon:'📝', name:'CoreNote',    color:'#ec4899' },
   ];
 
   function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }

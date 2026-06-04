@@ -3,7 +3,7 @@
    - サイドバー底の <div data-cf-launcher data-current="..."></div> に挿入
    - 全てのオーバーレイは body 直下に launcher.js が動的に注入
    - クラス接頭辞は cf- で固定（衝突回避）
-   - 5アプリ対応（CoreFlow / PitFlow / ScheduleFlow / CarFlow / StockFlow）
+   - 7アプリ対応（CoreFlow / PitFlow / ScheduleFlow / CarFlow / StockFlow / CoreBoard / CoreNote）
    ============================================ */
 
 /* === マウント要素（flex列のサイドバー内では最下部に貼り付け） === */
@@ -104,17 +104,21 @@ body.cf-open .cf-lo-hotzone{pointer-events:auto}
   transition:transform .28s cubic-bezier(.18,.85,.25,1), opacity .18s ease-out;
   pointer-events:none;
 }
-/* 半径 R=165px、右上1/4 を5等分配置（top→right） */
-body.cf-open .cf-lo-item.p1{transform:translate(9px,  -165px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p2{transform:translate(67px, -151px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p3{transform:translate(117px,-117px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p4{transform:translate(151px,-67px)  scale(1); opacity:1}
-body.cf-open .cf-lo-item.p5{transform:translate(165px,-9px)   scale(1); opacity:1}
+/* 半径 R=190px、右上1/4 を7等分配置（top→right） */
+body.cf-open .cf-lo-item.p1{transform:translate(10px, -190px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p2{transform:translate(56px, -182px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p3{transform:translate(98px, -163px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p4{transform:translate(134px,-134px) scale(1); opacity:1}
+body.cf-open .cf-lo-item.p5{transform:translate(163px,-98px)  scale(1); opacity:1}
+body.cf-open .cf-lo-item.p6{transform:translate(182px,-56px)  scale(1); opacity:1}
+body.cf-open .cf-lo-item.p7{transform:translate(190px,-10px)  scale(1); opacity:1}
 body.cf-open .cf-lo-item.p1{transition-delay:0s, 0s}
-body.cf-open .cf-lo-item.p2{transition-delay:.04s, .04s}
-body.cf-open .cf-lo-item.p3{transition-delay:.08s, .08s}
-body.cf-open .cf-lo-item.p4{transition-delay:.12s, .12s}
-body.cf-open .cf-lo-item.p5{transition-delay:.16s, .16s}
+body.cf-open .cf-lo-item.p2{transition-delay:.03s, .03s}
+body.cf-open .cf-lo-item.p3{transition-delay:.06s, .06s}
+body.cf-open .cf-lo-item.p4{transition-delay:.09s, .09s}
+body.cf-open .cf-lo-item.p5{transition-delay:.12s, .12s}
+body.cf-open .cf-lo-item.p6{transition-delay:.15s, .15s}
+body.cf-open .cf-lo-item.p7{transition-delay:.18s, .18s}
 
 /* === 球本体 === */
 .cf-lo-ball{
@@ -154,6 +158,8 @@ body.cf-open .cf-lo-item.p5{transition-delay:.16s, .16s}
 .cf-lo-ball.cf-stockflow{background:#7c3aed}
 .cf-lo-ball.cf-pitflow{background:#1db97a}
 .cf-lo-ball.cf-scheduleflow{background:#dc2626}
+.cf-lo-ball.cf-coreboard{background:#06b6d4}
+.cf-lo-ball.cf-corenote{background:#ec4899}
 
 /* 現在地（自分のアプリ）：薄表示＋クリック無効 */
 body.cf-open .cf-lo-item.cf-current{opacity:.6}
