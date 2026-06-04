@@ -48,14 +48,22 @@
     h += '</div></div>';
 
     /* ===== 置き場 ===== */
+    const lc = s.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
+    const lcSum = (lc.pit||0) + (lc.yard||0) + (lc.parking||0) + (lc.extra||0);
     h += '<div class="ps-card">';
     h += '<div class="ps-h">🅿️ 置き場（混雑度の基準）</div>';
-    h += '<div class="ps-desc">同時に預かれる台数（置き場・代車は共有）。混雑度ゲージ・2週間の混み具合バー・最短入庫の計算すべての基準になります。</div>';
+    h += '<div class="ps-desc">同時に預かれる台数を<b>場所ごとに分けて</b>持ちます。混雑度ゲージ・2週間バー・最短入庫は<b>4つの合計</b>で計算。「緊急＋α」は最悪ここまで使える、の上乗せ分。</div>';
     h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">置ける台数 ' + numIn('ps-lot', s.lotCapacity != null ? s.lotCapacity : 28, 1, 200) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb">🔧 ピット内 ' + numIn('ps-lot-pit', lc.pit != null ? lc.pit : 4, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb">🏠 自社敷地 ' + numIn('ps-lot-yard', lc.yard != null ? lc.yard : 12, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb">🅿️ 駐車場 ' + numIn('ps-lot-park', lc.parking != null ? lc.parking : 8, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb">🚨 緊急＋α ' + numIn('ps-lot-extra', lc.extra != null ? lc.extra : 4, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<span class="ps-lb">＝ 合計 <b id="ps-lot-sum" style="font-size:17px">' + lcSum + '</b><span class="ps-unit">台</span></span>';
+    h += '</div>';
+    h += '<div class="ps-grid" style="margin-top:12px">';
     h += '<label class="ps-lb">最短入庫の預かり想定 ' + numIn('ps-hold', s.holdDaysDefault != null ? s.holdDaysDefault : 3, 1, 60) + '<span class="ps-unit">日</span></label>';
     h += '</div>';
-    h += '<div class="ps-hint">※「最短で入庫できる日」は、この想定日数ぶん預かっても置き場が溢れない最初の日を探します。</div>';
+    h += '<div class="ps-hint">※「最短で入庫できる日」は、この想定日数ぶん預かっても置き場（合計）が溢れない最初の日を探します。</div>';
     h += '</div>';
 
     /* ===== 概算預かり日数の初期値 ===== */
@@ -115,7 +123,15 @@
       default: readNum('ps-cap-default', 5, 0, 99),
       import:  readNum('ps-cap-import', 3, 0, 99),
     };
-    s.lotCapacity     = readNum('ps-lot', 28, 1, 200);
+    s.lotCap = {
+      pit:     readNum('ps-lot-pit', 4, 0, 99),
+      yard:    readNum('ps-lot-yard', 12, 0, 99),
+      parking: readNum('ps-lot-park', 8, 0, 99),
+      extra:   readNum('ps-lot-extra', 4, 0, 99),
+    };
+    s.lotCapacity = Math.max(1, s.lotCap.pit + s.lotCap.yard + s.lotCap.parking + s.lotCap.extra);
+    const sumEl = document.getElementById('ps-lot-sum');
+    if (sumEl) sumEl.textContent = s.lotCapacity;
     s.holdDaysDefault = readNum('ps-hold', 3, 1, 60);
 
     const est = {};

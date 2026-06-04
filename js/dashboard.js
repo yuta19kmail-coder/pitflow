@@ -129,7 +129,9 @@ function renderDashboard(){
   h += '<div class="dash-card">';
   h += '<div class="dash-h"><span>🚦 今日の混雑度（置き場ベース）</span><span class="dash-lv" style="background:' + lv.c + '">' + lv.t + ' ' + pct + '%</span></div>';
   h += '<div class="dash-gauge"><div class="dash-gauge-fill" style="width:' + Math.min(100, pct) + '%;background:' + lv.c + '"></div></div>';
-  h += '<div class="dash-sub">' + heldNow + ' 台 / 置ける ' + cap + ' 台' + (heldNow > cap ? '（' + (heldNow - cap) + '台オーバー）' : '') + '</div>';
+  const lc = (state.settings && state.settings.lotCap) || null;
+  const lcStr = lc ? '（内訳：ピット' + (lc.pit||0) + '・敷地' + (lc.yard||0) + '・駐車場' + (lc.parking||0) + '・緊急+α' + (lc.extra||0) + '）' : '';
+  h += '<div class="dash-sub">' + heldNow + ' 台 / 置ける ' + cap + ' 台' + lcStr + (heldNow > cap ? '（' + (heldNow - cap) + '台オーバー）' : '') + '</div>';
   h += '</div>';
 
   // 最短入庫
