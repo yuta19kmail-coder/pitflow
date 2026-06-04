@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v5';   // v5: 社用車(companyCars)・車検/12点期日 対応で再シード
+  const LS_KEY = 'pitflow_data_v6';   // v6: 代車20台＋予約ID付与で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'

@@ -238,24 +238,29 @@
 .dash-bar-w{ font-size:10px; color:var(--text3); }
 .dash-foot{ font-size:11px; color:var(--text3); line-height:1.6; }
 
-/* ===== 代車ビュー（縦＝日付・横＝代車・無限スクロール） ===== */
-.lo-scroll{ height:calc(100dvh - 150px); overflow-y:auto; border:1px solid var(--border); border-radius:var(--r); background:var(--bg2); }
-.lo-grid{ display:grid; }
-.lo-cell{ border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-height:34px; padding:5px 8px; font-size:12px; }
-.lo-head{ position:sticky; top:0; z-index:3; background:var(--bg3); border-bottom:1px solid var(--border2); }
-.lo-corner{ z-index:4; }
-.lo-car{ font-weight:700; font-size:12.5px; white-space:nowrap; }
-.lo-model{ font-size:10px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lo-date{ font-weight:600; color:var(--text2); background:var(--bg2); }
-.lo-date span{ font-size:10px; color:var(--text3); }
+/* ===== 代車ビュー（縦＝日付・横＝代車20台・両方向スクロール） ===== */
+.lo-scroll{ height:calc(100dvh - 150px); overflow:auto; border:1px solid var(--border); border-radius:var(--r); background:var(--bg2); }
+.lo-grid{ display:grid; min-width:max-content; }
+.lo-cell{ border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-height:30px; padding:3px 4px; font-size:11px; position:relative; }
+.lo-head{ position:sticky; top:0; z-index:4; background:var(--bg3); border-bottom:1px solid var(--border2); text-align:center; }
+.lo-corner{ position:sticky; left:0; top:0; z-index:6; }
+.lo-car{ font-weight:800; font-size:13px; white-space:nowrap; }
+.lo-model{ font-size:9px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-date{ position:sticky; left:0; z-index:3; font-weight:600; color:var(--text2); background:var(--bg2); padding:3px 6px; }
+.lo-date span{ font-size:9.5px; color:var(--text3); }
 .lo-date.sun{ color:#f87171; } .lo-date.sat{ color:#60a5fa; }
-.lo-date .lo-hol{ font-size:9px; color:var(--red); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lo-date .lo-month{ font-size:9.5px; font-weight:800; color:var(--brand); }
+.lo-date .lo-hol{ font-size:8.5px; color:var(--red); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-date .lo-month{ font-size:9px; font-weight:800; color:var(--brand); }
 .lo-cell.lo-today{ background:var(--brand-soft); }
 .lo-date.lo-today{ color:var(--brand); box-shadow:inset 3px 0 0 var(--brand); }
-.lo-booked{ background:rgba(38,162,105,.30); cursor:default; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lo-booked[onclick]{ cursor:pointer; }
-.lo-booked.start{ border-top:2px solid var(--brand); }
+/* 予約＝開始バッジ → 縦線が↓に伸びる → 返却予定日に▼ */
+.lo-bk::before{ content:""; position:absolute; left:50%; transform:translateX(-50%); top:-1px; bottom:-1px; width:3px; border-radius:2px; background:var(--brand); opacity:.8; }
+.lo-bk.bk-start::before{ top:18px; }
+.lo-bk.bk-end::before{ bottom:11px; }
+.lo-bk.bk-single::before{ display:none; }
+.lo-bk.bk-end::after{ content:"▼"; position:absolute; left:50%; transform:translateX(-50%); bottom:0; font-size:9px; color:var(--brand); }
+.lo-badge{ position:relative; z-index:1; display:inline-block; max-width:100%; font-size:9.5px; font-weight:700; background:var(--brand); color:#fff; border-radius:999px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:grab; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+.lo-badge:active{ cursor:grabbing; }
 .lo-free{ background:transparent; }
 
 /* ===== 代車・自社車両管理 ===== */
@@ -275,11 +280,18 @@
 .fl-btn{ background:var(--bg3); border:1px solid var(--border); border-radius:7px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--text2); }
 .fl-btn:hover{ border-color:var(--brand); color:var(--text); }
 .fl-btn.del:hover{ border-color:var(--red); color:var(--red); }
-.fl-cal{ display:grid; gap:4px; overflow-x:auto; }
-.fl-cal-h{ font-size:11px; font-weight:700; color:var(--text2); text-align:center; padding:5px 2px; background:var(--bg3); border-radius:6px; }
+/* エクセル風 月次カレンダー（縦横スクロール・行列固定） */
+.fl-cal-wrap{ max-height:58vh; overflow:auto; border:1px solid var(--border); border-radius:10px; background:var(--bg); }
+.fl-cal{ display:grid; min-width:max-content; }
+.fl-cal-h{ position:sticky; top:0; z-index:3; font-size:11.5px; font-weight:700; color:var(--text2); text-align:center; padding:8px 4px; background:var(--bg3); border-bottom:1px solid var(--border2); border-right:1px solid var(--border); }
 .fl-cal-h span{ display:block; font-size:9px; color:var(--text3); }
-.fl-cal-name{ font-size:12px; font-weight:600; padding:6px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.fl-cal-cell{ min-height:30px; border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; gap:3px; padding:2px; }
+.fl-cal-corner{ position:sticky; left:0; top:0; z-index:5; text-align:left; padding-left:10px; }
+.fl-cal-name{ position:sticky; left:0; z-index:2; background:var(--bg2); font-size:12px; font-weight:600; padding:8px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid var(--border); border-right:1px solid var(--border2); }
+.fl-cal-cell{ min-height:36px; border-bottom:1px solid var(--border); border-right:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:3px; padding:3px; background:var(--bg2); }
+.fl-rows{ display:grid; grid-template-columns:repeat(auto-fill, minmax(270px, 1fr)); gap:7px; }
+.fl-modal{ width:min(440px, 94vw); }
+.fl-mform{ display:flex; flex-direction:column; gap:10px; }
+.fl-mlb{ font-size:12px; color:var(--text2); display:flex; flex-direction:column; gap:4px; font-weight:600; }
 .fl-bdg{ font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:5px; color:#fff; white-space:nowrap; }
 .fl-bdg.shaken{ background:var(--red); }
 .fl-bdg.tenken{ background:#f59e0b; }

@@ -109,13 +109,15 @@
     // 今年の8/17（お盆明け）まで、4台の代車を背中合わせで埋める
     const obon = new Date(today.getFullYear(), 7, 17);  // 8月17日
     const assigns = [];
+    let aid = 0;
     const loaners = (state.loaners || [{id:'L01'},{id:'L02'},{id:'L03'},{id:'L04'}]);
     loaners.forEach(function(l){
       let cur = add(today, -ri(0, 3));
       while (cur < obon){
         const len = ri(3, 10);
         const to = add(cur, len - 1);
-        assigns.push({ loanerId: l.id, cardId: null, fromDate: ymdL(cur), toDate: ymdL(to) });
+        aid++;
+        assigns.push({ id: 'a' + aid, loanerId: l.id, cardId: null, fromDate: ymdL(cur), toDate: ymdL(to) });
         cur = add(to, 1);
       }
     });
