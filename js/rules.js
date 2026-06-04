@@ -277,17 +277,6 @@
 
     let h = '';
 
-    /* アルゴリズムの流れ */
-    h += '<div class="rl-flow">';
-    h += '<div class="rl-fbox"><div class="rl-fb-t">① 基本値</div><div class="rl-fb-s">国産 ' + (rc.default != null ? rc.default : 5) + '・輸入 ' + (rc.import != null ? rc.import : 3) + ' 台／日</div></div>';
-    h += '<div class="rl-farr">→</div>';
-    h += '<div class="rl-fbox"><div class="rl-fb-t">② 🧩 ルールで足し引き</div><div class="rl-fb-s">' + rules.filter(function (r) { return r.on !== false; }).length + ' 個が稼働' + (ed ? '（編集中）' : '中') + '</div></div>';
-    h += '<div class="rl-farr">→</div>';
-    h += '<div class="rl-fbox"><div class="rl-fb-t">③ その日の実効枠</div><div class="rl-fb-s">下の2週間カレンダーで確認</div></div>';
-    h += '<div class="rl-farr">→</div>';
-    h += '<div class="rl-fbox dim"><div class="rl-fb-t">④ 受付の○△×</div><div class="rl-fb-s">次フェーズ（売上集計と連動）</div></div>';
-    h += '</div>';
-
     /* モードバー */
     if (!ed) {
       h += '<div class="ps-bar"><span class="ps-bar-note">いま<b>適用中</b>の内容です。変更は「✏️ 編集する」→ プレビュー確認 → OKで反映。</span>'
@@ -300,33 +289,41 @@
          + '<button class="vh-btn primary" onclick="pitRuleOk()">✅ OKで反映</button></div>';
     }
 
-    /* ① 基本値 */
-    h += '<div class="ps-card">';
-    h += '<div class="ps-h">📥 ① 入庫の基本値</div>';
-    if (!ed) {
-      h += '<div class="ps-grid rl-vbasics">';
-      h += '<span class="ps-lb">🚗 国産の予約枠 <b>' + (rc.default != null ? rc.default : 5) + '</b><span class="ps-unit">台／日</span></span>';
-      h += '<span class="ps-lb">🌍 輸入の予約枠 <b>' + (rc.import != null ? rc.import : 3) + '</b><span class="ps-unit">台／日</span></span>';
-      h += '<span class="ps-lb">📈 目標 <b>' + Math.round(tg.monthMin / 10000) + '〜' + Math.round(tg.monthMax / 10000) + '</b><span class="ps-unit">万円／月（期 ' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '万）</span></span>';
-      h += '<span class="ps-lb">💴 単価 国産 <b>' + manStr(up.default) + '</b>・輸入 <b>' + manStr(up.import) + '</b><span class="ps-unit">万円／台</span></span>';
-      h += '</div>';
-    } else {
-      h += '<div class="ps-desc">なにもルールが無い日の数字。ここを起点に下のルールが足し引きされます。</div>';
-      h += '<div class="ps-grid">';
-      h += '<label class="ps-lb">🚗 国産の予約枠 <input type="number" class="ps-in ps-num" id="rb-cap-d" value="' + (rc.default != null ? rc.default : 5) + '" min="0" max="99" onchange="pitRuleBaseApply()"><span class="ps-unit">台／日</span></label>';
-      h += '<label class="ps-lb">🌍 輸入の予約枠 <input type="number" class="ps-in ps-num" id="rb-cap-i" value="' + (rc.import != null ? rc.import : 3) + '" min="0" max="99" onchange="pitRuleBaseApply()"><span class="ps-unit">台／日</span></label>';
-      h += '</div>';
-      h += '<div class="ps-grid" style="margin-top:12px">';
-      h += '<label class="ps-lb">最低目標（月） <input type="number" class="ps-in ps-num" id="rb-tg-min" value="' + Math.round(tg.monthMin / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
-      h += '<label class="ps-lb">最高目標＝天井（月） <input type="number" class="ps-in ps-num" id="rb-tg-max" value="' + Math.round(tg.monthMax / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
-      h += '<span class="ps-lb">→ 目安(単純÷4) <b id="rb-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／期 ※実際は下の営業日配分</span></span>';
-      h += '</div>';
-      h += '<div class="ps-grid" style="margin-top:12px">';
-      h += '<label class="ps-lb">🚗 国産の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-d" value="' + manStr(up.default) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
-      h += '<label class="ps-lb">🌍 輸入の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-i" value="' + manStr(up.import) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
-      h += '</div>';
-      h += '<div class="ps-hint">※ 単価は初期値（実績：国産8.3万・輸入13万）。返車完了の確定金額が直近3ヶ月で10台以上貯まると実績平均に自動切替。</div>';
+    /* 🧮 目標 → 日の理論値（計算式カスケード・入れると下に流れて自動計算） */
+    const ratioD = (tg.ratioD != null) ? tg.ratioD : 50;
+    const upD0 = (up.default != null) ? up.default : 83000;
+    const upI0 = (up.import != null) ? up.import : 130000;
+    const rcD0 = (rc.default != null) ? rc.default : 5;
+    const rcI0 = (rc.import != null) ? rc.import : 3;
+    const _nowD = new Date();
+    const _alloc0 = _qAllocC(c, _nowD.getFullYear(), _nowD.getMonth() + 1);
+    const biz = _alloc0.total || 1;
+    const dMin = tg.monthMin * ratioD / 100, dMax = tg.monthMax * ratioD / 100;
+    const iMin = tg.monthMin - dMin, iMax = tg.monthMax - dMax;
+    const cDmin = dMin / upD0, cDmax = dMax / upD0;
+    const cImin = iMin / upI0, cImax = iMax / upI0;
+    function f1(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+    function man(x) { return Math.round(x / 10000); }
+    function fxIn(id, val, w, step) {
+      if (!ed) return '<b class="fx-v">' + val + '</b>';
+      return '<input type="number" class="ps-in ps-num fx-in" id="' + id + '" value="' + val + '" style="width:' + (w || 64) + 'px"' + (step ? ' step="' + step + '"' : '') + ' onchange="pitRuleBaseApply()">';
     }
+
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">🧮 目標 → 日の理論値<span class="fx-note">固定値は年1回レベル／営業日・連休は毎月自動反映</span></div>';
+    h += '<div class="fx">';
+    h += '<div class="fx-row"><span class="fx-lb">売上目標（月）</span>' + fxIn('rb-tg-min', Math.round(tg.monthMin / 10000), 76) + '<span class="fx-u">万</span><span class="fx-u">〜</span>' + fxIn('rb-tg-max', Math.round(tg.monthMax / 10000), 76) + '<span class="fx-u">万</span></div>';
+    h += '<div class="fx-arr">↓ 部門に分ける（国産 ' + fxIn('rb-ratio', ratioD, 56) + '<span class="fx-u">%</span><span class="fx-u">：輸入 ' + (100 - ratioD) + '%</span>）</div>';
+    h += '<div class="fx-row"><span class="fx-lb">部門目標</span><span class="fx-pair">🚗 <b>' + man(dMin) + '〜' + man(dMax) + '</b><span class="fx-u">万</span></span><span class="fx-pair">🌍 <b>' + man(iMin) + '〜' + man(iMax) + '</b><span class="fx-u">万</span></span></div>';
+    h += '<div class="fx-arr">↓ 台単価で割る（🚗 ' + fxIn('rb-up-d', manStr(upD0), 60, '0.1') + '<span class="fx-u">万</span>・🌍 ' + fxIn('rb-up-i', manStr(upI0), 60, '0.1') + '<span class="fx-u">万</span>＝実績3ヶ月平均に自動切替予定）</div>';
+    h += '<div class="fx-row"><span class="fx-lb">月の入庫数</span><span class="fx-pair">🚗 <b>' + Math.round(cDmin) + '〜' + Math.round(cDmax) + '</b><span class="fx-u">台</span></span><span class="fx-pair">🌍 <b>' + Math.round(cImin) + '〜' + Math.round(cImax) + '</b><span class="fx-u">台</span></span><span class="fx-pair dim">計 ' + Math.round(cDmin + cImin) + '〜' + Math.round(cDmax + cImax) + '台</span></div>';
+    h += '<div class="fx-arr">↓ 営業日で割る（今月 <b>' + biz + '</b>日＝月−定休日−長期休み・自動）</div>';
+    h += '<div class="fx-row fx-big"><span class="fx-lb">日の理論値</span><span class="fx-pair">🚗 <b>' + f1(cDmin / biz) + '〜' + f1(cDmax / biz) + '</b><span class="fx-u">台/日</span></span><span class="fx-pair">🌍 <b>' + f1(cImin / biz) + '〜' + f1(cImax / biz) + '</b><span class="fx-u">台/日</span></span></div>';
+    const okD = (rcD0 >= cDmax / biz) ? '✅' : ((rcD0 >= cDmin / biz) ? '🟡' : '🔴');
+    const okI = (rcI0 >= cImax / biz) ? '✅' : ((rcI0 >= cImin / biz) ? '🟡' : '🔴');
+    h += '<div class="fx-arr">↓ 予約枠（1日に受付できる上限）と比べる</div>';
+    h += '<div class="fx-row"><span class="fx-lb">予約枠</span><span class="fx-pair">🚗 ' + fxIn('rb-cap-d', rcD0, 56) + '<span class="fx-u">台</span> ' + okD + '</span><span class="fx-pair">🌍 ' + fxIn('rb-cap-i', rcI0, 56) + '<span class="fx-u">台</span> ' + okI + '</span><span class="fx-pair dim">✅天井まで可｜🟡目標のみ｜🔴不足</span></div>';
+    h += '</div>';
     h += '</div>';
 
     /* 🏖 長期休み */
@@ -335,7 +332,7 @@
     h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🏖 長期休み（お盆・年末年始・GWなど）'
        + (ed ? '<button class="vh-btn" style="margin-left:auto" onclick="pitBreakAdd()">＋ 休みを追加</button>' : '')
        + '</div>';
-    h += '<div class="ps-desc">期間中は<b>入庫受付が自動で0</b>（営業していないため。預かり継続は可＝置き場は使われたまま）。下の配分も営業日数から自動で除外。</div>';
+    h += '<div class="ps-desc">期間中＝受付自動0・営業日からも自動除外（置き場は使われたまま）。</div>';
     if (!brs.length) {
       h += '<div class="ps-hint">登録なし。' + (ed ? '「＋ 休みを追加」で登録してください。' : '「✏️ 編集する」から登録できます。') + '</div>';
     }
@@ -353,7 +350,7 @@
         h += '</div>';
       }
     });
-    h += '<div class="ps-hint">⚠ <b>休みが始まる週は要注意</b>：預かってもパーツが届かず返せない（置き場が埋まりっぱなしになる）。定石＝「長期休みの前1週間」×「預かり入庫」を「気を付ける」＋⚠注意表示。補いは営業日配分が自動でやるので、さらに足すなら「長期休み明け1週間」×「増やす」をルールで。</div>';
+    h += '<div class="ps-hint">⚠ 休み前週はパーツが来ない → 「長期休みの前1週間 × 預かり入庫 × 気を付ける」ルール推奨。</div>';
     h += '</div>';
 
     /* 📐 今月の配分（営業日ベース・自動計算）＋枠とのつじつまチェック */
@@ -372,13 +369,12 @@
       }
       return s;
     }
-    function _needCars(yen) {   // 目標金額→必要台数（国産:輸入＝50:50の売上を単価で割る）
-      return Math.round(yen / 2 / upD + yen / 2 / upI);
+    function _needCars(yen) {   // 目標金額→必要台数（部門比で分けて各単価で割る）
+      return Math.round(yen * ratioD / 100 / upD + yen * (100 - ratioD) / 100 / upI);
     }
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📐 今月の配分（' + _nowM + '月・営業日ベース・自動計算' + (ed ? '＝プレビュー' : '') + '）</div>';
-    h += '<div class="ps-desc">月の目標を<b>営業日数（月−定休日−長期休み）の比率</b>で各期へ再振り分け（÷4ではない）。祝日は営業扱い。将来はMHS会社カレンダーから取得。<br>「枠」＝その期の予約枠の合計台数（休み・ルール適用後）。<b>枠が必要台数より少ない期は警告</b>＝ルールで増やすか目標を見直す。</div>';
-    h += '<table class="rl-alloc"><tr><th>期</th><th>営業日</th><th>目標</th><th>天井</th><th>必要台数</th><th>枠</th><th>判定</th></tr>';
+    h += '<div class="ps-h">📐 期への自動配分（' + _nowM + '月・営業日比' + (ed ? '＝プレビュー' : '') + '）</div>';
+    h += '<table class="rl-alloc"><tr><th>期</th><th>営業日</th><th>目標</th><th>天井</th><th>入庫数</th><th>枠</th><th>判定</th></tr>';
     alloc.q.forEach(function (q, i) {
       const needMin = _needCars(q.min), needMax = _needCars(q.max);
       const capSum = _qCapSum(q);
@@ -390,15 +386,15 @@
     });
     h += '<tr><td class="dim">合計</td><td class="dim">' + alloc.total + '日</td><td class="dim">' + Math.round((c.target || {}).monthMin / 10000 || 0) + '万</td><td class="dim">' + Math.round((c.target || {}).monthMax / 10000 || 0) + '万</td><td class="dim"></td><td class="dim"></td><td class="dim"></td></tr>';
     h += '</table>';
-    h += '<div class="ps-hint">※ 基本値の5/3は<b>「普通の月（営業日26日前後）の天井ペース」＝フロントの処理能力</b>。営業日が減る月は枠が足りなくなる＝🔴/🟡が出る。そこで自動では上げず、<b>ゆうたがルール（◯期を増やす・長期休み明け1週間を増やす等）で足すか、目標側を調整するか決める</b>。必要台数は売上50:50を単価（国産' + manStr(upD) + '万・輸入' + manStr(upI) + '万）で割った値。</div>';
+    h += '<div class="ps-hint">🟡🔴の期＝枠が足りない → ルールで増やすか目標を調整（自動では上げない）。</div>';
     h += '</div>';
 
     /* ② 積み上げルール */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🧩 ② 積み上げルール'
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🧩 積み上げルール'
        + (ed ? '<button class="vh-btn primary" style="margin-left:auto" onclick="pitRuleAdd()">＋ ルールを追加</button>' : '')
        + '</div>';
-    h += '<div class="ps-desc">上から<b>全部足し算</b>（％は合算して1回掛け）。左の色＝<span style="color:#1db97a">増やす系</span>／<span style="color:#ef4444">減らす系</span>／<span style="color:#eab308">注意</span>。</div>';
+    h += '<div class="ps-desc">上から全部足し算。<span style="color:#1db97a">緑＝増</span>／<span style="color:#ef4444">赤＝減</span>／<span style="color:#eab308">黄＝注意</span>。</div>';
     if (!rules.length) {
       h += '<div class="ps-hint">まだルールがありません。' + (ed ? '「＋ ルールを追加」で1つ目を積んでください。' : '「✏️ 編集する」から追加できます。') + '<br>例：「土曜・日曜」は「国産の予約枠」を「増やす」／「定休日の前日」は「代車つき預かり」に「⚠注意表示」。</div>';
     }
@@ -407,7 +403,7 @@
 
     /* ③ 言葉の辞書 */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📖 ③ 言葉の辞書（％）</div>';
+    h += '<div class="ps-h">📖 言葉の辞書（％）</div>';
     if (!ed) {
       h += '<div class="ps-desc">';
       h += Object.keys(DICT_LABEL).map(function (k) {
@@ -427,8 +423,8 @@
 
     /* ④ 2週間 */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">' + (ed ? '🧪 ④ プレビュー — OKで反映するとこうなる（2週間）' : '📅 ④ これから2週間 — いま適用中の実効枠') + '</div>';
-    h += '<div class="ps-desc">色つき＝ルールが効く日（<span style="color:#1db97a">緑＝増</span>／<span style="color:#f97316">橙＝減</span>／<span style="color:#ef4444">赤＝停止</span>）。日をクリックで理由表示。</div>';
+    h += '<div class="ps-h">' + (ed ? '🧪 プレビュー — OKで反映するとこうなる（2週間）' : '📅 これから2週間 — いま適用中の実効枠') + '</div>';
+    h += '<div class="ps-desc">日をクリックで理由表示。<span style="color:#1db97a">緑＝増</span>／<span style="color:#f97316">橙＝減</span>／<span style="color:#ef4444">赤＝停止</span>。</div>';
     h += '<div id="rl-grid"></div>';
     h += '<div id="rl-test-out" class="rl-test-out" style="margin-top:12px"></div>';
     h += '</div>';
@@ -535,13 +531,15 @@
       return v;
     }
     _draft.reserveCap = { default: rn('rb-cap-d', 5, 0, 99), import: rn('rb-cap-i', 3, 0, 99) };
-    _draft.target = { monthMin: rn('rb-tg-min', 1500, 0, 99999) * 10000, monthMax: rn('rb-tg-max', 2000, 0, 99999) * 10000 };
+    _draft.target = {
+      monthMin: rn('rb-tg-min', 1500, 0, 99999) * 10000,
+      monthMax: rn('rb-tg-max', 2000, 0, 99999) * 10000,
+      ratioD:   rn('rb-ratio', 50, 1, 99),
+    };
     if (_draft.target.monthMax < _draft.target.monthMin) _draft.target.monthMax = _draft.target.monthMin;
-    const q = document.getElementById('rb-tg-q');
-    if (q) q.textContent = Math.round(_draft.target.monthMin / 40000) + '〜' + Math.round(_draft.target.monthMax / 40000);
     _draft.unitPrice = { default: Math.round(rf('rb-up-d', 8.3, 0.1, 999) * 10000), import: Math.round(rf('rb-up-i', 13, 0.1, 999) * 10000) };
+    renderRules();   // カスケードの自動計算を全部更新
     _flash('🟡 プレビューに反映（未確定）');
-    pitRuleGrid();
   };
 
   window.pitRuleAdd = function () {
