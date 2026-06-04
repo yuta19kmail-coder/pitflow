@@ -1,16 +1,20 @@
 /* ========================================
-   rules.js  -  🧩 入庫ルール（入庫アルゴリズム設定ページ）／PitFlow v0.18.0
+   rules.js  -  🧩 入庫ルール（入庫アルゴリズム設定ページ）／PitFlow v0.19.0
    ----------------------------------------
-   ◎このページ＝入庫に関するアルゴリズムをすべて設定する場所（2026-06-04 ゆうた指示で集約）
-     1. 基本値：1日の予約枠（国産/輸入）・売上目標（最低/最高）・平均単価
-     2. 積み上げルール：いつ × なにを × どうする（ノーコード・上から全部足し算）
-     3. 言葉の辞書：増やす+20% / 減らす-20% / 気を付ける-15% / できる限り無くす-50% / 許容する+15%
-     4. 2週間ビジュアル試算：ルール適用後の実効枠をカレンダーで確認（クリックで理由）
+   ◎運用フロー（2026-06-04 ゆうた指示）
+     閲覧モード（既定）＝現在適用中の内容を表示するだけ（誤操作で変わらない）
+       → 「✏️ 編集する」で編集モードへ＝現在の内容を丸っとコピー（下書き）
+       → 目標・ルールをいじる → 下のプレビュー（2週間）で確認
+       → 「✅ OKで反映」＝本番へ一括反映 ／ 「✖ やめる」＝捨てて元のまま
+   ◎ページ構成
+     ① 入庫の基本値（予約枠・売上目標・平均単価） ② 積み上げルール
+     ③ 言葉の辞書（％） ④ 2週間ビジュアル（閲覧=現在適用中／編集=プレビュー）
    ◎計算仕様
-     ・％は合算して1回掛け。端数は減らす系=切り捨て・増やす系=切り上げ（必ず効く）
-     ・「無くす」=0台。「⚠注意表示」=文言を出すだけ（数字に影響しない）
-     ・判定には「どのルール#が効いたか」を必ず理由表示
+     ％は合算して1回掛け。端数は減らす系=切り捨て・増やす系=切り上げ。
+     「無くす」=0台。「⚠注意表示」=文言のみ。理由（ルール#）を必ず表示。
    ◎保存：state.settings.reserveCap / target / unitPrice / rules / ruleDict（PitDB永続化）
+     ※ ダッシュボード等が使う window.pitRulesFor / pitEffective は常に「反映済み（本番）」を読む。
+       編集中の下書きはこのページのプレビューにしか影響しない。
    ======================================== */
 (function () {
 
@@ -54,15 +58,36 @@
     { id: 'warn',     label: '⚠ 注意表示',      grp: 'warn' },
   ];
   const DICT_LABEL = { increase: '増やす', decrease: '減らす', careful: '気を付ける', minimize: 'できる限り無くす', allow: '許容する' };
+  const KEYS = ['reserveCap', 'target', 'unitPrice', 'rules', 'ruleDict'];
+
+  /* ===== 下書き（編集モード） ===== */
+  let _draft = null;
+  function _editing() { return !!_draft; }
+  function _cfg() { return _draft || state.settings; }   // このページの表示・プレビュー用
+
+  function _mkDraft() {
+    const s = state.settings;
+    _draft = JSON.parse(JSON.stringify({
+      reserveCap: s.reserveCap || { default: 5, import: 3 },
+      target:     s.target     || { monthMin: 15000000, monthMax: 20000000 },
+      unitPrice:  s.unitPrice  || { default: 83000, import: 130000 },
+      rules:      s.rules      || [],
+      ruleDict:   s.ruleDict   || { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 },
+    }));
+  }
 
   function _rules() {
-    if (!state.settings.rules) state.settings.rules = [];
-    return state.settings.rules;
+    const c = _cfg();
+    if (!c.rules) c.rules = [];
+    return c.rules;
   }
   function _dict() {
-    if (!state.settings.ruleDict) state.settings.ruleDict = { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 };
-    return state.settings.ruleDict;
+    const c = _cfg();
+    if (!c.ruleDict) c.ruleDict = { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 };
+    return c.ruleDict;
   }
+
+  /* ===== ヘルパー ===== */
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
@@ -80,9 +105,6 @@
     const v = Math.round(yen / 1000) / 10;
     return (v % 1 === 0) ? String(v) : v.toFixed(1);
   }
-
-  /* ===== 判定エンジン ===== */
-
   function _holName(dStr) {
     return (window.Holidays && Holidays.name) ? Holidays.name(dStr) : null;
   }
@@ -91,9 +113,11 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  /* ===== 判定エンジン（cfg指定版＝内部用） ===== */
+
   function _match(r, d, dStr) {
     const dow = d.getDay(), day = d.getDate();
-    const closed = (state.settings.closedDow || []);
+    const closed = (state.settings.closedDow || []);   // 定休は設定ページの本番値を常に使う
     switch (r.when) {
       case 'weekend':     return dow === 0 || dow === 6;
       case 'q1':          return day <= 7;
@@ -112,12 +136,12 @@
     }
   }
 
-  window.pitRulesFor = function (dateStr) {
+  function _rulesForC(cfg, dateStr) {
     const p = String(dateStr).split('-');
     const d = new Date(+p[0], +p[1] - 1, +p[2]);
-    const dict = _dict();
+    const dict = cfg.ruleDict || {};
     const out = { byTarget: {}, warns: [] };
-    _rules().forEach(function (r, i) {
+    (cfg.rules || []).forEach(function (r, i) {
       if (r.on === false) return;
       if (!_match(r, d, dateStr)) return;
       if (r.action === 'warn') {
@@ -131,10 +155,10 @@
       tg.rules.push(i + 1);
     });
     return out;
-  };
+  }
 
-  window.pitEffective = function (dateStr, target, base) {
-    const rs = window.pitRulesFor(dateStr);
+  function _effC(cfg, dateStr, target, base) {
+    const rs = _rulesForC(cfg, dateStr);
     let pct = 0, zero = false, rules = [];
     function acc(x) { if (!x) return; pct += x.pct; zero = zero || x.zero; rules = rules.concat(x.rules); }
     acc(rs.byTarget[target]);
@@ -145,81 +169,115 @@
     v = (pct < 0) ? Math.floor(v) : Math.ceil(v);
     if (v < 0) v = 0;
     return { value: v, pct: pct, zero: false, rules: rules };
-  };
+  }
+
+  /* 公開版＝常に「反映済み（本番）」を読む。ダッシュボード等はこれを使う */
+  window.pitRulesFor  = function (dateStr) { return _rulesForC(state.settings, dateStr); };
+  window.pitEffective = function (dateStr, target, base) { return _effC(state.settings, dateStr, target, base); };
 
   /* ===== 画面 ===== */
 
   window.renderRules = function () {
     const body = document.getElementById('view-rules-body');
     if (!body) return;
-    const s = state.settings;
-    const rc = s.reserveCap || { default: 5, import: 3 };
-    const tg = s.target || { monthMin: 15000000, monthMax: 20000000 };
-    const up = s.unitPrice || { default: 83000, import: 130000 };
+    const c = _cfg();
+    const rc = c.reserveCap || { default: 5, import: 3 };
+    const tg = c.target || { monthMin: 15000000, monthMax: 20000000 };
+    const up = c.unitPrice || { default: 83000, import: 130000 };
     const rules = _rules();
     const dict = _dict();
+    const ed = _editing();
 
     let h = '';
 
-    /* アルゴリズムの流れ（ビジュアル） */
+    /* アルゴリズムの流れ */
     h += '<div class="rl-flow">';
     h += '<div class="rl-fbox"><div class="rl-fb-t">① 基本値</div><div class="rl-fb-s">国産 ' + (rc.default != null ? rc.default : 5) + '・輸入 ' + (rc.import != null ? rc.import : 3) + ' 台／日</div></div>';
     h += '<div class="rl-farr">→</div>';
-    h += '<div class="rl-fbox"><div class="rl-fb-t">② 🧩 ルールで足し引き</div><div class="rl-fb-s">' + rules.filter(function (r) { return r.on !== false; }).length + ' 個が稼働中</div></div>';
+    h += '<div class="rl-fbox"><div class="rl-fb-t">② 🧩 ルールで足し引き</div><div class="rl-fb-s">' + rules.filter(function (r) { return r.on !== false; }).length + ' 個が稼働' + (ed ? '（編集中）' : '中') + '</div></div>';
     h += '<div class="rl-farr">→</div>';
     h += '<div class="rl-fbox"><div class="rl-fb-t">③ その日の実効枠</div><div class="rl-fb-s">下の2週間カレンダーで確認</div></div>';
     h += '<div class="rl-farr">→</div>';
     h += '<div class="rl-fbox dim"><div class="rl-fb-t">④ 受付の○△×</div><div class="rl-fb-s">次フェーズ（売上集計と連動）</div></div>';
     h += '</div>';
 
-    h += '<div class="ps-bar"><span class="ps-bar-note">変更すると<b>その場で自動保存</b>。入庫のアルゴリズムは<b>すべてこのページ</b>で設定します。</span>'
-       + '<span class="ps-status" id="ps-status"></span></div>';
+    /* モードバー */
+    if (!ed) {
+      h += '<div class="ps-bar"><span class="ps-bar-note">いま<b>適用中</b>の内容です。変更は「✏️ 編集する」→ プレビュー確認 → OKで反映。</span>'
+         + '<span class="ps-status" id="ps-status"></span>'
+         + '<button class="vh-btn primary" onclick="pitRuleEditStart()">✏️ 編集する</button></div>';
+    } else {
+      h += '<div class="ps-bar edit"><span class="rl-ebadge">🟡 編集中</span><span class="ps-bar-note">まだ<b>反映されていません</b>。下のプレビューで確認 → OKで全面反映／やめるで元のまま。</span>'
+         + '<span class="ps-status" id="ps-status"></span>'
+         + '<button class="vh-btn" onclick="pitRuleCancel()">✖ やめる（元に戻す）</button>'
+         + '<button class="vh-btn primary" onclick="pitRuleOk()">✅ OKで反映</button></div>';
+    }
 
     /* ① 基本値 */
     h += '<div class="ps-card">';
     h += '<div class="ps-h">📥 ① 入庫の基本値</div>';
-    h += '<div class="ps-desc">なにもルールが無い日の数字。ここを起点に下のルールが足し引きされます。</div>';
-    h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">🚗 国産の予約枠 <input type="number" class="ps-in ps-num" id="rb-cap-d" value="' + (rc.default != null ? rc.default : 5) + '" min="0" max="99" onchange="pitRuleBaseApply()"><span class="ps-unit">台／日</span></label>';
-    h += '<label class="ps-lb">🌍 輸入の予約枠 <input type="number" class="ps-in ps-num" id="rb-cap-i" value="' + (rc.import != null ? rc.import : 3) + '" min="0" max="99" onchange="pitRuleBaseApply()"><span class="ps-unit">台／日</span></label>';
-    h += '</div>';
-    h += '<div class="ps-grid" style="margin-top:12px">';
-    h += '<label class="ps-lb">最低目標（月） <input type="number" class="ps-in ps-num" id="rb-tg-min" value="' + Math.round(tg.monthMin / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
-    h += '<label class="ps-lb">最高目標＝天井（月） <input type="number" class="ps-in ps-num" id="rb-tg-max" value="' + Math.round(tg.monthMax / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
-    h += '<span class="ps-lb">→ 期換算 <b id="rb-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／期</span></span>';
-    h += '</div>';
-    h += '<div class="ps-grid" style="margin-top:12px">';
-    h += '<label class="ps-lb">🚗 国産の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-d" value="' + manStr(up.default) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
-    h += '<label class="ps-lb">🌍 輸入の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-i" value="' + manStr(up.import) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
-    h += '</div>';
-    h += '<div class="ps-hint">※ 単価は初期値（実績：国産8.3万・輸入13万）。返車完了の確定金額が直近3ヶ月で10台以上貯まると実績平均に自動切替。目標÷単価＝必要台数（目標375万/期 → 国産23台＋輸入14台≒6:4）。</div>';
+    if (!ed) {
+      h += '<div class="ps-grid rl-vbasics">';
+      h += '<span class="ps-lb">🚗 国産の予約枠 <b>' + (rc.default != null ? rc.default : 5) + '</b><span class="ps-unit">台／日</span></span>';
+      h += '<span class="ps-lb">🌍 輸入の予約枠 <b>' + (rc.import != null ? rc.import : 3) + '</b><span class="ps-unit">台／日</span></span>';
+      h += '<span class="ps-lb">📈 目標 <b>' + Math.round(tg.monthMin / 10000) + '〜' + Math.round(tg.monthMax / 10000) + '</b><span class="ps-unit">万円／月（期 ' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '万）</span></span>';
+      h += '<span class="ps-lb">💴 単価 国産 <b>' + manStr(up.default) + '</b>・輸入 <b>' + manStr(up.import) + '</b><span class="ps-unit">万円／台</span></span>';
+      h += '</div>';
+    } else {
+      h += '<div class="ps-desc">なにもルールが無い日の数字。ここを起点に下のルールが足し引きされます。</div>';
+      h += '<div class="ps-grid">';
+      h += '<label class="ps-lb">🚗 国産の予約枠 <input type="number" class="ps-in ps-num" id="rb-cap-d" value="' + (rc.default != null ? rc.default : 5) + '" min="0" max="99" onchange="pitRuleBaseApply()"><span class="ps-unit">台／日</span></label>';
+      h += '<label class="ps-lb">🌍 輸入の予約枠 <input type="number" class="ps-in ps-num" id="rb-cap-i" value="' + (rc.import != null ? rc.import : 3) + '" min="0" max="99" onchange="pitRuleBaseApply()"><span class="ps-unit">台／日</span></label>';
+      h += '</div>';
+      h += '<div class="ps-grid" style="margin-top:12px">';
+      h += '<label class="ps-lb">最低目標（月） <input type="number" class="ps-in ps-num" id="rb-tg-min" value="' + Math.round(tg.monthMin / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
+      h += '<label class="ps-lb">最高目標＝天井（月） <input type="number" class="ps-in ps-num" id="rb-tg-max" value="' + Math.round(tg.monthMax / 10000) + '" min="0" max="99999" onchange="pitRuleBaseApply()"><span class="ps-unit">万円</span></label>';
+      h += '<span class="ps-lb">→ 期換算 <b id="rb-tg-q" style="font-size:15px">' + Math.round(tg.monthMin / 40000) + '〜' + Math.round(tg.monthMax / 40000) + '</b><span class="ps-unit">万円／期</span></span>';
+      h += '</div>';
+      h += '<div class="ps-grid" style="margin-top:12px">';
+      h += '<label class="ps-lb">🚗 国産の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-d" value="' + manStr(up.default) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
+      h += '<label class="ps-lb">🌍 輸入の平均単価 <input type="number" class="ps-in ps-num" id="rb-up-i" value="' + manStr(up.import) + '" min="0.1" max="999" step="0.1" onchange="pitRuleBaseApply()"><span class="ps-unit">万円／台</span></label>';
+      h += '</div>';
+      h += '<div class="ps-hint">※ 単価は初期値（実績：国産8.3万・輸入13万）。返車完了の確定金額が直近3ヶ月で10台以上貯まると実績平均に自動切替。</div>';
+    }
     h += '</div>';
 
-    /* ② 積んであるルール */
+    /* ② 積み上げルール */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🧩 ② 積み上げルール<button class="vh-btn primary" style="margin-left:auto" onclick="pitRuleAdd()">＋ ルールを追加</button></div>';
-    h += '<div class="ps-desc">上から<b>全部足し算</b>で効きます（％は合算して1回掛け）。左の色＝<span style="color:#1db97a">増やす系</span>／<span style="color:#ef4444">減らす系</span>／<span style="color:#eab308">注意</span>。</div>';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🧩 ② 積み上げルール'
+       + (ed ? '<button class="vh-btn primary" style="margin-left:auto" onclick="pitRuleAdd()">＋ ルールを追加</button>' : '')
+       + '</div>';
+    h += '<div class="ps-desc">上から<b>全部足し算</b>（％は合算して1回掛け）。左の色＝<span style="color:#1db97a">増やす系</span>／<span style="color:#ef4444">減らす系</span>／<span style="color:#eab308">注意</span>。</div>';
     if (!rules.length) {
-      h += '<div class="ps-hint">まだルールがありません。例：「土曜・日曜」は「国産の予約枠」を「増やす」／「定休日の前日」は「代車つき預かり」に「⚠注意表示」。</div>';
+      h += '<div class="ps-hint">まだルールがありません。' + (ed ? '「＋ ルールを追加」で1つ目を積んでください。' : '「✏️ 編集する」から追加できます。') + '<br>例：「土曜・日曜」は「国産の予約枠」を「増やす」／「定休日の前日」は「代車つき預かり」に「⚠注意表示」。</div>';
     }
-    rules.forEach(function (r, i) { h += _rowHtml(r, i); });
+    rules.forEach(function (r, i) { h += ed ? _rowEditHtml(r, i) : _rowViewHtml(r, i); });
     h += '</div>';
 
     /* ③ 言葉の辞書 */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📖 ③ 言葉の辞書（％は調整できる）</div>';
-    h += '<div class="ps-grid">';
-    Object.keys(DICT_LABEL).forEach(function (k) {
-      h += '<label class="ps-lb">' + DICT_LABEL[k] + ' <input type="number" class="ps-in ps-num" id="rl-dict-' + k + '" value="' + (dict[k] != null ? dict[k] : 0) + '" min="-100" max="100" onchange="pitRuleDictApply()"><span class="ps-unit">%</span></label>';
-    });
-    h += '</div>';
-    h += '<div class="ps-hint">※「無くす」は常に0台。端数は減らす系＝切り捨て・増やす系＝切り上げ（小さい数字でも必ず効く）。</div>';
+    h += '<div class="ps-h">📖 ③ 言葉の辞書（％）</div>';
+    if (!ed) {
+      h += '<div class="ps-desc">';
+      h += Object.keys(DICT_LABEL).map(function (k) {
+        const v = dict[k] != null ? dict[k] : 0;
+        return DICT_LABEL[k] + ' <b>' + (v > 0 ? '+' : '') + v + '%</b>';
+      }).join('　／　');
+      h += '</div>';
+    } else {
+      h += '<div class="ps-grid">';
+      Object.keys(DICT_LABEL).forEach(function (k) {
+        h += '<label class="ps-lb">' + DICT_LABEL[k] + ' <input type="number" class="ps-in ps-num" id="rl-dict-' + k + '" value="' + (dict[k] != null ? dict[k] : 0) + '" min="-100" max="100" onchange="pitRuleDictApply()"><span class="ps-unit">%</span></label>';
+      });
+      h += '</div>';
+      h += '<div class="ps-hint">※「無くす」は常に0台。端数は減らす系＝切り捨て・増やす系＝切り上げ。</div>';
+    }
     h += '</div>';
 
-    /* ④ 2週間ビジュアル試算 */
+    /* ④ 2週間 */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🧪 ④ これから2週間 — ルール適用後の実効枠</div>';
-    h += '<div class="ps-desc">色つき＝ルールが効いている日（<span style="color:#1db97a">緑＝増</span>／<span style="color:#f97316">橙＝減</span>／<span style="color:#ef4444">赤＝停止</span>）。日をクリックすると下に理由が出ます。</div>';
+    h += '<div class="ps-h">' + (ed ? '🧪 ④ プレビュー — OKで反映するとこうなる（2週間）' : '📅 ④ これから2週間 — いま適用中の実効枠') + '</div>';
+    h += '<div class="ps-desc">色つき＝ルールが効く日（<span style="color:#1db97a">緑＝増</span>／<span style="color:#f97316">橙＝減</span>／<span style="color:#ef4444">赤＝停止</span>）。日をクリックで理由表示。</div>';
     h += '<div id="rl-grid"></div>';
     h += '<div id="rl-test-out" class="rl-test-out" style="margin-top:12px"></div>';
     h += '</div>';
@@ -229,15 +287,22 @@
     if (window._rlTestDate) pitRuleDay(window._rlTestDate);
   };
 
-  function _sel(i, field, list, cur) {
-    let s = '<select class="ps-in rl-sel" onchange="pitRuleEdit(' + i + ',\'' + field + '\',this.value)">';
-    list.forEach(function (o) {
-      s += '<option value="' + o.id + '"' + (o.id === cur ? ' selected' : '') + '>' + o.label + '</option>';
-    });
-    return s + '</select>';
+  /* 閲覧モードのルール行（文章で表示） */
+  function _rowViewHtml(r, i) {
+    let t = labelOf(WHEN, r.when);
+    if (r.when === 'range') t = (r.from || '?') + '〜' + (r.to || '?');
+    let h = '<div class="rl-row view act-' + actGrp(r.action) + (r.on === false ? ' off' : '') + '">';
+    h += '<span class="rl-no">' + (i + 1) + '</span>';
+    h += '<span class="rl-vtxt">「' + esc(t) + '」は「' + esc(labelOf(TARGET, r.target)) + '」を <b>' + esc(labelOf(ACTION, r.action)) + '</b>';
+    if (r.action === 'warn' && r.note) h += '：「' + esc(r.note) + '」';
+    h += '</span>';
+    if (r.on === false) h += '<span class="rl-offtag">停止中</span>';
+    h += '</div>';
+    return h;
   }
 
-  function _rowHtml(r, i) {
+  /* 編集モードのルール行（セレクト） */
+  function _rowEditHtml(r, i) {
     let h = '<div class="rl-row act-' + actGrp(r.action) + (r.on === false ? ' off' : '') + '">';
     h += '<span class="rl-no">' + (i + 1) + '</span>';
     h += '<label class="rl-on" title="ON/OFF"><input type="checkbox"' + (r.on !== false ? ' checked' : '') + ' onchange="pitRuleEdit(' + i + ',\'on\',this.checked)"></label>';
@@ -259,9 +324,44 @@
     return h;
   }
 
-  /* 基本値の保存 */
+  function _sel(i, field, list, cur) {
+    let s = '<select class="ps-in rl-sel" onchange="pitRuleEdit(' + i + ',\'' + field + '\',this.value)">';
+    list.forEach(function (o) {
+      s += '<option value="' + o.id + '"' + (o.id === cur ? ' selected' : '') + '>' + o.label + '</option>';
+    });
+    return s + '</select>';
+  }
+
+  /* ===== 編集モードの開始・確定・破棄 ===== */
+
+  window.pitRuleEditStart = function () {
+    _mkDraft();
+    renderRules();
+    _flash('✏️ 編集モード（まだ反映されません）');
+  };
+
+  window.pitRuleOk = function () {
+    if (!_draft) return;
+    if (!confirm('この内容で全面的に反映します。よろしいですか？')) return;
+    KEYS.forEach(function (k) { state.settings[k] = _draft[k]; });
+    _draft = null;
+    if (window.PitDB) PitDB.save(true);
+    renderRules();
+    _flash('✅ 反映しました');
+  };
+
+  window.pitRuleCancel = function () {
+    if (!_draft) return;
+    if (!confirm('編集をやめて元に戻します。いじった内容は消えます。よろしいですか？')) return;
+    _draft = null;
+    renderRules();
+    _flash('↩ 元に戻しました');
+  };
+
+  /* ===== 編集ハンドラ（すべて下書きにだけ効く） ===== */
+
   window.pitRuleBaseApply = function () {
-    const s = state.settings;
+    if (!_draft) return;
     function rn(id, fb, min, max) {
       const el = document.getElementById(id);
       if (!el) return fb;
@@ -283,41 +383,44 @@
       el.value = v;
       return v;
     }
-    s.reserveCap = { default: rn('rb-cap-d', 5, 0, 99), import: rn('rb-cap-i', 3, 0, 99) };
-    s.target = { monthMin: rn('rb-tg-min', 1500, 0, 99999) * 10000, monthMax: rn('rb-tg-max', 2000, 0, 99999) * 10000 };
-    if (s.target.monthMax < s.target.monthMin) s.target.monthMax = s.target.monthMin;
+    _draft.reserveCap = { default: rn('rb-cap-d', 5, 0, 99), import: rn('rb-cap-i', 3, 0, 99) };
+    _draft.target = { monthMin: rn('rb-tg-min', 1500, 0, 99999) * 10000, monthMax: rn('rb-tg-max', 2000, 0, 99999) * 10000 };
+    if (_draft.target.monthMax < _draft.target.monthMin) _draft.target.monthMax = _draft.target.monthMin;
     const q = document.getElementById('rb-tg-q');
-    if (q) q.textContent = Math.round(s.target.monthMin / 40000) + '〜' + Math.round(s.target.monthMax / 40000);
-    s.unitPrice = { default: Math.round(rf('rb-up-d', 8.3, 0.1, 999) * 10000), import: Math.round(rf('rb-up-i', 13, 0.1, 999) * 10000) };
-    _save('✓ 保存しました');
+    if (q) q.textContent = Math.round(_draft.target.monthMin / 40000) + '〜' + Math.round(_draft.target.monthMax / 40000);
+    _draft.unitPrice = { default: Math.round(rf('rb-up-d', 8.3, 0.1, 999) * 10000), import: Math.round(rf('rb-up-i', 13, 0.1, 999) * 10000) };
+    _flash('🟡 プレビューに反映（未確定）');
     pitRuleGrid();
   };
 
   window.pitRuleAdd = function () {
+    if (!_draft) return;
     _rules().push({ on: true, when: 'weekend', target: 'capDefault', action: 'increase', note: '' });
-    _save('✓ ルールを追加しました');
     renderRules();
+    _flash('🟡 追加（未確定）');
   };
 
   window.pitRuleEdit = function (i, field, val) {
+    if (!_draft) return;
     const r = _rules()[i];
     if (!r) return;
     if (field === 'on') r.on = !!val;
     else r[field] = val;
-    _save('✓ 保存しました');
     renderRules();
+    _flash('🟡 プレビューに反映（未確定）');
   };
 
   window.pitRuleDel = function (i) {
+    if (!_draft) return;
     const r = _rules()[i];
     if (!r) return;
-    if (!confirm('ルール ' + (i + 1) + '（' + labelOf(WHEN, r.when) + ' は ' + labelOf(TARGET, r.target) + ' を ' + labelOf(ACTION, r.action) + '）を削除します。よろしいですか？')) return;
     _rules().splice(i, 1);
-    _save('🗑 削除しました');
     renderRules();
+    _flash('🟡 削除（未確定・OKで確定）');
   };
 
   window.pitRuleDictApply = function () {
+    if (!_draft) return;
     const dict = _dict();
     Object.keys(DICT_LABEL).forEach(function (k) {
       const el = document.getElementById('rl-dict-' + k);
@@ -329,18 +432,18 @@
       el.value = v;
       dict[k] = v;
     });
-    _save('✓ 辞書を保存しました');
+    _flash('🟡 プレビューに反映（未確定）');
     pitRuleGrid();
     if (window._rlTestDate) pitRuleDay(window._rlTestDate);
   };
 
-  /* ===== 2週間ビジュアル ===== */
+  /* ===== 2週間グリッド（cfg＝閲覧:本番／編集:下書き） ===== */
 
   window.pitRuleGrid = function () {
     const box = document.getElementById('rl-grid');
     if (!box) return;
-    const s = state.settings;
-    const rc = s.reserveCap || { default: 5, import: 3 };
+    const c = _cfg();
+    const rc = c.reserveCap || { default: 5, import: 3 };
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const days = [];
     for (let i = 0; i < 14; i++) days.push(_shift(today, i));
@@ -353,34 +456,30 @@
     }
 
     let g = '<div class="rl-grid" style="grid-template-columns:88px repeat(' + days.length + ',1fr)">';
-    /* ヘッダ */
     g += '<div class="rl-g-h"></div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const hol = _holName(ds);
-      const closed = (s.closedDow || []).indexOf(d.getDay()) >= 0;
+      const closed = (state.settings.closedDow || []).indexOf(d.getDay()) >= 0;
       const cls = (d.getDay() === 0 || hol) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
       g += '<div class="rl-g-h' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (closed ? '・休' : '') + '</div>';
     });
-    /* 国産 */
     g += '<div class="rl-g-n">🚗 国産枠</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
-      const eff = window.pitEffective(ds, 'capDefault', rc.default != null ? rc.default : 5);
+      const eff = _effC(c, ds, 'capDefault', rc.default != null ? rc.default : 5);
       g += '<div class="rl-g-c' + cellCls(eff) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.zero ? '停' : eff.value) + '</div>';
     });
-    /* 輸入 */
     g += '<div class="rl-g-n">🌍 輸入枠</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
-      const eff = window.pitEffective(ds, 'capImport', rc.import != null ? rc.import : 3);
+      const eff = _effC(c, ds, 'capImport', rc.import != null ? rc.import : 3);
       g += '<div class="rl-g-c' + cellCls(eff) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.zero ? '停' : eff.value) + '</div>';
     });
-    /* 注意 */
     g += '<div class="rl-g-n">⚠ 注意</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
-      const rs = window.pitRulesFor(ds);
+      const rs = _rulesForC(c, ds);
       g += '<div class="rl-g-c wmark' + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (rs.warns.length ? '⚠' + (rs.warns.length > 1 ? rs.warns.length : '') : '') + '</div>';
     });
     g += '</div>';
@@ -392,16 +491,16 @@
     window._rlTestDate = dStr;
     const out = document.getElementById('rl-test-out');
     if (!out) return;
-    const s = state.settings;
-    const rc = s.reserveCap || { default: 5, import: 3 };
-    const lc = s.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
+    const c = _cfg();
+    const rc = c.reserveCap || { default: 5, import: 3 };
+    const lc = state.settings.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
     const lotNormal = (lc.pit || 0) + (lc.yard || 0) + (lc.parking || 0);
-    const rs = window.pitRulesFor(dStr);
+    const rs = _rulesForC(c, dStr);
     const p = dStr.split('-');
     const dd = new Date(+p[0], +p[1] - 1, +p[2]);
 
     function line(label, target, base, unit) {
-      const e = window.pitEffective(dStr, target, base);
+      const e = _effC(c, dStr, target, base);
       let t = '<div class="rl-tl"><span class="rl-tl-n">' + label + '</span>';
       if (e.zero) t += '<span class="rl-tl-v stop">停止(0' + unit + ')</span>';
       else if (e.rules.length) t += '<span class="rl-tl-v">' + base + ' → <b>' + e.value + unit + '</b>(' + (e.pct > 0 ? '+' : '') + e.pct + '%)</span>';
@@ -416,7 +515,7 @@
       return '<div class="rl-tl"><span class="rl-tl-n">' + label + '</span><span class="rl-tl-v">' + txt + '</span><span class="rl-tl-r">ルール ' + t.rules.map(function (n) { return '#' + n; }).join('・') + ' が効いています</span></div>';
     }
 
-    let h = '<div class="rl-day-t">📅 ' + (dd.getMonth() + 1) + '月' + dd.getDate() + '日（' + '日月火水木金土'[dd.getDay()] + '）' + (_holName(dStr) ? '・🎌' + esc(_holName(dStr)) : '') + ' の中身</div>';
+    let h = '<div class="rl-day-t">📅 ' + (dd.getMonth() + 1) + '月' + dd.getDate() + '日（' + '日月火水木金土'[dd.getDay()] + '）' + (_holName(dStr) ? '・🎌' + esc(_holName(dStr)) : '') + (_editing() ? '<span class="rl-ebadge" style="margin-left:8px">プレビュー</span>' : '') + ' の中身</div>';
     h += line('予約枠（国産）', 'capDefault', rc.default != null ? rc.default : 5, '台');
     h += line('予約枠（輸入）', 'capImport', rc.import != null ? rc.import : 3, '台');
     h += line('置き場の通常枠', 'lotNormal', lotNormal, '台');
@@ -427,17 +526,16 @@
       h += '<div class="rl-tl warn"><span class="rl-tl-n">⚠ ' + esc(labelOf(TARGET, w.target)) + '</span><span class="rl-tl-v">' + esc(w.msg) + '</span><span class="rl-tl-r">ルール #' + w.no + '</span></div>';
     });
     out.innerHTML = h;
-    pitRuleGrid();   // 選択ハイライトを更新
+    pitRuleGrid();
   };
 
-  function _save(msg) {
-    if (window.PitDB) PitDB.save(true);
+  function _flash(msg) {
     const el = document.getElementById('ps-status');
     if (el) {
       el.textContent = msg;
       el.classList.add('show');
       clearTimeout(window._rlFlashT);
-      window._rlFlashT = setTimeout(function () { el.classList.remove('show'); }, 1800);
+      window._rlFlashT = setTimeout(function () { el.classList.remove('show'); }, 2200);
     }
   }
 
