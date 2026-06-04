@@ -291,7 +291,7 @@
   function _rowViewHtml(r, i) {
     let t = labelOf(WHEN, r.when);
     if (r.when === 'range') t = (r.from || '?') + '〜' + (r.to || '?');
-    let h = '<div class="rl-row view act-' + actGrp(r.action) + (r.on === false ? ' off' : '') + '">';
+    let h = '<div class="rl-row rl-vw act-' + actGrp(r.action) + (r.on === false ? ' off' : '') + '">';   // ※クラス名に view を使うとアプリの画面切替CSS(.view)と衝突するため rl-vw
     h += '<span class="rl-no">' + (i + 1) + '</span>';
     h += '<span class="rl-vtxt">「' + esc(t) + '」は「' + esc(labelOf(TARGET, r.target)) + '」を <b>' + esc(labelOf(ACTION, r.action)) + '</b>';
     if (r.action === 'warn' && r.note) h += '：「' + esc(r.note) + '」';
