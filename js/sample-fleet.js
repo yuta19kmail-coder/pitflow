@@ -16,12 +16,13 @@
   const SEI = ['佐藤','鈴木','高橋','田中','伊藤','渡辺','山本','中村','小林','加藤','吉田','山田','佐々木','山口','松本','井上','木村','林','清水','山崎','森','池田','橋本','阿部','石川','前田','藤田','後藤','小川','岡田','長谷川','村上','近藤','石井','斎藤','坂本','遠藤','青木','西村','福田'];
   const KOKU_MK = ['トヨタ','ホンダ','日産','スズキ','ダイハツ','マツダ','スバル'];
   const KOKU = ['アクア','プリウス','タント','ノート','セレナ','フィット','N-BOX','ハスラー','ワゴンR','ヴォクシー','ハリアー','ジムニー','ムーヴ','スイフト','デイズ','フリード','ルーミー','スペーシア'];
-  const YUNYU = ['MINI（R56）','BMW 320i','ベンツ Cクラス','アウディ A4','VW ゴルフ','プジョー 208','ボルボ V40','フィアット 500','ジープ レネゲード','ポルシェ マカン','MINI クロスオーバー','BMW X1','ベンツ A180','VW ポロ'];
+  // 輸入車は [メーカー, 車種] のペア（v0.27.0 メーカー/車種の2ボックス化）
+  const YUNYU = [['MINI','クーパー(R56)'],['BMW','320i'],['ベンツ','C200'],['アウディ','A4'],['VW','ゴルフ'],['プジョー','208'],['ボルボ','V40'],['フィアット','500'],['ジープ','レネゲード'],['ポルシェ','マカン'],['MINI','クロスオーバー'],['BMW','X1'],['ベンツ','A180'],['VW','ポロ']];
   const PLACES = ['品川','練馬','横浜','足立','世田谷','習志野','袖ヶ浦','千葉','野田','大宮','春日部','所沢'];
   const CLS = ['300','500','580','330','530'];
   const KANA = ['あ','い','う','か','き','く','さ','す','せ','た','つ','て','な','に','は','ひ','ふ','ほ','ま','み','む','や','ゆ','ら','り','る'];
   const STAFF = ['社長','椎名','壱谷','福光','蓮沼','箱崎','菅谷','林','高橋'];
-  const WORK = ['shaken','shaken','shaken','general','general','oil','12pt','bp','3m','used'];  // 車検多め
+  const WORK = ['shaken','shaken','shaken','general','general','oil','12pt','bp','coat1y','coat3m'];  // 車検多め（v0.27.0 確定7種）
   const DROP = ['drop','drop','drop','wait','sameDay'];  // 基本は預かり
   const ACTIVE = ['check','estim','contact','parts','work'];
 
@@ -37,18 +38,23 @@
   function baseCard(id, imp){
     const workType = rnd(WORK);
     const dropType = rnd(DROP);
+    const yn = imp ? rnd(YUNYU) : null;
     return {
       id: 'f' + id,
       boardId: imp ? 'import' : 'default',
+      division: imp ? 'div2' : 'div1',   // 国→1課・輸→2課
       customer: rnd(SEI),
       tel: '0' + rnd(['90','80','70']) + '-' + d4() + '-' + d4(),
-      car: imp ? rnd(YUNYU) : (rnd(KOKU_MK) + ' ' + rnd(KOKU)),
+      maker: imp ? yn[0] : rnd(KOKU_MK),
+      car:   imp ? yn[1] : rnd(KOKU),
       plate: plate(),
       workType: workType,
       dropType: dropType,
+      consult: Math.random() < 0.08,   // たまに「相談」つき
       staff: rnd(STAFF),
       reserveTime: timeSlot(),
       estHoldDays: (window.pitEstHold ? pitEstHold(workType, dropType) : 5),  // 概算預かり日数
+      estAmount: (window.pitEstAmount ? pitEstAmount(workType) : 100000),     // 概算金額（タイプ別平均）
       needLoaner: false, needWash: Math.random() < 0.4, urgent: Math.random() < 0.06, memo: ''
     };
   }

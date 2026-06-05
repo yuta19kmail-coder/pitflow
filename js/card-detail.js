@@ -62,6 +62,10 @@ function renderCardForm(c){
   if (!body) return;
   let h = '';
 
+  /* 新規予約（全画面）は右パネル付き2カラム（v0.27.0） */
+  const withSide = (_cardMode === 'page');
+  if (withSide) h += '<div class="cfp-wrap"><div class="cfp-main">';
+
   /* === 顧客呼び出し（入力補助・整備ソフトとは別の控え） === */
   h += '<div class="cf-recall">';
   h += '<input id="cf-recall-input" class="cf-input" placeholder="🔍 過去の顧客・ナンバーから呼び出し（名前/ナンバー）" oninput="custSuggest(this.value)" autocomplete="off">';
@@ -80,7 +84,7 @@ function renderCardForm(c){
   /* === 基本情報パネル === */
   h += '<div class="cf-panel" data-tab="basic"' + (_cardTab === 'basic' ? '' : ' hidden') + '>';
 
-  /* === 基本情報 === */
+  /* === 基本情報（車両もここに統合・v0.27.0） === */
   h += sec('基本情報', '👤');
   h += '<div class="cf-row">';
   h += field('お客様名', textIn(c, 'customer', 'flex:2'));
@@ -89,26 +93,20 @@ function renderCardForm(c){
   h += '<div class="cf-row">';
   h += field('ナンバー', textIn(c, 'plate'));
   h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
+  h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
   h += '</div>';
-  h += secEnd();
-
-  /* === 車両 === */
-  h += sec('車両', '🚗');
   h += '<div class="cf-row">';
-  h += field('車名・型式', textIn(c, 'car'));
+  h += field('メーカー', textIn(c, 'maker', 'placeholder="例 トヨタ" style="max-width:160px"'));
+  h += field('車種（グレード）', textIn(c, 'car', 'placeholder="例 アクアGz"'));
   h += '</div>';
   h += '<div class="cf-row">';
   h += field('入庫日', dateIn(c, 'reserveDate'));
   h += field('入庫時刻', textIn(c, 'reserveTime', 'placeholder="例 09:30 / 09:00-10:00"'));
   h += field('予約受付日', dateIn(c, 'bookedAt'));
   h += '</div>';
-  h += '<div class="cf-row">';
-  h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
-  h += '</div>';
-  h += '<div class="cf-hint" style="margin-top:0">※「だいたい何日預かるか」の概算。ダッシュボードの“予想（不確定）”の混雑に使う。診断後に直せばOK。</div>';
   h += secEnd();
 
-  /* === 作業内容 === */
+  /* === 作業内容（概算日数・概算金額はここ・v0.27.0） === */
   h += sec('作業内容', '🔧');
   h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
   h += '<div class="cf-label">作業タイプ</div>';
@@ -116,14 +114,20 @@ function renderCardForm(c){
   h += '</div></div>';
   h += '<div class="cf-row">';
   h += field('受付タイプ', chips(c, 'dropType', state.dropTypes, true));
+  h += field('相談', toggle(c, 'consult', '相談あり', 'なし'));
   h += '</div>';
+  h += '<div class="cf-row">';
+  h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
+  h += field('概算 金額（円）', numIn(c, 'estAmount', 'placeholder="作業タイプから自動"'));
+  h += '</div>';
+  h += '<div class="cf-hint" style="margin-top:0">※ 日数・金額とも作業タイプを選ぶと平均値が自動で入る概算。診断・見積もりで後から直せばOK。</div>';
   h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
   h += '<div class="cf-label">整備内容（自由記入）</div>';
   h += textareaIn(c, 'menu', 2);
   h += '</div></div>';
   h += secEnd();
 
-  /* === 担当 === */
+  /* === 担当（フロント・予約者のみ・v0.27.0） === */
   h += sec('担当', '👥');
   h += '<div class="cf-row">';
   h += field('課', chips(c, 'division', state.divisions, true));
@@ -131,7 +135,6 @@ function renderCardForm(c){
   h += '<div class="cf-row">';
   h += field('フロント担当', staffSelect(c, 'frontStaff'));
   h += field('予約担当',     staffSelect(c, 'reserveStaff'));
-  h += field('作業担当',     staffSelect(c, 'staff'));
   h += '</div>';
   h += secEnd();
 
@@ -213,11 +216,88 @@ function renderCardForm(c){
   h += '<div class="cf-panel" data-tab="maint"'  + (_cardTab === 'maint'  ? '' : ' hidden') + '>' + cfMaintHtml(c)  + '</div>';
   h += '<div class="cf-panel" data-tab="office"' + (_cardTab === 'office' ? '' : ' hidden') + '>' + cfOfficeHtml(c) + '</div>';
 
+  /* === 右パネル（新規予約・全画面のみ）：最短入庫＋予約状況カレンダー（v0.27.0） === */
+  if (withSide){
+    h += '</div>';   // /cfp-main
+    h += '<div class="cfp-side">' + cfSideHtml(c) + '</div>';
+    h += '</div>';   // /cfp-wrap
+  }
+
   body.innerHTML = h;
 
   // === イベントバインド ===
   bindCardFormEvents(body);
 }
+
+/* ========================================
+   右パネル：最短入庫BOX＋予約状況ミニカレンダー（クリックで入庫日を自動入力）
+   ======================================== */
+const TEAM_ITEMS = [
+  { id: 'default', label: '国産車（1課）', color: '#1db97a' },
+  { id: 'import',  label: '輸入車（2課）', color: '#ec4899' },
+];
+
+function cfSideHtml(c){
+  const team = (c.boardId === 'import') ? 'import' : 'default';
+  const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
+  const teamName  = (team === 'import') ? '🌍 輸入車（2課）' : '🚗 国産車（1課）';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tStr = ymd(today);
+  let h = '';
+
+  /* ⏱ 最短入庫（クリックで入庫日に入る） */
+  h += '<div class="cfs-card">';
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">⏱ 最短入庫 <span class="cfs-team" style="color:' + teamColor + '">' + teamName + '</span></div>';
+  if (typeof dashEarliestIntake === 'function'){
+    [{ k: 'noLoaner', n: '代車なし' }, { k: 'loaner', n: '代車あり' }, { k: 'same', n: '当日作業' }].forEach(function (x) {
+      const d = dashEarliestIntake(team, x.k, today);
+      const ds = d ? ymd(d) : null;
+      const lbl = !d ? 'なし' : (ds === tStr ? '今日' : (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）');
+      h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickDate(\'' + ds + '\')"' : ' disabled') + '>'
+         + '<span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b><span class="cfs-el-go">タップで入庫日に入る</span></button>';
+    });
+  }
+  h += '</div>';
+
+  /* 📅 予約状況カレンダー（6週間・日クリックで入庫日に入る） */
+  h += '<div class="cfs-card">';
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">📅 予約の空き（' + (team === 'import' ? '輸入' : '国産') + '）</div>';
+  h += '<div class="cfs-cal">';
+  ['日','月','火','水','木','金','土'].forEach(function (w, i) {
+    h += '<div class="cfs-dow' + (i === 0 ? ' red' : (i === 6 ? ' sat' : '')) + '">' + w + '</div>';
+  });
+  const start = addDays(today, -today.getDay());   // 今週の日曜から6週間
+  for (let i = 0; i < 42; i++){
+    const d = addDays(start, i);
+    const ds = ymd(d);
+    if (ds < tStr){ h += '<div class="cfs-day past">' + d.getDate() + '</div>'; continue; }
+    let cls = '', mark = '';
+    if (window.pitVerdict){
+      const tv = pitVerdict(ds)[team];
+      if (tv.mark === '休'){ cls = ' closed'; mark = '休'; }
+      else if (tv.mark === '×'){ cls = ' full'; mark = '満'; }
+      else if (tv.mark === '△'){ cls = ' near'; mark = '△'; }
+      else { cls = ' ok'; mark = '○'; }
+    }
+    h += '<div class="cfs-day' + cls + (c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '" onclick="cfPickDate(\'' + ds + '\')" title="' + (d.getMonth()+1) + '/' + d.getDate() + '">'
+       + d.getDate() + '<span>' + mark + '</span></div>';
+  }
+  h += '</div>';
+  h += '<div class="cfs-hint">○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）</div>';
+  h += '</div>';
+
+  return h;
+}
+
+/* 右パネルの日付タップ → 入庫日に自動入力（×の日は確認・従来ガードと同じ） */
+window.cfPickDate = function (ds) {
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+  const fin = (window.pitIntakeGuard) ? pitIntakeGuard(c, ds, c.reserveDate) : ds;
+  if (fin !== ds) return;   // やめた
+  c.reserveDate = ds;
+  renderCardForm(c);
+};
 
 /* ========================================
    ヘルパー：セクション・フィールド・コントロール
@@ -356,11 +436,19 @@ function bindCardFormEvents(root){
       btn.addEventListener('click', () => {
         const newVal = btn.dataset.val;
         const wasActive = btn.classList.contains('active');
-        // 同じ値クリックで解除
-        if (wasActive){
-          c[key] = null;
+        if (key === 'boardId'){
+          // 国産/輸入は解除なし。選ぶと課も自動選択（国→1課・輸→2課）
+          c.boardId = newVal;
+          c.division = (newVal === 'import') ? 'div2' : 'div1';
+        } else if (wasActive){
+          c[key] = null;   // 同じ値クリックで解除
         } else {
           c[key] = newVal;
+        }
+        // 作業タイプ・受付タイプを選んだら概算（日数・金額）を自動セット（後から手で直せる）
+        if (key === 'workType' || key === 'dropType'){
+          if (window.pitEstHold)   c.estHoldDays = pitEstHold(c.workType, c.dropType);
+          if (window.pitEstAmount && key === 'workType' && c.workType) c.estAmount = pitEstAmount(c.workType);
         }
         renderCardForm(c);
       });

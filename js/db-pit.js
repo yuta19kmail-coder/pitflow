@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v8';   // v8: 予約サンプルをリアル再現（直近3週満杯→残り1枠→余裕）に変更で再シード
+  const LS_KEY = 'pitflow_data_v9';   // v9: 車両のメーカー/車種2ボックス化・作業タイプ7種確定・概算金額 追加で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'
@@ -37,6 +37,10 @@
             if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
             if (d.aiVerdicts && typeof d.aiVerdicts === 'object') state.aiVerdicts = d.aiVerdicts;
             this._mergeSettings(d.settings);
+            // 作業タイプは設定で増減できる＝保存があれば実行リストを上書き
+            if (Array.isArray(state.settings.workTypes) && state.settings.workTypes.length) {
+              state.workTypes = state.settings.workTypes;
+            }
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
           }
         } else {
@@ -89,7 +93,7 @@
       if (!saved || typeof saved !== 'object') return;
       const cur = state.settings || {};
       Object.keys(saved).forEach(function (k) {
-        if (k === 'reserveCap' || k === 'estHold' || k === 'lotCap' || k === 'target' || k === 'unitPrice' || k === 'ruleDict' || k === 'lotOver') {
+        if (k === 'reserveCap' || k === 'estHold' || k === 'estAmount' || k === 'lotCap' || k === 'target' || k === 'unitPrice' || k === 'ruleDict' || k === 'lotOver') {
           cur[k] = Object.assign({}, cur[k] || {}, saved[k] || {});
         } else {
           cur[k] = saved[k];

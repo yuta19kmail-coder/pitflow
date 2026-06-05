@@ -509,6 +509,40 @@
 .dash-park-u{ font-size:14px; font-weight:700; color:var(--text2); }
 .dash-park-sub{ font-size:11.5px; color:var(--text3); line-height:1.6; margin-left:10px; }
 
+/* ===== 📋 新規予約の2カラム＋右パネル（v0.27.0） ===== */
+.cfp-wrap{ display:flex; gap:18px; align-items:flex-start; }
+.cfp-main{ flex:1; min-width:0; }
+.cfp-side{ flex:none; width:300px; position:sticky; top:0; }
+@media (max-width:980px){ .cfp-wrap{ flex-direction:column; } .cfp-side{ width:100%; position:static; } }
+.cfs-card{ background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
+.cfs-h{ font-size:13.5px; font-weight:800; margin-bottom:10px; border-left:4px solid var(--brand); padding-left:8px; }
+.cfs-team{ font-size:11px; font-weight:700; margin-left:4px; }
+.cfs-el{ display:flex; align-items:center; gap:8px; width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:9px 12px; margin-bottom:7px; cursor:pointer; color:var(--text); text-align:left; transition:border-color .12s, transform .12s; }
+.cfs-el:hover{ border-color:#1db97a; transform:translateY(-1px); }
+.cfs-el.sel{ border-color:#1db97a; outline:1px solid #1db97a; }
+.cfs-el:disabled{ opacity:.5; cursor:default; }
+.cfs-el-n{ font-size:12px; font-weight:700; min-width:58px; }
+.cfs-el b{ font-size:16px; }
+.cfs-el-go{ margin-left:auto; font-size:9.5px; color:var(--text3); }
+.cfs-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.cfs-dow{ font-size:10px; text-align:center; color:var(--text3); padding:2px 0; font-weight:600; }
+.cfs-dow.red{ color:#ef4444; } .cfs-dow.sat{ color:#3b82f6; }
+.cfs-day{ position:relative; text-align:center; font-size:11.5px; font-weight:700; padding:4px 0 2px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; cursor:pointer; line-height:1.2; }
+.cfs-day span{ display:block; font-size:9px; font-weight:700; }
+.cfs-day.ok{ border-color:#1db97a; color:#1db97a; }
+.cfs-day.near{ border-color:#f97316; color:#f97316; }
+.cfs-day.full{ border-color:#ef4444; color:#ef4444; background:rgba(239,68,68,.08); }
+.cfs-day.closed{ background:transparent; border-color:transparent; color:var(--text3); font-weight:400; cursor:default; }
+.cfs-day.past{ background:transparent; border-color:transparent; color:var(--text3); opacity:.35; cursor:default; }
+.cfs-day.today{ outline:1px dashed #1db97a; }
+.cfs-day.sel{ outline:2px solid #1db97a; }
+.cfs-hint{ font-size:10px; color:var(--text3); margin-top:8px; line-height:1.6; }
+
+/* 設定：作業タイプ編集行（v0.27.0） */
+.ps-wt-row{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed var(--border); }
+.ps-wt-row:last-child{ border-bottom:0; }
+.ps-wt-color{ width:34px; height:26px; border:1px solid var(--border); border-radius:6px; background:var(--bg3); cursor:pointer; padding:1px; }
+
 /* ===== 📅 予約・月ビュー＝日付リスト型（v0.26.0） ===== */
 .reserve-month.rml-host{ display:block; background:transparent; border:0; border-radius:0; overflow:visible; }
 .rml-scroll{ overflow-y:auto; max-height:calc(100vh - 190px); padding-right:6px; }

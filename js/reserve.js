@@ -127,8 +127,8 @@ function renderReserveWeek(){
       inCell.forEach(c => {
         html += '<div class="reserve-week-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
         html += ' onclick="openDetail(\'' + c.id + '\')"';
-        html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + c.menu + '">';
-        html += c.reserveTime + ' ' + c.customer;
+        html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
+        html += c.reserveTime + ' ' + c.customer + (c.car ? ' ' + c.car : '');
         html += '</div>';
       });
       html += '</div>';
@@ -205,7 +205,7 @@ function _rmlRows(from, to){
              + ' style="border-left-color:' + ac + '"'
              + ' onclick="openDetail(\'' + c.id + '\')"'
              + ' title="' + (c.reserveTime || '') + ' ' + (c.customer || '') + '様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
-             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + (c.customer || '（未入力）')
+             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + (c.customer || '（未入力）') + (c.car ? ' ' + c.car : '')
              + (wt ? '<span class="rml-wt" style="color:' + ac + '">' + wt.label + '</span>' : '')
              + (c.needLoaner ? '<span class="rml-wt">代車</span>' : '')
              + '</div>';
@@ -282,8 +282,8 @@ function monthGridCells(refDate){
     visible.forEach(c => {
       html += '<div class="reserve-month-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       html += ' onclick="openDetail(\'' + c.id + '\')"';
-      html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + c.menu + '">';
-      html += c.reserveTime + ' ' + c.customer;
+      html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
+      html += c.reserveTime + ' ' + c.customer + (c.car ? ' ' + c.car : '');
       html += '</div>';
     });
     if (remaining > 0){

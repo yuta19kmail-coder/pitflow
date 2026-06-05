@@ -142,7 +142,10 @@ window.state = {
     holdDaysDefault: 3,   // 最短入庫の計算で使う「預かり想定日数」
     reserveCap: { default: 5, import: 3 },   // 1日の予約上限（default＝国産 / import＝輸入・人が別なのでチーム別）
     // 概算預かり日数の既定（作業タイプ別・入庫予約時の初期値。_default＝表にないタイプ用）
-    estHold: { shaken:5, general:6, bp:12, '3m':2, used:3, oil:0, '12pt':0, coat1y:3, coat3m:2, bring:4, _default:5 },
+    estHold: { shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 },
+    // 💴 概算金額の既定（作業タイプ別・円）。カードの「概算金額」の初期値＝メニュー平均単価
+    // 初期値は売上表Excelの実績（車検12.9万・点検5.6万・一般9.4万）＋仮置き。設定画面で調整可
+    estAmount: { shaken:129000, '12pt':56000, general:94000, oil:8000, bp:120000, coat1y:35000, coat3m:20000, _default:100000 },
     // 売上目標（円/月）＝最低目標〜最高目標(天井)。クォーター換算は÷4（売上表Excel 4年分の実績から）
     target: { monthMin: 15000000, monthMax: 20000000 },
     // 平均単価の初期値（円・チーム別）。実績が貯まれば pitUnitPrice() が直近3ヶ月平均に自動切替
@@ -163,15 +166,13 @@ window.state = {
   // 空のうちは計算式の仮判定（pitVerdict）がそのまま使われる
   aiVerdicts: {},
 
+  // 作業タイプ（2026-06-05 ゆうた確定の7種。設定画面で増減可能＝settings.workTypes に保存され、ここを上書きする）
   workTypes: [
-    { id: 'shaken',  label: '車検',         color: '#ef4444' },
-    { id: 'general', label: '一般',         color: '#84cc16' },
-    { id: 'oil',     label: 'オイル',       color: '#eab308' },
-    { id: '12pt',    label: '12点',         color: '#f97316' },
-    { id: 'used',    label: '中古',         color: '#3b82f6' },
-    { id: 'bp',      label: 'B.P',          color: '#ec4899' },
-    { id: '3m',      label: '3M',           color: '#a855f7' },
-    { id: 'bring',   label: '持込',         color: '#06b6d4' },
+    { id: 'shaken',  label: '車検',           color: '#ef4444' },
+    { id: '12pt',    label: '12点',           color: '#f97316' },
+    { id: 'general', label: '一般',           color: '#84cc16' },
+    { id: 'oil',     label: 'オイル',         color: '#eab308' },
+    { id: 'bp',      label: 'B.P',            color: '#3b82f6' },
     { id: 'coat1y',  label: 'コーティング1Y', color: '#8b5cf6' },
     { id: 'coat3m',  label: 'コーティング3M', color: '#a855f7' },
   ],
@@ -197,6 +198,14 @@ function pitEstHold(workType, dropType){
   return (map._default != null) ? map._default : 5;
 }
 window.pitEstHold = pitEstHold;
+
+/* 概算金額の初期値（作業タイプ別・円）＝カードの「概算金額」に自動で入る。後で手で直せる */
+function pitEstAmount(workType){
+  const map = (state.settings && state.settings.estAmount) || {};
+  if (map[workType] != null) return map[workType];
+  return (map._default != null) ? map._default : 100000;
+}
+window.pitEstAmount = pitEstAmount;
 
 /* チーム別の平均単価（円）＝直近3ヶ月（92日）の返車完了カードに確定金額(amountFinal)が
    10台以上あれば実績平均を自動計算。足りないうちは設定の初期単価を使う */

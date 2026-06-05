@@ -80,10 +80,23 @@
     h += '<div class="ps-hint">※ 空き0台まではずっと<b style="color:#1db97a">緑</b>。ちょい超過は緊急＋α・コインパで吸収できる「普通」なので、赤を安売りして受付が萎縮しないように（間の台数は濃いオレンジ）。</div>';
     h += '</div>';
 
+    /* ===== 作業タイプ（増減できる・v0.27.0） ===== */
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🔧 作業タイプ（メニュー）<button class="vh-btn" style="margin-left:auto" onclick="pitWtAdd()">＋ タイプを追加</button></div>';
+    h += '<div class="ps-desc">入庫カードの「作業タイプ」に出る選択肢。名前・色を変更でき、追加・削除も可能（削除しても過去カードのデータは消えません）。</div>';
+    (state.workTypes || []).forEach(function (w, i) {
+      h += '<div class="ps-wt-row">'
+         + '<input type="color" class="ps-wt-color" value="' + esc(w.color || '#64748b') + '" onchange="pitWtEdit(' + i + ',\'color\',this.value)">'
+         + '<input type="text" class="ps-in" style="width:170px" value="' + esc(w.label) + '" onchange="pitWtEdit(' + i + ',\'label\',this.value)">'
+         + '<button class="rl-del" title="削除" onclick="pitWtDel(' + i + ')">🗑</button>'
+         + '</div>';
+    });
+    h += '</div>';
+
     /* ===== 概算預かり日数の初期値 ===== */
     h += '<div class="ps-card">';
     h += '<div class="ps-h">⏳ 概算預かり日数の初期値（作業タイプ別）</div>';
-    h += '<div class="ps-desc">新規の入庫予約を作った時に入る「だいたい何日預かるか」の初期値。未来の混雑の<b>予想（不確定）</b>軸に使われます。カードごとに後から手で直せます。</div>';
+    h += '<div class="ps-desc">作業タイプを選んだ時にカードへ自動で入る「だいたい何日預かるか」。未来の混雑の<b>予想（不確定）</b>軸に使われます。カードごとに後から手で直せます。</div>';
     h += '<div class="ps-est-grid">';
     (state.workTypes || []).forEach(function (w) {
       h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:' + w.color + '"></span>'
@@ -97,6 +110,26 @@
        + '<span class="ps-unit">日</span></label>';
     h += '</div>';
     h += '<div class="ps-hint">※ 受付タイプが「待ち」「当日返車」のときは、この表に関係なく <b>0日（置き場を使わない）</b>になります。</div>';
+    h += '</div>';
+
+    /* ===== 概算金額の初期値（v0.27.0） ===== */
+    const eam = s.estAmount || {};
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">💴 概算金額の初期値（作業タイプ別・平均単価）</div>';
+    h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る平均単価。将来のクォーター集計（抱え高）とAI判定の材料になります。</div>';
+    h += '<div class="ps-est-grid">';
+    (state.workTypes || []).forEach(function (w) {
+      h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:' + w.color + '"></span>'
+         + '<span class="ps-est-name">' + esc(w.label) + '</span>'
+         + numIn('ps-eam-' + w.id, eam[w.id] != null ? eam[w.id] : (eam._default != null ? eam._default : 100000), 0, 9999999)
+         + '<span class="ps-unit">円</span></label>';
+    });
+    h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:#64748b"></span>'
+       + '<span class="ps-est-name">その他（表にないタイプ）</span>'
+       + numIn('ps-eam-default', eam._default != null ? eam._default : 100000, 0, 9999999)
+       + '<span class="ps-unit">円</span></label>';
+    h += '</div>';
+    h += '<div class="ps-hint">※ 初期値は売上表の実績（車検12.9万・12点5.6万・一般9.4万）＋仮置き。実態に合わせて調整してください。</div>';
     h += '</div>';
 
     /* ===== 営業時間・定休 ===== */
@@ -163,6 +196,13 @@
     est._default = readNum('ps-est-default', 5, 0, 60);
     s.estHold = est;
 
+    const eam = {};
+    (state.workTypes || []).forEach(function (w) {
+      eam[w.id] = readNum('ps-eam-' + w.id, 100000, 0, 9999999);
+    });
+    eam._default = readNum('ps-eam-default', 100000, 0, 9999999);
+    s.estAmount = eam;
+
     const openEl = document.getElementById('ps-open');
     const cutEl  = document.getElementById('ps-cutoff');
     if (openEl && openEl.value) s.openTime  = openEl.value;
@@ -179,6 +219,32 @@
 
     if (window.PitDB) PitDB.save(true);
     pitSettingsFlash('✓ 保存しました');
+  };
+
+  /* ===== 🔧 作業タイプの増減（v0.27.0）＝state.workTypes を編集し settings.workTypes に保存 ===== */
+  function _wtSave() {
+    state.settings.workTypes = state.workTypes;
+    if (window.PitDB) PitDB.save(true);
+    renderSettings();   // 日数・金額の表も追従
+    pitSettingsFlash('✓ 保存しました');
+  }
+  window.pitWtAdd = function () {
+    state.workTypes.push({ id: 'w' + Date.now(), label: '新タイプ', color: '#64748b' });
+    _wtSave();
+  };
+  window.pitWtEdit = function (i, field, val) {
+    const w = state.workTypes[i];
+    if (!w) return;
+    if (field === 'label' && !String(val).trim()) return;
+    w[field] = val;
+    _wtSave();
+  };
+  window.pitWtDel = function (i) {
+    const w = state.workTypes[i];
+    if (!w) return;
+    if (!confirm('作業タイプ「' + w.label + '」を削除しますか？\n（過去のカードのデータは消えません。選択肢から消えるだけです）')) return;
+    state.workTypes.splice(i, 1);
+    _wtSave();
   };
 
   /* 初期値に戻す（このページの項目だけ。🧩ルールページの内容＝ルール・辞書・予約枠・目標・単価は保持） */

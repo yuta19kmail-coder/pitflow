@@ -21,12 +21,12 @@
     const name=(c.customer||'').trim();
     const plate=(c.plate||'').trim();
     if(!name && !plate) return;                 // 空は登録しない
-    const rec={ name, tel:(c.tel||'').trim(), car:(c.car||'').trim(), plate, staff:(c.staff||'').trim(), updatedAt:Date.now() };
+    const rec={ name, tel:(c.tel||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), plate, staff:(c.staff||'').trim(), updatedAt:Date.now() };
     const arr=list();
     const k=keyOf(rec);
     const ex=arr.find(r=>keyOf(r)===k);
     if(ex){
-      ex.name=rec.name||ex.name; ex.tel=rec.tel||ex.tel; ex.car=rec.car||ex.car;
+      ex.name=rec.name||ex.name; ex.tel=rec.tel||ex.tel; ex.maker=rec.maker||ex.maker; ex.car=rec.car||ex.car;
       ex.plate=rec.plate||ex.plate; ex.staff=rec.staff||ex.staff; ex.updatedAt=rec.updatedAt;
     } else {
       rec.id='cu'+Date.now()+Math.floor(Math.random()*1000);
@@ -60,7 +60,7 @@
   window.custPick=function(id){
     const r=list().find(x=>x.id===id); if(!r) return;
     const c=state.cards.find(x=>x.id===_editingCardId); if(!c) return;
-    c.customer=r.name||c.customer; c.tel=r.tel||c.tel; c.car=r.car||c.car; c.plate=r.plate||c.plate;
+    c.customer=r.name||c.customer; c.tel=r.tel||c.tel; c.maker=r.maker||c.maker; c.car=r.car||c.car; c.plate=r.plate||c.plate;
     if(!c.staff) c.staff=r.staff||'';
     renderCardForm(c);
   };
