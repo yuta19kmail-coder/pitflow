@@ -520,7 +520,7 @@
 #app.sb-off #sidebar{ display:none; }
 #sb-toggle{ font-size:15px; padding:6px 10px; }
 .cfs-card{ background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
-.cfs-h{ font-size:13.5px; font-weight:800; margin-bottom:10px; border-left:4px solid var(--brand); padding-left:8px; }
+.cfs-h{ display:flex; align-items:center; gap:6px; font-size:13.5px; font-weight:800; margin-bottom:10px; border-left:4px solid var(--brand); padding-left:8px; }
 .cfs-team{ font-size:11px; font-weight:700; margin-left:4px; }
 .cfs-el{ display:flex; align-items:center; gap:8px; width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:9px; padding:9px 12px; margin-bottom:7px; cursor:pointer; color:var(--text); text-align:left; transition:border-color .12s, transform .12s; }
 .cfs-el:hover{ border-color:#1db97a; transform:translateY(-1px); }
@@ -543,8 +543,9 @@
 .cfs-day.ok{ border-color:#1db97a; color:#1db97a; }
 .cfs-day.near{ border-color:#f97316; color:#f97316; }
 .cfs-day.full{ border-color:#ef4444; color:#ef4444; background:rgba(239,68,68,.08); }
-.cfs-day.closed{ background:transparent; border-color:transparent; color:var(--text3); font-weight:400; cursor:default; }
+.cfs-day.closed{ background:transparent; border:1px solid var(--border); color:var(--text3); font-weight:400; cursor:default; }   /* 定休日もラインは引く（v0.27.3） */
 .cfs-day.past{ background:transparent; border-color:transparent; color:var(--text3); opacity:.35; cursor:default; }
+.cfs-day.noclick{ cursor:default; }
 .cfs-day.today{ outline:1px dashed #1db97a; }
 .cfs-day.sel{ outline:2px solid #1db97a; }
 .cfs-hint{ font-size:10px; color:var(--text3); margin-top:8px; line-height:1.6; }

@@ -94,10 +94,9 @@ function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay
 
 function openNewReserve(){
   const id = 'c' + Date.now();
-  const boardId = state.currentBoardId || 'default';
   const card = {
-    id, status: 'reserved', boardId: boardId, bayId: null,
-    division: (boardId === 'import') ? 'div2' : 'div1',   // 国→1課・輸→2課（自動）
+    id, status: 'reserved', boardId: null, bayId: null,   // 国産/輸入は未選択スタート（選ぶと片方のカレンダーが消える）
+    division: null,   // 課は国産/輸入を選んだ瞬間に自動で入る
     log: [{ label: '予約作成', at: Date.now() }],
     customer: '', tel: '', maker: '', car: '', plate: '',
     reserveDate: ymd(new Date()), reserveTime: '', returnDate: '',
