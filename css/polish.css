@@ -511,11 +511,14 @@
 
 /* ===== 📋 新規予約の2カラム＋右パネル（v0.28.0＝左右が独立スクロール・バー非表示） ===== */
 #view-card.active{ display:flex; flex-direction:column; overflow:hidden; }
-#view-card .card-page-body{ flex:1; min-height:0; overflow:hidden; }
+#view-card .card-page-head{ position:relative; z-index:5; background:var(--bg); margin-bottom:10px; }   /* 透け防止：ヘッダは不透明で前面 */
+#view-card .card-page-body{ flex:1; min-height:0; overflow:hidden; position:relative; z-index:1; }
 .cfp-wrap{ display:flex; gap:22px; align-items:stretch; height:100%; }
 .cfp-main{ flex:none; width:min(860px, 100%); min-width:0; height:100%; overflow-y:auto; scrollbar-width:none; padding-bottom:30px; }
 .cfp-side{ flex:1; min-width:320px; height:100%; overflow-y:auto; scrollbar-width:none; padding-bottom:30px; }
 .cfp-main::-webkit-scrollbar, .cfp-side::-webkit-scrollbar{ display:none; }
+.cfp-main, .cfp-side{ overscroll-behavior:contain; }
+.cfs-lg-scroll{ background:var(--bg2); }   /* 角丸すき間からの透け防止 */
 @media (max-width:980px){
   #view-card.active{ display:block; overflow:auto; }
   #view-card .card-page-body{ overflow:visible; }
@@ -554,6 +557,10 @@
 .cfs-day.closed{ background:transparent; border:1px solid var(--border); color:var(--text3); font-weight:400; cursor:default; }   /* 定休日もラインは引く（v0.27.3） */
 .cfs-day.past{ background:transparent; border-color:transparent; color:var(--text3); opacity:.35; cursor:default; }
 .cfs-day.noclick{ cursor:default; }
+
+/* 🔎 入力チェックの漏れハイライト（v0.28.1） */
+.cf-miss{ outline:2px solid #ef4444 !important; outline-offset:2px; border-radius:8px; animation:cfMiss .5s ease 2; }
+@keyframes cfMiss{ 50%{ outline-color:rgba(239,68,68,.25); } }
 
 /* 🚙 代車の空き＝代車ビュー式ミニガント（v0.27.4） */
 .cfs-lg-scroll{ overflow:auto; max-height:420px; border:1px solid var(--border); border-radius:8px; }

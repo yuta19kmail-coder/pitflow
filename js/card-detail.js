@@ -62,6 +62,18 @@ function closeDetail(){
 function renderCardForm(c){
   const body = document.getElementById(_cardBodyId || 'md-body');
   if (!body) return;
+
+  /* 再描画前にスクロール位置を控える（ボタン操作で先頭に飛ばないように・v0.28.1） */
+  const _pm = body.querySelector('.cfp-main');
+  const _ps = body.querySelector('.cfp-side');
+  const _pg = body.querySelector('#cfs-lg-scroll');
+  const _keep = {
+    main: _pm ? _pm.scrollTop : 0,
+    side: _ps ? _ps.scrollTop : 0,
+    gT: _pg ? _pg.scrollTop : 0,
+    gL: _pg ? _pg.scrollLeft : 0,
+  };
+
   let h = '';
 
   /* 新規予約（全画面）は右パネル付き2カラム（v0.27.0） */
@@ -227,6 +239,14 @@ function renderCardForm(c){
 
   body.innerHTML = h;
 
+  /* スクロール位置を復元（v0.28.1） */
+  const _nm = body.querySelector('.cfp-main');
+  const _ns = body.querySelector('.cfp-side');
+  const _ng = body.querySelector('#cfs-lg-scroll');
+  if (_nm) _nm.scrollTop = _keep.main;
+  if (_ns) _ns.scrollTop = _keep.side;
+  if (_ng){ _ng.scrollTop = _keep.gT; _ng.scrollLeft = _keep.gL; }
+
   // === イベントバインド ===
   bindCardFormEvents(body);
 }
@@ -274,7 +294,7 @@ function _cfsShortHtml(c, team, today, tStr){
     const d = dashEarliestIntake(team, x.k, today);
     const ds = d ? ymd(d) : null;
     const lbl = !d ? 'なし' : (ds === tStr ? '今日' : (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）');
-    h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"' : ' disabled') + '>'
+    h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickShort(\'' + ds + '\',\'' + team + '\',\'' + x.k + '\')"' : ' disabled') + '>'
        + '<span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b><span class="cfs-el-go">タップで入庫日に入る</span></button>';
   });
   h += '</div>';
@@ -337,7 +357,7 @@ function _cfsLgRows(from, to, today, tStr, c){
     const ds = ymd(d);
     const dow = d.getDay();
     const dCls = (dow === 0) ? ' red' : (dow === 6 ? ' sat' : '');
-    h += '<tr><td class="cfs-lg-d' + dCls + (ds === tStr ? ' today' : '') + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + '</span></td>';
+    h += '<tr data-ds="' + ds + '"><td class="cfs-lg-d' + dCls + (ds === tStr ? ' today' : '') + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + '</span></td>';
     loaners.forEach(function (l) {
       const a = assigns.find(function (x) { return x.loanerId === l.id && x.fromDate <= ds && x.toDate >= ds; });
       if (a){
@@ -390,6 +410,50 @@ window.cfsLgToday = function () {
   if (sc) sc.scrollTop = 0;
 };
 
+/* 🔎 入力チェック（v0.28.1）：漏れていそうな項目を赤くハイライト＋先頭へスクロール。強制はしない */
+window.pitCardCheck = function () {
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+  const body = document.getElementById(_cardBodyId || 'md-body');
+  if (!body) return;
+  body.querySelectorAll('.cf-miss').forEach(el => el.classList.remove('cf-miss'));
+
+  const need = [
+    ['customer',    'お客様名',        !!(c.customer || '').trim()],
+    ['tel',         'TEL',             !!(c.tel || '').trim()],
+    ['boardId',     '国産車／輸入車',  c.boardId === 'default' || c.boardId === 'import'],
+    ['maker',       'メーカー',        !!(c.maker || '').trim()],
+    ['car',         '車種（グレード）', !!(c.car || '').trim()],
+    ['reserveDate', '入庫日',          !!c.reserveDate],
+    ['workType',    '作業タイプ',      !!c.workType],
+    ['dropType',    '受付タイプ',      !!c.dropType],
+  ];
+  if (c.needLoaner){
+    need.push(['loanerId',   '使用代車', !!c.loanerId]);
+    need.push(['loanerFrom', '貸出から', !!c.loanerFrom]);
+    need.push(['loanerTo',   '貸出まで', !!c.loanerTo]);
+  }
+
+  const misses = [];
+  let first = null;
+  need.forEach(function (n) {
+    if (n[2]) return;
+    misses.push(n[1]);
+    const el = body.querySelector('[data-key="' + n[0] + '"]');
+    if (el){
+      el.classList.add('cf-miss');
+      if (!first) first = el;
+    }
+  });
+
+  if (!misses.length){
+    if (window.pitToast) pitToast('✅ 入力OK！漏れはありません');
+    return;
+  }
+  if (window.pitToast) pitToast('⚠ 未入力 ' + misses.length + '件：' + misses.join('・'));
+  if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+};
+
 /* カレンダーの月送り（右パネル）。n=0 で今月に戻る */
 window.cfsCalShift = function (n) {
   if (!window._cfsYM) return;
@@ -405,15 +469,46 @@ window.cfsCalShift = function (n) {
 };
 
 /* 右パネルの日付タップ → 入庫日に自動入力（×の日は確認・従来ガードと同じ）
-   team指定あり＝そのカレンダーのチームで判定（チーム未選択でも正しく警告が出る） */
+   team指定あり＝そのカレンダーのチームで判定（チーム未選択でも正しく警告が出る）
+   同じ日をもう一度タップ＝選択キャンセル（v0.28.1） */
 window.cfPickDate = function (ds, team) {
   const c = state.cards.find(x => x.id === _editingCardId);
   if (!c) return;
+  if (c.reserveDate === ds){   // 同日タップ＝キャンセル
+    c.reserveDate = '';
+    renderCardForm(c);
+    return;
+  }
   const judge = { boardId: team || c.boardId };   // ガードはチームだけ見る
   const fin = (window.pitIntakeGuard) ? pitIntakeGuard(judge, ds, c.reserveDate) : ds;
   if (fin !== ds) return;   // やめた
   c.reserveDate = ds;
   renderCardForm(c);
+};
+
+/* ⏱最短入庫カードのタップ → 入庫日セット＋カレンダーをその月へジャンプ。
+   「代車あり」は代車ガントも出して該当日へスクロール（v0.28.1） */
+window.cfPickShort = function (ds, team, kind) {
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+  const judge = { boardId: team || c.boardId };
+  const fin = (window.pitIntakeGuard) ? pitIntakeGuard(judge, ds, c.reserveDate) : ds;
+  if (fin !== ds) return;
+  c.reserveDate = ds;
+  const p = ds.split('-');
+  window._cfsYM = { y: +p[0], m: +p[1] - 1 };   // 予約カレンダーをその月へ
+  if (kind === 'loaner'){
+    c.needLoaner = true;   // 代車ガントも表示
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const idx = Math.round((new Date(+p[0], +p[1]-1, +p[2]) - today) / 86400000);
+    if ((window._cfsLgN || 28) < idx + 14) window._cfsLgN = idx + 28;   // 行を先に確保
+  }
+  renderCardForm(c);
+  if (kind === 'loaner'){
+    const sc = document.getElementById('cfs-lg-scroll');
+    const tr = sc && sc.querySelector('tr[data-ds="' + ds + '"]');
+    if (sc && tr) sc.scrollTop = Math.max(0, tr.offsetTop - 60);   // ガントを該当日へ
+  }
 };
 
 /* ========================================
