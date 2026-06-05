@@ -256,11 +256,11 @@
   padding-right:2px;
 }
 
-/* 予約ビュー：2ヶ月（月カレンダー2連） */
+/* 予約ビュー：2ヶ月（月カレンダー2連・v0.26.0 縦積みに変更） */
 .reserve-2month{
   display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:16px;
+  grid-template-columns:1fr;
+  gap:20px;
 }
 .reserve-2month .month-block-title{
   font-size:14px;font-weight:600;

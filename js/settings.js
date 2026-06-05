@@ -71,6 +71,13 @@
     h += '<label class="ps-lb">最短入庫の預かり想定 ' + numIn('ps-hold', s.holdDaysDefault != null ? s.holdDaysDefault : 3, 1, 60) + '<span class="ps-unit">日</span></label>';
     h += '</div>';
     h += '<div class="ps-hint">※「最短で入庫できる日」は、この想定日数ぶん預かっても置き場（合計）が溢れない最初の日を探します。</div>';
+    const ov = s.lotOver || { warn: 5, danger: 10 };
+    h += '<div class="ps-grid" style="margin-top:12px">';
+    h += '<span class="ps-lb" style="font-weight:700">空き数字の色分け</span>';
+    h += '<label class="ps-lb">🟠 超過がここまでオレンジ ' + numIn('ps-over-warn', ov.warn != null ? ov.warn : 5, 0, 98) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb">🔴 ここからは赤 ' + numIn('ps-over-danger', ov.danger != null ? ov.danger : 10, 1, 99) + '<span class="ps-unit">台 以上</span></label>';
+    h += '</div>';
+    h += '<div class="ps-hint">※ 空き0台まではずっと<b style="color:#1db97a">緑</b>。ちょい超過は緊急＋α・コインパで吸収できる「普通」なので、赤を安売りして受付が萎縮しないように（間の台数は濃いオレンジ）。</div>';
     h += '</div>';
 
     /* ===== 概算預かり日数の初期値 ===== */
@@ -139,6 +146,15 @@
     const sumEl = document.getElementById('ps-lot-sum');
     if (sumEl) sumEl.textContent = s.lotCapacity;
     s.holdDaysDefault = readNum('ps-hold', 3, 1, 60);
+
+    const ovWarn = readNum('ps-over-warn', 5, 0, 98);
+    let ovDanger = readNum('ps-over-danger', 10, 1, 99);
+    if (ovDanger <= ovWarn) {   // 赤がオレンジ以下だと矛盾するので自動補正
+      ovDanger = ovWarn + 1;
+      const el = document.getElementById('ps-over-danger');
+      if (el) el.value = ovDanger;
+    }
+    s.lotOver = { warn: ovWarn, danger: ovDanger };
 
     const est = {};
     (state.workTypes || []).forEach(function (w) {

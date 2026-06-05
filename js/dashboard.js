@@ -133,6 +133,18 @@ function _dashLevel(ratio){
   return { c:'#1db97a', t:'余裕' };
 }
 
+/* 🅿️ 駐車場の空き → 色（v0.25.2 ゆうた指定・しきい値は設定で変更可）
+   ちょい超過は緊急+α・コインパで吸収できる「普通」＝赤を安売りしない。
+   空き0以上＝緑／超過1〜warn(既定5)＝オレンジ／warn超〜danger未満＝濃いオレンジ／danger(既定10)以上＝赤 */
+function dashParkCol(freeSigned){
+  const ov = (state.settings && state.settings.lotOver) || { warn: 5, danger: 10 };
+  if (freeSigned >= 0) return '#1db97a';
+  const over = -freeSigned;
+  if (over >= (ov.danger != null ? ov.danger : 10)) return '#ef4444';
+  if (over >  (ov.warn   != null ? ov.warn   : 5))  return '#ea580c';
+  return '#f97316';
+}
+
 function renderDashboard(){
   const wrap = document.getElementById('view-dashboard-body');
   if (!wrap) return;
@@ -145,7 +157,7 @@ function renderDashboard(){
   const outToday  = state.cards.filter(function(c){ return c.returnDate === tStr && _dashHeld(c); }).length;
   const heldNow   = dashOccupancy(tStr, tStr);
   const freeSigned = cap - heldNow;   // 今日の駐車場空き（マイナス＝オーバー）
-  const parkCol = (freeSigned <= 0) ? '#ef4444' : (freeSigned <= 3 ? '#f97316' : '#1db97a');
+  const parkCol = dashParkCol(freeSigned);
 
   // 2週間の混雑
   const days = [];
@@ -202,7 +214,7 @@ function renderDashboard(){
   h += '<div class="dash-card">';
   h += '<div class="dash-h"><span>🅿️ 今日の駐車場空き</span></div>';
   h += '<div class="dash-park"><span class="dash-park-num" style="color:' + parkCol + '">' + (freeSigned > 0 ? '+' : '') + freeSigned + '</span><span class="dash-park-u">台</span>'
-     + '<span class="dash-park-sub">' + heldNow + '台預かり中 / 置ける' + cap + '台' + lcStr + (freeSigned < 0 ? '<br><b style="color:#ef4444">⚠ ' + (-freeSigned) + '台オーバー（緊急コインパ行き）</b>' : '') + '</span></div>';
+     + '<span class="dash-park-sub">' + heldNow + '台預かり中 / 置ける' + cap + '台' + lcStr + (freeSigned < 0 ? '<br><b style="color:' + parkCol + '">⚠ ' + (-freeSigned) + '台オーバー（緊急コインパ行き）</b>' : '') + '</span></div>';
   h += '</div>';
 
   // 📅 直近2週間の駐車場予想（数字＝空き台数±）
@@ -210,14 +222,13 @@ function renderDashboard(){
   h += '<div class="dash-h"><span>📅 直近2週間の駐車場予想</span><span class="dash-note">数字＝空き台数（マイナス＝オーバー）／点線＝満杯／薄いバー＝概算日数による予想</span></div>';
   h += '<div class="dash-bars">';
   days.forEach(function(x){
-    const ratio = x.occ / cap;
-    const lvi = _dashLevel(ratio);
     const hpx = Math.round((x.occ / maxOcc) * 84);
     const isToday = ymd(x.d) === tStr;
     const fs = cap - x.occ;
+    const fc = dashParkCol(fs);
     h += '<div class="dash-bar' + (isToday ? ' today' : '') + (ymd(x.d) > tStr ? ' is-forecast' : '') + '">';
-    h += '<div class="dash-bar-n" style="color:' + (fs <= 0 ? '#ef4444' : (fs <= 3 ? '#f97316' : '#1db97a')) + '">' + (fs > 0 ? '+' : '') + fs + '</div>';
-    h += '<div class="dash-bar-track"><div class="dash-bar-fill" style="height:' + Math.max(3, hpx) + 'px;background:' + lvi.c + '"></div><div class="dash-bar-cap" style="bottom:' + Math.round((cap / maxOcc) * 84) + 'px"></div></div>';
+    h += '<div class="dash-bar-n" style="color:' + fc + '">' + (fs > 0 ? '+' : '') + fs + '</div>';
+    h += '<div class="dash-bar-track"><div class="dash-bar-fill" style="height:' + Math.max(3, hpx) + 'px;background:' + fc + '"></div><div class="dash-bar-cap" style="bottom:' + Math.round((cap / maxOcc) * 84) + 'px"></div></div>';
     h += '<div class="dash-bar-d">' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '</div>';
     h += '<div class="dash-bar-w">' + '日月火水木金土'[x.d.getDay()] + '</div>';
     h += '</div>';

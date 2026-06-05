@@ -138,13 +138,82 @@ function renderReserveWeek(){
   wrap.innerHTML = html;
 }
 
+/* 月ビュー（v0.26.0 ゆうた指示で刷新）＝左に日付・右にその日の予約を時間順で左詰め・下へ無限スクロール。
+   月をまたぐと月見出しを挟んで永遠に続く。行へのドラッグ＝入庫日変更（×日は警告）。 */
 function renderReserveMonth(){
   document.getElementById('reserve-day-list').style.display = 'none';
   document.getElementById('reserve-week').style.display = 'none';
   document.getElementById('reserve-2month').style.display = 'none';
   const wrap = document.getElementById('reserve-month');
+  wrap.classList.add('rml-host');   // グリッド用CSSを無効化してリスト表示に
   wrap.style.display = '';
-  wrap.innerHTML = monthGridCells(state.reserveDate);
+
+  const base = new Date(state.reserveDate.getFullYear(), state.reserveDate.getMonth(), 1);
+  window._rmlStart = base;
+  window._rmlN = 42;   // 初期6週間ぶん
+  wrap.innerHTML = '<div class="rml-scroll" id="rml-scroll"><div id="rml-list">' + _rmlRows(0, window._rmlN) + '</div></div>';
+
+  const sc = document.getElementById('rml-scroll');
+  if (sc){
+    sc.addEventListener('scroll', function(){
+      if (sc.scrollTop + sc.clientHeight > sc.scrollHeight - 320){
+        const from = window._rmlN;
+        window._rmlN += 21;
+        const list = document.getElementById('rml-list');
+        if (list) list.insertAdjacentHTML('beforeend', _rmlRows(from, window._rmlN));
+      }
+    });
+    // 今月を開いた時は今日の行まで自動スクロール
+    const t = sc.querySelector('.rml-date.today');
+    if (t) sc.scrollTop = Math.max(0, t.closest('.rml-row').offsetTop - 8);
+  }
+}
+
+function _rmlRows(from, to){
+  const todayStr = ymd(new Date());
+  let html = '';
+  for (let i = from; i < to; i++){
+    const d = addDays(window._rmlStart, i);
+    const ds = ymd(d);
+    if (d.getDate() === 1 || i === 0){
+      html += '<div class="rml-mhead">' + d.getFullYear() + '年 ' + (d.getMonth()+1) + '月</div>';
+    }
+    const dow = d.getDay();
+    const isClosed = state.settings.closedDow.includes(dow);
+    const hol = (window.Holidays && Holidays.name(ds)) || null;
+    const cardsOfDay = state.cards
+      .filter(c => c.reserveDate === ds && c.status !== 'returned' && c.status !== 'workDone')
+      .sort((a, b) => (a.reserveTime || '99:99') < (b.reserveTime || '99:99') ? -1 : 1);
+
+    let dCls = '';
+    if (ds === todayStr) dCls += ' today';
+    if (dow === 0 || hol) dCls += ' red';
+    else if (dow === 6) dCls += ' sat';
+
+    html += '<div class="rml-row' + (isClosed ? ' closed' : '') + '">';
+    html += '<div class="rml-date' + dCls + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + (ds === todayStr ? '・今日' : '') + '</span>'
+         + (hol ? '<span class="rml-hol">🎌' + hol + '</span>' : '')
+         + (isClosed ? '<span class="rml-hol">定休</span>' : '') + '</div>';
+    html += '<div class="rml-cards" data-drop="reserveDate" data-drop-val="' + ds + '">';
+    if (!cardsOfDay.length){
+      html += '<span class="rml-empty">' + (isClosed ? '休' : '—') + '</span>';
+    } else {
+      cardsOfDay.forEach(c => {
+        const wt = state.workTypes.find(w => w.id === c.workType);
+        const ac = wt ? wt.color : 'var(--brand)';
+        html += '<div class="rml-ev' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"'
+             + ' style="border-left-color:' + ac + '"'
+             + ' onclick="openDetail(\'' + c.id + '\')"'
+             + ' title="' + (c.reserveTime || '') + ' ' + (c.customer || '') + '様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
+             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + (c.customer || '（未入力）')
+             + (wt ? '<span class="rml-wt" style="color:' + ac + '">' + wt.label + '</span>' : '')
+             + (c.needLoaner ? '<span class="rml-wt">代車</span>' : '')
+             + '</div>';
+      });
+    }
+    html += '</div></div>';
+  }
+  return html;
 }
 
 function renderReserve2Month(){

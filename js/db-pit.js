@@ -89,7 +89,7 @@
       if (!saved || typeof saved !== 'object') return;
       const cur = state.settings || {};
       Object.keys(saved).forEach(function (k) {
-        if (k === 'reserveCap' || k === 'estHold' || k === 'lotCap' || k === 'target' || k === 'unitPrice' || k === 'ruleDict') {
+        if (k === 'reserveCap' || k === 'estHold' || k === 'lotCap' || k === 'target' || k === 'unitPrice' || k === 'ruleDict' || k === 'lotOver') {
           cur[k] = Object.assign({}, cur[k] || {}, saved[k] || {});
         } else {
           cur[k] = saved[k];

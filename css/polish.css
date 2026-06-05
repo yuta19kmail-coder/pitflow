@@ -509,6 +509,27 @@
 .dash-park-u{ font-size:14px; font-weight:700; color:var(--text2); }
 .dash-park-sub{ font-size:11.5px; color:var(--text3); line-height:1.6; margin-left:10px; }
 
+/* ===== 📅 予約・月ビュー＝日付リスト型（v0.26.0） ===== */
+.reserve-month.rml-host{ display:block; background:transparent; border:0; border-radius:0; overflow:visible; }
+.rml-scroll{ overflow-y:auto; max-height:calc(100vh - 190px); padding-right:6px; }
+.rml-mhead{ font-size:14.5px; font-weight:800; padding:16px 2px 6px; color:var(--text); }
+.rml-row{ display:flex; gap:12px; align-items:flex-start; border-bottom:1px dashed var(--border); padding:5px 0; }
+.rml-row.closed{ background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 10px,transparent 10px,transparent 20px); border-radius:6px; }
+.rml-date{ flex:none; width:92px; font-size:13px; font-weight:700; color:var(--text2); padding:6px 0 0 4px; line-height:1.3; }
+.rml-date span{ font-size:10.5px; font-weight:600; color:var(--text3); margin-left:4px; }
+.rml-date.red, .rml-date.red span{ color:#ef4444; }
+.rml-date.sat, .rml-date.sat span{ color:#3b82f6; }
+.rml-date.today, .rml-date.today span{ color:#1db97a; }
+.rml-hol{ display:block; font-size:9.5px; color:#ef4444; font-weight:600; margin-left:0 !important; }
+.rml-cards{ flex:1; display:flex; flex-wrap:wrap; gap:6px; min-height:30px; align-items:flex-start; padding:2px 0; }
+.rml-empty{ color:var(--text3); font-size:11px; padding-top:7px; }
+.rml-ev{ background:var(--bg3); border:1px solid var(--border); border-left:3px solid var(--brand); border-radius:7px; padding:4px 9px; font-size:11.5px; cursor:pointer; white-space:nowrap; transition:filter .1s, transform .1s; }
+.rml-ev:hover{ filter:brightness(1.12); transform:translateY(-1px); }
+.rml-ev b{ font-size:11px; }
+.rml-ev.urgent{ border-color:#ef4444; color:#ef4444; }
+.rml-ev[draggable="true"]{ cursor:grab; }
+.rml-wt{ font-size:9.5px; font-weight:700; margin-left:6px; color:var(--text3); }
+
 /* ===== 🗓 予約の埋まり＝横軸の無限カレンダー（v0.25.0） ===== */
 .drc-scroll{ overflow-x:auto; padding-bottom:6px; }
 .drc-grid{ display:flex; gap:3px; min-width:max-content; }
