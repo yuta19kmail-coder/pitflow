@@ -148,7 +148,7 @@ function renderCardForm(c){
     h += '<div class="cf-loaner-detail">';
     h += '<div class="cf-row">';
     h += field('使用代車', loanerSelect(c, 'loanerId'));
-    h += field('車種固定', toggle(c, 'loanerFixed', '固定あり', 'なし'));
+    h += field('', '<div class="cf-chips" style="margin-top:20px"><button type="button" id="cf-fixed-btn" class="cf-chip' + (c.loanerFixed ? ' active' : '') + '"' + (c.loanerFixed ? ' style="background:#1db97a;color:#fff;border-color:#1db97a;"' : '') + '>車種固定</button></div>');
     h += '</div>';
     h += '<div class="cf-row">';
     h += field('貸出 から', dateIn(c, 'loanerFrom'));
@@ -245,34 +245,38 @@ function cfSideHtml(c){
   const picked = (c.boardId === 'default' || c.boardId === 'import');   // 国産/輸入を選んだか
   let h = '';
 
-  /* ⏱ 最短入庫（チーム確定後・クリックで入庫日に入る） */
-  if (picked && typeof dashEarliestIntake === 'function'){
-    const team = c.boardId;
-    const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
-    const teamName  = (team === 'import') ? '🌍 輸入車' : '🚗 国産車';
-    h += '<div class="cfs-card">';
-    h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">⏱ 最短入庫 <span class="cfs-team" style="color:' + teamColor + '">' + teamName + '</span></div>';
-    [{ k: 'noLoaner', n: '代車なし' }, { k: 'loaner', n: '代車あり' }, { k: 'same', n: '当日作業' }].forEach(function (x) {
-      const d = dashEarliestIntake(team, x.k, today);
-      const ds = d ? ymd(d) : null;
-      const lbl = !d ? 'なし' : (ds === tStr ? '今日' : (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）');
-      h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"' : ' disabled') + '>'
-         + '<span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b><span class="cfs-el-go">タップで入庫日に入る</span></button>';
-    });
-    h += '</div>';
-  }
-
-  /* 📅 予約の空きカレンダー：チーム未選択＝国産・輸入の両方／選択＝そのチームだけ（v0.27.3） */
+  /* 並び＝最短入庫カード→カレンダー→（未選択ならもう1チームぶん）カード→カレンダー（v0.27.4） */
   if (picked){
+    h += _cfsShortHtml(c, c.boardId, today, tStr);
     h += _cfsCalHtml(c, c.boardId, tStr);
   } else {
+    h += _cfsShortHtml(c, 'default', today, tStr);
     h += _cfsCalHtml(c, 'default', tStr);
+    h += _cfsShortHtml(c, 'import', today, tStr);
     h += _cfsCalHtml(c, 'import', tStr);
   }
 
-  /* 🚙 代車の空きカレンダー（「代車必要」を押すと出る） */
-  if (c.needLoaner) h += _cfsLoanerCalHtml(tStr);
+  /* 🚙 代車の空き（「代車必要」を押すと出る・代車ビュー式＝どの車がいつ空くか） */
+  if (c.needLoaner) h += _cfsLoanerGanttHtml(today, tStr);
 
+  return h;
+}
+
+/* ⏱ 最短入庫カード（チーム別・クリックで入庫日に入る） */
+function _cfsShortHtml(c, team, today, tStr){
+  if (typeof dashEarliestIntake !== 'function') return '';
+  const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
+  const teamName  = (team === 'import') ? '🌍 輸入車' : '🚗 国産車';
+  let h = '<div class="cfs-card">';
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">⏱ 最短入庫 <span class="cfs-team" style="color:' + teamColor + '">' + teamName + '</span></div>';
+  [{ k: 'noLoaner', n: '代車なし' }, { k: 'loaner', n: '代車あり' }, { k: 'same', n: '当日作業' }].forEach(function (x) {
+    const d = dashEarliestIntake(team, x.k, today);
+    const ds = d ? ymd(d) : null;
+    const lbl = !d ? 'なし' : (ds === tStr ? '今日' : (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）');
+    h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"' : ' disabled') + '>'
+       + '<span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b><span class="cfs-el-go">タップで入庫日に入る</span></button>';
+  });
+  h += '</div>';
   return h;
 }
 
@@ -288,7 +292,7 @@ function _cfsCalHtml(c, team, tStr){
   let h = '';
   h += '<div class="cfs-card">';
   h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">' + (team === 'import' ? '🌍 輸入車' : '🚗 国産車') + '</span>　予約の空き'
-     + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button></span></div>';
+     + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button><button type="button" onclick="cfsCalShift(0)" title="今月に戻る">今月</button></span></div>';
   h += '<div class="cfs-cal">';
   ['日','月','火','水','木','金','土'].forEach(function (w, i) {
     h += '<div class="cfs-dow' + (i === 0 ? ' red' : (i === 6 ? ' sat' : '')) + '">' + w + '</div>';
@@ -320,43 +324,51 @@ function _cfsCalHtml(c, team, tStr){
   return h;
 }
 
-/* 🚙 代車の空きカレンダー（その日に空いている代車の台数・表示のみ） */
-function _cfsLoanerCalHtml(tStr){
-  const ym = window._cfsYM;
-  const lastD = new Date(ym.y, ym.m + 1, 0).getDate();
-  const startDow = new Date(ym.y, ym.m, 1).getDay();
+/* 🚙 代車の空き（代車ビュー式＝縦に日付・横に各代車。どの車がいつ空くかが見える・表示のみ）v0.27.4 */
+function _cfsLoanerGanttHtml(today, tStr){
   const loaners = state.loaners || [];
   const assigns = state.loanerAssigns || [];
-  let h = '';
-  h += '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車の空き</span>'
-     + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button></span></div>';
-  h += '<div class="cfs-cal">';
-  ['日','月','火','水','木','金','土'].forEach(function (w, i) {
-    h += '<div class="cfs-dow' + (i === 0 ? ' red' : (i === 6 ? ' sat' : '')) + '">' + w + '</div>';
+  const DAYS = 28;
+  let h = '<div class="cfs-card">';
+  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車の空き（4週間・どの車がいつ空くか）</span></div>';
+  h += '<div class="cfs-lg-scroll"><table class="cfs-lg">';
+  h += '<tr><th class="cfs-lg-d"></th>';
+  loaners.forEach(function (l) {
+    h += '<th title="' + (l.name || '') + ' ' + (l.model || '') + '">' + String(l.name || '').replace('代車', '') + '</th>';
   });
-  for (let i = 0; i < startDow; i++) h += '<div class="cfs-day blank"></div>';
-  for (let dd = 1; dd <= lastD; dd++){
-    const d = new Date(ym.y, ym.m, dd);
+  h += '</tr>';
+  for (let i = 0; i < DAYS; i++){
+    const d = addDays(today, i);
     const ds = ymd(d);
-    if (ds < tStr){ h += '<div class="cfs-day past"><i>' + dd + '</i></div>'; continue; }
-    const busy = assigns.filter(function (a) { return a.fromDate <= ds && a.toDate >= ds; }).length;
-    const free = Math.max(0, loaners.length - busy);
-    const cls = free <= 0 ? ' full' : (free <= 2 ? ' near' : ' ok');
-    h += '<div class="cfs-day' + cls + ' noclick" title="' + (ym.m + 1) + '/' + dd + '：空き' + free + '台">'
-       + '<i>' + dd + '</i><span>' + free + '/' + loaners.length + '</span><b class="cfs-mk">' + (free <= 0 ? '満' : '○') + '</b></div>';
+    const dow = d.getDay();
+    const dCls = (dow === 0) ? ' red' : (dow === 6 ? ' sat' : '');
+    h += '<tr><td class="cfs-lg-d' + dCls + (ds === tStr ? ' today' : '') + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + '</span></td>';
+    loaners.forEach(function (l) {
+      const a = assigns.find(function (x) { return x.loanerId === l.id && x.fromDate <= ds && x.toDate >= ds; });
+      if (a){
+        h += '<td class="cfs-lg-busy" title="' + (l.name || '') + ' ' + (l.model || '') + '：' + (a.customer || '貸出中') + (a.car ? '（' + a.car + '）' : '') + ' 〜' + a.toDate.slice(5).replace('-', '/') + '"></td>';
+      } else {
+        h += '<td class="cfs-lg-free" title="' + (l.name || '') + ' ' + (l.model || '') + '：空き"></td>';
+      }
+    });
+    h += '</tr>';
   }
-  h += '</div>';
-  h += '<div class="cfs-hint">数字＝空き台数/全' + loaners.length + '台（代車予約から自動計算・表示のみ）</div>';
+  h += '</table></div>';
+  h += '<div class="cfs-hint">色付き＝貸出中（マウスを乗せると誰に・いつまでか）／空欄＝空き。車両の入替や予約操作は 🚙代車ビュー で。</div>';
   h += '</div>';
   return h;
 }
 
-/* カレンダーの月送り（右パネル） */
+/* カレンダーの月送り（右パネル）。n=0 で今月に戻る */
 window.cfsCalShift = function (n) {
   if (!window._cfsYM) return;
-  const d = new Date(window._cfsYM.y, window._cfsYM.m + n, 1);
-  window._cfsYM = { y: d.getFullYear(), m: d.getMonth() };
+  if (n === 0){
+    const now = new Date();
+    window._cfsYM = { y: now.getFullYear(), m: now.getMonth() };
+  } else {
+    const d = new Date(window._cfsYM.y, window._cfsYM.m + n, 1);
+    window._cfsYM = { y: d.getFullYear(), m: d.getMonth() };
+  }
   const c = state.cards.find(x => x.id === _editingCardId);
   if (c) renderCardForm(c);
 };
@@ -549,6 +561,14 @@ function bindCardFormEvents(root){
   if (consultBtn){
     consultBtn.addEventListener('click', () => {
       c.consult = !c.consult;
+      renderCardForm(c);
+    });
+  }
+  // 車種固定ボタン（ある時だけ押す単独チップ）
+  const fixedBtn = root.querySelector('#cf-fixed-btn');
+  if (fixedBtn){
+    fixedBtn.addEventListener('click', () => {
+      c.loanerFixed = !c.loanerFixed;
       renderCardForm(c);
     });
   }
