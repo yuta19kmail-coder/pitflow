@@ -222,9 +222,26 @@
     return { value: v, pct: pct, zero: false, rules: rules };
   }
 
+  /* 🤖 AI判定による「その日の枠」上書き（v0.25.1）
+     state.aiVerdicts[日付].capD / .capI に台数が入っていれば、その日の実効枠として最優先。
+     ＝本番化後、Claudeが毎朝「分母そのもの」を日々調整できる器。休（定休・連休）は上書き不可。 */
+  function _aiCap(dStr, target) {
+    const ai = (state.aiVerdicts || {})[dStr];
+    if (!ai) return null;
+    if (target === 'capDefault' && ai.capD != null) return ai.capD;
+    if (target === 'capImport'  && ai.capI != null) return ai.capI;
+    return null;
+  }
+
   /* 公開版＝常に「反映済み（本番）」を読む。ダッシュボード等はこれを使う */
   window.pitRulesFor  = function (dateStr) { return _rulesForC(state.settings, dateStr); };
-  window.pitEffective = function (dateStr, target, base) { return _effC(state.settings, dateStr, target, base); };
+  window.pitEffective = function (dateStr, target, base) {
+    const eff = _effC(state.settings, dateStr, target, base);
+    if (eff.closed) return eff;   // 休みの日はAIでも開けない
+    const ac = _aiCap(dateStr, target);
+    if (ac != null) return Object.assign({}, eff, { value: ac, zero: ac <= 0, ai: true });
+    return eff;
+  };
 
   /* ===== 営業日ベースの期配分（2026-06-04 ゆうた設計）=====
      理論値は「月 − 定休日 − 長期休み」の営業日数で算出し、期（月4分割）へ営業日数比で再振り分け。
@@ -279,7 +296,11 @@
     const rc = cfg.reserveCap || { default: 5, import: 3 };
     const tgt  = (team === 'import') ? 'capImport' : 'capDefault';
     const base = (team === 'import') ? (rc.import != null ? rc.import : 3) : (rc.default != null ? rc.default : 5);
-    const eff = _effC(cfg, dStr, tgt, base);
+    let eff = _effC(cfg, dStr, tgt, base);
+    if (cfg === state.settings && !eff.closed) {   // AIの枠上書きは本番値のみ（編集プレビューには効かせない）
+      const ac = _aiCap(dStr, tgt);
+      if (ac != null) eff = Object.assign({}, eff, { value: ac, zero: ac <= 0 });
+    }
     if (eff.closed) return { mark: '休', reason: eff.closed + '＝受付なし', cnt: 0, cap: 0, by: 'calc' };
     const cnt = _bookCount(team, dStr);
     const left = eff.value - cnt;
@@ -538,7 +559,7 @@
     h += '<div class="ps-card">';
     h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🤖 AI判定（受付の○△×）<span class="rl-offtag" style="margin-left:auto">未接続＝本番化（Firebase）とセットで接続</span></div>';
     h += '<div class="ps-desc">流れ：<b>①計算ルール</b>（枠・営業日＝上のカード群）→ <b>②肌感ルール</b>（言葉）→ <b>③AIが1日1回、日別の○△×と理由を判定</b> → <b>④人が予約を入れる</b>（ラベルは見えるが強制しない）。</div>';
-    h += '<div class="ps-hint">いまは③を<b>計算式の仮判定</b>で代用中（枠の埋まり具合から自動で○△×）。本番化後は Claude API がここの判定を毎朝更新し、肌感ルール' + fzOn + '件・🧩ルール' + rlOn + '件・予約状況・通年達成率を読んで<b>理由つき</b>で判定します（1日1回更新＝月数百円の見込み）。'
+    h += '<div class="ps-hint">いまは③を<b>計算式の仮判定</b>で代用中（枠の埋まり具合から自動で○△×）。本番化後は Claude API がここの判定を毎朝更新し、肌感ルール' + fzOn + '件・🧩ルール' + rlOn + '件・予約状況・通年達成率を読んで<b>理由つき</b>で判定します（1日1回更新＝月数百円の見込み）。AIは○△×ラベルだけでなく<b>その日の枠（分母）そのもの</b>も日々書き換えられます（例：国産5→4台。定休・連休だけはAIでも開けない）。'
        + (aiCnt ? '<br>🤖 AI判定の保存数：' + aiCnt + '日分' : '') + '</div>';
     h += '</div>';
 
