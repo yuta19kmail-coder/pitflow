@@ -76,6 +76,41 @@ function dashEarliestIntake(team, kind, today){
   return null;
 }
 
+/* ===== 🗓 予約の埋まり＝横軸の無限カレンダー（v0.25.0） =====
+   1日1列：日付／国産車／輸入車。セルは「埋まり/枠」＋ 可・終了・超過（黒）・休 のシンプル4種。
+   右端近くまでスクロールすると30日ずつ継ぎ足し（初期60日・件数はその場で計算） */
+window._dashCalN = window._dashCalN || 60;
+
+function _dashCalCell(team, tgt, base, ds){
+  const eff = window.pitEffective ? pitEffective(ds, tgt, base) : { value: base, closed: null, rules: [] };
+  if (eff.closed) return '<div class="drc-c drc-closed" title="' + eff.closed + '＝受付なし">休</div>';
+  const cnt = dashIntake(team, ds);
+  const capEff = eff.value;
+  if (capEff <= 0) return '<div class="drc-c drc-end" title="🧩ルールで受付停止">停</div>';
+  if (cnt > capEff)  return '<div class="drc-c drc-over" title="枠を超えて受けています（人の最終判断で挿入）">' + cnt + '/' + capEff + '<span>超過</span></div>';
+  if (cnt >= capEff) return '<div class="drc-c drc-end">' + cnt + '/' + capEff + '<span>終了</span></div>';
+  return '<div class="drc-c drc-okk">' + cnt + '/' + capEff + '<span>可</span></div>';
+}
+
+function _dashCalCols(from, to, today, tStr){
+  const rc = (state.settings && state.settings.reserveCap) || { default: 5, import: 3 };
+  const capD = rc.default != null ? rc.default : 5;
+  const capI = rc.import  != null ? rc.import  : 3;
+  let g = '';
+  for (let i = from; i < to; i++){
+    const d = addDays(today, i);
+    const ds = ymd(d);
+    const hol = (window.Holidays && Holidays.name) ? Holidays.name(ds) : null;
+    const cls = (d.getDay() === 0 || hol) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
+    g += '<div class="drc-col' + (ds === tStr ? ' today' : '') + '">';
+    g += '<div class="drc-h' + cls + '"' + (hol ? ' title="🎌' + hol + '"' : '') + '>' + (d.getMonth()+1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (ds === tStr ? '・今日' : '') + '</div>';
+    g += _dashCalCell('default', 'capDefault', capD, ds);
+    g += _dashCalCell('import',  'capImport',  capI, ds);
+    g += '</div>';
+  }
+  return g;
+}
+
 // 代車の最短空き（4台のうち1台でも空く最初の日）
 function dashLoanerEarliestFree(today){
   const loaners = state.loaners || [];
@@ -190,46 +225,33 @@ function renderDashboard(){
   h += '</div>';
   h += '</div>';
 
-  // 予約の埋まり（チーム別・1日の上限）
-  const rc = (state.settings && state.settings.reserveCap) || { default:5, import:3 };
-  const capD = rc.default || 5, capI = rc.import || 3;
-  h += '<div class="dash-card"><div class="dash-h"><span>🗓 予約の埋まり（チーム別・1日の上限）</span><span class="dash-note">満＝打ち止め｜基本 国産 ' + capD + ' ／ 輸入 ' + capI + '・🧩ルール適用後</span></div>';
-  h += '<div class="dash-cap">';
-  [{ key:'default', name:'🚗 国産', cap:capD, tgt:'capDefault' }, { key:'import', name:'🌍 輸入', cap:capI, tgt:'capImport' }].forEach(function(t){
-    h += '<div class="dash-cap-row"><div class="dash-cap-name">' + t.name + '</div><div class="dash-cap-cells">';
-    days.forEach(function(x){
-      const ds = ymd(x.d);
-      const eff = window.pitEffective ? pitEffective(ds, t.tgt, t.cap) : { value: t.cap, pct: 0, rules: [] };
-      const capEff = eff.value;
-      const cnt = dashIntake(t.key, ds);
-      const stop = capEff <= 0;
-      const full = !stop && cnt >= capEff;
-      const near = !stop && !full && cnt >= capEff - 1;
-      const ruleTip = eff.closed ? ('｜' + eff.closed + '＝受付なし') : (eff.rules.length ? '｜🧩ルール' + eff.rules.map(function(n){ return '#' + n; }).join('・') + '（' + (eff.pct > 0 ? '+' : '') + eff.pct + '%）' : '');
-      h += '<div class="dash-cap-cell' + (eff.closed ? ' closed' : ((stop || full) ? ' full' : (near ? ' near' : ''))) + (ds === tStr ? ' today' : '') + '" title="' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '：' + (eff.closed ? eff.closed : cnt + '/' + capEff) + ruleTip + '">' + (eff.closed ? '休' : (stop ? '停' : (full ? '満' : cnt))) + '</div>';
-    });
-    h += '</div></div>';
-  });
-  // 📞 受付の○△×（仮判定＝枠の埋まり具合。本番化後はAI判定が優先表示される）
-  if (window.pitVerdict){
-    h += '<div class="dash-cap-row"><div class="dash-cap-name">📞 受付</div><div class="dash-cap-cells">';
-    days.forEach(function(x){
-      const ds = ymd(x.d);
-      const v = pitVerdict(ds);
-      const cls = (v.day === '○') ? ' vd-ok' : (v.day === '△') ? ' vd-mid' : (v.day === '×') ? ' vd-ng' : ' closed';
-      const tip = (x.d.getMonth()+1) + '/' + x.d.getDate() + '：🚗' + v.default.mark + ' ' + v.default.reason + '｜🌍' + v.import.mark + ' ' + v.import.reason + (v.default.by === 'ai' || v.import.by === 'ai' ? '｜🤖AI判定' : '｜仮判定（計算式）');
-      h += '<div class="dash-cap-cell' + cls + (ds === tStr ? ' today' : '') + '" title="' + tip + '">' + v.day + '</div>';
-    });
-    h += '</div></div>';
-  }
-  h += '<div class="dash-cap-row"><div class="dash-cap-name dash-cap-axis"></div><div class="dash-cap-cells">';
-  days.forEach(function(x){ h += '<div class="dash-cap-d">' + x.d.getDate() + '</div>'; });
+  // 🗓 予約の埋まり（横軸の無限カレンダー・v0.25.0 ゆうた指示のシンプル表示）
+  //    可（緑）＝空きあり／終了（赤）＝満枠／超過（黒）＝人の判断で枠を超えて受けた分／休＝定休・連休
+  h += '<div class="dash-card">';
+  h += '<div class="dash-h"><span>🗓 予約の埋まり</span><span class="dash-note">右へスクロールで無限に先まで｜<span style="color:#1db97a">可</span>＝空きあり・<span style="color:#ef4444">終了</span>＝満枠・<b>超過(黒)</b>＝人の判断で枠超え</span></div>';
+  h += '<div class="drc-scroll" id="drc-scroll"><div class="drc-grid" id="drc-grid">';
+  h += '<div class="drc-col drc-lab"><div class="drc-h"></div><div class="drc-c">🚗 国産車</div><div class="drc-c">🌍 輸入車</div></div>';
+  h += _dashCalCols(0, window._dashCalN, today, tStr);
   h += '</div></div>';
-  h += '</div></div>';
+  h += '</div>';
 
   h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は <a href="javascript:showView(\'settings\')" style="color:inherit;font-weight:700">⚙️ 設定</a> から変更できます。</div>';
 
   wrap.innerHTML = h;
+
+  // 🗓 予約の埋まり：右端近くで30日継ぎ足し（スクロール位置はそのまま＝カクつかない）
+  const sc = document.getElementById('drc-scroll');
+  if (sc && !sc._drcBound){
+    sc._drcBound = true;
+    sc.addEventListener('scroll', function(){
+      if (sc.scrollLeft + sc.clientWidth > sc.scrollWidth - 260){
+        const from = window._dashCalN;
+        window._dashCalN += 30;
+        const grid = document.getElementById('drc-grid');
+        if (grid) grid.insertAdjacentHTML('beforeend', _dashCalCols(from, window._dashCalN, today, tStr));
+      }
+    });
+  }
 }
 
 function dashKpi(icon, label, num, unit){
