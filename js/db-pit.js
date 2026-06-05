@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v7';   // v7: 車両イベント(fleetEvents)・代車予約の顧客/車種 対応で再シード
+  const LS_KEY = 'pitflow_data_v8';   // v8: 予約サンプルをリアル再現（直近3週満杯→残り1枠→余裕）に変更で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'

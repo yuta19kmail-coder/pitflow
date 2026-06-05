@@ -40,6 +40,42 @@ function _dashHeldOnTeam(board, dStr){
     return _dashEnd(c) >= dStr;
   }).length;
 }
+/* ===== ⏱ 最短入庫日（v0.24.0・チーム別×タイプ別） =====
+   代車なし＝予約枠が空く最初の営業日（受付判定が×でない日）
+   代車あり＝上に加えて、1台の代車が「預かり想定日数ぶん連続」で空く最初の日
+   当日作業＝営業日ならOK（オイル等＝置き場・枠をほぼ使わない） */
+function _vdTeam(ds, team){
+  const v = window.pitVerdict ? pitVerdict(ds) : null;
+  if (!v) return { mark: '○' };
+  return team === 'import' ? v.import : v.default;
+}
+function _loanerFreeRun(startStr, days){
+  const loaners = state.loaners || [];
+  const assigns = state.loanerAssigns || [];
+  return loaners.some(function(l){
+    for (let j = 0; j < days; j++){
+      const ds = ymd(addDays(_pd(startStr), j));
+      const busy = assigns.some(function(a){ return a.loanerId === l.id && a.fromDate <= ds && a.toDate >= ds; });
+      if (busy) return false;
+    }
+    return true;
+  });
+}
+function dashEarliestIntake(team, kind, today){
+  const hold = (state.settings && state.settings.holdDaysDefault) || 3;
+  for (let i = 0; i < 180; i++){
+    const d = addDays(today, i);
+    const ds = ymd(d);
+    const tv = _vdTeam(ds, team);
+    if (tv.mark === '休') continue;                       // 定休・連休は受付なし
+    if (kind === 'same') return d;                        // 当日作業＝営業日ならOK
+    if (tv.mark === '×') continue;                        // 枠が埋まっている日は不可
+    if (kind === 'noLoaner') return d;                    // 代車なし＝枠が空けばOK
+    if (_loanerFreeRun(ds, hold)) return d;               // 代車あり＝代車の連続空きも必要
+  }
+  return null;
+}
+
 // 代車の最短空き（4台のうち1台でも空く最初の日）
 function dashLoanerEarliestFree(today){
   const loaners = state.loaners || [];
@@ -73,9 +109,8 @@ function renderDashboard(){
   const inToday   = state.cards.filter(function(c){ return c.reserveDate === tStr && _dashHeld(c); }).length;
   const outToday  = state.cards.filter(function(c){ return c.returnDate === tStr && _dashHeld(c); }).length;
   const heldNow   = dashOccupancy(tStr, tStr);
-  const free      = Math.max(0, cap - heldNow);
-  const todayRatio = heldNow / cap;
-  const lv = _dashLevel(todayRatio);
+  const freeSigned = cap - heldNow;   // 今日の駐車場空き（マイナス＝オーバー）
+  const parkCol = (freeSigned <= 0) ? '#ef4444' : (freeSigned <= 3 ? '#f97316' : '#1db97a');
 
   // 2週間の混雑
   const days = [];
@@ -85,19 +120,6 @@ function renderDashboard(){
     days.push({ d: d, occ: occ });
   }
   const maxOcc = Math.max(cap, days.reduce(function(m,x){ return Math.max(m, x.occ); }, 0));
-
-  // 最短入庫（預かり既定3日／当日仕上げ）
-  const holdDays = (state.settings && state.settings.holdDaysDefault) || 3;
-  let earliest = null;
-  for (let i = 0; i < 45 && !earliest; i++){
-    let ok = true;
-    for (let j = 0; j < holdDays; j++){
-      if (dashOccupancy(ymd(addDays(today, i + j)), tStr) + 1 > cap){ ok = false; break; }
-    }
-    if (ok) earliest = addDays(today, i);
-  }
-  const earliestStr = earliest ? (earliest.getMonth()+1) + '/' + earliest.getDate() + '（' + '日月火水木金土'[earliest.getDay()] + '）' : '今後3週間内になし';
-  const earliestToday = earliest && ymd(earliest) === tStr;
 
   let h = '';
 
@@ -109,7 +131,22 @@ function renderDashboard(){
   h += dashKpi('📥', '今日の入庫', inToday, '台');
   h += dashKpi('📤', '今日の返車', outToday, '台');
   h += dashKpi('🅿️', '預かり中', heldNow, '台');
-  h += dashKpi('🟢', '置き場の空き', free, '台');
+  h += '</div>';
+
+  // ⏱ 最短入庫日（チーム別×代車なし/代車あり/当日作業・v0.24.0）
+  const holdN = (state.settings && state.settings.holdDaysDefault) || 3;
+  function elCell(team, kind){
+    const d = dashEarliestIntake(team, kind, today);
+    if (!d) return '<td><b class="dash-el-d none">なし</b><span class="dash-el-w">180日内</span></td>';
+    const isT = ymd(d) === tStr;
+    return '<td><b class="dash-el-d' + (isT ? ' ok' : '') + '">' + (isT ? '今日' : (d.getMonth()+1) + '/' + d.getDate()) + '</b><span class="dash-el-w">' + (isT ? 'OK' : '日月火水木金土'[d.getDay()] + '曜') + '</span></td>';
+  }
+  h += '<div class="dash-card">';
+  h += '<div class="dash-h"><span>⏱ 最短入庫日</span><span class="dash-note">予約枠・定休・連休・代車の空きから自動計算（代車＝' + holdN + '日連続空きで判定）</span></div>';
+  h += '<table class="dash-el"><tr><th></th><th>代車なし</th><th>代車あり</th><th>当日作業</th></tr>';
+  h += '<tr><td class="dash-el-t">🚗 国産車</td>' + elCell('default','noLoaner') + elCell('default','loaner') + elCell('default','same') + '</tr>';
+  h += '<tr><td class="dash-el-t">🌍 輸入車</td>' + elCell('import','noLoaner')  + elCell('import','loaner')  + elCell('import','same')  + '</tr>';
+  h += '</table>';
   h += '</div>';
 
   // チーム別の状況（国産／輸入）
@@ -124,37 +161,27 @@ function renderDashboard(){
   });
   h += '</div></div>';
 
-  // 今日の混雑度ゲージ
-  const pct = Math.round(todayRatio * 100);
-  h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>🚦 今日の混雑度（置き場ベース）</span><span class="dash-lv" style="background:' + lv.c + '">' + lv.t + ' ' + pct + '%</span></div>';
-  h += '<div class="dash-gauge"><div class="dash-gauge-fill" style="width:' + Math.min(100, pct) + '%;background:' + lv.c + '"></div></div>';
+  // 🅿️ 今日の駐車場空き（±をズバッと・v0.24.0）
   const lc = (state.settings && state.settings.lotCap) || null;
   const lcStr = lc ? '（内訳：ピット' + (lc.pit||0) + '・敷地' + (lc.yard||0) + '・駐車場' + (lc.parking||0) + '・緊急+α' + (lc.extra||0) + '）' : '';
-  h += '<div class="dash-sub">' + heldNow + ' 台 / 置ける ' + cap + ' 台' + lcStr + (heldNow > cap ? '（' + (heldNow - cap) + '台オーバー）' : '') + '</div>';
-  h += '</div>';
-
-  // 最短入庫
-  h += '<div class="dash-card dash-earliest' + (earliestToday ? ' ok' : '') + '">';
-  h += '<div class="dash-h"><span>⏱ 最短で入庫できる日</span></div>';
-  h += '<div class="dash-earliest-main">' + (earliestToday ? '✅ 今日OK' : earliestStr) + '</div>';
-  const loanerFree = dashLoanerEarliestFree(today);
-  const loanerStr = loanerFree ? ((loanerFree.getMonth()+1) + '/' + loanerFree.getDate() + '（' + '日月火水木金土'[loanerFree.getDay()] + '）') : '空きなし';
-  h += '<div class="dash-loaner">🚙 代車の最短空き：<b>' + loanerStr + '</b><span>　代車予約が先行して埋まっています</span></div>';
-  h += '<div class="dash-sub">' + holdDays + '日預かり想定で、置き場が溢れない最初の日。<br>※オイル等の当日仕上げ（預かりなし）は基本いつでもOK（置き場をほぼ使わない）。<br>※<b>代車が要る預かり</b>は「代車の最短空き」が実際のボトルネックになります。</div>';
-  h += '</div>';
-
-  // 2週間の混雑バー
   h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>📅 これから2週間の混み具合（置き場）</span><span class="dash-note">点線＝置ける ' + cap + ' 台／薄いバー＝予想（概算日数）</span></div>';
+  h += '<div class="dash-h"><span>🅿️ 今日の駐車場空き</span></div>';
+  h += '<div class="dash-park"><span class="dash-park-num" style="color:' + parkCol + '">' + (freeSigned > 0 ? '+' : '') + freeSigned + '</span><span class="dash-park-u">台</span>'
+     + '<span class="dash-park-sub">' + heldNow + '台預かり中 / 置ける' + cap + '台' + lcStr + (freeSigned < 0 ? '<br><b style="color:#ef4444">⚠ ' + (-freeSigned) + '台オーバー（緊急コインパ行き）</b>' : '') + '</span></div>';
+  h += '</div>';
+
+  // 📅 直近2週間の駐車場予想（数字＝空き台数±）
+  h += '<div class="dash-card">';
+  h += '<div class="dash-h"><span>📅 直近2週間の駐車場予想</span><span class="dash-note">数字＝空き台数（マイナス＝オーバー）／点線＝満杯／薄いバー＝概算日数による予想</span></div>';
   h += '<div class="dash-bars">';
   days.forEach(function(x){
     const ratio = x.occ / cap;
     const lvi = _dashLevel(ratio);
     const hpx = Math.round((x.occ / maxOcc) * 84);
     const isToday = ymd(x.d) === tStr;
+    const fs = cap - x.occ;
     h += '<div class="dash-bar' + (isToday ? ' today' : '') + (ymd(x.d) > tStr ? ' is-forecast' : '') + '">';
-    h += '<div class="dash-bar-n">' + x.occ + '</div>';
+    h += '<div class="dash-bar-n" style="color:' + (fs <= 0 ? '#ef4444' : (fs <= 3 ? '#f97316' : '#1db97a')) + '">' + (fs > 0 ? '+' : '') + fs + '</div>';
     h += '<div class="dash-bar-track"><div class="dash-bar-fill" style="height:' + Math.max(3, hpx) + 'px;background:' + lvi.c + '"></div><div class="dash-bar-cap" style="bottom:' + Math.round((cap / maxOcc) * 84) + 'px"></div></div>';
     h += '<div class="dash-bar-d">' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '</div>';
     h += '<div class="dash-bar-w">' + '日月火水木金土'[x.d.getDay()] + '</div>';

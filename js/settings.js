@@ -92,13 +92,14 @@
     h += '<div class="ps-hint">※ 受付タイプが「待ち」「当日返車」のときは、この表に関係なく <b>0日（置き場を使わない）</b>になります。</div>';
     h += '</div>';
 
-    /* ===== 営業・受付 ===== */
+    /* ===== 営業時間・定休 ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🕐 営業・受付</div>';
+    h += '<div class="ps-h">🕐 営業時間・定休</div>';
     h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">受付開始 <input type="time" class="ps-in" id="ps-open" value="' + esc(s.openTime || '09:00') + '" onchange="pitSettingsApply()"></label>';
-    h += '<label class="ps-lb">受付終了 <input type="time" class="ps-in" id="ps-cutoff" value="' + esc(s.cutoffTime || '17:00') + '" onchange="pitSettingsApply()"></label>';
+    h += '<label class="ps-lb">営業開始（この時刻から受付） <input type="time" class="ps-in" id="ps-open" value="' + esc(s.openTime || '09:00') + '" onchange="pitSettingsApply()"></label>';
+    h += '<label class="ps-lb">営業終了（この時刻で受付締切） <input type="time" class="ps-in" id="ps-cutoff" value="' + esc(s.cutoffTime || '17:00') + '" onchange="pitSettingsApply()"></label>';
     h += '</div>';
+    h += '<div class="ps-hint">※ ここは<b>時刻</b>の設定。日単位の「受付できる/できない（○△×）」は 🧩入庫ルール ページとダッシュボードの判定が担当。</div>';
     h += '<div class="ps-dow-row"><span class="ps-dow-t">定休曜日</span>';
     DOW.forEach(function (d, i) {
       const on = (s.closedDow || []).indexOf(i) >= 0;
