@@ -509,17 +509,11 @@
 .dash-park-u{ font-size:14px; font-weight:700; color:var(--text2); }
 .dash-park-sub{ font-size:11.5px; color:var(--text3); line-height:1.6; margin-left:10px; }
 
-/* ===== 📋 新規予約の2カラム＋右パネル（v0.27.0／v0.27.1 全幅活用） ===== */
+/* ===== 📋 新規予約の2カラム＋右パネル（v0.27.2＝フォームは元の幅1段積み・残り全部カレンダー） ===== */
 .cfp-wrap{ display:flex; gap:22px; align-items:flex-start; }
-.cfp-main{ flex:1; min-width:0; }
-.cfp-side{ flex:none; width:380px; position:sticky; top:0; }
-@media (max-width:980px){ .cfp-wrap{ flex-direction:column; } .cfp-side{ width:100%; position:static; } }
-
-/* 広い画面では基本情報パネルのセクションを2列に並べる（メモは全幅）v0.27.1 */
-@media (min-width:1200px){
-  .cfp-main .cf-panel[data-tab="basic"]{ display:grid; grid-template-columns:1fr 1fr; gap:0 20px; align-items:start; }
-  .cfp-main .cf-panel[data-tab="basic"] > .cf-section:last-child{ grid-column:1 / -1; }
-}
+.cfp-main{ flex:none; width:min(860px, 100%); min-width:0; }
+.cfp-side{ flex:1; min-width:320px; position:sticky; top:0; }
+@media (max-width:980px){ .cfp-wrap{ flex-direction:column; } .cfp-main{ width:100%; } .cfp-side{ width:100%; position:static; } }
 
 /* ☰ サイドバーたたみ（v0.27.1） */
 #app.sb-off{ grid-template-columns:0 1fr; }
@@ -535,11 +529,17 @@
 .cfs-el-n{ font-size:12px; font-weight:700; min-width:58px; }
 .cfs-el b{ font-size:16px; }
 .cfs-el-go{ margin-left:auto; font-size:9.5px; color:var(--text3); }
-.cfs-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
-.cfs-dow{ font-size:10px; text-align:center; color:var(--text3); padding:2px 0; font-weight:600; }
+.cfs-nav{ margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:13px; }
+.cfs-nav button{ background:var(--bg3); border:1px solid var(--border); border-radius:7px; color:var(--text); padding:3px 10px; cursor:pointer; font-size:12px; }
+.cfs-nav button:hover{ border-color:#1db97a; }
+.cfs-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cfs-dow{ font-size:11px; text-align:center; color:var(--text3); padding:3px 0; font-weight:600; }
 .cfs-dow.red{ color:#ef4444; } .cfs-dow.sat{ color:#3b82f6; }
-.cfs-day{ position:relative; text-align:center; font-size:12.5px; font-weight:700; padding:6px 0 3px; background:var(--bg3); border:1px solid var(--border); border-radius:7px; cursor:pointer; line-height:1.25; }
-.cfs-day span{ display:block; font-size:9.5px; font-weight:700; }
+.cfs-day{ position:relative; text-align:center; padding:7px 2px 5px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; cursor:pointer; line-height:1.3; min-height:58px; }
+.cfs-day i{ font-style:normal; display:block; font-size:13px; font-weight:800; }
+.cfs-day span{ display:block; font-size:11px; font-weight:700; }
+.cfs-day .cfs-mk{ display:block; font-size:11px; font-weight:800; }
+.cfs-day.blank{ background:transparent; border-color:transparent; cursor:default; }
 .cfs-day.ok{ border-color:#1db97a; color:#1db97a; }
 .cfs-day.near{ border-color:#f97316; color:#f97316; }
 .cfs-day.full{ border-color:#ef4444; color:#ef4444; background:rgba(239,68,68,.08); }

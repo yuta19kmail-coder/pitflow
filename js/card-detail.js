@@ -29,6 +29,7 @@ function openCard(cardId, mode){
     document.getElementById('modal-detail').classList.add('show');
   } else {
     _cardBodyId = 'md-body';
+    window._cfsYM = null;   // 右パネルのカレンダーは今月から
     if (state.currentView && state.currentView !== 'card') _returnView = state.currentView;
     document.getElementById('card-title').innerHTML = _cardTitleHtml(card);
     renderCardForm(card);
@@ -259,35 +260,58 @@ function cfSideHtml(c){
   }
   h += '</div>';
 
-  /* 📅 予約状況カレンダー（6週間・日クリックで入庫日に入る） */
+  /* 📅 予約状況カレンダー（月送り・埋まり/枠の数字つき・日クリックで入庫日に入る）v0.27.2 */
+  if (!window._cfsYM){ window._cfsYM = { y: today.getFullYear(), m: today.getMonth() }; }
+  const ym = window._cfsYM;
+  const lastD = new Date(ym.y, ym.m + 1, 0).getDate();
+  const startDow = new Date(ym.y, ym.m, 1).getDay();
+  const rc = (state.settings && state.settings.reserveCap) || { default: 5, import: 3 };
+  const base = (team === 'import') ? (rc.import != null ? rc.import : 3) : (rc.default != null ? rc.default : 5);
+  const tgt  = (team === 'import') ? 'capImport' : 'capDefault';
+
   h += '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">📅 予約の空き（' + (team === 'import' ? '輸入' : '国産') + '）</div>';
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">📅 予約の空き（' + (team === 'import' ? '輸入' : '国産') + '）'
+     + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button></span></div>';
   h += '<div class="cfs-cal">';
   ['日','月','火','水','木','金','土'].forEach(function (w, i) {
     h += '<div class="cfs-dow' + (i === 0 ? ' red' : (i === 6 ? ' sat' : '')) + '">' + w + '</div>';
   });
-  const start = addDays(today, -today.getDay());   // 今週の日曜から6週間
-  for (let i = 0; i < 42; i++){
-    const d = addDays(start, i);
+  for (let i = 0; i < startDow; i++) h += '<div class="cfs-day blank"></div>';
+  for (let dd = 1; dd <= lastD; dd++){
+    const d = new Date(ym.y, ym.m, dd);
     const ds = ymd(d);
-    if (ds < tStr){ h += '<div class="cfs-day past">' + d.getDate() + '</div>'; continue; }
-    let cls = '', mark = '';
+    if (ds < tStr){ h += '<div class="cfs-day past"><i>' + dd + '</i></div>'; continue; }
+    let cls = '', mark = '', num = '';
     if (window.pitVerdict){
       const tv = pitVerdict(ds)[team];
+      const eff = window.pitEffective ? pitEffective(ds, tgt, base) : { value: base, closed: null };
+      const cnt = (state.cards || []).filter(function (x) { return x.boardId === team && x.reserveDate === ds && x.status !== 'returned' && x.status !== 'scrap'; }).length;
       if (tv.mark === '休'){ cls = ' closed'; mark = '休'; }
-      else if (tv.mark === '×'){ cls = ' full'; mark = '満'; }
-      else if (tv.mark === '△'){ cls = ' near'; mark = '△'; }
-      else { cls = ' ok'; mark = '○'; }
+      else {
+        num = cnt + '/' + eff.value;
+        if (tv.mark === '×'){ cls = ' full'; mark = '満'; }
+        else if (tv.mark === '△'){ cls = ' near'; mark = '△'; }
+        else { cls = ' ok'; mark = '○'; }
+      }
     }
-    h += '<div class="cfs-day' + cls + (c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '" onclick="cfPickDate(\'' + ds + '\')" title="' + (d.getMonth()+1) + '/' + d.getDate() + '">'
-       + d.getDate() + '<span>' + mark + '</span></div>';
+    h += '<div class="cfs-day' + cls + (c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '" onclick="cfPickDate(\'' + ds + '\')" title="' + (ym.m + 1) + '/' + dd + (num ? '：' + num + '台' : '') + '">'
+       + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';
-  h += '<div class="cfs-hint">○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）</div>';
+  h += '<div class="cfs-hint">数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）</div>';
   h += '</div>';
 
   return h;
 }
+
+/* カレンダーの月送り（右パネル） */
+window.cfsCalShift = function (n) {
+  if (!window._cfsYM) return;
+  const d = new Date(window._cfsYM.y, window._cfsYM.m + n, 1);
+  window._cfsYM = { y: d.getFullYear(), m: d.getMonth() };
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (c) renderCardForm(c);
+};
 
 /* 右パネルの日付タップ → 入庫日に自動入力（×の日は確認・従来ガードと同じ） */
 window.cfPickDate = function (ds) {
