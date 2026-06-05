@@ -183,6 +183,18 @@ function renderDashboard(){
     });
     h += '</div></div>';
   });
+  // 📞 受付の○△×（仮判定＝枠の埋まり具合。本番化後はAI判定が優先表示される）
+  if (window.pitVerdict){
+    h += '<div class="dash-cap-row"><div class="dash-cap-name">📞 受付</div><div class="dash-cap-cells">';
+    days.forEach(function(x){
+      const ds = ymd(x.d);
+      const v = pitVerdict(ds);
+      const cls = (v.day === '○') ? ' vd-ok' : (v.day === '△') ? ' vd-mid' : (v.day === '×') ? ' vd-ng' : ' closed';
+      const tip = (x.d.getMonth()+1) + '/' + x.d.getDate() + '：🚗' + v.default.mark + ' ' + v.default.reason + '｜🌍' + v.import.mark + ' ' + v.import.reason + (v.default.by === 'ai' || v.import.by === 'ai' ? '｜🤖AI判定' : '｜仮判定（計算式）');
+      h += '<div class="dash-cap-cell' + cls + (ds === tStr ? ' today' : '') + '" title="' + tip + '">' + v.day + '</div>';
+    });
+    h += '</div></div>';
+  }
   h += '<div class="dash-cap-row"><div class="dash-cap-name dash-cap-axis"></div><div class="dash-cap-cells">';
   days.forEach(function(x){ h += '<div class="dash-cap-d">' + x.d.getDate() + '</div>'; });
   h += '</div></div>';

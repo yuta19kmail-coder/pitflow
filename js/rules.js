@@ -60,7 +60,7 @@
     { id: 'warn',     label: '⚠ 注意表示',      grp: 'warn' },
   ];
   const DICT_LABEL = { increase: '増やす', decrease: '減らす', careful: '気を付ける', minimize: 'できる限り無くす', allow: '許容する' };
-  const KEYS = ['reserveCap', 'target', 'unitPrice', 'rules', 'ruleDict', 'longBreaks'];
+  const KEYS = ['reserveCap', 'target', 'unitPrice', 'rules', 'ruleDict', 'longBreaks', 'fuzzyRules'];
 
   /* ===== 下書き（編集モード） ===== */
   let _draft = null;
@@ -76,6 +76,7 @@
       rules:      s.rules      || [],
       ruleDict:   s.ruleDict   || { increase: 20, decrease: -20, careful: -15, minimize: -50, allow: 15 },
       longBreaks: s.longBreaks || [],
+      fuzzyRules: s.fuzzyRules || [],
     }));
   }
 
@@ -262,6 +263,91 @@
   /* 公開版（本番設定で計算）：クォーター集計エンジン・ダッシュボードが使う */
   window.pitQAlloc = function (y, m) { return _qAllocC(state.settings, y, m); };
 
+  /* ===== 📞 受付の○△×判定（v0.23.0）=====
+     4層の流れ：①計算ルール層（枠・営業日）→ ②肌感ルール層（言葉＝AIの判断基準）
+              → ③判定（いまは計算式の仮判定／本番化後はClaude APIが1日1回 state.aiVerdicts を更新）
+              → ④人間の予約挿入（ラベルは見えるが強制しない＝従うか従わないかは受付の自由）
+     AI判定（state.aiVerdicts[日付]）があればそれが優先。無ければ計算式の仮判定。 */
+
+  function _bookCount(team, dStr) {   // その日の予約・入庫台数（返車済/廃車は除く）
+    return (state.cards || []).filter(function (c) {
+      return c.boardId === team && c.reserveDate === dStr && c.status !== 'returned' && c.status !== 'scrap';
+    }).length;
+  }
+
+  function _verdictTeamC(cfg, dStr, team) {
+    const rc = cfg.reserveCap || { default: 5, import: 3 };
+    const tgt  = (team === 'import') ? 'capImport' : 'capDefault';
+    const base = (team === 'import') ? (rc.import != null ? rc.import : 3) : (rc.default != null ? rc.default : 5);
+    const eff = _effC(cfg, dStr, tgt, base);
+    if (eff.closed) return { mark: '休', reason: eff.closed + '＝受付なし', cnt: 0, cap: 0, by: 'calc' };
+    const cnt = _bookCount(team, dStr);
+    const left = eff.value - cnt;
+    let mark, reason;
+    if (eff.zero)            { mark = '×'; reason = '🧩ルールで受付停止（' + eff.rules.map(function (n) { return '#' + n; }).join('・') + '）'; }
+    else if (left <= 0)      { mark = '×'; reason = '枠が埋まりました（' + cnt + '/' + eff.value + '台）＝受付終了'; }
+    else if (left === 1)     { mark = '△'; reason = '残り1台（' + cnt + '/' + eff.value + '台）'; }
+    else                     { mark = '○'; reason = '空きあり（残り' + left + '台）'; }
+    /* ⚠注意ルールがある日は ○ を △ に落とす（理由つき） */
+    if (mark === '○') {
+      const rs = _rulesForC(cfg, dStr);
+      if (rs.warns.length) { mark = '△'; reason = '⚠ ' + rs.warns.map(function (w) { return w.msg; }).join('／'); }
+    }
+    return { mark: mark, reason: reason, cnt: cnt, cap: eff.value, by: 'calc' };
+  }
+
+  function _verdictC(cfg, dStr) {
+    /* AI判定があれば優先（本番化後にClaude APIが書き込む。器＝v0.23.0） */
+    const ai = (state.aiVerdicts || {})[dStr];
+    const d = (ai && ai.default) ? Object.assign({ by: 'ai' }, ai.default) : _verdictTeamC(cfg, dStr, 'default');
+    const i = (ai && ai.import)  ? Object.assign({ by: 'ai' }, ai.import)  : _verdictTeamC(cfg, dStr, 'import');
+    /* 日全体のまとめ：両方休→休／両方×系→×／どちらかに△・×→△／それ以外→○ */
+    let day;
+    if (d.mark === '休' && i.mark === '休') day = '休';
+    else if ((d.mark === '×' || d.mark === '休') && (i.mark === '×' || i.mark === '休')) day = '×';
+    else if (d.mark !== '○' || i.mark !== '○') day = '△';
+    else day = '○';
+    return { default: d, import: i, day: day };
+  }
+
+  /* 公開版＝常に反映済み（本番）設定で判定。ダッシュボード・予約警告が使う */
+  window.pitVerdict = function (dStr) { return _verdictC(state.settings, dStr); };
+
+  /* ささやかなトースト（ブロックしないお知らせ） */
+  window.pitToast = function (msg) {
+    let el = document.getElementById('pit-toast');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'pit-toast';
+      el.className = 'pit-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(window._pitToastT);
+    window._pitToastT = setTimeout(function () { el.classList.remove('show'); }, 3200);
+  };
+
+  /* 予約挿入ガード：×＝「それでも入れますか？」と一言聞く（強制はしない）／△＝トーストで一言だけ
+     戻り値＝確定する日付（やめたら元の日付に戻す） */
+  window.pitIntakeGuard = function (card, newDate, oldDate) {
+    if (!newDate || newDate === oldDate || !window.pitVerdict) return newDate;
+    const v = pitVerdict(newDate);
+    const team = (card && card.boardId === 'import') ? 'import' : 'default';
+    const tv = v[team];
+    const p = String(newDate).split('-');
+    const dd = new Date(+p[0], +p[1] - 1, +p[2]);
+    const dLabel = (dd.getMonth() + 1) + '/' + dd.getDate() + '（' + '日月火水木金土'[dd.getDay()] + '）';
+    const tName = (team === 'import') ? '輸入' : '国産';
+    if (tv.mark === '×' || tv.mark === '休') {
+      const head = (tv.mark === '休') ? '休業日' : '受付終了（×）';
+      const ok = confirm('📅 ' + dLabel + ' の' + tName + 'は ' + head + ' です。\n理由：' + tv.reason + (tv.by === 'ai' ? '（AI判定）' : '') + '\n\nそれでも予約を入れますか？（最終判断は人でOK）');
+      return ok ? newDate : (oldDate || '');
+    }
+    if (tv.mark === '△') pitToast('△ ' + dLabel + ' ' + tName + '：' + tv.reason);
+    return newDate;
+  };
+
   /* ===== 画面 ===== */
 
   window.renderRules = function () {
@@ -419,6 +505,41 @@
       h += '</div>';
       h += '<div class="ps-hint">※「無くす」は常に0台。端数は減らす系＝切り捨て・増やす系＝切り上げ。</div>';
     }
+    h += '</div>';
+
+    /* 🗣 肌感ルール（言葉のまま積む＝AIの判断基準層） */
+    const fz = c.fuzzyRules || [];
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🗣 肌感ルール（言葉のまま積む）'
+       + (ed ? '<button class="vh-btn" style="margin-left:auto" onclick="pitFuzzyAdd()">＋ 肌感を追加</button>' : '')
+       + '</div>';
+    h += '<div class="ps-desc">計算式にできない現場の知恵を<b>そのままの言葉</b>で登録。上の🧩ルール（数字）と違い、ここは<b>AIの判断基準</b>になる層＝％や台数に直さなくてOK。</div>';
+    if (!fz.length) {
+      h += '<div class="ps-hint">まだ登録なし。' + (ed ? '「＋ 肌感を追加」で1つ目を。' : '「✏️ 編集する」から登録できます。') + '<br>例：「高額な作業が3台以上重なる週はメカがしんどいので控えめに」「常連の急ぎは多少無理しても受ける」</div>';
+    }
+    fz.forEach(function (f, i) {
+      if (!ed) {
+        h += '<div class="rl-row rl-vw' + (f.on === false ? ' off' : '') + '"><span class="rl-no" style="background:#7c3aed">🗣</span><span class="rl-vtxt">' + esc(f.text || '（未入力）') + '</span>' + (f.on === false ? '<span class="rl-offtag">停止中</span>' : '') + '</div>';
+      } else {
+        h += '<div class="rl-row' + (f.on === false ? ' off' : '') + '">';
+        h += '<span class="rl-no" style="background:#7c3aed">🗣</span>';
+        h += '<label class="rl-on" title="ON/OFF"><input type="checkbox"' + (f.on !== false ? ' checked' : '') + ' onchange="pitFuzzyEdit(' + i + ',\'on\',this.checked)"></label>';
+        h += '<input type="text" class="ps-in rl-note" style="flex:1;min-width:240px" placeholder="現場の知恵をそのままの言葉で（例：休み前の週は重整備を控えめに）" value="' + esc(f.text || '') + '" onchange="pitFuzzyEdit(' + i + ',\'text\',this.value)">';
+        h += '<button class="rl-del" title="削除" onclick="pitFuzzyDel(' + i + ')">🗑</button>';
+        h += '</div>';
+      }
+    });
+    h += '</div>';
+
+    /* 🤖 AI判定（器・本番化後にClaude API接続） */
+    const fzOn = fz.filter(function (f) { return f.on !== false; }).length;
+    const rlOn = rules.filter(function (r) { return r.on !== false; }).length;
+    const aiCnt = Object.keys(state.aiVerdicts || {}).length;
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🤖 AI判定（受付の○△×）<span class="rl-offtag" style="margin-left:auto">未接続＝本番化（Firebase）とセットで接続</span></div>';
+    h += '<div class="ps-desc">流れ：<b>①計算ルール</b>（枠・営業日＝上のカード群）→ <b>②肌感ルール</b>（言葉）→ <b>③AIが1日1回、日別の○△×と理由を判定</b> → <b>④人が予約を入れる</b>（ラベルは見えるが強制しない）。</div>';
+    h += '<div class="ps-hint">いまは③を<b>計算式の仮判定</b>で代用中（枠の埋まり具合から自動で○△×）。本番化後は Claude API がここの判定を毎朝更新し、肌感ルール' + fzOn + '件・🧩ルール' + rlOn + '件・予約状況・通年達成率を読んで<b>理由つき</b>で判定します（1日1回更新＝月数百円の見込み）。'
+       + (aiCnt ? '<br>🤖 AI判定の保存数：' + aiCnt + '日分' : '') + '</div>';
     h += '</div>';
 
     /* ④ 2週間 */
@@ -592,6 +713,30 @@
     _flash('🟡 削除（未確定・OKで確定）');
   };
 
+  /* 🗣 肌感ルールの編集（下書きにだけ効く） */
+  window.pitFuzzyAdd = function () {
+    if (!_draft) return;
+    if (!_draft.fuzzyRules) _draft.fuzzyRules = [];
+    _draft.fuzzyRules.push({ on: true, text: '' });
+    renderRules();
+    _flash('🟡 追加（未確定）');
+  };
+  window.pitFuzzyEdit = function (i, field, val) {
+    if (!_draft) return;
+    const f = (_draft.fuzzyRules || [])[i];
+    if (!f) return;
+    if (field === 'on') f.on = !!val;
+    else f[field] = val;
+    renderRules();
+    _flash('🟡 プレビューに反映（未確定）');
+  };
+  window.pitFuzzyDel = function (i) {
+    if (!_draft) return;
+    (_draft.fuzzyRules || []).splice(i, 1);
+    renderRules();
+    _flash('🟡 削除（未確定・OKで確定）');
+  };
+
   window.pitRuleDictApply = function () {
     if (!_draft) return;
     const dict = _dict();
@@ -656,6 +801,13 @@
       const rs = _rulesForC(c, ds);
       g += '<div class="rl-g-c wmark' + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (rs.warns.length ? '⚠' + (rs.warns.length > 1 ? rs.warns.length : '') : '') + '</div>';
     });
+    g += '<div class="rl-g-n">📞 受付</div>';
+    days.forEach(function (d) {
+      const ds = _ds(d);
+      const v = _verdictC(c, ds);
+      const cls = (v.day === '○') ? ' vd-ok' : (v.day === '△') ? ' vd-mid' : (v.day === '×') ? ' vd-ng' : ' closed';
+      g += '<div class="rl-g-c' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')" title="🚗' + v.default.mark + '／🌍' + v.import.mark + '">' + v.day + '</div>';
+    });
     g += '</div>';
     box.innerHTML = g;
   };
@@ -701,6 +853,13 @@
     h += policyLine('代車つき預かり', 'loanerDrop');
     rs.warns.forEach(function (w) {
       h += '<div class="rl-tl warn"><span class="rl-tl-n">⚠ ' + esc(labelOf(TARGET, w.target)) + '</span><span class="rl-tl-v">' + esc(w.msg) + '</span><span class="rl-tl-r">ルール #' + w.no + '</span></div>';
+    });
+    /* 📞 受付の○△×（仮判定＝枠の埋まり具合。AI判定が保存されていればそちらを表示） */
+    const vd = _verdictC(c, dStr);
+    [{ k: 'default', n: '📞 受付（国産）' }, { k: 'import', n: '📞 受付（輸入）' }].forEach(function (t) {
+      const tv = vd[t.k];
+      const col = (tv.mark === '○') ? '#1db97a' : (tv.mark === '△') ? '#f97316' : '#ef4444';
+      h += '<div class="rl-tl"><span class="rl-tl-n">' + t.n + '</span><span class="rl-tl-v"><b style="color:' + col + '">' + tv.mark + '</b>　' + esc(tv.reason) + '</span><span class="rl-tl-r">' + (tv.by === 'ai' ? '🤖 AI判定' : '計算式の仮判定（本番化後はAIが理由を書く）') + '</span></div>';
     });
     out.innerHTML = h;
     pitRuleGrid();

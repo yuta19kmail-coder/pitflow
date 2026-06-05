@@ -328,6 +328,7 @@ function bindCardFormEvents(root){
 
   // テキスト・select
   root.querySelectorAll('input.cf-input, textarea.cf-input, select.cf-input').forEach(el => {
+    if (el.dataset.key === 'reserveDate') el.dataset.prev = el.value;   // 受付○△×ガード用に元の日付を控える
     el.addEventListener('input', () => {
       const key = el.dataset.key;
       let v = el.value;
@@ -338,6 +339,12 @@ function bindCardFormEvents(root){
       const key = el.dataset.key;
       let v = el.value;
       if (el.type === 'number') v = v === '' ? null : Number(v);
+      // 入庫日の変更は受付○△×ガードを通す（×＝「それでも入れますか？」・△＝一言トースト・強制はしない）
+      if (key === 'reserveDate' && window.pitIntakeGuard) {
+        const fin = pitIntakeGuard(c, v, el.dataset.prev || '');
+        if (fin !== v) { el.value = fin; v = fin; }
+        el.dataset.prev = fin;
+      }
       c[key] = v;
     });
   });

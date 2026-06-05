@@ -35,6 +35,7 @@
             if (Array.isArray(d.customers))     state.customers     = d.customers;
             if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
             if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
+            if (d.aiVerdicts && typeof d.aiVerdicts === 'object') state.aiVerdicts = d.aiVerdicts;
             this._mergeSettings(d.settings);
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
           }
@@ -62,6 +63,7 @@
             customers: state.customers,
             companyCars: state.companyCars,
             fleetEvents: state.fleetEvents,
+            aiVerdicts: state.aiVerdicts || {},
             settings: state.settings,
             savedAt: Date.now(),
           }));

@@ -32,12 +32,14 @@
       if (state.returnDate) c.returnDate = ymd(state.returnDate);
     } else if (kind === 'reserveDate') {        // 月カレンダー：日付だけ変更
       if (c.reserveDate === val) return;
+      if (window.pitIntakeGuard && pitIntakeGuard(c, val, c.reserveDate) !== val) return;   // ×日は「それでも？」→やめたら動かさない
       c.reserveDate = val;
     } else if (kind === 'returnDate') {
       if (c.returnDate === val) return;
       c.returnDate = val;
     } else if (kind === 'reserveDateTime') {     // 週カレンダー：日付＋時刻
       const p = val.split('|');
+      if (p[0] !== c.reserveDate && window.pitIntakeGuard && pitIntakeGuard(c, p[0], c.reserveDate) !== p[0]) return;
       c.reserveDate = p[0];
       if (p[1]) c.reserveTime = p[1];
     } else if (kind === 'returnDateTime') {

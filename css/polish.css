@@ -489,3 +489,18 @@
 .fx-v{ font-size:15px; }
 .fx-in{ text-align:center; }
 .fx-note{ font-size:11px; color:var(--text3); font-weight:400; margin-left:10px; }
+
+/* ===== 📞 受付の○△×（v0.23.0） ===== */
+.rl-g-c.vd-ok,  .dash-cap-cell.vd-ok{  background:rgba(29,185,122,.16); border-color:#1db97a; color:#1db97a; font-weight:800; }
+.rl-g-c.vd-mid, .dash-cap-cell.vd-mid{ background:rgba(249,115,22,.14); border-color:#f97316; color:#f97316; font-weight:800; }
+.rl-g-c.vd-ng,  .dash-cap-cell.vd-ng{  background:rgba(239,68,68,.16);  border-color:#ef4444; color:#ef4444; font-weight:800; }
+
+/* ささやかなトースト（△の一言注意など・ブロックしない） */
+.pit-toast{
+  position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(10px);
+  background:var(--bg2); color:var(--text); border:1px solid #f97316; border-radius:10px;
+  padding:10px 18px; font-size:13px; font-weight:600; z-index:99999;
+  opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+  box-shadow:0 10px 34px rgba(0,0,0,.4); max-width:min(92vw,560px);
+}
+.pit-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
