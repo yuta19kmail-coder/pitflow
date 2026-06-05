@@ -258,7 +258,7 @@ function cfSideHtml(c){
   }
 
   /* 🚙 代車の空き（「代車必要」を押すと出る・代車ビュー式＝どの車がいつ空くか） */
-  if (c.needLoaner) h += _cfsLoanerGanttHtml(today, tStr);
+  if (c.needLoaner) h += _cfsLoanerGanttHtml(today, tStr, c);
 
   return h;
 }
@@ -302,7 +302,9 @@ function _cfsCalHtml(c, team, tStr){
   for (let dd = 1; dd <= lastD; dd++){
     const d = new Date(ym.y, ym.m, dd);
     const ds = ymd(d);
-    if (ds < tStr){ h += '<div class="cfs-day past"><i>' + dd + '</i></div>'; continue; }
+    const hol = (window.Holidays && Holidays.name) ? Holidays.name(ds) : null;
+    const holBadge = hol ? '<em class="cfs-hol" title="🎌' + hol + '">祝</em>' : '';
+    if (ds < tStr){ h += '<div class="cfs-day past"><i>' + dd + '</i>' + holBadge + '</div>'; continue; }
     let cls = '', mark = '', num = '';
     if (window.pitVerdict){
       const tv = pitVerdict(ds)[team];
@@ -316,8 +318,8 @@ function _cfsCalHtml(c, team, tStr){
         else { cls = ' ok'; mark = '○'; }
       }
     }
-    h += '<div class="cfs-day' + cls + (c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '" onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')" title="' + (ym.m + 1) + '/' + dd + (num ? '：' + num + '台' : '') + '">'
-       + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
+    h += '<div class="cfs-day' + cls + (c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '" onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')" title="' + (ym.m + 1) + '/' + dd + (hol ? '・🎌' + hol : '') + (num ? '：' + num + '台' : '') + '">'
+       + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';
   h += '<div class="cfs-hint">数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）</div>';
@@ -326,7 +328,7 @@ function _cfsCalHtml(c, team, tStr){
 }
 
 /* 🚙 代車の空き（代車ビュー式＝縦に日付・横に各代車。車種名はヘッダに常時表示・下へ無限スクロール）v0.27.5 */
-function _cfsLgRows(from, to, today, tStr){
+function _cfsLgRows(from, to, today, tStr, c){
   const loaners = state.loaners || [];
   const assigns = state.loanerAssigns || [];
   let h = '';
@@ -341,7 +343,9 @@ function _cfsLgRows(from, to, today, tStr){
       if (a){
         h += '<td class="cfs-lg-busy" title="' + (l.name || '') + ' ' + (l.model || '') + '：' + (a.customer || '貸出中') + (a.car ? '（' + a.car + '）' : '') + ' 〜' + a.toDate.slice(5).replace('-', '/') + '"></td>';
       } else {
-        h += '<td class="cfs-lg-free" title="' + (l.name || '') + ' ' + (l.model || '') + '：空き"></td>';
+        /* このカードの貸出予定（使用代車＋から/まで）と一致するマスは緑＝双方向（ドラッグでもテキスト入力でも光る） */
+        const pick = c && c.loanerId === l.id && c.loanerFrom && c.loanerTo && ds >= c.loanerFrom && ds <= c.loanerTo;
+        h += '<td class="cfs-lg-free' + (pick ? ' cfs-lg-pick' : '') + '" data-lgl="' + l.id + '" data-lgd="' + ds + '" title="' + (l.name || '') + ' ' + (l.model || '') + '：空き（クリック→ドラッグで貸出期間に）"></td>';
       }
     });
     h += '</tr>';
@@ -349,7 +353,7 @@ function _cfsLgRows(from, to, today, tStr){
   return h;
 }
 
-function _cfsLoanerGanttHtml(today, tStr){
+function _cfsLoanerGanttHtml(today, tStr, c){
   const loaners = state.loaners || [];
   if (!window._cfsLgN) window._cfsLgN = 28;
   let h = '<div class="cfs-card">';
@@ -361,9 +365,9 @@ function _cfsLoanerGanttHtml(today, tStr){
     h += '<th title="' + (l.name || '') + ' ' + (l.model || '') + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
   });
   h += '</tr></thead>';
-  h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr) + '</tbody>';
+  h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c) + '</tbody>';
   h += '</table></div>';
-  h += '<div class="cfs-hint">色付き＝貸出中（マウスで誰に・いつまでか）／空欄＝空き。下へスクロールで先の日付が無限に出ます。予約操作は 🚙代車ビュー で。</div>';
+  h += '<div class="cfs-hint">色付き＝貸出中（マウスで誰に・いつまでか）／<b style="color:#1db97a">緑＝このカードの貸出予定</b>。空きマスを<b>クリック→そのままドラッグ</b>で「使用代車＋貸出から/まで」に自動で入ります（下の入力欄に日付を打っても緑が追従）。</div>';
   h += '</div>';
   return h;
 }
@@ -376,7 +380,8 @@ window.cfsLgScroll = function (sc) {
     const from = window._cfsLgN || 28;
     window._cfsLgN = from + 21;
     const body = document.getElementById('cfs-lg-body');
-    if (body) body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today)));
+    const c = state.cards.find(x => x.id === _editingCardId);
+    if (body) body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today), c));
   }
 };
 /* 代車ガント：今日（一番上）へ戻る */
@@ -596,6 +601,50 @@ function bindCardFormEvents(root){
     fixedBtn.addEventListener('click', () => {
       c.loanerFixed = !c.loanerFixed;
       renderCardForm(c);
+    });
+  }
+
+  // 🚙 代車ガント：空きマスをクリック→ドラッグで範囲選択→「使用代車＋貸出から/まで」に自動入力（v0.28.0）
+  const lgBody = root.querySelector('#cfs-lg-body');
+  if (lgBody){
+    const busyAt = (lid, ds) => (state.loanerAssigns || []).some(a => a.loanerId === lid && a.fromDate <= ds && a.toDate >= ds);
+    const nextDs = (ds) => { const p = ds.split('-'); const d = new Date(+p[0], +p[1]-1, +p[2]); d.setDate(d.getDate()+1); return ymd(d); };
+    const rangeFree = (lid, a, b) => {   // a〜b（両端含む）が全部空きか
+      let cur = a;
+      while (cur <= b){ if (busyAt(lid, cur)) return false; cur = nextDs(cur); }
+      return true;
+    };
+    const paint = (drag) => {
+      lgBody.querySelectorAll('td[data-lgd]').forEach(td => {
+        const on = drag && td.dataset.lgl === drag.l && td.dataset.lgd >= drag.a && td.dataset.lgd <= drag.b;
+        td.classList.toggle('cfs-lg-pick', on || (!drag && c.loanerId === td.dataset.lgl && c.loanerFrom && c.loanerTo && td.dataset.lgd >= c.loanerFrom && td.dataset.lgd <= c.loanerTo));
+      });
+    };
+    let drag = null;
+    lgBody.addEventListener('mousedown', (e) => {
+      const td = e.target.closest('td[data-lgd]');
+      if (!td) return;
+      e.preventDefault();
+      drag = { l: td.dataset.lgl, anchor: td.dataset.lgd, a: td.dataset.lgd, b: td.dataset.lgd };
+      paint(drag);
+      document.addEventListener('mouseup', () => {
+        if (!drag) return;
+        c.needLoaner = true;
+        c.loanerId = drag.l;
+        c.loanerFrom = drag.a;
+        c.loanerTo = drag.b;
+        drag = null;
+        if (window.PitDB) PitDB.save();
+        renderCardForm(c);   // 使用代車セレクト・日付欄・緑マスがすべて追従
+      }, { once: true });
+    });
+    lgBody.addEventListener('mouseover', (e) => {
+      if (!drag) return;
+      const td = e.target.closest('td[data-lgd]');
+      if (!td || td.dataset.lgl !== drag.l) return;   // 同じ代車の列だけ
+      let a = drag.anchor, b = td.dataset.lgd;
+      if (b < a){ const t = a; a = b; b = t; }
+      if (rangeFree(drag.l, a, b)){ drag.a = a; drag.b = b; paint(drag); }   // 途中に貸出中があれば伸ばさない
     });
   }
 
