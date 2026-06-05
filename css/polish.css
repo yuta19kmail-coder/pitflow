@@ -354,7 +354,7 @@
 
 /* ===== 入庫カード 全画面ページ（新規予約／編集 共通） ===== */
 .card-page-head{ position:sticky; top:0; z-index:5; background:var(--bg); padding-bottom:12px; margin-bottom:4px; border-bottom:1px solid var(--border); align-items:center; }
-.card-page-body{ max-width:860px; }
+.card-page-body{ max-width:none; }   /* v0.27.1 全幅を使う（旧860px） */
 .card-page-body .cf-section{ background:var(--bg2); border-color:var(--border); }
 .card-page-body .cf-section-head{ background:var(--bg3); }
 .card-page-body .cf-input{ background:var(--bg); }
@@ -509,11 +509,22 @@
 .dash-park-u{ font-size:14px; font-weight:700; color:var(--text2); }
 .dash-park-sub{ font-size:11.5px; color:var(--text3); line-height:1.6; margin-left:10px; }
 
-/* ===== 📋 新規予約の2カラム＋右パネル（v0.27.0） ===== */
-.cfp-wrap{ display:flex; gap:18px; align-items:flex-start; }
+/* ===== 📋 新規予約の2カラム＋右パネル（v0.27.0／v0.27.1 全幅活用） ===== */
+.cfp-wrap{ display:flex; gap:22px; align-items:flex-start; }
 .cfp-main{ flex:1; min-width:0; }
-.cfp-side{ flex:none; width:300px; position:sticky; top:0; }
+.cfp-side{ flex:none; width:380px; position:sticky; top:0; }
 @media (max-width:980px){ .cfp-wrap{ flex-direction:column; } .cfp-side{ width:100%; position:static; } }
+
+/* 広い画面では基本情報パネルのセクションを2列に並べる（メモは全幅）v0.27.1 */
+@media (min-width:1200px){
+  .cfp-main .cf-panel[data-tab="basic"]{ display:grid; grid-template-columns:1fr 1fr; gap:0 20px; align-items:start; }
+  .cfp-main .cf-panel[data-tab="basic"] > .cf-section:last-child{ grid-column:1 / -1; }
+}
+
+/* ☰ サイドバーたたみ（v0.27.1） */
+#app.sb-off{ grid-template-columns:0 1fr; }
+#app.sb-off #sidebar{ display:none; }
+#sb-toggle{ font-size:15px; padding:6px 10px; }
 .cfs-card{ background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:14px; margin-bottom:12px; }
 .cfs-h{ font-size:13.5px; font-weight:800; margin-bottom:10px; border-left:4px solid var(--brand); padding-left:8px; }
 .cfs-team{ font-size:11px; font-weight:700; margin-left:4px; }
@@ -527,8 +538,8 @@
 .cfs-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
 .cfs-dow{ font-size:10px; text-align:center; color:var(--text3); padding:2px 0; font-weight:600; }
 .cfs-dow.red{ color:#ef4444; } .cfs-dow.sat{ color:#3b82f6; }
-.cfs-day{ position:relative; text-align:center; font-size:11.5px; font-weight:700; padding:4px 0 2px; background:var(--bg3); border:1px solid var(--border); border-radius:6px; cursor:pointer; line-height:1.2; }
-.cfs-day span{ display:block; font-size:9px; font-weight:700; }
+.cfs-day{ position:relative; text-align:center; font-size:12.5px; font-weight:700; padding:6px 0 3px; background:var(--bg3); border:1px solid var(--border); border-radius:7px; cursor:pointer; line-height:1.25; }
+.cfs-day span{ display:block; font-size:9.5px; font-weight:700; }
 .cfs-day.ok{ border-color:#1db97a; color:#1db97a; }
 .cfs-day.near{ border-color:#f97316; color:#f97316; }
 .cfs-day.full{ border-color:#ef4444; color:#ef4444; background:rgba(239,68,68,.08); }

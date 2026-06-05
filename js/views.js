@@ -30,6 +30,22 @@ function showView(viewId){
   if (viewId === 'rules' && window.renderRules) renderRules();
 }
 
+/* ☰ サイドバーをたたむ（v0.27.1・CarFlow/StockFlowと同じ操作感）。状態は端末に記憶 */
+function toggleSidebar(){
+  const app = document.getElementById('app');
+  if (!app) return;
+  const off = app.classList.toggle('sb-off');
+  try { localStorage.setItem('pitflow_sb_off', off ? '1' : ''); } catch (e) {}
+}
+(function(){
+  try {
+    if (localStorage.getItem('pitflow_sb_off') === '1'){
+      const app = document.getElementById('app');
+      if (app) app.classList.add('sb-off');
+    }
+  } catch (e) {}
+})();
+
 function toggleTheme(){
   const root = document.documentElement;
   const cur = root.getAttribute('data-theme') || 'dark';
