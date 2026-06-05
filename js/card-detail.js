@@ -29,7 +29,8 @@ function openCard(cardId, mode){
     document.getElementById('modal-detail').classList.add('show');
   } else {
     _cardBodyId = 'md-body';
-    window._cfsYM = null;   // 右パネルのカレンダーは今月から
+    window._cfsYM = null;    // 右パネルのカレンダーは今月から
+    window._cfsLgN = null;   // 代車ガントは今日から28日ぶんで仕切り直し
     if (state.currentView && state.currentView !== 'card') _returnView = state.currentView;
     document.getElementById('card-title').innerHTML = _cardTitleHtml(card);
     renderCardForm(card);
@@ -324,20 +325,12 @@ function _cfsCalHtml(c, team, tStr){
   return h;
 }
 
-/* 🚙 代車の空き（代車ビュー式＝縦に日付・横に各代車。どの車がいつ空くかが見える・表示のみ）v0.27.4 */
-function _cfsLoanerGanttHtml(today, tStr){
+/* 🚙 代車の空き（代車ビュー式＝縦に日付・横に各代車。車種名はヘッダに常時表示・下へ無限スクロール）v0.27.5 */
+function _cfsLgRows(from, to, today, tStr){
   const loaners = state.loaners || [];
   const assigns = state.loanerAssigns || [];
-  const DAYS = 28;
-  let h = '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車の空き（4週間・どの車がいつ空くか）</span></div>';
-  h += '<div class="cfs-lg-scroll"><table class="cfs-lg">';
-  h += '<tr><th class="cfs-lg-d"></th>';
-  loaners.forEach(function (l) {
-    h += '<th title="' + (l.name || '') + ' ' + (l.model || '') + '">' + String(l.name || '').replace('代車', '') + '</th>';
-  });
-  h += '</tr>';
-  for (let i = 0; i < DAYS; i++){
+  let h = '';
+  for (let i = from; i < to; i++){
     const d = addDays(today, i);
     const ds = ymd(d);
     const dow = d.getDay();
@@ -353,11 +346,44 @@ function _cfsLoanerGanttHtml(today, tStr){
     });
     h += '</tr>';
   }
+  return h;
+}
+
+function _cfsLoanerGanttHtml(today, tStr){
+  const loaners = state.loaners || [];
+  if (!window._cfsLgN) window._cfsLgN = 28;
+  let h = '<div class="cfs-card">';
+  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車の空き（どの車がいつ空くか）</span>'
+     + '<span class="cfs-nav"><button type="button" onclick="cfsLgToday()" title="一番上（今日）に戻る">📍 今日へ</button></span></div>';
+  h += '<div class="cfs-lg-scroll" id="cfs-lg-scroll" onscroll="cfsLgScroll(this)"><table class="cfs-lg">';
+  h += '<thead><tr><th class="cfs-lg-d"></th>';
+  loaners.forEach(function (l) {
+    h += '<th title="' + (l.name || '') + ' ' + (l.model || '') + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
+  });
+  h += '</tr></thead>';
+  h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr) + '</tbody>';
   h += '</table></div>';
-  h += '<div class="cfs-hint">色付き＝貸出中（マウスを乗せると誰に・いつまでか）／空欄＝空き。車両の入替や予約操作は 🚙代車ビュー で。</div>';
+  h += '<div class="cfs-hint">色付き＝貸出中（マウスで誰に・いつまでか）／空欄＝空き。下へスクロールで先の日付が無限に出ます。予約操作は 🚙代車ビュー で。</div>';
   h += '</div>';
   return h;
 }
+
+/* 代車ガント：下端近くで21日ずつ継ぎ足し（スクロール位置はそのまま） */
+window.cfsLgScroll = function (sc) {
+  if (!sc) return;
+  if (sc.scrollTop + sc.clientHeight > sc.scrollHeight - 200){
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const from = window._cfsLgN || 28;
+    window._cfsLgN = from + 21;
+    const body = document.getElementById('cfs-lg-body');
+    if (body) body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today)));
+  }
+};
+/* 代車ガント：今日（一番上）へ戻る */
+window.cfsLgToday = function () {
+  const sc = document.getElementById('cfs-lg-scroll');
+  if (sc) sc.scrollTop = 0;
+};
 
 /* カレンダーの月送り（右パネル）。n=0 で今月に戻る */
 window.cfsCalShift = function (n) {

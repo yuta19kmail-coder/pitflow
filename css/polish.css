@@ -550,7 +550,9 @@
 /* 🚙 代車の空き＝代車ビュー式ミニガント（v0.27.4） */
 .cfs-lg-scroll{ overflow:auto; max-height:420px; border:1px solid var(--border); border-radius:8px; }
 .cfs-lg{ border-collapse:collapse; min-width:max-content; }
-.cfs-lg th{ position:sticky; top:0; z-index:2; background:var(--bg3); font-size:10px; font-weight:700; color:var(--text2); padding:4px 5px; border:1px solid var(--border); min-width:24px; }
+.cfs-lg th{ position:sticky; top:0; z-index:2; background:var(--bg3); font-size:10px; font-weight:700; color:var(--text2); padding:4px 3px; border:1px solid var(--border); min-width:30px; vertical-align:bottom; }
+.cfs-lg th i{ font-style:normal; display:block; font-size:10.5px; color:var(--text); }
+.cfs-lg th b{ display:block; writing-mode:vertical-rl; margin:3px auto 0; font-size:9.5px; font-weight:600; color:var(--text2); max-height:62px; overflow:hidden; letter-spacing:.04em; }
 .cfs-lg td{ border:1px solid var(--border); height:22px; min-width:24px; }
 .cfs-lg-d{ position:sticky; left:0; z-index:1; background:var(--bg2) !important; font-size:10.5px; font-weight:700; color:var(--text2); padding:2px 7px; white-space:nowrap; }
 th.cfs-lg-d{ z-index:3; }
