@@ -633,17 +633,25 @@
 .tag-work{ font-size:13px; }
 .tag-work.long{ font-size:11px; }
 
-/* 休憩バー */
-.tod-break{ border-bottom:1px solid var(--border); }
+/* 休憩ゾーン：全体が黄色の斜めストライプの連続ブロック。中のカードもその上に乗る。
+   ゾーンの一番下に明るい黄色の点線（休憩の終わりの目印） */
+.tod-break{
+  background:repeating-linear-gradient(45deg, rgba(234,179,8,.12), rgba(234,179,8,.12) 10px, rgba(234,179,8,.03) 10px, rgba(234,179,8,.03) 20px);
+  border-bottom:2px dashed #facc15;
+}
 .tod-break-bar{
-  background:repeating-linear-gradient(45deg, rgba(234,179,8,.14), rgba(234,179,8,.14) 10px, rgba(234,179,8,.06) 10px, rgba(234,179,8,.06) 20px);
   color:#a16207; font-size:12px; font-weight:800; text-align:center;
-  padding:5px 0; border-top:1px dashed #eab308; border-bottom:1px dashed #eab308;
+  padding:5px 0; border-top:1px dashed #eab308; border-bottom:1px dashed rgba(234,179,8,.5);
+  background:rgba(234,179,8,.10);
 }
 [data-theme="dark"] .tod-break-bar{ color:#eab308; }
-/* 休憩枠内の空き行（相手側にカードがある時に枠を縦に広げる）＝斜線で休憩感を出す */
-.tod-break-pad{ height:56px; box-sizing:border-box; border-bottom:1px dashed rgba(234,179,8,.3);
-  background:repeating-linear-gradient(45deg, rgba(234,179,8,.05), rgba(234,179,8,.05) 10px, transparent 10px, transparent 20px); }
+/* 休憩枠内のカードは背景を透かしてストライプを見せる＝枠の中にいる感じ */
+.tod-break .today-row, .tod-break .today-row.in-break{ background:transparent; }
+.tod-break .today-row:hover{ background:rgba(234,179,8,.10); }
+.tod-break .today-row{ border-bottom:1px dashed rgba(234,179,8,.25); }
+/* 休憩枠内の空き行（相手側にカードがある時に枠を縦に広げる）＝枠と同じストライプ（背景は親が出すので透明）。
+   行間の点線で枠が何台分か分かる。一番下の明るい点線は親(.tod-break)の border-bottom が担当 */
+.tod-break-pad{ height:56px; box-sizing:border-box; border-bottom:1px dashed rgba(234,179,8,.25); background:transparent; }
 .tod-break-pad:last-child{ border-bottom:none; }
 /* セグメントの空き行＝相手カラムにカードがある高さに合わせた余白（午前の入庫スカスカが見える） */
 .tod-seg-pad{ height:56px; box-sizing:border-box; border-bottom:1px solid var(--border); background:repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(128,128,128,.04) 12px, rgba(128,128,128,.04) 24px); }
