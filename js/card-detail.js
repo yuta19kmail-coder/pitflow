@@ -312,7 +312,7 @@ function _cfsCalHtml(c, team, tStr){
   const tgt  = (team === 'import') ? 'capImport' : 'capDefault';
   let h = '';
   h += '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">' + (team === 'import' ? '🌍 輸入車' : '🚗 国産車') + '</span>　予約の空き'
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">' + (team === 'import' ? '🌍 輸入車空き予約' : '🚗 国産車空き予約') + '</span>'
      + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button><button type="button" onclick="cfsCalShift(0)" title="今月に戻る">今月</button></span></div>';
   h += '<div class="cfs-cal">';
   ['日','月','火','水','木','金','土'].forEach(function (w, i) {
@@ -377,7 +377,7 @@ function _cfsLoanerGanttHtml(today, tStr, c){
   const loaners = state.loaners || [];
   if (!window._cfsLgN) window._cfsLgN = 28;
   let h = '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車の空き（どの車がいつ空くか）</span>'
+  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車カレンダー</span>'
      + '<span class="cfs-nav"><button type="button" onclick="cfsLgToday()" title="一番上（今日）に戻る">📍 今日へ</button></span></div>';
   h += '<div class="cfs-lg-scroll" id="cfs-lg-scroll" onscroll="cfsLgScroll(this)"><table class="cfs-lg">';
   h += '<thead><tr><th class="cfs-lg-d"></th>';
