@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v9';   // v9: 車両のメーカー/車種2ボックス化・作業タイプ7種確定・概算金額 追加で再シード
+  const LS_KEY = 'pitflow_data_v10';   // v10: フロント担当・返車時刻 追加（当日ビュー刷新）で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'

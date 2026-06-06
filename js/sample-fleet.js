@@ -52,7 +52,9 @@
       dropType: dropType,
       consult: Math.random() < 0.08,   // たまに「相談」つき
       staff: rnd(STAFF),
+      frontStaff: rnd(STAFF),          // フロント担当（当日ビューの縦バッジ）
       reserveTime: timeSlot(),
+      returnTime: timeSlot(),
       estHoldDays: (window.pitEstHold ? pitEstHold(workType, dropType) : 5),  // 概算預かり日数
       estAmount: (window.pitEstAmount ? pitEstAmount(workType) : 100000),     // 概算金額（タイプ別平均）
       needLoaner: false, needWash: Math.random() < 0.4, urgent: Math.random() < 0.06, memo: ''
