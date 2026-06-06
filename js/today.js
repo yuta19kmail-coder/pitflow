@@ -130,31 +130,35 @@ function _todBuildRows(cards, isReturn){
   return blocks;
 }
 
-/* 左右のブロックを揃えて、各ブロックを同じ最低行数にパディングしてHTML化 */
+/* 左右のブロックを揃える＝休憩バーが必ず同じ高さで並ぶように、
+   各セグメント／休憩ブロックを左右で同じ行数にパディングしてHTML化（少ない側を空き行で埋める） */
 function _todMergeAlign(left, right){
   let L = '', R = '';
   const n = Math.max(left.length, right.length);
   for (let i = 0; i < n; i++){
     const lb = left[i], rb = right[i];
-    if (lb && lb.type === 'break'){
-      // 休憩ブロック：被ったカード＋空き行を左右同数に
-      const lc = lb.cards.length, rc = (rb && rb.cards ? rb.cards.length : 0);
+    const lc = (lb && lb.cards) ? lb.cards.length : 0;
+    const rc = (rb && rb.cards) ? rb.cards.length : 0;
+    if ((lb && lb.type === 'break') || (rb && rb.type === 'break')){
       const rows = Math.max(lc, rc, 1);
       L += _todBreakHtml(lb, rows, false);
       R += _todBreakHtml(rb || lb, rows, true);
     } else {
-      // 通常セグメント：カード行をそのまま（行数は揃えず、自然に積む）
-      L += _todSegHtml(lb, false);
-      R += _todSegHtml(rb, true);
+      const rows = Math.max(lc, rc);   // セグメントも左右で揃える＝午前のスカスカが見える
+      L += _todSegHtml(lb, rows, false);
+      R += _todSegHtml(rb, rows, true);
     }
   }
   return { left: L, right: R };
 }
 function _todHasAny(html){ return /today-row/.test(html); }
 
-function _todSegHtml(block, isReturn){
-  if (!block || !block.cards || !block.cards.length) return '';
-  return block.cards.map(c => todayRow(c, isReturn)).join('');
+function _todSegHtml(block, rows, isReturn){
+  const cards = (block && block.cards) ? block.cards : [];
+  let h = '';
+  cards.forEach(c => { h += todayRow(c, isReturn); });
+  for (let k = cards.length; k < rows; k++) h += '<div class="tod-seg-pad"></div>';   // 空き行＝相手側に合わせた余白
+  return h;
 }
 
 function _todBreakHtml(block, rows, isReturn){
@@ -195,15 +199,18 @@ function todayRow(c, isReturn, inBreak){
   if (c.memo) h += '<div class="tr-memo">' + c.memo + '</div>';
   h += '</div>';
 
-  // 右側タグ（右詰め）：[相談][代車] [待/当/預] [作業タイプ]
-  h += '<div class="tr-tags">';
-  if (c.consult)              h += '<span class="tag-side consult">相談</span>';
-  if (c.needLoaner)           h += '<span class="tag-side loaner">代車</span>';
-  if (!isReturn && c.needWash) {}   // 入庫に洗車は出さない
-  if (isReturn && c.needWash) h += '<span class="tag-side wash">洗車</span>';
-  if (dt) h += '<span class="tag-drop tag-drop-' + dt.id + '" title="' + dt.desc + '">' + dt.label + '</span>';
-  if (wt) h += '<span class="tag-work" style="background:' + wt.color + '20;color:' + wt.color + ';border-color:' + wt.color + ';">' + wt.label + '</span>';
-  h += '</div>';
+  // 右側タグ：固定3スロット（添え物｜受付タイプ｜作業タイプ）で全幅揃え
+  let side = '';
+  if (c.consult)              side += '<span class="tag-side consult">相談</span>';
+  if (c.needLoaner)           side += '<span class="tag-side loaner">代車</span>';
+  if (isReturn && c.needWash) side += '<span class="tag-side wash">洗車</span>';   // 入庫に洗車は出さない
+  const dropTag = dt ? '<span class="tag-drop tag-drop-' + dt.id + '" title="' + dt.desc + '">' + dt.label + '</span>' : '';
+  const workTag = wt ? '<span class="tag-work' + (wt.label.length >= 4 ? ' long' : '') + '" style="background:' + wt.color + '20;color:' + wt.color + ';border-color:' + wt.color + ';">' + wt.label + '</span>' : '';
+  h += '<div class="tr-tags">'
+     + '<div class="tr-tag-slot">' + side + '</div>'
+     + '<div class="tr-tag-slot">' + dropTag + '</div>'
+     + '<div class="tr-tag-slot">' + workTag + '</div>'
+     + '</div>';
 
   h += '</div>';
   return h;
