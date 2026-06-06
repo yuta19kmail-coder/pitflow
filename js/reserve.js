@@ -51,8 +51,7 @@ function renderReserveDay(){
   }
 
   const todays = state.cards.filter(c =>
-    c.reserveDate === dateStr &&
-    c.status !== 'returned' && c.status !== 'workDone'
+    c.reserveDate === dateStr && c.status === 'reserved'   // 入庫済み以降は予約から外れる
   );
 
   let html = '';
@@ -121,7 +120,7 @@ function renderReserveWeek(){
       const inCell = state.cards.filter(c =>
         c.reserveDate === dStr &&
         c.reserveTime.startsWith(hh) &&
-        c.status !== 'returned' && c.status !== 'workDone'
+        c.status === 'reserved'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="reserveDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
       inCell.forEach(c => {
@@ -182,7 +181,7 @@ function _rmlRows(from, to){
     const isClosed = state.settings.closedDow.includes(dow);
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
-      .filter(c => c.reserveDate === ds && c.status !== 'returned' && c.status !== 'workDone')
+      .filter(c => c.reserveDate === ds && c.status === 'reserved')
       .sort((a, b) => (a.reserveTime || '99:99') < (b.reserveTime || '99:99') ? -1 : 1);
 
     let dCls = '';
@@ -268,8 +267,7 @@ function monthGridCells(refDate){
     if (dow === 6) dowClass = ' sat';
 
     const cardsOfDay = state.cards.filter(c =>
-      c.reserveDate === dateStr &&
-      c.status !== 'returned' && c.status !== 'workDone'
+      c.reserveDate === dateStr && c.status === 'reserved'
     );
 
     const visible = cardsOfDay.slice(0, 3);

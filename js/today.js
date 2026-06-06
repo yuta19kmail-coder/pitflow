@@ -38,10 +38,11 @@ function renderToday(){
   const dow = '日月火水木金土'[day.getDay()];
   const isToday = (window._todayOffset || 0) === 0;
 
-  // 入庫（その日が予約日・返車前まで）／返車（その日が返車日・未返車）
+  // 入庫リスト＝まだ来ていない予約（status=reserved）。入庫済みにするとタスクへ移りここから消える
   const intake = state.cards
-    .filter(c => c.reserveDate === dayStr && c.status !== 'returned' && c.status !== 'scrap')
+    .filter(c => c.reserveDate === dayStr && c.status === 'reserved')
     .sort((a,b) => _todMin(a.reserveTime) - _todMin(b.reserveTime));
+  // 返車リスト＝今日返車予定でまだ返していない。返車済みにすると実績へ移りここから消える
   const returns = state.cards
     .filter(c => c.returnDate === dayStr && c.status !== 'returned' && c.status !== 'scrap')
     .sort((a,b) => _todMin(a.returnTime || a.reserveTime) - _todMin(b.returnTime || b.reserveTime));
@@ -127,6 +128,71 @@ window.todayShift = function(n){
   renderToday();
 };
 
+/* ===== カードタップ → アクションシート（入庫済み/返車済み・詳細を見る）v0.30.0 ===== */
+window.pitTodayTap = function(id, isReturn){
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  let back = document.getElementById('today-action');
+  if (!back){
+    back = document.createElement('div');
+    back.id = 'today-action';
+    back.className = 'modal-backdrop';
+    back.addEventListener('click', e => { if (e.target.id === 'today-action') pitTodayActionClose(); });
+    document.body.appendChild(back);
+  }
+  const wt = state.workTypes.find(w => w.id === c.workType);
+  const team = (c.boardId === 'import') ? '🌍 輸入車' : '🚗 国産車';
+  const doneLabel = isReturn ? '📤 返車済みにする' : '📥 入庫済みにする';
+  const doneSub   = isReturn ? 'この日の実績（確定売上）に固めます' : 'タスクへ移動・予約から外れます';
+  const doneFn    = isReturn ? 'pitTodayReturn' : 'pitTodayCheckIn';
+  back.innerHTML =
+    '<div class="ta-sheet">' +
+      '<div class="ta-head"><b>' + (c.customer || '（未入力）') + ' 様</b>　' +
+        (c.maker ? c.maker + ' ' : '') + (c.car || '') + (c.plate ? '<span class="ta-plate">' + c.plate + '</span>' : '') +
+        '<div class="ta-sub">' + team + (wt ? '・' + wt.label : '') + (isReturn ? '・返車' : '・入庫') + '</div>' +
+      '</div>' +
+      '<button class="ta-btn primary" onclick="' + doneFn + '(\'' + id + '\')"><b>' + doneLabel + '</b><span>' + doneSub + '</span></button>' +
+      '<button class="ta-btn" onclick="pitTodayDetail(\'' + id + '\')"><b>📋 詳細を見る</b><span>カードを開いて確認・編集</span></button>' +
+      '<button class="ta-cancel" onclick="pitTodayActionClose()">キャンセル</button>' +
+    '</div>';
+  back.classList.add('show');
+};
+window.pitTodayActionClose = function(){
+  const back = document.getElementById('today-action');
+  if (back) back.classList.remove('show');
+};
+window.pitTodayDetail = function(id){
+  pitTodayActionClose();
+  openDetail(id);
+};
+/* 入庫済み：予約 → タスクの最初の工程（点検待ち＝check）へ。予約系から消える */
+window.pitTodayCheckIn = function(id){
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  c.status = 'check';
+  if (!c.actualInAt) c.actualInAt = ymd(new Date());   // 実入庫日
+  if (window.logFlow && typeof statusLabel === 'function') logFlow(c, '入庫（点検待ちへ）');
+  if (window.PitDB) PitDB.save();
+  pitTodayActionClose();
+  renderToday();
+  if (window.pitToast) pitToast('📥 入庫済み → タスク「点検待ち」へ移動しました');
+};
+/* 返車済み：実績へ。completedAtを今日に・売上を確定値で固める */
+window.pitTodayReturn = function(id){
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  const t = ymd(new Date());
+  c.status = 'returned';
+  c.returnDate = c.returnDate || t;
+  c.completedAt = t;                 // 実績カレンダーはこの日付で表示
+  if (c.amountFinal == null) c.amountFinal = (window.pitEstAmount ? (c.estAmount || pitEstAmount(c.workType)) : (c.estAmount || 0));  // 売上を固める
+  if (window.logFlow && typeof statusLabel === 'function') logFlow(c, '返車完了（実績へ）');
+  if (window.PitDB) PitDB.save();
+  pitTodayActionClose();
+  renderToday();
+  if (window.pitToast) pitToast('📤 返車済み → 実績（確定売上）に固めました');
+};
+
 /* カードと休憩を時間順にブロック分け：[{break?, cards:[...]}] の配列を返す */
 function _todBuildRows(cards, isReturn){
   const tOf = c => isReturn ? _todMin(c.returnTime || c.reserveTime) : _todMin(c.reserveTime);
@@ -205,7 +271,7 @@ function todayRow(c, isReturn, inBreak){
   const frontName = (c.frontStaff || '').trim();
 
   let h = '';
-  h += '<div class="today-row' + (c.urgent ? ' is-urgent' : '') + (inBreak ? ' in-break' : '') + '" onclick="openDetail(\'' + c.id + '\')" style="--team:' + teamColor + '">';
+  h += '<div class="today-row' + (c.urgent ? ' is-urgent' : '') + (inBreak ? ' in-break' : '') + '" onclick="pitTodayTap(\'' + c.id + '\',' + (isReturn ? 'true' : 'false') + ')" style="--team:' + teamColor + '">';
   h += '<div class="tr-time">' + time + '</div>';
   // 担当フロント縦書きバッジ
   if (frontName){
