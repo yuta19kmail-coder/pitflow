@@ -30,20 +30,20 @@ window.pitAutoArchive = pitAutoArchive;
 
 function _undTeamColor(c){ return (c.boardId === 'import') ? '#ec4899' : '#1db97a'; }
 
-function renderUndetermined(){
-  const wrap = document.getElementById('view-undet-body');
+/* 予約ビュー内「未定」タブ：縦半分で 未定（パーツ待ち）／未入庫（キャンセル） */
+function renderReserveTbd(){
+  ['reserve-day-list','reserve-week','reserve-month','reserve-2month'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const wrap = document.getElementById('reserve-tbd');
   if (!wrap) return;
+  wrap.style.display = '';
   pitAutoArchive();
 
   const intakeTbd = state.cards.filter(c => c.status === 'reserved' && c.intakeTbd);
   const noShow    = state.cards.filter(c => c.status === 'cancelled' && !c.archived);
-  const returnTbd = state.cards.filter(c => c.returnTbd && c.status !== 'returned' && c.status !== 'scrap');
 
-  let h = '<div class="und-cols">';
-
-  /* 左カラム：入庫（未定／未入庫） */
-  h += '<div class="today-col">';
-  h += '<div class="today-col-head intake"><span class="ic">📥</span>入庫</div>';
+  let h = '<div class="und-half">';
   h += '<div class="und-sec"><div class="und-sec-h">🅿️ 未定（パーツ待ち・入庫日決まらず）<span class="und-cnt">' + intakeTbd.length + '</span></div>';
   if (!intakeTbd.length) h += '<div class="today-empty">なし</div>';
   else intakeTbd.forEach(c => h += _undRow(c, 'intakeTbd'));
@@ -51,24 +51,34 @@ function renderUndetermined(){
   h += '<div class="und-sec"><div class="und-sec-h">🚫 未入庫（来店なし・キャンセル）<span class="und-cnt">' + noShow.length + '</span></div>';
   if (!noShow.length) h += '<div class="today-empty">なし</div>';
   else noShow.forEach(c => h += _undRow(c, 'noShow'));
-  h += '<div class="und-note">※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でアーカイブされます。</div>';
+  h += '<div class="und-note">※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でキャンセル・アーカイブされます。</div>';
   h += '</div>';
-  h += '</div>';
-
-  /* 右カラム：返車（未定） */
-  h += '<div class="today-col">';
-  h += '<div class="today-col-head return"><span class="ic">📤</span>返車</div>';
-  h += '<div class="und-sec"><div class="und-sec-h">🕒 未定（作業完了・完TEL待ち）<span class="und-cnt">' + returnTbd.length + '</span></div>';
-  if (!returnTbd.length) h += '<div class="today-empty">なし</div>';
-  else returnTbd.forEach(c => h += _undRow(c, 'returnTbd'));
-  h += '<div class="und-note">※ 完TEL（完成電話）で返車日を入れると返車カレンダーへ移ります。</div>';
-  h += '</div>';
-  h += '</div>';
-
   h += '</div>';
   wrap.innerHTML = h;
 }
-window.renderUndetermined = renderUndetermined;
+window.renderReserveTbd = renderReserveTbd;
+
+/* 返車ビュー内「未定」タブ：作業完了・完TEL待ち */
+function renderReturnTbd(){
+  ['return-day-list','return-week','return-month','return-2month'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
+  });
+  const wrap = document.getElementById('return-tbd');
+  if (!wrap) return;
+  wrap.style.display = '';
+
+  const returnTbd = state.cards.filter(c => c.returnTbd && c.status !== 'returned' && c.status !== 'scrap');
+
+  let h = '<div class="und-half">';
+  h += '<div class="und-sec"><div class="und-sec-h">🕒 未定（作業完了・完TEL待ち）<span class="und-cnt">' + returnTbd.length + '</span></div>';
+  if (!returnTbd.length) h += '<div class="today-empty">なし</div>';
+  else returnTbd.forEach(c => h += _undRow(c, 'returnTbd'));
+  h += '<div class="und-note">※ 完TEL（完成電話）で返車日を入れると返車カレンダーへ移ります。タスクで作業完了にしたカードがここに来ます。</div>';
+  h += '</div>';
+  h += '</div>';
+  wrap.innerHTML = h;
+}
+window.renderReturnTbd = renderReturnTbd;
 
 function _undRow(c, kind){
   const wt = (state.workTypes || []).find(w => w.id === c.workType);
@@ -103,7 +113,7 @@ window.pitUndSetIntake = function(id){
   c.intakeTbd = false;
   if (window.logFlow) logFlow(c, '入庫日を設定（予約へ）');
   if (window.PitDB) PitDB.save();
-  renderUndetermined();
+  renderReserveTbd();
   if (window.pitToast) pitToast('📅 ' + c.reserveDate + ' の予約に入れました');
 };
 
@@ -116,7 +126,7 @@ window.pitUndRestore = function(id){
   if (!c.reserveDate) c.intakeTbd = true;   // 日付が無ければ未定へ
   if (window.logFlow) logFlow(c, '未入庫から予約に復帰');
   if (window.PitDB) PitDB.save();
-  renderUndetermined();
+  renderReserveTbd();
   if (window.pitToast) pitToast('↩ 予約に戻しました');
 };
 
@@ -131,6 +141,6 @@ window.pitUndComplete = function(id){
   c.completeCallAt = ymd(new Date());
   if (window.logFlow) logFlow(c, '完TEL → 返車日設定');
   if (window.PitDB) PitDB.save();
-  renderUndetermined();
+  renderReturnTbd();
   if (window.pitToast) pitToast('📞 ' + c.returnDate + ' の返車予定に入れました');
 };

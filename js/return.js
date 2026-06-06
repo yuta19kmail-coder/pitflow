@@ -7,10 +7,12 @@
 function renderReturn(){
   renderReturnNav();
   const range = state.returnRange;
+  if (range !== 'tbd'){ const _t = document.getElementById('return-tbd'); if (_t) _t.style.display = 'none'; }
   if (range === 'day')    return renderReturnDay();
   if (range === 'week')   return renderReturnWeek();
   if (range === 'month')  return renderReturnMonth();
   if (range === '2month') return renderReturn2Month();
+  if (range === 'tbd')    return renderReturnTbd();
   renderReturnDay();
 }
 

@@ -6,10 +6,12 @@
 function renderReserve(){
   renderReserveNav();
   const range = state.reserveRange;
+  if (range !== 'tbd'){ const _t = document.getElementById('reserve-tbd'); if (_t) _t.style.display = 'none'; }
   if (range === 'day')    return renderReserveDay();
   if (range === 'week')   return renderReserveWeek();
   if (range === 'month')  return renderReserveMonth();
   if (range === '2month') return renderReserve2Month();
+  if (range === 'tbd')    return renderReserveTbd();
   renderReserveDay();
 }
 
@@ -40,6 +42,7 @@ function renderReserveDay(){
   document.getElementById('reserve-week').style.display = 'none';
   document.getElementById('reserve-month').style.display = 'none';
   document.getElementById('reserve-2month').style.display = 'none';
+  const _rt = document.getElementById('reserve-tbd'); if (_rt) _rt.style.display = 'none';
 
   const dateStr = ymd(state.reserveDate);
   const dow = state.reserveDate.getDay();
