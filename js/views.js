@@ -16,6 +16,7 @@ function showView(viewId){
     .forEach(i => i.classList.add('active'));
 
   if (viewId === 'today')   renderToday();
+  if (viewId === 'undet' && window.renderUndetermined) renderUndetermined();
   if (viewId === 'reserve') renderReserve();
   if (viewId === 'return')  renderReturn();
   if (viewId === 'task')    renderTask();

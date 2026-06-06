@@ -145,6 +145,8 @@ window.pitTodayTap = function(id, isReturn){
   const doneLabel = isReturn ? '📤 返車済みにする' : '📥 入庫済みにする';
   const doneSub   = isReturn ? 'この日の実績（確定売上）に固めます' : 'タスクへ移動・予約から外れます';
   const doneFn    = isReturn ? 'pitTodayReturn' : 'pitTodayCheckIn';
+  const cancelLabel = isReturn ? '🚫 返車キャンセル' : '🚫 キャンセル（来店なし）';
+  const cancelSub   = isReturn ? '返車予定を外して「返車・未定」へ戻す' : '「未入庫」へ（1ヶ月後に自動アーカイブ）';
   back.innerHTML =
     '<div class="ta-sheet">' +
       '<div class="ta-head"><b>' + (c.customer || '（未入力）') + ' 様</b>　' +
@@ -152,10 +154,64 @@ window.pitTodayTap = function(id, isReturn){
         '<div class="ta-sub">' + team + (wt ? '・' + wt.label : '') + (isReturn ? '・返車' : '・入庫') + '</div>' +
       '</div>' +
       '<button class="ta-btn primary" onclick="' + doneFn + '(\'' + id + '\')"><b>' + doneLabel + '</b><span>' + doneSub + '</span></button>' +
+      '<button class="ta-btn" onclick="pitTodayEditDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>🕒 日時変更</b><span>' + (isReturn ? '返車' : '入庫') + 'の日付・時間だけ変更</span></button>' +
       '<button class="ta-btn" onclick="pitTodayDetail(\'' + id + '\')"><b>📋 詳細を見る</b><span>カードを開いて確認・編集</span></button>' +
-      '<button class="ta-cancel" onclick="pitTodayActionClose()">キャンセル</button>' +
+      '<button class="ta-btn danger" onclick="pitTodayCancel(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>' + cancelLabel + '</b><span>' + cancelSub + '</span></button>' +
+      '<button class="ta-cancel" onclick="pitTodayActionClose()">閉じる</button>' +
     '</div>';
   back.classList.add('show');
+};
+
+/* 🕒 日時変更：入庫/返車の日付・時間だけをシート内でサッと変更（詳細カードにも反映） */
+window.pitTodayEditDt = function(id, isReturn){
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  const back = document.getElementById('today-action');
+  if (!back) return;
+  const dVal = isReturn ? (c.returnDate || '') : (c.reserveDate || '');
+  const tVal = isReturn ? (c.returnTime || '') : (c.reserveTime || '');
+  back.innerHTML =
+    '<div class="ta-sheet">' +
+      '<div class="ta-head"><b>🕒 ' + (isReturn ? '返車' : '入庫') + 'の日時変更</b>' +
+        '<div class="ta-sub">' + (c.customer || '') + ' 様　' + (c.car || '') + '</div></div>' +
+      '<label class="ta-f">日付<input type="date" id="ta-dt-d" value="' + dVal + '"></label>' +
+      '<label class="ta-f">時間<input type="text" id="ta-dt-t" value="' + tVal + '" placeholder="例 09:30 / 09:00-10:00"></label>' +
+      '<button class="ta-btn primary" onclick="pitTodaySaveDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>💾 保存</b></button>' +
+      '<button class="ta-cancel" onclick="pitTodayTap(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')">← 戻る</button>' +
+    '</div>';
+};
+window.pitTodaySaveDt = function(id, isReturn){
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  const d = (document.getElementById('ta-dt-d') || {}).value || '';
+  const t = (document.getElementById('ta-dt-t') || {}).value || '';
+  if (isReturn){ c.returnDate = d; c.returnTime = t; }
+  else { c.reserveDate = d; c.reserveTime = t; if (d) c.intakeTbd = false; }
+  if (window.PitDB) PitDB.save();
+  pitTodayActionClose();
+  renderToday();
+  if (window.pitToast) pitToast('🕒 日時を変更しました');
+};
+
+/* 🚫 キャンセル：入庫＝未入庫へ（1ヶ月でアーカイブ）／返車＝返車未定へ差し戻し */
+window.pitTodayCancel = function(id, isReturn){
+  const c = state.cards.find(x => x.id === id);
+  if (!c) return;
+  if (isReturn){
+    if (!confirm('返車予定をキャンセルして「返車・未定」へ戻しますか？')) return;
+    c.returnTbd = true;
+    c.returnDate = '';
+    if (window.logFlow) logFlow(c, '返車予定キャンセル（未定へ）');
+  } else {
+    if (!confirm('この入庫予約をキャンセルしますか？\n「未入庫」リストに残り、1ヶ月後に自動でアーカイブされます。')) return;
+    c.status = 'cancelled';
+    c.cancelledAt = ymd(new Date());
+    if (window.logFlow) logFlow(c, 'キャンセル（来店なし）');
+  }
+  if (window.PitDB) PitDB.save();
+  pitTodayActionClose();
+  renderToday();
+  if (window.pitToast) pitToast(isReturn ? '🚫 返車・未定へ戻しました' : '🚫 未入庫へ移しました');
 };
 window.pitTodayActionClose = function(){
   const back = document.getElementById('today-action');

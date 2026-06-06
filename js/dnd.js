@@ -19,6 +19,8 @@
     if (kind === 'status') {
       if (c.status === val) return;
       c.status = val;
+      // 作業完了（workDone）にしたら、返車日が未定なら「返車・未定」へ自動で乗せる（完TEL待ち）
+      if (val === 'workDone' && !c.returnDate) c.returnTbd = true;
       if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');
     } else if (kind === 'bay') {
       const nv = val || null;

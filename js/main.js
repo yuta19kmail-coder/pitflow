@@ -4,6 +4,7 @@
    ======================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.pitAutoArchive) pitAutoArchive();   // 古い未入庫を自動アーカイブ
   showView('dashboard');
 
   document.addEventListener('keydown', (e) => {
