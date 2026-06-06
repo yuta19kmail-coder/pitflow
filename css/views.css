@@ -637,11 +637,12 @@
    ゾーンの一番下に明るい黄色の点線（休憩の終わりの目印） */
 .tod-break{
   background:repeating-linear-gradient(45deg, rgba(234,179,8,.12), rgba(234,179,8,.12) 10px, rgba(234,179,8,.03) 10px, rgba(234,179,8,.03) 20px);
-  border-bottom:2px dashed #facc15;
+  border-top:2px dashed #eab308;      /* 上 */
+  border-bottom:2px dashed #eab308;   /* 下＝上と同じ点線 */
 }
 .tod-break-bar{
   color:#a16207; font-size:12px; font-weight:800; text-align:center;
-  padding:5px 0; border-top:1px dashed #eab308; border-bottom:1px dashed rgba(234,179,8,.5);
+  padding:5px 0; border-bottom:1px dashed rgba(234,179,8,.5);
   background:rgba(234,179,8,.10);
 }
 [data-theme="dark"] .tod-break-bar{ color:#eab308; }
