@@ -549,6 +549,8 @@
 }
 .tnav-btn:hover:not(:disabled){ border-color:#1db97a; }
 .tnav-btn:disabled{ opacity:.4; cursor:default; }
+.count-chip + .full-btn, .full-btn{ align-self:stretch; }
+.full-btn.on{ background:#1db97a; color:#fff; border-color:#1db97a; }
 
 .today-cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
 .today-col{
@@ -574,12 +576,15 @@
   display:grid;
   grid-template-columns:62px 22px 1fr 210px;
   gap:10px;
-  padding:9px 12px 9px 14px;
+  padding:0 12px 0 14px;
+  height:56px;            /* 固定高さ＝フルビューで左右の行がきっちり揃う */
+  box-sizing:border-box;
   border-bottom:1px solid var(--border);
   cursor:pointer;
   transition:background .1s;
   border-left:6px solid var(--team);
   align-items:center;
+  overflow:hidden;
 }
 .today-row:hover{ background:var(--bg3); }
 .today-row.is-urgent{ background:rgba(239,68,68,.06); }
@@ -599,7 +604,6 @@
 .tr-customer{ font-weight:800; font-size:16px; white-space:nowrap; }
 .tr-carname{ font-weight:700; font-size:15px; color:var(--text); white-space:nowrap; }
 .tr-plate{ font-size:12px; color:var(--text2); margin-top:1px; }
-.tr-memo{ font-size:11px; color:var(--text3); margin-top:2px; }
 
 /* 右タグ：固定3スロットで全幅揃え（添え物｜受付タイプ｜作業タイプ）。中身は各スロット幅いっぱい */
 .tr-tags{ display:grid; grid-template-columns:64px 30px 78px; gap:6px; align-items:center; justify-content:end; }
@@ -637,10 +641,14 @@
   padding:5px 0; border-top:1px dashed #eab308; border-bottom:1px dashed #eab308;
 }
 [data-theme="dark"] .tod-break-bar{ color:#eab308; }
-.tod-break-pad{ height:34px; border-bottom:1px dotted var(--border); }
+/* 休憩枠内の空き行（相手側にカードがある時に枠を縦に広げる）＝斜線で休憩感を出す */
+.tod-break-pad{ height:56px; box-sizing:border-box; border-bottom:1px dashed rgba(234,179,8,.3);
+  background:repeating-linear-gradient(45deg, rgba(234,179,8,.05), rgba(234,179,8,.05) 10px, transparent 10px, transparent 20px); }
 .tod-break-pad:last-child{ border-bottom:none; }
 /* セグメントの空き行＝相手カラムにカードがある高さに合わせた余白（午前の入庫スカスカが見える） */
-.tod-seg-pad{ height:54px; border-bottom:1px solid var(--border); background:repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(128,128,128,.04) 12px, rgba(128,128,128,.04) 24px); }
+.tod-seg-pad{ height:56px; box-sizing:border-box; border-bottom:1px solid var(--border); background:repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(128,128,128,.04) 12px, rgba(128,128,128,.04) 24px); }
+/* 休憩枠内のカードも同じ56px固定なので、フルビューで休憩バーが左右ぴったり揃う */
+.tod-break .today-row{ height:56px; }
 
 @media (max-width:768px){
   .today-cols{grid-template-columns:1fr}

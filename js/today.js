@@ -16,6 +16,7 @@ const TODAY_BREAKS = [
 ];
 
 window._todayOffset = 0;   // 0=当日 / 1=翌日 …
+window._todayFull = false; // false=コンパクト（詰め・既定）/ true=フルビュー（左右で高さを揃える）
 
 function _todTeamColor(c){ return (c.boardId === 'import') ? '#ec4899' : '#1db97a'; }
 
@@ -70,6 +71,8 @@ function renderToday(){
         + (inMoved > 0 ? '<span class="rem">残' + inLeft + '</span>' : '') + '</div>';
   html += '<div class="count-chip out"><span class="num">' + returnTotal + '</span><span class="lbl">返車</span>'
         + (outMoved > 0 ? '<span class="rem">残' + outLeft + '</span>' : '') + '</div>';
+  html += '<button class="tnav-btn full-btn' + (window._todayFull ? ' on' : '') + '" onclick="todayToggleFull()" title="入庫と返車の時間を左右で揃えて表示">'
+        + (window._todayFull ? '▤ コンパクト' : '▥ フルビュー') + '</button>';
   html += '</div>';
 
   // 当日/翌日トグル（旧 金庫/SNS/掃除 の位置）
@@ -80,24 +83,42 @@ function renderToday(){
   html += '</div>';
   html += '</div>';
 
-  // ===== 2カラム（時間軸・休憩バー揃え） =====
+  // ===== 2カラム（時間軸・休憩バー） =====
   const intakeRows = _todBuildRows(intake, false);
   const returnRows = _todBuildRows(returns, true);
-  // 休憩バーの高さを左右で揃える＝各ブロックの最大行数に合わせる
-  const merged = _todMergeAlign(intakeRows, returnRows);
+  // フルビュー＝左右で行数を揃える／コンパクト＝詰める（既定）
+  const merged = window._todayFull
+    ? _todMergeAlign(intakeRows, returnRows)
+    : { left: _todPlain(intakeRows, false), right: _todPlain(returnRows, true) };
 
-  html += '<div class="today-cols">';
+  html += '<div class="today-cols' + (window._todayFull ? ' full' : '') + '">';
   html += '<div class="today-col">';
   html += '<div class="today-col-head intake"><span class="ic">📥</span>入庫 <span class="cnt">' + intake.length + '</span></div>';
-  html += '<div class="today-col-body">' + (intake.length || _todHasAny(merged.left) ? merged.left : '<div class="today-empty">入庫予定なし</div>') + '</div>';
+  html += '<div class="today-col-body">' + (_todHasAny(merged.left) ? merged.left : '<div class="today-empty">入庫予定なし</div>') + '</div>';
   html += '</div>';
   html += '<div class="today-col">';
   html += '<div class="today-col-head return"><span class="ic">📤</span>返車 <span class="cnt">' + returns.length + '</span></div>';
-  html += '<div class="today-col-body">' + (returns.length || _todHasAny(merged.right) ? merged.right : '<div class="today-empty">返車予定なし</div>') + '</div>';
+  html += '<div class="today-col-body">' + (_todHasAny(merged.right) ? merged.right : '<div class="today-empty">返車予定なし</div>') + '</div>';
   html += '</div>';
   html += '</div>';
 
   wrap.innerHTML = html;
+}
+
+window.todayToggleFull = function(){ window._todayFull = !window._todayFull; renderToday(); };
+
+/* コンパクト（既定）：詰めて積む。休憩バーは被ったカードを枠内に入れる（パディングなし） */
+function _todPlain(blocks, isReturn){
+  let h = '';
+  blocks.forEach(b => {
+    if (b.type === 'break'){
+      if (b.cards.length) h += _todBreakHtml(b, b.cards.length, isReturn);
+      else h += _todBreakHtml(b, 0, isReturn);   // 空でもバーは出す（時間の目印）
+    } else {
+      b.cards.forEach(c => { h += todayRow(c, isReturn); });
+    }
+  });
+  return h;
 }
 
 window.todayShift = function(n){
@@ -161,13 +182,13 @@ function _todSegHtml(block, rows, isReturn){
   return h;
 }
 
+/* 休憩バー：黄色斜線の枠。休憩中に来る客はこの枠の中に入れる。
+   フルビューで相手側に合わせて行数(rows)が増える時は枠が縦に広がる（斜線の空き行で埋める） */
 function _todBreakHtml(block, rows, isReturn){
   const cards = (block && block.cards) ? block.cards : [];
   let h = '<div class="tod-break">';
   h += '<div class="tod-break-bar">☕ ' + block.from + '〜' + block.to + ' 休憩</div>';
-  // 被ったカード
   cards.forEach(c => { h += todayRow(c, isReturn, true); });
-  // 足りない行は空きスペース（高さ揃え＝体感で残りが見える）
   for (let k = cards.length; k < rows; k++) h += '<div class="tod-break-pad"></div>';
   h += '</div>';
   return h;
@@ -196,8 +217,7 @@ function todayRow(c, isReturn, inBreak){
   h += '<div class="tr-headline"><span class="tr-customer">' + (c.customer || '（未入力）') + ' 様</span>'
      + (c.car ? '<span class="tr-carname">' + c.car + '</span>' : '') + '</div>';
   if (c.plate) h += '<div class="tr-plate">' + c.plate + '</div>';
-  if (c.memo) h += '<div class="tr-memo">' + c.memo + '</div>';
-  h += '</div>';
+  h += '</div>';   // メモは行高さを崩すので当日ビューでは出さない（詳細はカードで）
 
   // 右側タグ：固定3スロット（添え物｜受付タイプ｜作業タイプ）で全幅揃え
   let side = '';
