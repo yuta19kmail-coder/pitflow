@@ -627,6 +627,20 @@ th.cfs-lg-d{ z-index:3; }
 .cfs-hol{ position:absolute; top:2px; right:3px; font-style:normal; font-size:8.5px; font-weight:800; color:#fff; background:#ef4444; border-radius:4px; padding:0 3px; line-height:1.4; }
 .cfs-hint{ font-size:10px; color:var(--text3); margin-top:8px; line-height:1.6; }
 
+/* ===== 🗓️ 空きカレンダービュー（v0.32.0）＝右パネル部品を3カラムで一同に ===== */
+.av-cols{ display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; padding:4px 2px 30px; }
+.av-col{ flex:1 1 300px; min-width:280px; max-width:440px; display:flex; flex-direction:column; }
+.av-col .cfs-card{ margin-bottom:14px; }
+.av-col-lg{ flex:2 1 460px; max-width:none; }
+.av-col-lg .cfs-lg-scroll{ max-height:72vh; }
+/* 読み取り専用＝クリックできる見た目を消す */
+.cfs-el-ro{ display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%; padding:7px 10px; margin-top:6px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; cursor:default; }
+.cfs-el-ro .cfs-el-n{ font-size:11px; color:var(--text2); }
+.cfs-el-ro b{ font-size:13px; }
+.cfs-cal-ro .cfs-day{ cursor:default; }
+.cfs-lg-ro{ cursor:default; }
+.cfs-lg-ro:hover{ background:transparent; }
+
 /* 設定：作業タイプ編集行（v0.27.0） */
 .ps-wt-row{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed var(--border); }
 .ps-wt-row:last-child{ border-bottom:0; }

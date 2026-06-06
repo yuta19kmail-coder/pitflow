@@ -283,8 +283,9 @@ function cfSideHtml(c){
   return h;
 }
 
-/* ⏱ 最短入庫カード（チーム別・クリックで入庫日に入る） */
-function _cfsShortHtml(c, team, today, tStr){
+/* ⏱ 最短入庫カード（チーム別・クリックで入庫日に入る）
+   ro=true（空きカレンダービュー）では読み取り専用＝クリックなしで日付だけ表示 */
+function _cfsShortHtml(c, team, today, tStr, ro){
   if (typeof dashEarliestIntake !== 'function') return '';
   const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
   const teamName  = (team === 'import') ? '🌍 輸入車' : '🚗 国産車';
@@ -294,15 +295,20 @@ function _cfsShortHtml(c, team, today, tStr){
     const d = dashEarliestIntake(team, x.k, today);
     const ds = d ? ymd(d) : null;
     const lbl = !d ? 'なし' : (ds === tStr ? '今日' : (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）');
-    h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickShort(\'' + ds + '\',\'' + team + '\',\'' + x.k + '\')"' : ' disabled') + '>'
-       + '<span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b><span class="cfs-el-go">タップで入庫日に入る</span></button>';
+    if (ro){
+      h += '<div class="cfs-el cfs-el-ro"><span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b></div>';
+    } else {
+      h += '<button type="button" class="cfs-el' + (ds && c.reserveDate === ds ? ' sel' : '') + '"' + (ds ? ' onclick="cfPickShort(\'' + ds + '\',\'' + team + '\',\'' + x.k + '\')"' : ' disabled') + '>'
+         + '<span class="cfs-el-n">' + x.n + '</span><b>' + lbl + '</b><span class="cfs-el-go">タップで入庫日に入る</span></button>';
+    }
   });
   h += '</div>';
   return h;
 }
 
-/* 予約の空きカレンダー（チーム別・月送り共有） */
-function _cfsCalHtml(c, team, tStr){
+/* 予約の空きカレンダー（チーム別・月送り共有）
+   ro=true（空きカレンダービュー）では日付クリックなしの読み取り専用 */
+function _cfsCalHtml(c, team, tStr, ro){
   const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
   const ym = window._cfsYM;
   const lastD = new Date(ym.y, ym.m + 1, 0).getDate();
@@ -314,7 +320,7 @@ function _cfsCalHtml(c, team, tStr){
   h += '<div class="cfs-card">';
   h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">' + (team === 'import' ? '🌍 輸入車空き予約' : '🚗 国産車空き予約') + '</span>'
      + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button><button type="button" onclick="cfsCalShift(0)" title="今月に戻る">今月</button></span></div>';
-  h += '<div class="cfs-cal">';
+  h += '<div class="cfs-cal' + (ro ? ' cfs-cal-ro' : '') + '">';
   ['日','月','火','水','木','金','土'].forEach(function (w, i) {
     h += '<div class="cfs-dow' + (i === 0 ? ' red' : (i === 6 ? ' sat' : '')) + '">' + w + '</div>';
   });
@@ -338,17 +344,20 @@ function _cfsCalHtml(c, team, tStr){
         else { cls = ' ok'; mark = '○'; }
       }
     }
-    h += '<div class="cfs-day' + cls + (c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '" onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')" title="' + (ym.m + 1) + '/' + dd + (hol ? '・🎌' + hol : '') + (num ? '：' + num + '台' : '') + '">'
+    const dayClick = ro ? '' : ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"';
+    h += '<div class="cfs-day' + cls + (!ro && c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '"' + dayClick + ' title="' + (ym.m + 1) + '/' + dd + (hol ? '・🎌' + hol : '') + (num ? '：' + num + '台' : '') + '">'
        + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';
-  h += '<div class="cfs-hint">数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）</div>';
+  h += '<div class="cfs-hint">' + (ro
+        ? '数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了'
+        : '数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）') + '</div>';
   h += '</div>';
   return h;
 }
 
 /* 🚙 代車の空き（代車ビュー式＝縦に日付・横に各代車。車種名はヘッダに常時表示・下へ無限スクロール）v0.27.5 */
-function _cfsLgRows(from, to, today, tStr, c){
+function _cfsLgRows(from, to, today, tStr, c, ro){
   const loaners = state.loaners || [];
   const assigns = state.loanerAssigns || [];
   let h = '';
@@ -362,6 +371,9 @@ function _cfsLgRows(from, to, today, tStr, c){
       const a = assigns.find(function (x) { return x.loanerId === l.id && x.fromDate <= ds && x.toDate >= ds; });
       if (a){
         h += '<td class="cfs-lg-busy" title="' + (l.name || '') + ' ' + (l.model || '') + '：' + (a.customer || '貸出中') + (a.car ? '（' + a.car + '）' : '') + ' 〜' + a.toDate.slice(5).replace('-', '/') + '"></td>';
+      } else if (ro){
+        /* 空きカレンダービュー＝読み取り専用（クリック選択なし） */
+        h += '<td class="cfs-lg-free cfs-lg-ro" title="' + (l.name || '') + ' ' + (l.model || '') + '：空き"></td>';
       } else {
         /* このカードの貸出予定（使用代車＋から/まで）と一致するマスは緑＝双方向（ドラッグでもテキスト入力でも光る） */
         const pick = c && c.loanerId === l.id && c.loanerFrom && c.loanerTo && ds >= c.loanerFrom && ds <= c.loanerTo;
@@ -373,7 +385,7 @@ function _cfsLgRows(from, to, today, tStr, c){
   return h;
 }
 
-function _cfsLoanerGanttHtml(today, tStr, c){
+function _cfsLoanerGanttHtml(today, tStr, c, ro){
   const loaners = state.loaners || [];
   if (!window._cfsLgN) window._cfsLgN = 28;
   let h = '<div class="cfs-card">';
@@ -385,9 +397,11 @@ function _cfsLoanerGanttHtml(today, tStr, c){
     h += '<th title="' + (l.name || '') + ' ' + (l.model || '') + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
   });
   h += '</tr></thead>';
-  h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c) + '</tbody>';
+  h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c, ro) + '</tbody>';
   h += '</table></div>';
-  h += '<div class="cfs-hint">色付き＝貸出中（マウスで誰に・いつまでか）／<b style="color:#1db97a">緑＝このカードの貸出予定</b>。空きマスを<b>クリック→そのままドラッグ</b>で「使用代車＋貸出から/まで」に自動で入ります（下の入力欄に日付を打っても緑が追従）。</div>';
+  h += '<div class="cfs-hint">' + (ro
+        ? '色付き＝貸出中（マウスで誰に・いつまでか）／空白＝空き。下にスクロールで先の日付まで見られます。'
+        : '色付き＝貸出中（マウスで誰に・いつまでか）／<b style="color:#1db97a">緑＝このカードの貸出予定</b>。空きマスを<b>クリック→そのままドラッグ</b>で「使用代車＋貸出から/まで」に自動で入ります（下の入力欄に日付を打っても緑が追従）。') + '</div>';
   h += '</div>';
   return h;
 }
@@ -400,8 +414,9 @@ window.cfsLgScroll = function (sc) {
     const from = window._cfsLgN || 28;
     window._cfsLgN = from + 21;
     const body = document.getElementById('cfs-lg-body');
-    const c = state.cards.find(x => x.id === _editingCardId);
-    if (body) body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today), c));
+    const ro = (state.currentView === 'availcal');   // 空きカレンダービューは読み取り専用
+    const c = ro ? null : state.cards.find(x => x.id === _editingCardId);
+    if (body) body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today), c, ro));
   }
 };
 /* 代車ガント：今日（一番上）へ戻る */
@@ -464,6 +479,8 @@ window.cfsCalShift = function (n) {
     const d = new Date(window._cfsYM.y, window._cfsYM.m + n, 1);
     window._cfsYM = { y: d.getFullYear(), m: d.getMonth() };
   }
+  // 空きカレンダービューならそちらを再描画。それ以外は編集中カードのフォームを再描画。
+  if (state.currentView === 'availcal' && window.renderAvail){ renderAvail(); return; }
   const c = state.cards.find(x => x.id === _editingCardId);
   if (c) renderCardForm(c);
 };
