@@ -1,26 +1,18 @@
 /* ============================================
    CoreFlow アプリランチャー（共通：全アプリで同一）
-   v2（2026-06-07）：中心＝CoreFlow（太陽・クリックでCoreFlowへ）＋公転2周。
+   v2.1（2026-06-07）：中心＝CoreFlow（太陽・クリックでCoreFlowへ）＋公転2周。
      内周(Flow系)：MHS / PitFlow / CarFlow / StockFlow
      外周(Core系＋Money)：CoreBoard / CoreNote / CoreTools / CoreMembers / MoneyFlow
-   ラベルは普段隠し、球ホバーで表示（被り解消）。
-
-   使い方：
-     1) サイドバー底に <div data-cf-launcher data-current="carflow"></div>（data-currentに自アプリ名）
-     2) この launcher.js と launcher.css を読み込む
-   アプリ追加時：APPS に dx/dy（トリガー中心からのオフセット・上は負）付きで足すだけ。
+   ラベルは普段隠し、球ホバーで表示。中心に太陽(CoreFlow)を表示。
    ============================================ */
 (function(){
   const COREFLOW_URL = 'https://coreflow.kobayashi-motors.com';
 
-  // ring:1=内周 / 2=外周。dx,dy = トリガー中心からのオフセット(px、上方向は負)
   const APPS = [
-    // 内周（Flow系）：手前上から右回り
     { key:'mhs',        url:'https://yuta19kmail-coder.github.io/mhs/',       icon:'📅', name:'MHS',        color:'#dc2626', dx:0,   dy:-150 },
     { key:'pitflow',    url:'https://yuta19kmail-coder.github.io/pitflow/',   icon:'🔧', name:'PitFlow',    color:'#1db97a', dx:68,  dy:-134 },
     { key:'carflow',    url:'https://carflow.kobayashi-motors.com',           icon:'🚙', name:'CarFlow',    color:'#378ADD', dx:121, dy:-88  },
     { key:'stockflow',  url:'https://stockflow.kobayashi-motors.com',         icon:'📦', name:'StockFlow',  color:'#7c3aed', dx:148, dy:-23  },
-    // 外周（Core系＋MoneyFlow）
     { key:'coreboard',  url:'https://yuta19kmail-coder.github.io/CoreBoard/', icon:'📋', name:'CoreBoard',  color:'#06b6d4', dx:8,   dy:-235 },
     { key:'corenote',   url:'https://yuta19kmail-coder.github.io/CoreNote/',  icon:'📝', name:'CoreNote',   color:'#ec4899', dx:88,  dy:-218 },
     { key:'coretools',  url:'https://yuta19kmail-coder.github.io/CoreTools/', icon:'🧰', name:'CoreTools',  color:'#64748b', dx:157, dy:-175 },
@@ -35,7 +27,6 @@
     if(!mount) return;
     const currentApp = (mount.getAttribute('data-current')||'').toLowerCase();
 
-    // --- トリガー（CoreFlow＝太陽）。クリックでCoreFlowへ、ホバーで軌道を開く ---
     mount.innerHTML =
       '<div class="cf-launcher-trigger" id="cf-trigger" title="CoreFlow（クリックで玄関へ／ホバーでアプリ切替）">' +
         '<div class="cf-lg-logo">C</div>' +
@@ -46,7 +37,6 @@
         '<span class="cf-lg-arrow">›</span>' +
       '</div>';
 
-    // --- オーバーレイ DOM を body 直下に注入 ---
     const overlay = document.createElement('div');
     overlay.id = 'cf-launcher-overlay';
     let ballsHTML = '';
@@ -99,13 +89,11 @@
       closeTimer = setTimeout(function(){ setOpen(false); closeTimer = null; }, 220);
     }
 
-    /* ホバーで開閉 */
     trigger.addEventListener('mouseenter', function(){ cancelClose(); setOpen(true); });
     trigger.addEventListener('mouseleave', function(){ scheduleClose(); });
     hotzone.addEventListener('mouseenter', cancelClose);
     hotzone.addEventListener('mouseleave', scheduleClose);
 
-    /* 太陽（トリガー）クリック＝CoreFlow玄関へ。現在地がCoreFlowなら何もしない */
     trigger.addEventListener('click', function(e){
       e.stopPropagation();
       if(currentApp === 'coreflow') return;
@@ -116,7 +104,6 @@
       if(e.key === 'Escape'){ cancelClose(); setOpen(false); }
     });
 
-    /* 色フラッド：球にホバーするたびに 0% からアニメ再スタート */
     function setFlood(ball){
       if(!ball){ root.classList.remove('cf-flooding'); return; }
       const r = ball.getBoundingClientRect();
@@ -135,4 +122,12 @@
         const isDisabled = b.getAttribute('aria-disabled') === 'true';
         const isCurrent  = (b.dataset.app === currentApp);
         if(isCurrent){ e.preventDefault(); return; }
-     
+        if(!url || isDisabled){ e.preventDefault(); alert(b.dataset.app + ' は準備中です。'); return; }
+      });
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else { init(); }
+})();
