@@ -74,7 +74,11 @@
       '<div class="cf-lo-flood"></div>' +
       '<div class="cf-lo-catcher"></div>' +
       '<div class="cf-lo-hotzone">' +
-        '<div class="cf-lo-stage" aria-hidden="true">' + ballsHTML + '</div>' +
+        '<div class="cf-lo-stage" aria-hidden="true">' +
+          '<a class="cf-lo-sun cf-coreflow" ' + (currentApp === 'coreflow' ? '' : 'href="'+COREFLOW_URL+'" ') + 'data-app="coreflow" title="CoreFlow（玄関へ）">🏠</a>' +
+          '<span class="cf-lo-sunlabel">CoreFlow</span>' +
+          ballsHTML +
+        '</div>' +
       '</div>';
     document.body.appendChild(overlay);
 
@@ -131,12 +135,4 @@
         const isDisabled = b.getAttribute('aria-disabled') === 'true';
         const isCurrent  = (b.dataset.app === currentApp);
         if(isCurrent){ e.preventDefault(); return; }
-        if(!url || isDisabled){ e.preventDefault(); alert(b.dataset.app + ' は準備中です。'); return; }
-      });
-    });
-  }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', init);
-  } else { init(); }
-})();
+     

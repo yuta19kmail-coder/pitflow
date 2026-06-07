@@ -89,6 +89,29 @@ body.cf-open .cf-lo-hotzone{pointer-events:auto}
 /* === 軌道ステージ＝トリガー中心点（左36px・下46pxあたり） === */
 .cf-lo-stage{position:absolute;left:36px;bottom:46px;width:0;height:0;z-index:1;pointer-events:none;}
 
+/* === 中心の太陽＝CoreFlow（開いたとき原点に灯る・クリックで玄関へ） === */
+.cf-lo-sun{
+  position:absolute;left:0;top:0;
+  width:52px;height:52px;border-radius:50%;
+  transform:translate(-50%,-50%) scale(.3);opacity:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;text-decoration:none;color:#1a1a1a;
+  border:3px solid transparent;box-sizing:border-box;
+  box-shadow:0 0 18px 5px rgba(255,255,255,.4);
+  pointer-events:auto;cursor:pointer;z-index:2;
+  transition:transform .28s cubic-bezier(.18,.85,.25,1), opacity .2s ease;
+}
+body.cf-open .cf-lo-sun{transform:translate(-50%,-50%) scale(1);opacity:1;animation:cf-sun 3.6s ease-in-out infinite}
+.cf-lo-sun:hover{transform:translate(-50%,-50%) scale(1.12)}
+@keyframes cf-sun{0%,100%{box-shadow:0 0 16px 4px rgba(255,255,255,.34)}50%{box-shadow:0 0 28px 8px rgba(255,255,255,.55)}}
+.cf-lo-sunlabel{
+  position:absolute;left:0;top:0;transform:translate(-50%,34px);
+  font-size:10px;font-weight:800;color:#fff;white-space:nowrap;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+  opacity:0;transition:opacity .2s ease .15s;pointer-events:none;z-index:2;
+}
+body.cf-open .cf-lo-sunlabel{opacity:1}
+
 /* === 各球のラッパー（位置と展開アニメ。位置は inline --dx/--dy） === */
 .cf-lo-item{
   position:absolute;left:0;top:0;width:0;height:0;
@@ -124,31 +147,4 @@ body.cf-open .cf-lo-item{
   font-size:10.5px;font-weight:700;color:#fff;
   letter-spacing:.04em;white-space:nowrap;
   background:rgba(8,10,14,.6);padding:1px 7px;border-radius:7px;
-  text-shadow:0 1px 3px rgba(0,0,0,.9);
-  opacity:0;transition:opacity .15s ease;
-  pointer-events:none;
-}
-.cf-lo-ball:hover + .cf-lo-label{opacity:1}
-.cf-lo-item:hover{z-index:5}
-
-/* 各アプリの色 */
-.cf-lo-ball.cf-coreflow{
-  background-color:#fff;
-  background-image: linear-gradient(#fff,#fff), conic-gradient(#ff0040,#ff8800,#ffe600,#00d048,#00c8ff,#5e3bff,#ff00aa,#ff0040);
-  background-origin: border-box;background-clip: padding-box, border-box;
-  border:3px solid transparent;box-sizing: border-box;color:#1a1a1a;
-}
-.cf-lo-ball.cf-carflow{background:#378ADD}
-.cf-lo-ball.cf-stockflow{background:#7c3aed}
-.cf-lo-ball.cf-pitflow{background:#1db97a}
-.cf-lo-ball.cf-mhs{background:#dc2626}
-.cf-lo-ball.cf-coreboard{background:#06b6d4}
-.cf-lo-ball.cf-corenote{background:#ec4899}
-.cf-lo-ball.cf-coretools{background:#64748b}
-.cf-lo-ball.cf-coremembers{background:#ea580c}
-.cf-lo-ball.cf-moneyflow{background:#e0a92b}
-
-/* 現在地（自分のアプリ）：薄表示＋クリック無効 */
-body.cf-open .cf-lo-item.cf-current{opacity:.55}
-.cf-lo-ball[aria-disabled="true"]{cursor:default}
-.cf-lo-ball[aria-disabled="true"]:hover{transform:translate(-50%,-50%) scale(1);box-shadow:0 2px 8px rgba(0,0,0,.5)}
+  text-shadow:0 1px 3p
