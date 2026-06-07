@@ -1,24 +1,31 @@
 /* ============================================
-   CoreFlow アプリランチャー（共通：全アプリで同一・7球）
+   CoreFlow アプリランチャー（共通：全アプリで同一）
+   v2（2026-06-07）：中心＝CoreFlow（太陽・クリックでCoreFlowへ）＋公転2周。
+     内周(Flow系)：MHS / PitFlow / CarFlow / StockFlow
+     外周(Core系＋Money)：CoreBoard / CoreNote / CoreTools / CoreMembers / MoneyFlow
+   ラベルは普段隠し、球ホバーで表示（被り解消）。
 
    使い方：
-     1) サイドバー底に
-          <div data-cf-launcher data-current="stockflow"></div>
-        のようなマウント要素を1つ置く（data-currentに自アプリ名）
+     1) サイドバー底に <div data-cf-launcher data-current="carflow"></div>（data-currentに自アプリ名）
      2) この launcher.js と launcher.css を読み込む
-     3) 起動時に自動的にトリガー＋オーバーレイを差し込み、ホバー/クリックで開く
-
-   アプリ追加時：APPS 配列に追記＋ launcher.css の p{n} 位置を1つ足す。
+   アプリ追加時：APPS に dx/dy（トリガー中心からのオフセット・上は負）付きで足すだけ。
    ============================================ */
 (function(){
+  const COREFLOW_URL = 'https://coreflow.kobayashi-motors.com';
+
+  // ring:1=内周 / 2=外周。dx,dy = トリガー中心からのオフセット(px、上方向は負)
   const APPS = [
-    { key:'coreflow',     url:'https://coreflow.kobayashi-motors.com',           icon:'🏠', name:'CoreFlow',     color:'#e2e8f0' },
-    { key:'pitflow',      url:'https://yuta19kmail-coder.github.io/pitflow/',     icon:'🔧', name:'PitFlow',     color:'#1db97a' },
-    { key:'mhs',          url:'https://yuta19kmail-coder.github.io/mhs/',         icon:'📅', name:'MHS',        color:'#dc2626' },
-    { key:'carflow',      url:'https://carflow.kobayashi-motors.com',             icon:'🚙', name:'CarFlow',     color:'#378ADD' },
-    { key:'stockflow',    url:'https://stockflow.kobayashi-motors.com',           icon:'📦', name:'StockFlow',   color:'#7c3aed' },
-    { key:'coreboard',    url:'https://yuta19kmail-coder.github.io/CoreBoard/',   icon:'📋', name:'CoreBoard',   color:'#06b6d4' },
-    { key:'corenote',     url:'https://yuta19kmail-coder.github.io/CoreNote/',    icon:'📝', name:'CoreNote',    color:'#ec4899' },
+    // 内周（Flow系）：手前上から右回り
+    { key:'mhs',        url:'https://yuta19kmail-coder.github.io/mhs/',       icon:'📅', name:'MHS',        color:'#dc2626', dx:0,   dy:-150 },
+    { key:'pitflow',    url:'https://yuta19kmail-coder.github.io/pitflow/',   icon:'🔧', name:'PitFlow',    color:'#1db97a', dx:68,  dy:-134 },
+    { key:'carflow',    url:'https://carflow.kobayashi-motors.com',           icon:'🚙', name:'CarFlow',    color:'#378ADD', dx:121, dy:-88  },
+    { key:'stockflow',  url:'https://stockflow.kobayashi-motors.com',         icon:'📦', name:'StockFlow',  color:'#7c3aed', dx:148, dy:-23  },
+    // 外周（Core系＋MoneyFlow）
+    { key:'coreboard',  url:'https://yuta19kmail-coder.github.io/CoreBoard/', icon:'📋', name:'CoreBoard',  color:'#06b6d4', dx:8,   dy:-235 },
+    { key:'corenote',   url:'https://yuta19kmail-coder.github.io/CoreNote/',  icon:'📝', name:'CoreNote',   color:'#ec4899', dx:88,  dy:-218 },
+    { key:'coretools',  url:'https://yuta19kmail-coder.github.io/CoreTools/', icon:'🧰', name:'CoreTools',  color:'#64748b', dx:157, dy:-175 },
+    { key:'coremembers',url:'',                                               icon:'👥', name:'CoreMembers',color:'#ea580c', dx:207, dy:-110 },
+    { key:'moneyflow',  url:'',                                               icon:'💴', name:'MoneyFlow',  color:'#e0a92b', dx:234, dy:-25  },
   ];
 
   function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }
@@ -28,9 +35,9 @@
     if(!mount) return;
     const currentApp = (mount.getAttribute('data-current')||'').toLowerCase();
 
-    // --- トリガー DOM をマウント位置に注入 ---
+    // --- トリガー（CoreFlow＝太陽）。クリックでCoreFlowへ、ホバーで軌道を開く ---
     mount.innerHTML =
-      '<div class="cf-launcher-trigger" id="cf-trigger" title="アプリ切替">' +
+      '<div class="cf-launcher-trigger" id="cf-trigger" title="CoreFlow（クリックで玄関へ／ホバーでアプリ切替）">' +
         '<div class="cf-lg-logo">C</div>' +
         '<div class="cf-lg-text">' +
           '<span class="cf-l1">CoreFlow</span>' +
@@ -44,13 +51,13 @@
     overlay.id = 'cf-launcher-overlay';
     let ballsHTML = '';
     APPS.forEach((a, idx)=>{
-      const i = idx + 1;
       const isCurrent = (a.key === currentApp);
       const hasUrl = !!a.url;
       const disabled = isCurrent || !hasUrl;
-      const itemClasses = 'cf-lo-item p'+i + (isCurrent ? ' cf-current' : '');
+      const itemClasses = 'cf-lo-item' + (isCurrent ? ' cf-current' : '');
+      const delay = (0.03 * idx).toFixed(2);
       ballsHTML += (
-        '<div class="'+itemClasses+'">' +
+        '<div class="'+itemClasses+'" style="--dx:'+a.dx+'px;--dy:'+a.dy+'px;--d:'+delay+'s">' +
           '<a class="cf-lo-ball cf-'+escAttr(a.key)+'" ' +
             (hasUrl && !isCurrent ? 'href="'+escAttr(a.url)+'" ' : '') +
             'data-app="'+escAttr(a.key)+'" ' +
@@ -71,65 +78,49 @@
       '</div>';
     document.body.appendChild(overlay);
 
-    // --- 参照取得 ---
     const root    = document.body;
     const trigger = document.getElementById('cf-trigger');
     const catcher = overlay.querySelector('.cf-lo-catcher');
     const hotzone = overlay.querySelector('.cf-lo-hotzone');
     const flood   = overlay.querySelector('.cf-lo-flood');
-    let locked = false;
     let closeTimer = null;
 
     function setOpen(on){
       if(on){ root.classList.add('cf-open'); }
-      else {
-        root.classList.remove('cf-open');
-        root.classList.remove('cf-flooding');
-      }
+      else { root.classList.remove('cf-open'); root.classList.remove('cf-flooding'); }
     }
     function cancelClose(){ if(closeTimer){ clearTimeout(closeTimer); closeTimer = null; } }
     function scheduleClose(){
       cancelClose();
-      closeTimer = setTimeout(function(){
-        if(!locked) setOpen(false);
-        closeTimer = null;
-      }, 220);
+      closeTimer = setTimeout(function(){ setOpen(false); closeTimer = null; }, 220);
     }
 
-    /* ホバーで開閉（球は hotzone の DOM 内側にいるので mouseleave 誤発火しない） */
+    /* ホバーで開閉 */
     trigger.addEventListener('mouseenter', function(){ cancelClose(); setOpen(true); });
     trigger.addEventListener('mouseleave', function(){ scheduleClose(); });
     hotzone.addEventListener('mouseenter', cancelClose);
     hotzone.addEventListener('mouseleave', scheduleClose);
 
-    /* クリックでロック（外クリック or Escで閉じる） */
+    /* 太陽（トリガー）クリック＝CoreFlow玄関へ。現在地がCoreFlowなら何もしない */
     trigger.addEventListener('click', function(e){
       e.stopPropagation();
-      locked = !locked;
-      setOpen(locked);
+      if(currentApp === 'coreflow') return;
+      window.location.href = COREFLOW_URL;
     });
-    catcher.addEventListener('click', function(){
-      locked = false; cancelClose(); setOpen(false);
-    });
+    catcher.addEventListener('click', function(){ cancelClose(); setOpen(false); });
     document.addEventListener('keydown', function(e){
-      if(e.key === 'Escape'){ locked = false; cancelClose(); setOpen(false); }
+      if(e.key === 'Escape'){ cancelClose(); setOpen(false); }
     });
 
     /* 色フラッド：球にホバーするたびに 0% からアニメ再スタート */
     function setFlood(ball){
       if(!ball){ root.classList.remove('cf-flooding'); return; }
       const r = ball.getBoundingClientRect();
-      const cx = r.left + r.width/2;
-      const cy = r.top  + r.height/2;
-      flood.style.setProperty('--cf-fx', cx + 'px');
-      flood.style.setProperty('--cf-fy', cy + 'px');
+      flood.style.setProperty('--cf-fx', (r.left + r.width/2) + 'px');
+      flood.style.setProperty('--cf-fy', (r.top  + r.height/2) + 'px');
       flood.style.setProperty('--cf-fcolor', ball.dataset.color || '#fff');
       root.classList.remove('cf-flooding');
-      /* 次フレームで付け直すと animation が 0% から開始 */
-      requestAnimationFrame(function(){
-        void flood.offsetWidth;
-        root.classList.add('cf-flooding');
-      });
+      requestAnimationFrame(function(){ void flood.offsetWidth; root.classList.add('cf-flooding'); });
     }
 
     overlay.querySelectorAll('.cf-lo-ball').forEach(function(b){
@@ -139,20 +130,13 @@
         const url = b.dataset.url;
         const isDisabled = b.getAttribute('aria-disabled') === 'true';
         const isCurrent  = (b.dataset.app === currentApp);
-        if(isCurrent){ e.preventDefault(); return; }     // 現在地は何もしない
-        if(!url || isDisabled){                            // URL未設定
-          e.preventDefault();
-          alert(b.dataset.app + ' は準備中です。');
-          return;
-        }
-        /* それ以外は <a href="..."> でそのまま遷移（同タブ） */
+        if(isCurrent){ e.preventDefault(); return; }
+        if(!url || isDisabled){ e.preventDefault(); alert(b.dataset.app + ' は準備中です。'); return; }
       });
     });
   }
 
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  } else { init(); }
 })();

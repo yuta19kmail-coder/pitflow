@@ -1,15 +1,14 @@
 /* ============================================
-   CoreFlow アプリランチャー（共通：全Flow系アプリで同一）
-   - サイドバー底の <div data-cf-launcher data-current="..."></div> に挿入
-   - 全てのオーバーレイは body 直下に launcher.js が動的に注入
-   - クラス接頭辞は cf- で固定（衝突回避）
-   - 7アプリ対応（CoreFlow / PitFlow / MHS / CarFlow / StockFlow / CoreBoard / CoreNote）
+   CoreFlow アプリランチャー（共通：全アプリで同一）
+   v2（2026-06-07）：中心＝CoreFlow（太陽）＋公転2周（内周Flow系／外周Core系＋Money）。
+   ラベルは普段隠し、球ホバーで表示。クラス接頭辞は cf- 固定（衝突回避）。
+   位置は各 .cf-lo-item の inline --dx/--dy（launcher.jsが付与）で決まる。
    ============================================ */
 
 /* === マウント要素（flex列のサイドバー内では最下部に貼り付け） === */
 [data-cf-launcher]{margin-top:auto}
 
-/* === トリガー（サイドバー底に置かれる） === */
+/* === トリガー（CoreFlow＝太陽）。サイドバー底に置かれる === */
 .cf-launcher-trigger{
   margin: 0 10px 12px;
   background: var(--bg3, rgba(255,255,255,.04));
@@ -20,7 +19,7 @@
   cursor:pointer;
   transition:background .15s ease, border-color .15s ease;
   position:relative;z-index:2;
-  color: var(--text, #e8ecf2);    /* テーマ対応：ライトでは黒系、ダークでは白系 */
+  color: var(--text, #e8ecf2);
   font-family:inherit;
   user-select:none;
 }
@@ -38,7 +37,10 @@
   box-sizing: border-box;
   display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1a1a;font-size:11px;
   flex:0 0 auto;
+  transition:box-shadow .2s ease;
 }
+.cf-launcher-trigger:hover .cf-lg-logo,
+body.cf-open .cf-lg-logo{ box-shadow:0 0 14px 3px rgba(255,255,255,.45); }
 .cf-lg-text{display:flex;flex-direction:column;line-height:1.2}
 .cf-lg-text .cf-l1{font-size:12.5px;font-weight:700;color: var(--text, #e8ecf2)}
 .cf-lg-text .cf-l2{font-size:10.5px;color: var(--text2, var(--text3, rgba(127,127,127,.7)));margin-top:2px}
@@ -56,22 +58,16 @@ body.cf-open .cf-lg-arrow{transform:rotate(-90deg);color: var(--text, #e8ecf2)}
 body.cf-open .cf-lo-backdrop{opacity:1;pointer-events:auto}
 
 /* === 色フラッド（球ホバーで色が画面いっぱいに広がる） === */
-.cf-lo-flood{
-  position:fixed;inset:0;pointer-events:none;
-  z-index:9051;overflow:hidden;
-}
+.cf-lo-flood{position:fixed;inset:0;pointer-events:none;z-index:9051;overflow:hidden;}
 .cf-lo-flood::before{
   content:"";position:absolute;
   left:var(--cf-fx, 0);top:var(--cf-fy, 100vh);
   width:80px;height:80px;border-radius:50%;
   background:var(--cf-fcolor, transparent);
   transform:translate(-50%,-50%) scale(0);opacity:0;
-  /* class が無いとき＝引く動き */
   transition:transform .35s ease-out, opacity .25s ease-out;
 }
-body.cf-flooding .cf-lo-flood::before{
-  animation:cf-flood-grow 2.0s cubic-bezier(.32,.08,.28,1) forwards;
-}
+body.cf-flooding .cf-lo-flood::before{ animation:cf-flood-grow 2.0s cubic-bezier(.32,.08,.28,1) forwards; }
 @keyframes cf-flood-grow{
   0%   { transform:translate(-50%,-50%) scale(0);  opacity:0; }
   5%   { opacity:1; }
@@ -82,43 +78,30 @@ body.cf-flooding .cf-lo-flood::before{
 .cf-lo-catcher{position:fixed;inset:0;z-index:9055;display:none}
 body.cf-open .cf-lo-catcher{display:block}
 
-/* === ホバー領域（トリガー＋軌道を内包・mouseleaveを安定化） === */
+/* === ホバー領域（トリガー＋2周を内包） === */
 .cf-lo-hotzone{
   position:fixed;left:0;bottom:0;
-  width:400px;height:420px;
+  width:430px;height:480px;
   z-index:9061;pointer-events:none;
 }
 body.cf-open .cf-lo-hotzone{pointer-events:auto}
 
 /* === 軌道ステージ＝トリガー中心点（左36px・下46pxあたり） === */
-.cf-lo-stage{
-  position:absolute;left:36px;bottom:46px;
-  width:0;height:0;z-index:1;pointer-events:none;
-}
+.cf-lo-stage{position:absolute;left:36px;bottom:46px;width:0;height:0;z-index:1;pointer-events:none;}
 
-/* === 各球のラッパー（位置と展開アニメ） === */
+/* === 各球のラッパー（位置と展開アニメ。位置は inline --dx/--dy） === */
 .cf-lo-item{
   position:absolute;left:0;top:0;width:0;height:0;
   transform:translate(0,0) scale(.35);
   opacity:0;
-  transition:transform .28s cubic-bezier(.18,.85,.25,1), opacity .18s ease-out;
+  transition:transform .30s cubic-bezier(.18,.85,.25,1), opacity .2s ease-out;
   pointer-events:none;
 }
-/* 半径 R=190px、右上1/4 を7等分配置（top→right） */
-body.cf-open .cf-lo-item.p1{transform:translate(10px, -190px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p2{transform:translate(56px, -182px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p3{transform:translate(98px, -163px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p4{transform:translate(134px,-134px) scale(1); opacity:1}
-body.cf-open .cf-lo-item.p5{transform:translate(163px,-98px)  scale(1); opacity:1}
-body.cf-open .cf-lo-item.p6{transform:translate(182px,-56px)  scale(1); opacity:1}
-body.cf-open .cf-lo-item.p7{transform:translate(190px,-10px)  scale(1); opacity:1}
-body.cf-open .cf-lo-item.p1{transition-delay:0s, 0s}
-body.cf-open .cf-lo-item.p2{transition-delay:.03s, .03s}
-body.cf-open .cf-lo-item.p3{transition-delay:.06s, .06s}
-body.cf-open .cf-lo-item.p4{transition-delay:.09s, .09s}
-body.cf-open .cf-lo-item.p5{transition-delay:.12s, .12s}
-body.cf-open .cf-lo-item.p6{transition-delay:.15s, .15s}
-body.cf-open .cf-lo-item.p7{transition-delay:.18s, .18s}
+body.cf-open .cf-lo-item{
+  transform:translate(var(--dx,0), var(--dy,0)) scale(1);
+  opacity:1;
+  transition-delay:var(--d, 0s);
+}
 
 /* === 球本体 === */
 .cf-lo-ball{
@@ -134,25 +117,26 @@ body.cf-open .cf-lo-item.p7{transition-delay:.18s, .18s}
 }
 .cf-lo-ball:hover{transform:translate(-50%,-50%) scale(1.18);box-shadow:0 6px 18px rgba(0,0,0,.6);text-decoration:none}
 
-/* ラベル（球の下に常時表示） */
+/* ラベル：普段は隠し、球ホバーで表示（被り解消） */
 .cf-lo-label{
   position:absolute;left:0;top:0;
   transform:translate(-50%, 28px);
   font-size:10.5px;font-weight:700;color:#fff;
   letter-spacing:.04em;white-space:nowrap;
-  text-shadow:0 1px 3px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.7);
+  background:rgba(8,10,14,.6);padding:1px 7px;border-radius:7px;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+  opacity:0;transition:opacity .15s ease;
   pointer-events:none;
 }
+.cf-lo-ball:hover + .cf-lo-label{opacity:1}
+.cf-lo-item:hover{z-index:5}
 
-/* 各アプリの色（CSS変数化で他CSSの ID変数と衝突しないよう固定値） */
+/* 各アプリの色 */
 .cf-lo-ball.cf-coreflow{
   background-color:#fff;
   background-image: linear-gradient(#fff,#fff), conic-gradient(#ff0040,#ff8800,#ffe600,#00d048,#00c8ff,#5e3bff,#ff00aa,#ff0040);
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  border:3px solid transparent;
-  box-sizing: border-box;
-  color:#1a1a1a;
+  background-origin: border-box;background-clip: padding-box, border-box;
+  border:3px solid transparent;box-sizing: border-box;color:#1a1a1a;
 }
 .cf-lo-ball.cf-carflow{background:#378ADD}
 .cf-lo-ball.cf-stockflow{background:#7c3aed}
@@ -160,8 +144,11 @@ body.cf-open .cf-lo-item.p7{transition-delay:.18s, .18s}
 .cf-lo-ball.cf-mhs{background:#dc2626}
 .cf-lo-ball.cf-coreboard{background:#06b6d4}
 .cf-lo-ball.cf-corenote{background:#ec4899}
+.cf-lo-ball.cf-coretools{background:#64748b}
+.cf-lo-ball.cf-coremembers{background:#ea580c}
+.cf-lo-ball.cf-moneyflow{background:#e0a92b}
 
 /* 現在地（自分のアプリ）：薄表示＋クリック無効 */
-body.cf-open .cf-lo-item.cf-current{opacity:.6}
+body.cf-open .cf-lo-item.cf-current{opacity:.55}
 .cf-lo-ball[aria-disabled="true"]{cursor:default}
 .cf-lo-ball[aria-disabled="true"]:hover{transform:translate(-50%,-50%) scale(1);box-shadow:0 2px 8px rgba(0,0,0,.5)}
