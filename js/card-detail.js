@@ -594,10 +594,15 @@ function toggle(c, key, onLabel, offLabel){
 
 function staffSelect(c, key){
   const div = c.division || '';   // 課が選ばれていれば、その課＋全社(課なし)のメンバーだけ出す
+  // 役割で絞る：フロント担当＝フロントのみ／予約担当・完TEL担当＝受付＋フロント
+  const frontOnly  = (key === 'frontStaff');
+  const frontOrRcv = (key === 'reserveStaff' || key === 'completeCallStaff');
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">―</option>';
   state.staff.forEach(s => {
-    if (div && s.division && s.division !== div) return;   // 別の課のメンバーは一覧から消す
+    if (div && s.division && s.division !== div) return;        // 別の課のメンバーは一覧から消す
+    if (frontOnly  && !s.front) return;                         // フロント担当＝フロント業務ありのみ
+    if (frontOrRcv && !(s.front || s.reception)) return;        // 予約/完TEL＝受付＋フロント（メカのみは出さない）
     const sel = c[key] === s.name ? ' selected' : '';
     h += '<option value="' + s.name + '"' + sel + '>' + s.name + '</option>';
   });

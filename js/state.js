@@ -93,18 +93,24 @@ window.state = {
     cleaning:'蓮沼',
   },
 
-  // スタッフ一覧（select用）。division を持たせると課で絞り込み＆担当→課の自動連動が効く。
-  // division 未設定（社長など全社）は課を選んでも常に候補に出る。※将来は設定/CoreFlowで編集
+  // スタッフ一覧（select用）。division＝課（div1/div2、受付など全社は空）。
+  //   front＝フロント業務あり（フロント担当に出る）／reception＝受付（予約担当に出る）。
+  //   ※メカニックのみ（front:false, reception:false）は担当セレクトに出ない。将来は設定/CoreFlowで編集。
   staff: [
-    { id: 'shacho',  name: '社長',   role: 'owner', division: '' },
-    { id: 'shiina',  name: '椎名',   role: 'staff', division: 'div1' },
-    { id: 'ichiya',  name: '壱谷',   role: 'staff', division: 'div1' },
-    { id: 'fukumitsu',name:'福光',   role: 'staff', division: 'div1' },
-    { id: 'hayashi', name: '林',     role: 'staff', division: 'div1' },
-    { id: 'hasunuma',name: '蓮沼',   role: 'staff', division: 'div2' },
-    { id: 'hakozaki',name: '箱崎',   role: 'staff', division: 'div2' },
-    { id: 'sugaya',  name: '菅谷',   role: 'staff', division: 'div2' },
-    { id: 'takagi',  name: '高橋',   role: 'staff', division: 'div2' },
+    // 1課（国産）
+    { id: 'shacho', name: '社長', role: 'owner', division: 'div1', front: true,  reception: false },
+    { id: 'senmu',  name: '専務', role: 'staff', division: 'div1', front: true,  reception: false },
+    { id: 'shiina', name: '椎名', role: 'staff', division: 'div1', front: true,  reception: false },
+    { id: 'yamada', name: '山田', role: 'mech',  division: 'div1', front: false, reception: false }, // ※メカのみ
+    // 2課（輸入）
+    { id: 'chief',   name: 'チーフ', role: 'staff', division: 'div2', front: true,  reception: false },
+    { id: 'hasunuma',name: '蓮沼',   role: 'staff', division: 'div2', front: true,  reception: true  }, // 2課＋受付
+    { id: 'hakozaki',name: '箱崎',   role: 'staff', division: 'div2', front: true,  reception: false },
+    { id: 'sugaya',  name: '菅谷',   role: 'staff', division: 'div2', front: true,  reception: false },
+    { id: 'yamane',  name: '山根',   role: 'mech',  division: 'div2', front: false, reception: false }, // ※メカのみ
+    // 受付（課なし・全社）
+    { id: 'hayashi', name: '林',   role: 'staff', division: '', front: false, reception: true },
+    { id: 'onishi',  name: '大西', role: 'staff', division: '', front: false, reception: true },
   ],
 
   divisions: [
