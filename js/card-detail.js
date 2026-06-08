@@ -141,6 +141,16 @@ function renderCardForm(c){
   h += field('概算 金額（円）', numIn(c, 'estAmount', 'placeholder="作業タイプから自動"'));
   h += '</div>';
   h += '<div class="cf-hint" style="margin-top:0">※ 日数・金額とも作業タイプを選ぶと平均値が自動で入る概算。診断・見積もりで後から直せばOK。</div>';
+  /* 車検を選んだ時だけ：入庫時持ち物（概算の下・代車の上に出す・v0.35.4） */
+  if (c.workType === 'shaken'){
+    h += '<div class="cf-subhead">📋 入庫時持ち物（車検）</div>';
+    h += '<div class="cf-row" style="flex-wrap:wrap">';
+    h += field('車検証',     toggle(c, 'hasShakenSho', 'あり', 'なし'));
+    h += field('納税証明書', toggle(c, 'hasTaxSho',    '有',   '無'));
+    h += field('自賠責',     toggle(c, 'hasJibaiseki', 'あり', 'なし'));
+    h += field('諸費用 ¥',   numIn(c, 'feeAmount'));
+    h += '</div>';
+  }
   /* 代車（旧・独立セクション → 予約内容に統合・v0.35.2）。スイッチONで使用代車＋車種固定をスイッチの右隣に並べ、行を減らして高さを抑える（v0.35.3） */
   h += '<div class="cf-subhead">🚙 代車</div>';
   h += '<div class="cf-row">';
@@ -181,17 +191,7 @@ function renderCardForm(c){
   h += '</div></div>';
   h += secEnd();
 
-  /* === 入庫時持ち物（車検時のみ） === */
-  if (c.workType === 'shaken'){
-    h += sec('入庫時持ち物確認（車検）', '📋');
-    h += '<div class="cf-row" style="flex-wrap:wrap">';
-    h += field('車検証',       toggle(c, 'hasShakenSho', 'あり', 'なし'));
-    h += field('納税証明書',   toggle(c, 'hasTaxSho',    '有',   '無'));
-    h += field('自賠責',       toggle(c, 'hasJibaiseki', 'あり', 'なし'));
-    h += field('諸費用 ¥',     numIn(c, 'feeAmount'));
-    h += '</div>';
-    h += secEnd();
-  }
+  /* 入庫時持ち物（車検）は予約内容＝概算の下・代車の上へ移動済み（v0.35.4） */
 
   /* === 返車 === */
   h += sec('返車', '📤');
