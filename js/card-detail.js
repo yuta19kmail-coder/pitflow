@@ -141,17 +141,17 @@ function renderCardForm(c){
   h += field('概算 金額（円）', numIn(c, 'estAmount', 'placeholder="作業タイプから自動"'));
   h += '</div>';
   h += '<div class="cf-hint" style="margin-top:0">※ 日数・金額とも作業タイプを選ぶと平均値が自動で入る概算。診断・見積もりで後から直せばOK。</div>';
-  /* 代車（旧・独立セクション → 予約内容に統合・v0.35.2） */
+  /* 代車（旧・独立セクション → 予約内容に統合・v0.35.2）。スイッチONで使用代車＋車種固定をスイッチの右隣に並べ、行を減らして高さを抑える（v0.35.3） */
   h += '<div class="cf-subhead">🚙 代車</div>';
   h += '<div class="cf-row">';
-  h += field('代車', toggle(c, 'needLoaner', '必要', '不要'));
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">代車</div>' + toggle(c, 'needLoaner', '必要', '不要') + '</div>';
+  if (c.needLoaner){
+    h += '<div class="cf-field" style="flex:2"><div class="cf-label">使用代車</div>' + loanerSelect(c, 'loanerId') + '</div>';
+    h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">&nbsp;</div><div class="cf-chips"><button type="button" id="cf-fixed-btn" class="cf-chip' + (c.loanerFixed ? ' active' : '') + '"' + (c.loanerFixed ? ' style="background:#1db97a;color:#fff;border-color:#1db97a;"' : '') + '>車種固定</button></div></div>';
+  }
   h += '</div>';
   if (c.needLoaner){
     h += '<div class="cf-loaner-detail">';
-    h += '<div class="cf-row">';
-    h += field('使用代車', loanerSelect(c, 'loanerId'));
-    h += field('', '<div class="cf-chips" style="margin-top:20px"><button type="button" id="cf-fixed-btn" class="cf-chip' + (c.loanerFixed ? ' active' : '') + '"' + (c.loanerFixed ? ' style="background:#1db97a;color:#fff;border-color:#1db97a;"' : '') + '>車種固定</button></div>');
-    h += '</div>';
     h += '<div class="cf-row">';
     h += field('貸出 から', dateIn(c, 'loanerFrom'));
     h += field('まで',     dateIn(c, 'loanerTo'));
