@@ -359,8 +359,8 @@
 .cf-flowadd .cf-label{ margin-bottom:8px; }
 .cf-flowmeta{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
 .cf-flowmeta .cf-input{ flex:0 0 auto; }
-.cf-flowmeta #cf-flow-staff{ flex:1 1 130px; min-width:120px; }
-.cf-flowwhen{ flex:2 1 220px; min-width:210px; width:auto; box-sizing:border-box; }
+.cf-flowmeta #cf-flow-staff{ flex:0 0 auto; width:7.5em; min-width:0; box-sizing:border-box; }
+.cf-flowwhen{ flex:1 1 210px; min-width:200px; width:auto; box-sizing:border-box; }
 .cf-flownow{ flex:0 0 auto; background:var(--bg3); border:1px solid var(--border); color:var(--text2); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; }
 .cf-flownow:hover{ background:var(--brand-soft); border-color:var(--brand); color:var(--brand); }
 .cf-flowquick{ display:flex; flex-wrap:wrap; gap:7px; }

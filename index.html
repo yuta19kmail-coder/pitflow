@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=17">
-<link rel="stylesheet" href="css/polish.css?v=41">
+<link rel="stylesheet" href="css/polish.css?v=42">
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.34.2</div>
+    <div class="pl-ver">PitFlow v0.34.3</div>
   </div>
 </div>
 
@@ -71,7 +71,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.34.2</span>
+      <span class="ver">v0.34.3</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -87,59 +87,35 @@
       <span class="icon">🏠</span><span>ダッシュボード</span>
     </div>
 
-    <!-- 予約（フライアウト親） -->
-    <div class="si-flyout" id="fly-reserve" onmouseenter="openFlyout('reserve')" onmouseleave="scheduleCloseFlyout()">
-      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'reserve')"><span class="icon">📅</span><span>予約</span><span class="si-caret">▸</span></div>
-      <div class="si-flyout-panel" id="flypanel-reserve" onmouseenter="openFlyout('reserve')" onmouseleave="scheduleCloseFlyout()">
-        <div class="si-item" data-view="today" onclick="showView('today')"><span class="icon">🌅</span><span>当日</span></div>
-        <div class="si-item" data-view="availcal" onclick="showView('availcal')"><span class="icon">🗓️</span><span>空きカレンダー</span></div>
-        <div class="si-item" data-view="reserve" onclick="showView('reserve')"><span class="icon">📅</span><span>予約</span></div>
-        <div class="si-item" data-view="return" onclick="showView('return')"><span class="icon">📤</span><span>返車</span></div>
-      </div>
-    </div>
+    <!-- ▼ 一旦フラット表示（フライアウトのたたみは保留・section titleで区切り）。フライアウトに戻す時はこの範囲を si-flyout 版へ -->
+    <div class="si-section-title">予約</div>
+    <div class="si-item" data-view="today" onclick="showView('today')"><span class="icon">🌅</span><span>当日</span></div>
+    <div class="si-item" data-view="availcal" onclick="showView('availcal')"><span class="icon">🗓️</span><span>空きカレンダー</span></div>
+    <div class="si-item" data-view="reserve" onclick="showView('reserve')"><span class="icon">📅</span><span>予約</span></div>
+    <div class="si-item" data-view="return" onclick="showView('return')"><span class="icon">📤</span><span>返車</span></div>
 
-    <!-- 車両（フライアウト親） -->
-    <div class="si-flyout" id="fly-vehicle" onmouseenter="openFlyout('vehicle')" onmouseleave="scheduleCloseFlyout()">
-      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'vehicle')"><span class="icon">🚗</span><span>車両</span><span class="si-caret">▸</span></div>
-      <div class="si-flyout-panel" id="flypanel-vehicle" onmouseenter="openFlyout('vehicle')" onmouseleave="scheduleCloseFlyout()">
-        <div class="si-item" data-view="loaner" onclick="showView('loaner')"><span class="icon">🚙</span><span>代車カレンダー</span></div>
-        <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon">🅿️</span><span>駐車場</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon">🚐</span><span>代車・自社車両管理</span></div>
-      </div>
-    </div>
+    <div class="si-section-title">車両</div>
+    <div class="si-item" data-view="loaner" onclick="showView('loaner')"><span class="icon">🚙</span><span>代車カレンダー</span></div>
+    <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon">🅿️</span><span>駐車場</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon">🚐</span><span>代車・自社車両管理</span></div>
 
-    <!-- 整備（フライアウト親） -->
-    <div class="si-flyout" id="fly-maint" onmouseenter="openFlyout('maint')" onmouseleave="scheduleCloseFlyout()">
-      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'maint')"><span class="icon">🔧</span><span>整備</span><span class="si-caret">▸</span></div>
-      <div class="si-flyout-panel" id="flypanel-maint" onmouseenter="openFlyout('maint')" onmouseleave="scheduleCloseFlyout()">
-        <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🔧</span><span>作業</span></div>
-        <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon">✅</span><span>実績</span></div>
-      </div>
-    </div>
+    <div class="si-section-title">整備</div>
+    <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🔧</span><span>作業</span></div>
+    <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon">✅</span><span>実績</span></div>
 
-    <!-- データ（フライアウト親） -->
-    <div class="si-flyout" id="fly-data" onmouseenter="openFlyout('data')" onmouseleave="scheduleCloseFlyout()">
-      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'data')"><span class="icon">📂</span><span>データ</span><span class="si-caret">▸</span></div>
-      <div class="si-flyout-panel" id="flypanel-data" onmouseenter="openFlyout('data')" onmouseleave="scheduleCloseFlyout()">
-        <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon">💴</span><span>売上</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon">👤</span><span>顧客</span></div>
-      </div>
-    </div>
+    <div class="si-section-title">データ</div>
+    <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon">💴</span><span>売上</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon">👤</span><span>顧客</span></div>
 
-    <!-- 管理（フライアウト親） -->
-    <div class="si-flyout" id="fly-admin" onmouseenter="openFlyout('admin')" onmouseleave="scheduleCloseFlyout()">
-      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'admin')"><span class="icon">🛠</span><span>管理</span><span class="si-caret">▸</span></div>
-      <div class="si-flyout-panel" id="flypanel-admin" onmouseenter="openFlyout('admin')" onmouseleave="scheduleCloseFlyout()">
-        <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon">👥</span><span>メンバー</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon">📜</span><span>操作ログ</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon">⚙️</span><span>設定</span></div>
-        <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon">📣</span><span>お知らせ</span><span class="si-soon">準備中</span></div>
-        <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon">❓</span><span>ヘルプ</span><span class="si-soon">準備中</span></div>
-      </div>
-    </div>
+    <div class="si-section-title">管理</div>
+    <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon">👥</span><span>メンバー</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon">📜</span><span>操作ログ</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon">⚙️</span><span>設定</span></div>
+    <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon">📣</span><span>お知らせ</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon">❓</span><span>ヘルプ</span><span class="si-soon">準備中</span></div>
 
     <div class="si-section-title">たたき台（今だけ）</div>
     <div class="si-item" data-view="samplepat" onclick="showView('samplepat')">
