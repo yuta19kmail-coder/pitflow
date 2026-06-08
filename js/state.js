@@ -93,17 +93,18 @@ window.state = {
     cleaning:'蓮沼',
   },
 
-  // スタッフ一覧（select用）
+  // スタッフ一覧（select用）。division を持たせると課で絞り込み＆担当→課の自動連動が効く。
+  // division 未設定（社長など全社）は課を選んでも常に候補に出る。※将来は設定/CoreFlowで編集
   staff: [
-    { id: 'shacho',  name: '社長',   role: 'owner' },
-    { id: 'shiina',  name: '椎名',   role: 'staff' },
-    { id: 'ichiya',  name: '壱谷',   role: 'staff' },
-    { id: 'fukumitsu',name:'福光',   role: 'staff' },
-    { id: 'hasunuma',name: '蓮沼',   role: 'staff' },
-    { id: 'hakozaki',name: '箱崎',   role: 'staff' },
-    { id: 'sugaya',  name: '菅谷',   role: 'staff' },
-    { id: 'hayashi', name: '林',     role: 'staff' },
-    { id: 'takagi',  name: '高橋',   role: 'staff' },
+    { id: 'shacho',  name: '社長',   role: 'owner', division: '' },
+    { id: 'shiina',  name: '椎名',   role: 'staff', division: 'div1' },
+    { id: 'ichiya',  name: '壱谷',   role: 'staff', division: 'div1' },
+    { id: 'fukumitsu',name:'福光',   role: 'staff', division: 'div1' },
+    { id: 'hayashi', name: '林',     role: 'staff', division: 'div1' },
+    { id: 'hasunuma',name: '蓮沼',   role: 'staff', division: 'div2' },
+    { id: 'hakozaki',name: '箱崎',   role: 'staff', division: 'div2' },
+    { id: 'sugaya',  name: '菅谷',   role: 'staff', division: 'div2' },
+    { id: 'takagi',  name: '高橋',   role: 'staff', division: 'div2' },
   ],
 
   divisions: [

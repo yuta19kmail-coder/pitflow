@@ -593,14 +593,24 @@ function toggle(c, key, onLabel, offLabel){
 }
 
 function staffSelect(c, key){
+  const div = c.division || '';   // 課が選ばれていれば、その課＋全社(課なし)のメンバーだけ出す
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">―</option>';
   state.staff.forEach(s => {
+    if (div && s.division && s.division !== div) return;   // 別の課のメンバーは一覧から消す
     const sel = c[key] === s.name ? ' selected' : '';
     h += '<option value="' + s.name + '"' + sel + '>' + s.name + '</option>';
   });
   h += '</select>';
   return h;
+}
+/* 担当の名前→その人の課。課が変わったら、別の課の担当はクリア（一覧から消える挙動に合わせる） */
+function _staffDivision(name){ const m = (state.staff || []).find(s => s.name === name); return m ? (m.division || '') : ''; }
+function _syncStaffToDivision(c){
+  ['frontStaff', 'reserveStaff'].forEach(function(k){
+    const d = _staffDivision(c[k]);
+    if (c[k] && d && c.division && d !== c.division) c[k] = '';
+  });
 }
 
 function loanerSelect(c, key){
@@ -663,6 +673,11 @@ function bindCardFormEvents(root){
         el.dataset.prev = fin;
       }
       c[key] = v;
+      // 担当（フロント/予約）を選んだら、その人の課を自動選択して再描画（→課チップ点灯＆もう一方の担当も同課で絞られる）
+      if ((key === 'frontStaff' || key === 'reserveStaff') && v) {
+        const d = _staffDivision(v);
+        if (d && c.division !== d) { c.division = d; renderCardForm(c); return; }
+      }
     });
   });
 
@@ -677,10 +692,12 @@ function bindCardFormEvents(root){
           // 国産/輸入は解除なし。選ぶと課も自動選択（国→1課・輸→2課）
           c.boardId = newVal;
           c.division = (newVal === 'import') ? 'div2' : 'div1';
+          _syncStaffToDivision(c);   // 別の課の担当はクリア
         } else if (wasActive){
           c[key] = null;   // 同じ値クリックで解除
         } else {
           c[key] = newVal;
+          if (key === 'division') _syncStaffToDivision(c);   // 課を選んだら別の課の担当を一覧から消す＝クリア
         }
         // 作業タイプ・受付タイプを選んだら概算（日数・金額）を自動セット（後から手で直せる）
         if (key === 'workType' || key === 'dropType'){
