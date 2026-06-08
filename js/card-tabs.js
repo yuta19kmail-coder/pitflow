@@ -26,24 +26,91 @@ function fmtFlowTime(ms){
   const d = new Date(ms);
   return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
+/* フローでワンタップ追加できる「よくあるアクション」。現場の言葉で。 */
+const FLOW_QUICK = [
+  '📞 こちらから電話 → 留守（折り返し待ち）',
+  '📞 こちらから電話 → つながった',
+  '📞 お客様から入電',
+  '🚗 来店・相談',
+  '💬 見積りを連絡',
+  '✅ 承認 OK',
+  '⏳ 部品待ち',
+  '📅 日程を調整'
+];
+function _flowEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* タイムライン1行。delIdx を渡すと ✕（手動記録の削除）が付く。 */
+function _flowRow(title, detail, delIdx){
+  let r = '<div class="cf-flowrow"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">' + _flowEsc(title) + '</div>';
+  if (detail) r += '<div class="cf-flowd">' + _flowEsc(detail) + '</div>';
+  r += '</div>';
+  if (delIdx !== null && delIdx !== undefined){
+    r += '<button type="button" class="cf-flowdel" title="この記録を消す" onclick="cfFlowDel(' + delIdx + ')">✕</button>';
+  }
+  return r + '</div>';
+}
 function cfFlowHtml(c){
-  const ev = [];
-  if (c.bookedAt)    ev.push(['予約受付', c.bookedAt]);
-  if (c.reserveDate) ev.push(['入庫予定', c.reserveDate + (c.reserveTime ? ' ' + c.reserveTime : '')]);
-  (c.log || []).forEach(function(l){ ev.push([l.label, fmtFlowTime(l.at)]); });
-  if (c.returnDate)  ev.push(['返車予定', c.returnDate + (c.returnTime ? ' ' + c.returnTime : '')]);
-
   let h = sec('フロー（進捗ログ）', '🕒');
+
+  /* === タイムライン === */
   h += '<div class="cf-flow">';
-  ev.forEach(function(e){
-    h += '<div class="cf-flowrow"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">' + e[0] + '</div>' + (e[1] ? '<div class="cf-flowd">' + e[1] + '</div>' : '') + '</div></div>';
+  if (c.bookedAt)    h += _flowRow('予約受付', c.bookedAt);
+  if (c.reserveDate) h += _flowRow('入庫予定', c.reserveDate + (c.reserveTime ? ' ' + c.reserveTime : ''));
+  (c.log || []).forEach(function(l, i){
+    h += _flowRow(l.label, fmtFlowTime(l.at), l.manual ? i : null);
   });
+  if (c.returnDate)  h += _flowRow('返車予定', c.returnDate + (c.returnTime ? ' ' + c.returnTime : ''));
   h += '<div class="cf-flowrow now"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">現在：' + statusLabel(c.status) + '</div></div></div>';
   h += '</div>';
-  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」ボタン）と、ここに自動で記録されます。</div>';
+
+  /* === 手動でアクションを残す（ある程度イージーに） === */
+  h += '<div class="cf-flowadd">';
+  h += '<div class="cf-label">アクションを記録（タップで今すぐ追加）</div>';
+  h += '<div class="cf-flowquick">';
+  FLOW_QUICK.forEach(function(q, i){
+    h += '<button type="button" class="cf-flowchip" onclick="cfFlowAddQuick(' + i + ')">' + _flowEsc(q) + '</button>';
+  });
+  h += '</div>';
+  h += '<div class="cf-flowcustom">';
+  h += '<input id="cf-flow-input" class="cf-input" placeholder="その他（自由入力）例：代車の件で連絡待ち" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cfFlowAddCustom();}">';
+  h += '<button type="button" class="cf-flowaddbtn" onclick="cfFlowAddCustom()">＋ 追加</button>';
+  h += '</div>';
+  h += '</div>';
+
+  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。ここで残した手動メモは ✕ で消せます。記録時刻は「今」で入ります。</div>';
   h += secEnd();
   return h;
 }
+/* ===== 手動アクションログ：追加・削除 ===== */
+function _flowCard(){ return state.cards.find(function(x){ return x.id === _editingCardId; }); }
+function cfFlowAdd(label){
+  const c = _flowCard(); if (!c) return;
+  label = String(label || '').trim(); if (!label) return;
+  if (!Array.isArray(c.log)) c.log = [];
+  c.log.push({ label: label, at: Date.now(), manual: true });
+  if (window.PitDB) PitDB.save();
+  renderCardForm(c);
+}
+function cfFlowAddQuick(i){ cfFlowAdd(FLOW_QUICK[i]); }
+function cfFlowAddCustom(){
+  const inp = document.getElementById('cf-flow-input');
+  if (!inp) return;
+  const v = inp.value.trim();
+  if (!v) { inp.focus(); return; }
+  inp.value = '';
+  cfFlowAdd(v);
+}
+function cfFlowDel(i){
+  const c = _flowCard(); if (!c || !Array.isArray(c.log)) return;
+  const l = c.log[i];
+  if (!l || !l.manual) return;   // 手動記録のみ削除可（自動の工程ログは残す）
+  c.log.splice(i, 1);
+  if (window.PitDB) PitDB.save();
+  renderCardForm(c);
+}
+window.cfFlowAdd = cfFlowAdd;
+window.cfFlowAddQuick = cfFlowAddQuick;
+window.cfFlowAddCustom = cfFlowAddCustom;
+window.cfFlowDel = cfFlowDel;
 
 /* ===== 整備（作業チェックリスト） ===== */
 function cfMaintItems(c){
