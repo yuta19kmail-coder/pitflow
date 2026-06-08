@@ -199,7 +199,7 @@ function renderCardForm(c){
 
   /* 入庫時持ち物（車検）は予約内容＝概算の下・代車の上へ移動済み（v0.35.4） */
   /* 返車・完了/支払い・メモは基本情報タブから撤去（v0.35.5）。返車/支払いは将来「別タブ」へ。
-     データキー（returnDate/returnTime/needWash/payment/followUpTel/completeCall*/memo/urgent）はモデルに温存。
+     データキー（returnDate・returnTime・needWash・payment・followUpTel・completeCall系・memo・urgent）はモデルに温存。
      ※返車予定はフロータブのタイムラインに引き続き表示される。 */
 
   h += '</div>'; // /基本情報パネル
