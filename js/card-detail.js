@@ -120,15 +120,19 @@ function renderCardForm(c){
   h += '</div>';
   h += secEnd();
 
-  /* === 作業内容（概算日数・概算金額はここ・v0.27.0） === */
+  /* === 作業内容（担当＝課/フロント/予約もここに統合・v0.34.4） === */
   h += sec('作業内容', '🔧');
-  h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
-  h += '<div class="cf-label">作業タイプ</div>';
-  h += chips(c, 'workType', state.workTypes, true);
-  h += '</div></div>';
+  /* 1行目：作業タイプ（広め）＋ 課 */
+  h += '<div class="cf-row">';
+  h += '<div class="cf-field" style="flex:3"><div class="cf-label">作業タイプ</div>' + chips(c, 'workType', state.workTypes, true) + '</div>';
+  h += field('課', chips(c, 'division', state.divisions, true));
+  h += '</div>';
+  /* 2行目：受付タイプ＋相談＋担当を1行に詰める */
   h += '<div class="cf-row">';
   h += field('受付タイプ', chips(c, 'dropType', state.dropTypes, true));
   h += field('相談', '<div class="cf-chips"><button type="button" id="cf-consult-btn" class="cf-chip' + (c.consult ? ' active' : '') + '"' + (c.consult ? ' style="background:#eab308;color:#1c1917;border-color:#eab308;"' : '') + '>相談</button></div>');
+  h += field('フロント担当', staffSelect(c, 'frontStaff'));
+  h += field('予約担当',     staffSelect(c, 'reserveStaff'));
   h += '</div>';
   h += '<div class="cf-row">';
   h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
@@ -140,17 +144,7 @@ function renderCardForm(c){
   h += textareaIn(c, 'menu', 2);
   h += '</div></div>';
   h += secEnd();
-
-  /* === 担当（フロント・予約者のみ・v0.27.0） === */
-  h += sec('担当', '👥');
-  h += '<div class="cf-row">';
-  h += field('課', chips(c, 'division', state.divisions, true));
-  h += '</div>';
-  h += '<div class="cf-row">';
-  h += field('フロント担当', staffSelect(c, 'frontStaff'));
-  h += field('予約担当',     staffSelect(c, 'reserveStaff'));
-  h += '</div>';
-  h += secEnd();
+  /* 旧「担当」セクションは作業内容へ統合（v0.34.4）＝以降のセクション（代車ほか）が一つ上がる */
 
   /* === 代車 === */
   h += sec('代車', '🚙');
