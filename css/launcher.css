@@ -1,6 +1,6 @@
 /* ============================================
-   CoreFlow アプリランチャー（共通：全アプリで同一）v2.1（2026-06-07）
-   中心＝CoreFlow（太陽）＋公転2周（内周Flow系／外周Core系＋Money）。
+   CoreFlow アプリランチャー（共通：全アプリで同一）v2.2（2026-06-07）
+   中心＝CoreFlow（太陽・トリガーに被らないよう右上にオフセット）＋公転2周。
    ラベルは普段隠し球ホバーで表示。位置は各 .cf-lo-item の inline --dx/--dy。
    ============================================ */
 [data-cf-launcher]{margin-top:auto}
@@ -70,27 +70,27 @@ body.cf-open .cf-lo-hotzone{pointer-events:auto}
 
 .cf-lo-stage{position:absolute;left:36px;bottom:46px;width:0;height:0;z-index:1;pointer-events:none;}
 
-/* 中心の太陽＝CoreFlow */
+/* 中心の太陽＝CoreFlow（トリガーボタンに被らないよう右上に +28/-66 オフセット） */
 .cf-lo-sun{
   position:absolute;left:0;top:0;width:52px;height:52px;border-radius:50%;
-  transform:translate(-50%,-50%) scale(.3);opacity:0;
+  transform:translate(calc(-50% + 44px), calc(-50% - 50px)) scale(.3);opacity:0;
   display:flex;align-items:center;justify-content:center;
-  font-size:24px;text-decoration:none;color:#1a1a1a;
-  border:3px solid transparent;box-sizing:border-box;
-  box-shadow:0 0 18px 5px rgba(255,255,255,.4);
+  font-size:24px;text-decoration:none;color:#fff;background:#0e1116;
+  border:3px solid rgba(255,255,255,.22);box-sizing:border-box;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
   pointer-events:auto;cursor:pointer;z-index:2;
   transition:transform .28s cubic-bezier(.18,.85,.25,1), opacity .2s ease;
 }
-body.cf-open .cf-lo-sun{transform:translate(-50%,-50%) scale(1);opacity:1;animation:cf-sun 3.6s ease-in-out infinite}
-.cf-lo-sun:hover{transform:translate(-50%,-50%) scale(1.12)}
+body.cf-open .cf-lo-sun{transform:translate(calc(-50% + 44px), calc(-50% - 50px)) scale(1);opacity:1}
+.cf-lo-sun:hover{transform:translate(calc(-50% + 44px), calc(-50% - 50px)) scale(1.12)}
 @keyframes cf-sun{0%,100%{box-shadow:0 0 16px 4px rgba(255,255,255,.34)}50%{box-shadow:0 0 28px 8px rgba(255,255,255,.55)}}
 .cf-lo-sunlabel{
-  position:absolute;left:0;top:0;transform:translate(-50%,34px);
+  position:absolute;left:0;top:0;transform:translate(calc(-50% + 44px), -16px);
   font-size:10px;font-weight:800;color:#fff;white-space:nowrap;
   text-shadow:0 1px 3px rgba(0,0,0,.9);
   opacity:0;transition:opacity .2s ease .15s;pointer-events:none;z-index:2;
 }
-body.cf-open .cf-lo-sunlabel{opacity:1}
+.cf-lo-sun:hover + .cf-lo-sunlabel{opacity:1}
 
 .cf-lo-item{
   position:absolute;left:0;top:0;width:0;height:0;

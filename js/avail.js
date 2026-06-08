@@ -40,5 +40,9 @@ function renderAvail(){
   h += '</div>';
 
   body.innerHTML = h;
+
+  // 代車カレンダーは表示領域が高い（72vh）ため初期行だと縦にあふれず縦スクロールが出ない。
+  // レイアウト確定後に、縦スクロールバーが出るまで行を先読みで埋める。
+  requestAnimationFrame(function () { if (window.cfsLgFill) window.cfsLgFill(); });
 }
 window.renderAvail = renderAvail;

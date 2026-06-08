@@ -65,7 +65,7 @@
       '<div class="cf-lo-catcher"></div>' +
       '<div class="cf-lo-hotzone">' +
         '<div class="cf-lo-stage" aria-hidden="true">' +
-          '<a class="cf-lo-sun cf-coreflow" ' + (currentApp === 'coreflow' ? '' : 'href="'+COREFLOW_URL+'" ') + 'data-app="coreflow" title="CoreFlow（玄関へ）">🏠</a>' +
+          '<a class="cf-lo-sun" ' + (currentApp === 'coreflow' ? '' : 'href="'+COREFLOW_URL+'" ') + 'data-app="coreflow" title="CoreFlow（玄関へ）">🏠</a>' +
           '<span class="cf-lo-sunlabel">CoreFlow</span>' +
           ballsHTML +
         '</div>' +

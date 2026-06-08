@@ -406,18 +406,31 @@ function _cfsLoanerGanttHtml(today, tStr, c, ro){
   return h;
 }
 
-/* 代車ガント：下端近くで21日ずつ継ぎ足し（スクロール位置はそのまま） */
+/* 代車ガント：行を継ぎ足す共通処理（スクロール位置はそのまま） */
+function _cfsLgAppend (count) {
+  const body = document.getElementById('cfs-lg-body');
+  if (!body) return;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const from = window._cfsLgN || 28;
+  window._cfsLgN = from + (count || 21);
+  const ro = (state.currentView === 'availcal');   // 空きカレンダービューは読み取り専用
+  const c = ro ? null : state.cards.find(x => x.id === _editingCardId);
+  body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today), c, ro));
+}
+/* 代車ガント：下端近くで21日ずつ継ぎ足し */
 window.cfsLgScroll = function (sc) {
   if (!sc) return;
   if (sc.scrollTop + sc.clientHeight > sc.scrollHeight - 200){
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const from = window._cfsLgN || 28;
-    window._cfsLgN = from + 21;
-    const body = document.getElementById('cfs-lg-body');
-    const ro = (state.currentView === 'availcal');   // 空きカレンダービューは読み取り専用
-    const c = ro ? null : state.cards.find(x => x.id === _editingCardId);
-    if (body) body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today), c, ro));
+    _cfsLgAppend(21);
   }
+};
+/* 代車ガント：縦スクロールバーが必ず出るよう、表示領域を超えるまで先に行を埋める。
+   （これがないと初期行が縦にあふれず、横スクロールで初めて縦が出る不具合になる） */
+window.cfsLgFill = function () {
+  const sc = document.getElementById('cfs-lg-scroll');
+  if (!sc) return;
+  let guard = 0;
+  while (sc.scrollHeight <= sc.clientHeight + 20 && guard < 40){ _cfsLgAppend(21); guard++; }
 };
 /* 代車ガント：今日（一番上）へ戻る */
 window.cfsLgToday = function () {
