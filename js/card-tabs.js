@@ -56,7 +56,8 @@ function cfFlowHtml(c){
   if (c.bookedAt)    h += _flowRow('予約受付', c.bookedAt);
   if (c.reserveDate) h += _flowRow('入庫予定', c.reserveDate + (c.reserveTime ? ' ' + c.reserveTime : ''));
   (c.log || []).forEach(function(l, i){
-    h += _flowRow(l.label, fmtFlowTime(l.at), l.manual ? i : null);
+    const det = fmtFlowTime(l.at) + (l.staff ? '　・　' + l.staff : '');
+    h += _flowRow(l.label, det, l.manual ? i : null);
   });
   if (c.returnDate)  h += _flowRow('返車予定', c.returnDate + (c.returnTime ? ' ' + c.returnTime : ''));
   h += '<div class="cf-flowrow now"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">現在：' + statusLabel(c.status) + '</div></div></div>';
@@ -64,7 +65,17 @@ function cfFlowHtml(c){
 
   /* === 手動でアクションを残す（ある程度イージーに） === */
   h += '<div class="cf-flowadd">';
-  h += '<div class="cf-label">アクションを記録（タップで今すぐ追加）</div>';
+  h += '<div class="cf-label">アクションを記録（チップをタップ／自由入力で追加）</div>';
+  /* 担当・時刻（既定＝前回の担当＋今。触らなければそのまま） */
+  h += '<div class="cf-flowmeta">';
+  h += '<select id="cf-flow-staff" class="cf-input" title="担当者"><option value="">担当 ―</option>';
+  (state.staff || []).forEach(function(s){
+    h += '<option value="' + _flowEsc(s.name) + '"' + (s.name === _lastFlowStaff ? ' selected' : '') + '>' + _flowEsc(s.name) + '</option>';
+  });
+  h += '</select>';
+  h += '<input id="cf-flow-when" class="cf-input cf-flowwhen" type="datetime-local" value="' + _dtLocalNow() + '" title="記録時刻（既定は今・昨日の留守などはここを変更）">';
+  h += '<button type="button" class="cf-flownow" onclick="cfFlowNow()" title="時刻を今に戻す">今</button>';
+  h += '</div>';
   h += '<div class="cf-flowquick">';
   FLOW_QUICK.forEach(function(q, i){
     h += '<button type="button" class="cf-flowchip" onclick="cfFlowAddQuick(' + i + ')">' + _flowEsc(q) + '</button>';
@@ -76,17 +87,37 @@ function cfFlowHtml(c){
   h += '</div>';
   h += '</div>';
 
-  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。ここで残した手動メモは ✕ で消せます。記録時刻は「今」で入ります。</div>';
+  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。担当・時刻は触らなければ「前回の担当＋今」で入り、手動メモは ✕ で消せます。</div>';
   h += secEnd();
   return h;
 }
 /* ===== 手動アクションログ：追加・削除 ===== */
+let _lastFlowStaff = '';   // 次回の既定担当（同じ人が連続で記録するケースが多い）
 function _flowCard(){ return state.cards.find(function(x){ return x.id === _editingCardId; }); }
+/* いまの日時を datetime-local 用の "YYYY-MM-DDTHH:MM" に */
+function _dtLocalNow(){
+  const d = new Date(); d.setSeconds(0, 0);
+  const p = function(n){ return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+/* 追加フォームの担当・時刻を読む（未入力なら担当なし＋今） */
+function _flowMeta(){
+  const staffEl = document.getElementById('cf-flow-staff');
+  const whenEl  = document.getElementById('cf-flow-when');
+  const staff = staffEl ? staffEl.value : '';
+  let at = Date.now();
+  if (whenEl && whenEl.value){ const t = new Date(whenEl.value).getTime(); if (!isNaN(t)) at = t; }
+  return { staff: staff, at: at };
+}
+/* 時刻を今に戻すボタン */
+function cfFlowNow(){ const el = document.getElementById('cf-flow-when'); if (el) el.value = _dtLocalNow(); }
 function cfFlowAdd(label){
   const c = _flowCard(); if (!c) return;
   label = String(label || '').trim(); if (!label) return;
+  const m = _flowMeta();
   if (!Array.isArray(c.log)) c.log = [];
-  c.log.push({ label: label, at: Date.now(), manual: true });
+  c.log.push({ label: label, at: m.at, manual: true, staff: m.staff || '' });
+  _lastFlowStaff = m.staff || '';   // 次回の既定に記憶
   if (window.PitDB) PitDB.save();
   renderCardForm(c);
 }
@@ -111,6 +142,7 @@ window.cfFlowAdd = cfFlowAdd;
 window.cfFlowAddQuick = cfFlowAddQuick;
 window.cfFlowAddCustom = cfFlowAddCustom;
 window.cfFlowDel = cfFlowDel;
+window.cfFlowNow = cfFlowNow;
 
 /* ===== 整備（作業チェックリスト） ===== */
 function cfMaintItems(c){
