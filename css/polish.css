@@ -351,6 +351,17 @@
 .cf-flowt{ font-size:13.5px; font-weight:600; }
 .cf-flowrow.now .cf-flowt{ color:var(--brand); }
 .cf-flowd{ font-size:11.5px; color:var(--text3); margin-top:1px; }
+/* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
+.cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
+/* 内容セクション：テンプレを開いてクリックで挿入 */
+.cf-tpl{ margin-top:8px; }
+.cf-tpl-toggle{ background:transparent; border:1px dashed var(--border2); color:var(--text2); border-radius:7px; padding:5px 12px; font-size:12px; cursor:pointer; }
+.cf-tpl-toggle:hover{ border-color:var(--brand); color:var(--brand); }
+.cf-tpl-panel{ display:none; flex-wrap:wrap; gap:7px; margin-top:8px; padding:10px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; }
+.cf-tpl.open .cf-tpl-panel{ display:flex; }
+.cf-tpl.open .cf-tpl-toggle{ border-style:solid; border-color:var(--brand); color:var(--brand); }
+.cf-tpl-chip{ background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; transition:background .12s,border-color .12s; }
+.cf-tpl-chip:hover{ background:var(--brand-soft); border-color:var(--brand); }
 /* 受付タイプ＋相談：相談は待/当/預の隣に□っぽい別ボタンで（区切り線で違いを演出） */
 .cf-recv{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .cf-recv .cf-chips{ gap:4px; }

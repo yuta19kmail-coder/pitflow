@@ -120,8 +120,8 @@ function renderCardForm(c){
   h += '</div>';
   h += secEnd();
 
-  /* === 作業内容（担当＝課/フロント/予約もここに統合・v0.34.4） === */
-  h += sec('作業内容', '🔧');
+  /* === 予約内容（旧「作業内容」＝作業タイプ/課/受付/相談/担当/概算＋代車を統合・v0.35.2） === */
+  h += sec('予約内容', '🗒️');
   /* 1行目：作業タイプ（広め）＋ 課 */
   h += '<div class="cf-row">';
   h += '<div class="cf-field" style="flex:3"><div class="cf-label">作業タイプ</div>' + chips(c, 'workType', state.workTypes, true) + '</div>';
@@ -135,20 +135,14 @@ function renderCardForm(c){
   h += field('フロント担当', staffSelect(c, 'frontStaff'));
   h += field('予約担当',     staffSelect(c, 'reserveStaff'));
   h += '</div>';
+  /* 3行目：概算 */
   h += '<div class="cf-row">';
   h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
   h += field('概算 金額（円）', numIn(c, 'estAmount', 'placeholder="作業タイプから自動"'));
   h += '</div>';
   h += '<div class="cf-hint" style="margin-top:0">※ 日数・金額とも作業タイプを選ぶと平均値が自動で入る概算。診断・見積もりで後から直せばOK。</div>';
-  h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
-  h += '<div class="cf-label">整備内容（自由記入）</div>';
-  h += textareaIn(c, 'menu', 2);
-  h += '</div></div>';
-  h += secEnd();
-  /* 旧「担当」セクションは作業内容へ統合（v0.34.4）＝以降のセクション（代車ほか）が一つ上がる */
-
-  /* === 代車 === */
-  h += sec('代車', '🚙');
+  /* 代車（旧・独立セクション → 予約内容に統合・v0.35.2） */
+  h += '<div class="cf-subhead">🚙 代車</div>';
   h += '<div class="cf-row">';
   h += field('代車', toggle(c, 'needLoaner', '必要', '不要'));
   h += '</div>';
@@ -171,6 +165,20 @@ function renderCardForm(c){
     h += '</div>';
     h += '</div>';
   }
+  h += secEnd();
+
+  /* === 内容（旧「整備内容（自由記入）」を独立セクション化＋テンプレ挿入・v0.35.2） === */
+  h += sec('内容', '🔧');
+  h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
+  h += '<div class="cf-label">作業内容（自由記入）</div>';
+  h += textareaIn(c, 'menu', 3);
+  h += '<div class="cf-tpl">';
+  h += '<button type="button" class="cf-tpl-toggle" onclick="cfMenuTplToggle(this)">＋ テンプレートから入れる ▾</button>';
+  h += '<div class="cf-tpl-panel">';
+  CF_MENU_TPL.forEach(function(t, i){ h += '<button type="button" class="cf-tpl-chip" onclick="cfMenuAddTpl(' + i + ')">' + t + '</button>'; });
+  h += '</div>';
+  h += '</div>';
+  h += '</div></div>';
   h += secEnd();
 
   /* === 入庫時持ち物（車検時のみ） === */
@@ -617,6 +625,31 @@ function _syncStaffToDivision(c){
     if (c[k] && d && c.division && d !== c.division) c[k] = '';
   });
 }
+
+/* ===== 内容セクションのテンプレ（自由入力に1行ずつ足せる） ===== */
+const CF_MENU_TPL = [
+  'エンジンオイル交換', 'オイル・エレメント交換', 'タイヤ交換（4本）', 'タイヤ組替・バランス',
+  'バッテリー交換', 'ブレーキパッド交換', 'ワイパーゴム交換', 'エアコンフィルター交換',
+  '12ヶ月点検', '車検整備一式', '下回り点検・洗浄', 'ヘッドライト光軸調整',
+  '冷却水（LLC）交換', '持ち込み部品取付', '見積り後に連絡'
+];
+/* テンプレ開閉（再描画せずパネルをトグル＝開いたまま連続で足せる） */
+function cfMenuTplToggle(btn){
+  const wrap = btn.closest('.cf-tpl');
+  if (wrap) wrap.classList.toggle('open');
+}
+/* テンプレを内容（c.menu）に1行ずつ追記（テキストへ直接反映＝再描画なし） */
+function cfMenuAddTpl(i){
+  const c = state.cards.find(x => x.id === _editingCardId); if (!c) return;
+  const t = CF_MENU_TPL[i]; if (!t) return;
+  const ta = document.querySelector('textarea.cf-input[data-key="menu"]');
+  const cur = (c.menu || '').replace(/\s+$/, '');
+  c.menu = cur ? (cur + '\n' + t) : t;
+  if (ta) { ta.value = c.menu; ta.focus(); }
+  if (window.PitDB) PitDB.save();
+}
+window.cfMenuTplToggle = cfMenuTplToggle;
+window.cfMenuAddTpl = cfMenuAddTpl;
 
 function loanerSelect(c, key){
   let h = '<select class="cf-input" data-key="' + key + '">';
