@@ -86,14 +86,19 @@ function renderCardForm(c){
   h += '<div id="cf-recall-list" class="cf-recall-list" style="display:none"></div>';
   h += '</div>';
 
-  /* === タブ === */
+  /* === タブ（新規予約＝page は基本情報だけ・既存編集＝modal は全タブ）v0.35.5 === */
   if (!_cardTab) _cardTab = 'basic';
-  h += '<div class="cf-tabs">'
-     + cfTabBtn('basic',  '📋 基本情報')
-     + cfTabBtn('flow',   '🕒 フロー')
-     + cfTabBtn('maint',  '🔧 整備')
-     + cfTabBtn('office', '🗂 バックオフィス')
-     + '</div>';
+  if (withSide){
+    _cardTab = 'basic';   // 新規予約は基本情報のみ表示
+    h += '<div class="cf-tabs">' + cfTabBtn('basic', '📋 基本情報') + '</div>';
+  } else {
+    h += '<div class="cf-tabs">'
+       + cfTabBtn('basic',  '📋 基本情報')
+       + cfTabBtn('flow',   '🕒 フロー')
+       + cfTabBtn('maint',  '🔧 整備')
+       + cfTabBtn('office', '🗂 バックオフィス')
+       + '</div>';
+  }
 
   /* === 基本情報パネル === */
   h += '<div class="cf-panel" data-tab="basic"' + (_cardTab === 'basic' ? '' : ' hidden') + '>';
@@ -131,7 +136,8 @@ function renderCardForm(c){
   h += '<div class="cf-row">';
   h += field('受付タイプ', '<div class="cf-recv">' + chips(c, 'dropType', state.dropTypes, true)
        + '<span class="cf-recv-sep"></span>'
-       + '<button type="button" id="cf-consult-btn" class="cf-consult' + (c.consult ? ' active' : '') + '">相談</button></div>');
+       + '<button type="button" id="cf-consult-btn" class="cf-consult' + (c.consult ? ' active' : '') + '">相談</button>'
+       + '<button type="button" id="cf-codered-btn" class="cf-codered' + (c.codeRed ? ' active' : '') + '" title="マルエフ＝コードレッド（クレーム等の要注意案件）">F</button></div>');
   h += field('フロント担当', staffSelect(c, 'frontStaff'));
   h += field('予約担当',     staffSelect(c, 'reserveStaff'));
   h += '</div>';
@@ -192,46 +198,17 @@ function renderCardForm(c){
   h += secEnd();
 
   /* 入庫時持ち物（車検）は予約内容＝概算の下・代車の上へ移動済み（v0.35.4） */
-
-  /* === 返車 === */
-  h += sec('返車', '📤');
-  h += '<div class="cf-row">';
-  h += field('返車予定・希望', textIn(c, 'returnWish', 'placeholder="お客様希望や予定"'));
-  h += '</div>';
-  h += '<div class="cf-row">';
-  h += field('返車日',   dateIn(c, 'returnDate'));
-  h += field('返車時刻', textIn(c, 'returnTime', 'placeholder="例 17:00"'));
-  h += field('洗車',     toggle(c, 'needWash', '要', '不要'));
-  h += '</div>';
-  h += secEnd();
-
-  /* === 完了系（後で記入） === */
-  h += sec('完了・支払い', '✅');
-  h += '<div class="cf-row">';
-  h += field('支払方法', paymentSelect(c, 'payment'));
-  h += field('後日TEL',  toggle(c, 'followUpTel', '要', '不要'));
-  h += '</div>';
-  h += '<div class="cf-row">';
-  h += field('完TEL日',     dateIn(c, 'completeCallAt'));
-  h += field('完TEL担当',   staffSelect(c, 'completeCallStaff'));
-  h += field('留守',         toggle(c, 'completeCallLeftMsg', 'あり', 'なし'));
-  h += '</div>';
-  h += secEnd();
-
-  /* === メモ・緊急 === */
-  h += sec('メモ', '📝');
-  h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
-  h += textareaIn(c, 'memo', 3);
-  h += '</div></div>';
-  h += '<div class="cf-row">';
-  h += field('緊急対応', toggle(c, 'urgent', '緊急', '通常'));
-  h += '</div>';
-  h += secEnd();
+  /* 返車・完了/支払い・メモは基本情報タブから撤去（v0.35.5）。返車/支払いは将来「別タブ」へ。
+     データキー（returnDate/returnTime/needWash/payment/followUpTel/completeCall*/memo/urgent）はモデルに温存。
+     ※返車予定はフロータブのタイムラインに引き続き表示される。 */
 
   h += '</div>'; // /基本情報パネル
-  h += '<div class="cf-panel" data-tab="flow"'   + (_cardTab === 'flow'   ? '' : ' hidden') + '>' + cfFlowHtml(c)   + '</div>';
-  h += '<div class="cf-panel" data-tab="maint"'  + (_cardTab === 'maint'  ? '' : ' hidden') + '>' + cfMaintHtml(c)  + '</div>';
-  h += '<div class="cf-panel" data-tab="office"' + (_cardTab === 'office' ? '' : ' hidden') + '>' + cfOfficeHtml(c) + '</div>';
+  // 他タブ（フロー/整備/バックオフィス）は既存編集（modal）時のみ。新規予約（page）は基本情報だけ。
+  if (!withSide){
+    h += '<div class="cf-panel" data-tab="flow"'   + (_cardTab === 'flow'   ? '' : ' hidden') + '>' + cfFlowHtml(c)   + '</div>';
+    h += '<div class="cf-panel" data-tab="maint"'  + (_cardTab === 'maint'  ? '' : ' hidden') + '>' + cfMaintHtml(c)  + '</div>';
+    h += '<div class="cf-panel" data-tab="office"' + (_cardTab === 'office' ? '' : ' hidden') + '>' + cfOfficeHtml(c) + '</div>';
+  }
 
   /* === 右パネル（新規予約・全画面のみ）：最短入庫＋予約状況カレンダー（v0.27.0） === */
   if (withSide){
@@ -767,6 +744,14 @@ function bindCardFormEvents(root){
   if (consultBtn){
     consultBtn.addEventListener('click', () => {
       c.consult = !c.consult;
+      renderCardForm(c);
+    });
+  }
+  // マルエフ（Ⓕ＝コードレッド／クレーム等の要注意）ボタン
+  const coderedBtn = root.querySelector('#cf-codered-btn');
+  if (coderedBtn){
+    coderedBtn.addEventListener('click', () => {
+      c.codeRed = !c.codeRed;
       renderCardForm(c);
     });
   }
