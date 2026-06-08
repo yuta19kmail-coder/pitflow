@@ -351,6 +351,13 @@
 .cf-flowt{ font-size:13.5px; font-weight:600; }
 .cf-flowrow.now .cf-flowt{ color:var(--brand); }
 .cf-flowd{ font-size:11.5px; color:var(--text3); margin-top:1px; }
+/* 受付タイプ＋相談：相談は待/当/預の隣に□っぽい別ボタンで（区切り線で違いを演出） */
+.cf-recv{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.cf-recv .cf-chips{ gap:4px; }
+.cf-recv-sep{ width:1px; align-self:stretch; min-height:26px; background:var(--border2); margin:0 2px; }
+.cf-consult{ padding:6px 16px; font-size:12px; border:1px solid var(--border2); border-radius:5px; background:var(--bg3); color:var(--text2); cursor:pointer; transition:background .12s,border-color .12s,color .12s; }
+.cf-consult:hover{ border-color:#eab308; color:#eab308; }
+.cf-consult.active{ background:#eab308; border-color:#eab308; color:#1c1917; font-weight:700; }
 /* 手動アクションログの ✕（削除）ボタン */
 .cf-flowdel{ margin-left:auto; align-self:center; background:transparent; border:none; color:var(--text3); cursor:pointer; font-size:13px; line-height:1; padding:2px 6px; border-radius:6px; }
 .cf-flowdel:hover{ background:var(--bg3); color:#ef4444; }

@@ -107,8 +107,8 @@ window.state = {
   ],
 
   divisions: [
-    { id: 'div1', label: '1課' },
-    { id: 'div2', label: '2課' },
+    { id: 'div1', label: '1課', color: '#1db97a' },   // 国産＝緑
+    { id: 'div2', label: '2課', color: '#ec4899' },   // 輸入＝ピンク
   ],
 
   paymentMethods: [

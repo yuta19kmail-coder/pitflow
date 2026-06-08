@@ -127,10 +127,11 @@ function renderCardForm(c){
   h += '<div class="cf-field" style="flex:3"><div class="cf-label">作業タイプ</div>' + chips(c, 'workType', state.workTypes, true) + '</div>';
   h += field('課', chips(c, 'division', state.divisions, true));
   h += '</div>';
-  /* 2行目：受付タイプ＋相談＋担当を1行に詰める */
+  /* 2行目：受付タイプ（待/当/預）の右隣に「相談」を□っぽい別ボタンで配置（区切り線で違いを演出）＋担当を1行に詰める */
   h += '<div class="cf-row">';
-  h += field('受付タイプ', chips(c, 'dropType', state.dropTypes, true));
-  h += field('相談', '<div class="cf-chips"><button type="button" id="cf-consult-btn" class="cf-chip' + (c.consult ? ' active' : '') + '"' + (c.consult ? ' style="background:#eab308;color:#1c1917;border-color:#eab308;"' : '') + '>相談</button></div>');
+  h += field('受付タイプ', '<div class="cf-recv">' + chips(c, 'dropType', state.dropTypes, true)
+       + '<span class="cf-recv-sep"></span>'
+       + '<button type="button" id="cf-consult-btn" class="cf-consult' + (c.consult ? ' active' : '') + '">相談</button></div>');
   h += field('フロント担当', staffSelect(c, 'frontStaff'));
   h += field('予約担当',     staffSelect(c, 'reserveStaff'));
   h += '</div>';
