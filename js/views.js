@@ -15,6 +15,15 @@ function showView(viewId){
   document.querySelectorAll('.si-item[data-view="' + viewId + '"]')
     .forEach(i => i.classList.add('active'));
 
+  // フライアウト：開いていたら閉じる＋アクティブな子を持つ親グループを淡くハイライト
+  if (window.closeFlyoutNow) closeFlyoutNow();
+  document.querySelectorAll('.si-flyout.has-active').forEach(g => g.classList.remove('has-active'));
+  const activeChild = document.querySelector('.si-flyout-panel .si-item.active');
+  if (activeChild){
+    const grp = activeChild.closest('.si-flyout');
+    if (grp) grp.classList.add('has-active');
+  }
+
   if (viewId === 'today')   renderToday();
   if (viewId === 'availcal' && window.renderAvail) renderAvail();
   if (viewId === 'reserve') renderReserve();
@@ -30,6 +39,65 @@ function showView(viewId){
   if (viewId === 'settings' && window.renderSettings) renderSettings();
   if (viewId === 'rules' && window.renderRules) renderRules();
 }
+
+/* ===== サイドバー フライアウト（親をホバー/タップ→右に小メニュー・StockFlow流用を汎用化）v0.33.0 =====
+   HTML側：<div class="si-flyout" id="fly-<key>" onmouseenter="openFlyout('<key>')" onmouseleave="scheduleCloseFlyout()">
+             <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'<key>')">…<span class="si-caret">▸</span></div>
+             <div class="si-flyout-panel" id="flypanel-<key>" onmouseenter="openFlyout('<key>')" onmouseleave="scheduleCloseFlyout()">…子…</div>
+           </div> */
+let _flyCloseT = null;
+let _flyCurrent = null;
+function _isNarrowMenu(){ return window.matchMedia('(max-width:768px)').matches; }
+function openFlyout(key){
+  clearTimeout(_flyCloseT);
+  if (_flyCurrent && _flyCurrent !== key) _closeFlyoutEl(_flyCurrent);
+  _flyCurrent = key;
+  const wrap = document.getElementById('fly-' + key);
+  const panel = document.getElementById('flypanel-' + key);
+  if (!wrap || !panel) return;
+  wrap.classList.add('open-parent');
+  const trig = wrap.querySelector('.si-has-flyout');
+  const r = trig.getBoundingClientRect();
+  panel.style.visibility = 'hidden';
+  panel.classList.add('open');
+  if (_isNarrowMenu()){
+    panel.style.left = Math.max(8, r.left) + 'px';
+    panel.style.top  = (r.bottom + 4) + 'px';
+  } else {
+    panel.style.left = (r.right + 2) + 'px';
+    panel.style.top  = r.top + 'px';
+    const ph = panel.offsetHeight;
+    if (r.top + ph > window.innerHeight - 8){
+      panel.style.top = Math.max(8, window.innerHeight - 8 - ph) + 'px';
+    }
+  }
+  panel.style.visibility = '';
+}
+function _closeFlyoutEl(key){
+  const wrap = document.getElementById('fly-' + key);
+  const panel = document.getElementById('flypanel-' + key);
+  if (wrap)  wrap.classList.remove('open-parent');
+  if (panel) panel.classList.remove('open');
+}
+function scheduleCloseFlyout(){
+  clearTimeout(_flyCloseT);
+  _flyCloseT = setTimeout(function(){ if (_flyCurrent) _closeFlyoutEl(_flyCurrent); _flyCurrent = null; }, 180);
+}
+function closeFlyoutNow(){
+  clearTimeout(_flyCloseT);
+  if (_flyCurrent) _closeFlyoutEl(_flyCurrent);
+  _flyCurrent = null;
+}
+function toggleFlyout(e, key){
+  if (e) e.stopPropagation();
+  const panel = document.getElementById('flypanel-' + key);
+  if (panel && panel.classList.contains('open')) closeFlyoutNow();
+  else openFlyout(key);
+}
+window.openFlyout = openFlyout;
+window.scheduleCloseFlyout = scheduleCloseFlyout;
+window.closeFlyoutNow = closeFlyoutNow;
+window.toggleFlyout = toggleFlyout;
 
 /* ☰ サイドバーをたたむ（v0.27.1・CarFlow/StockFlowと同じ操作感）。状態は端末に記憶 */
 function toggleSidebar(){

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>PitFlow - 整備入庫管理</title>
 <link rel="stylesheet" href="css/base.css?v=8">
-<link rel="stylesheet" href="css/layout.css?v=8">
+<link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=17">
 <link rel="stylesheet" href="css/polish.css?v=38">
 <link rel="stylesheet" href="css/launcher.css?v=7">
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.32.1</div>
+    <div class="pl-ver">PitFlow v0.33.0</div>
   </div>
 </div>
 
@@ -71,7 +71,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.32.1</span>
+      <span class="ver">v0.33.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -82,49 +82,63 @@
   <!-- ===== サイドバー ===== -->
   <div id="sidebar">
 
-    <div class="si-section-title">ビュー</div>
+    <!-- ダッシュボード（単独） -->
     <div class="si-item active" data-view="dashboard" onclick="showView('dashboard')">
       <span class="icon">🏠</span><span>ダッシュボード</span>
     </div>
-    <div class="si-item" data-view="today" onclick="showView('today')">
-      <span class="icon">🌅</span><span>当日</span>
-    </div>
-    <div class="si-item" data-view="availcal" onclick="showView('availcal')">
-      <span class="icon">🗓️</span><span>空きカレンダー</span>
-    </div>
-    <div class="si-item" data-view="reserve" onclick="showView('reserve')">
-      <span class="icon">📅</span><span>予約</span>
-    </div>
-    <div class="si-item" data-view="return" onclick="showView('return')">
-      <span class="icon">📤</span><span>返車</span>
-    </div>
-    <div class="si-item" data-view="task" onclick="showView('task')">
-      <span class="icon">📋</span><span>タスク</span>
-    </div>
-    <div class="si-item" data-view="work" onclick="showView('work')">
-      <span class="icon">🔧</span><span>作業</span>
-    </div>
-    <div class="si-item" data-view="result" onclick="showView('result')">
-      <span class="icon">✅</span><span>実績</span>
+
+    <!-- 予約（フライアウト親） -->
+    <div class="si-flyout" id="fly-reserve" onmouseenter="openFlyout('reserve')" onmouseleave="scheduleCloseFlyout()">
+      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'reserve')"><span class="icon">📅</span><span>予約</span><span class="si-caret">▸</span></div>
+      <div class="si-flyout-panel" id="flypanel-reserve" onmouseenter="openFlyout('reserve')" onmouseleave="scheduleCloseFlyout()">
+        <div class="si-item" data-view="today" onclick="showView('today')"><span class="icon">🌅</span><span>当日</span></div>
+        <div class="si-item" data-view="availcal" onclick="showView('availcal')"><span class="icon">🗓️</span><span>空きカレンダー</span></div>
+        <div class="si-item" data-view="reserve" onclick="showView('reserve')"><span class="icon">📅</span><span>予約</span></div>
+        <div class="si-item" data-view="return" onclick="showView('return')"><span class="icon">📤</span><span>返車</span></div>
+      </div>
     </div>
 
-    <div class="si-section-title">サブ</div>
-    <div class="si-item" data-view="loaner" onclick="showView('loaner')">
-      <span class="icon">🚙</span><span>代車</span>
+    <!-- 車両（フライアウト親） -->
+    <div class="si-flyout" id="fly-vehicle" onmouseenter="openFlyout('vehicle')" onmouseleave="scheduleCloseFlyout()">
+      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'vehicle')"><span class="icon">🚗</span><span>車両</span><span class="si-caret">▸</span></div>
+      <div class="si-flyout-panel" id="flypanel-vehicle" onmouseenter="openFlyout('vehicle')" onmouseleave="scheduleCloseFlyout()">
+        <div class="si-item" data-view="loaner" onclick="showView('loaner')"><span class="icon">🚙</span><span>代車カレンダー</span></div>
+        <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon">🅿️</span><span>駐車場</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon">🚐</span><span>代車・自社車両管理</span></div>
+      </div>
     </div>
 
-    <div class="si-section-title">管理</div>
-    <div class="si-item" data-view="customers" onclick="showView('customers')">
-      <span class="icon">👤</span><span>顧客</span>
+    <!-- 整備（フライアウト親） -->
+    <div class="si-flyout" id="fly-maint" onmouseenter="openFlyout('maint')" onmouseleave="scheduleCloseFlyout()">
+      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'maint')"><span class="icon">🔧</span><span>整備</span><span class="si-caret">▸</span></div>
+      <div class="si-flyout-panel" id="flypanel-maint" onmouseenter="openFlyout('maint')" onmouseleave="scheduleCloseFlyout()">
+        <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🔧</span><span>作業</span></div>
+        <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon">✅</span><span>実績</span></div>
+      </div>
     </div>
-    <div class="si-item" data-view="fleet" onclick="showView('fleet')">
-      <span class="icon">🚐</span><span>代車・車両管理</span>
+
+    <!-- データ（フライアウト親） -->
+    <div class="si-flyout" id="fly-data" onmouseenter="openFlyout('data')" onmouseleave="scheduleCloseFlyout()">
+      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'data')"><span class="icon">📂</span><span>データ</span><span class="si-caret">▸</span></div>
+      <div class="si-flyout-panel" id="flypanel-data" onmouseenter="openFlyout('data')" onmouseleave="scheduleCloseFlyout()">
+        <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon">💴</span><span>売上</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon">👤</span><span>顧客</span></div>
+      </div>
     </div>
-    <div class="si-item" data-view="rules" onclick="showView('rules')">
-      <span class="icon">🧩</span><span>入庫ルール</span>
-    </div>
-    <div class="si-item" data-view="settings" onclick="showView('settings')">
-      <span class="icon">⚙️</span><span>設定</span>
+
+    <!-- 管理（フライアウト親） -->
+    <div class="si-flyout" id="fly-admin" onmouseenter="openFlyout('admin')" onmouseleave="scheduleCloseFlyout()">
+      <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'admin')"><span class="icon">🛠</span><span>管理</span><span class="si-caret">▸</span></div>
+      <div class="si-flyout-panel" id="flypanel-admin" onmouseenter="openFlyout('admin')" onmouseleave="scheduleCloseFlyout()">
+        <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon">👥</span><span>メンバー</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon">📜</span><span>操作ログ</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon">⚙️</span><span>設定</span></div>
+        <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon">📣</span><span>お知らせ</span><span class="si-soon">準備中</span></div>
+        <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon">❓</span><span>ヘルプ</span><span class="si-soon">準備中</span></div>
+      </div>
     </div>
 
     <div class="si-section-title">たたき台（今だけ）</div>
@@ -302,6 +316,9 @@
     <section id="view-settings" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">⚙️</span>設定</div>
+        <div class="view-actions">
+          <button class="vh-btn" onclick="showView('rules')">🧩 入庫ルール</button>
+        </div>
       </div>
       <div id="view-settings-body"></div>
       <div class="pit-devtools">
@@ -319,8 +336,55 @@
     <section id="view-rules" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">🧩</span>入庫ルール <span style="font-size:11px;color:var(--text3);font-weight:400">入庫のアルゴリズムはすべてここで設定（基本値 ＋ 積み上げルール）</span></div>
+        <div class="view-actions"><button class="vh-btn" onclick="showView('settings')">← 設定へ戻る</button></div>
       </div>
       <div id="view-rules-body"></div>
+    </section>
+
+    <!-- ===== 準備中ビュー（器のみ・中身は順次実装 v0.33.0） ===== -->
+    <section id="view-parking" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">🅿️</span>駐車場</div></div>
+      <div class="soon-card"><div class="soon-emoji">🅿️</div><h3>駐車場ビュー（準備中）</h3><p>「明日の朝までに何台空けておくべきか」を中心に、預かりスペースの空き状況をここに作ります。<br>いまはダッシュボードの駐車場サマリーをご利用ください。</p></div>
+    </section>
+
+    <section id="view-maintdash" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">📊</span>整備ダッシュボード</div></div>
+      <div class="soon-card"><div class="soon-emoji">📊</div><h3>整備側のまとめ（準備中）</h3><p>1課・2課の進捗、工程の詰まり、当日の作業量などを整備視点でまとめるダッシュボードを作ります。</p></div>
+    </section>
+
+    <section id="view-course1" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">1️⃣</span>1課（国産）</div></div>
+      <div class="soon-card"><div class="soon-emoji">1️⃣</div><h3>1課のタスク看板（準備中）</h3><p>今のタスク看板を「課ごと」に分けた国産チーム用ビューを作ります。既存のタスク看板はコードに温存済みで、ここに接続します。</p></div>
+    </section>
+
+    <section id="view-course2" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">2️⃣</span>2課（輸入）</div></div>
+      <div class="soon-card"><div class="soon-emoji">2️⃣</div><h3>2課のタスク看板（準備中）</h3><p>今のタスク看板を「課ごと」に分けた輸入チーム用ビューを作ります。既存のタスク看板はコードに温存済みで、ここに接続します。</p></div>
+    </section>
+
+    <section id="view-sales" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">💴</span>売上</div></div>
+      <div class="soon-card"><div class="soon-emoji">💴</div><h3>売上ダッシュボード（準備中）</h3><p>クォーター制（月4分割）の実績・抱え高、国産/輸入の内訳などを集計する売上ダッシュボードを作ります。</p></div>
+    </section>
+
+    <section id="view-members" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">👥</span>メンバー</div></div>
+      <div class="soon-card"><div class="soon-emoji">👥</div><h3>メンバー管理（準備中）</h3><p>スタッフの追加・権限・担当設定をここで。StockFlowのメンバー機能をベースに移植します。</p></div>
+    </section>
+
+    <section id="view-oplog" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">📜</span>操作ログ</div></div>
+      <div class="soon-card"><div class="soon-emoji">📜</div><h3>操作ログ（準備中）</h3><p>誰が・いつ・何をしたかの操作ログ。CarFlow/StockFlowと同じ設計でここに作ります。</p></div>
+    </section>
+
+    <section id="view-news" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">📣</span>お知らせ</div></div>
+      <div class="soon-card"><div class="soon-emoji">📣</div><h3>お知らせ（準備中）</h3><p>更新情報や社内連絡をここに表示します。</p></div>
+    </section>
+
+    <section id="view-help" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">❓</span>ヘルプ</div></div>
+      <div class="soon-card"><div class="soon-emoji">❓</div><h3>ヘルプ（準備中）</h3><p>使い方ガイドとよくある質問をここにまとめます。</p></div>
     </section>
 
     <!-- ===== カード設計サンプル（今だけ・たたき台） ===== -->
@@ -426,7 +490,7 @@
 <script src="js/sample-fleet.js?v=7"></script>
 <script src="js/firebase-init.js?v=8"></script>
 <script src="js/db-pit.js?v=24"></script>
-<script src="js/views.js?v=24"></script>
+<script src="js/views.js?v=25"></script>
 <script src="js/card-detail.js?v=24"></script>
 <script src="js/avail.js?v=2"></script>
 <script src="js/card-tabs.js?v=3"></script>

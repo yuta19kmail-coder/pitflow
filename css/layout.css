@@ -99,6 +99,33 @@
   text-align:center;
 }
 
+/* ===== サイドバー フライアウト（親をホバー/タップで右に小メニュー・StockFlow流用） ===== */
+.si-flyout{position:relative}
+.si-has-flyout .si-caret{margin-left:auto;color:var(--text3);font-size:11px}
+.si-flyout.open-parent>.si-has-flyout{color:var(--brand)}
+.si-flyout.has-active>.si-has-flyout{color:var(--brand);font-weight:600;border-left-color:var(--brand)}
+.si-flyout-panel{
+  position:fixed;display:none;z-index:200;
+  min-width:212px;
+  background:var(--bg2);
+  border:1px solid var(--brand);
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+.si-flyout-panel.open{display:block;animation:sfPop .14s ease-out}
+@keyframes sfPop{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.si-flyout-panel .si-item{border-left:none;border-radius:6px;padding:8px 10px}
+.si-flyout-panel .si-item:hover{background:var(--bg3)}
+/* 準備中（未実装）バッジ */
+.si-soon{margin-left:auto;font-size:9px;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:0 5px;line-height:15px}
+.si-flyout-panel .si-item .si-soon{margin-left:8px}
+/* 準備中ビューの中央カード */
+.soon-card{max-width:540px;margin:6vh auto 0;text-align:center;background:var(--bg2);border:1px dashed var(--border2);border-radius:14px;padding:34px 28px}
+.soon-card .soon-emoji{font-size:46px;line-height:1}
+.soon-card h3{margin:14px 0 8px;font-size:17px;color:var(--text)}
+.soon-card p{margin:0;color:var(--text2);font-size:13px;line-height:1.8}
+
 /* ===== メイン領域 ===== */
 #main{
   grid-column:2;
