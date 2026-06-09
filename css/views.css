@@ -288,7 +288,7 @@
   border-bottom-color:var(--brand);
   font-weight:600;
 }
-#view-task .kanban{
+.kanban{
   display:flex;
   gap:12px;
   overflow-x:auto;
@@ -296,7 +296,7 @@
   padding-bottom:12px;
   min-height:400px;
 }
-#view-task .kanban-col{
+.kanban-col{
   flex:0 0 260px;
   background:var(--bg2);
   border:1px solid var(--border);
@@ -305,14 +305,14 @@
   flex-direction:column;
   max-height:calc(100dvh - 220px);
 }
-#view-task .kanban-col-head{
+.kanban-col-head{
   padding:10px 12px;
   border-bottom:1px solid var(--border);
   display:flex;align-items:center;gap:6px;
   font-size:13px;
   font-weight:600;
 }
-#view-task .kanban-col-head .count{
+.kanban-col-head .count{
   margin-left:auto;
   font-size:11px;
   color:var(--text3);
@@ -320,7 +320,7 @@
   padding:1px 8px;
   border-radius:10px;
 }
-#view-task .kanban-col-body{
+.kanban-col-body{
   padding:8px;
   display:flex;
   flex-direction:column;
@@ -495,7 +495,7 @@
 
 /* ===== レスポンシブ ===== */
 @media (max-width:768px){
-  #view-task .kanban-col{flex:0 0 220px}
+  .kanban-col{flex:0 0 220px}
   #view-work .pit-grid{grid-template-columns:1fr}
   #view-loaner .loaner-grid{grid-template-columns:120px repeat(7,minmax(50px,1fr))}
 }
@@ -666,24 +666,24 @@
 }
 
 /* タスクボード：終端列・サイド列のスタイル */
-#view-task .kanban-col.terminal{
+.kanban-col.terminal{
   background:var(--bg);
 }
-#view-task .kanban-col.terminal .kanban-col-head{
+.kanban-col.terminal .kanban-col-head{
   color:var(--green);
   background:linear-gradient(0deg, transparent, rgba(29,185,122,0.06));
 }
-#view-task .kanban-col.side{
+.kanban-col.side{
   flex:0 0 200px;
   margin-left:8px;
   border-color:var(--border2);
   background:repeating-linear-gradient(45deg,var(--bg2),var(--bg2) 8px,var(--bg) 8px,var(--bg) 16px);
 }
-#view-task .kanban-col.side .kanban-col-head{
+.kanban-col.side .kanban-col-head{
   color:var(--text3);
   background:none;
 }
-#view-task .kanban-empty{
+.kanban-empty{
   color:var(--text3);
   font-size:11px;
   text-align:center;

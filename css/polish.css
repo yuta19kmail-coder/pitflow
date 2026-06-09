@@ -40,18 +40,18 @@
 .pc-kbtn.next{ flex:1; background:var(--brand-soft); color:var(--brand); border-color:var(--brand); font-weight:700; }
 
 /* ===== タスク看板 ===== */
-#view-task .kanban-col{
+.kanban-col{
   border-top:3px solid var(--stage, var(--brand));
   box-shadow:0 2px 10px rgba(0,0,0,.18);
 }
-#view-task .kanban-col-head{ font-size:13.5px; }
-#view-task .kanban-col-head .count{
+.kanban-col-head{ font-size:13.5px; }
+.kanban-col-head .count{
   background:color-mix(in srgb, var(--stage,#64748b) 18%, transparent);
   color:var(--stage, var(--text2));
   font-weight:700;
 }
-#view-task .kanban-col.side{ box-shadow:none; }
-#view-task .kanban-empty{
+.kanban-col.side{ box-shadow:none; }
+.kanban-empty{
   border:1px dashed var(--border); border-radius:var(--r);
   padding:14px 0; color:var(--text3);
 }
@@ -118,7 +118,7 @@
   background:var(--brand-soft);
   border-radius:var(--r);
 }
-#view-task .kanban-col-body[data-drop]{ min-height:48px; }
+.kanban-col-body[data-drop]{ min-height:48px; }
 #view-work .pit-bay.dnd-over,
 [data-drop].dnd-over{ transition:background .08s; }
 
