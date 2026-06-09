@@ -19,10 +19,12 @@
     'スバル':['インプレッサ','フォレスター','レガシィ','レヴォーグ','XV'],
     '三菱':['eKワゴン','アウトランダー','デリカD:5','RVR']
   };
-  const PLACES = ['品川','練馬','横浜','足立','世田谷','習志野','袖ヶ浦','千葉','野田','大宮','春日部','所沢','川口','柏'];
+  const PLACES = ['野田','柏','習志野','千葉','松戸','袖ヶ浦','品川','練馬','足立','横浜','大宮','春日部','所沢','川口'];
   const CLS = ['300','500','580','330','530','480'];
   const KANA = ['あ','い','う','え','か','き','く','け','こ','さ','す','せ','そ','た','つ','て','と','な','に','ぬ','の','は','ひ','ふ','ほ','ま','み','む','め','も','や','ゆ','よ','ら','り','る','れ','わ'];
-  const STAFF = ['社長','専務','椎名','チーフ','蓮沼','箱崎','菅谷','林','大西'];
+  // 国産メーカー＝1課（国産車）、輸入扱い相当は今回サンプルでは輸入フラグでランダム付与
+  // フロント担当は課ごと（v0.35.1の役割と一致：※メカのみ/受付専任は除く）
+  const FRONT = { div1: ['社長','専務','椎名'], div2: ['チーフ','蓮沼','箱崎','菅谷'] };
 
   const rnd = a => a[Math.floor(Math.random() * a.length)];
   const d = n => String(Math.floor(Math.random() * Math.pow(10, n))).padStart(n, '0');
@@ -32,11 +34,20 @@
     do { plate = rnd(PLACES) + ' ' + rnd(CLS) + ' ' + rnd(KANA) + ' ' + d(4); } while (usedPlate[plate]);
     usedPlate[plate] = 1;
     const mk = rnd(Object.keys(MAKERS));
-    const car = mk + ' ' + rnd(MAKERS[mk]);
+    const car = rnd(MAKERS[mk]);              // 車種（メーカーは別フィールド）
+    // 国産7割／輸入3割。課は連動（国産→1課・輸入→2課）、フロント担当はその課から
+    const boardId = Math.random() < 0.7 ? 'default' : 'import';
+    const division = boardId === 'import' ? 'div2' : 'div1';
+    const frontStaff = rnd(FRONT[division]);
     const tel = Math.random() < 0.6
       ? '0' + rnd(['90','80','70']) + '-' + d(4) + '-' + d(4)
       : '04' + rnd(['7','3','2']) + '-' + d(3) + '-' + d(4);
-    return { id: 'cu_s' + Date.now().toString(36) + i, name: rnd(SEI) + ' ' + rnd(MEI), tel, car, plate, staff: rnd(STAFF), updatedAt: Date.now() - i * 1000 };
+    return {
+      id: 'cu_s' + Date.now().toString(36) + i,
+      name: rnd(SEI) + ' ' + rnd(MEI), tel, maker: mk, car, plate,
+      boardId, division, frontStaff, staff: frontStaff,
+      updatedAt: Date.now() - i * 60000
+    };
   }
 
   function gen(n) {
@@ -60,8 +71,13 @@
     if (window.renderCustomers) renderCustomers();
   };
 
-  // 起動時：控えが空なら自動で 500 件
-  if (Array.isArray(state.customers) && state.customers.length === 0) {
-    window.seedSampleCustomers(500, false);
-  }
+  // 起動時：控えが空なら 500 件。旧フォーマット（boardId 等が誰にも無い）かつ全部サンプル(id=cu_s…)なら
+  // 新サンプルへ自動入替（手作業で足した顧客＝id が cu_s 以外があれば温存し、入替しない）。
+  (function () {
+    const cs = Array.isArray(state.customers) ? state.customers : [];
+    if (cs.length === 0) { window.seedSampleCustomers(500, false); return; }
+    const allSample = cs.every(r => typeof r.id === 'string' && r.id.indexOf('cu_s') === 0);
+    const oldFormat = !cs.some(r => r.boardId);   // 誰も国産輸入を持っていない＝旧サンプル
+    if (allSample && oldFormat) { window.seedSampleCustomers(500, true); }
+  })();
 })();
