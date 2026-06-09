@@ -14,8 +14,18 @@ function renderTask(){
 
   const board = state.boards.find(b => b.id === state.currentBoardId);
   if (!board) return;
+  _renderKanban(board, document.getElementById('kanban-cols'));
+}
 
-  const cols = document.getElementById('kanban-cols');
+/* 課別タスク看板（board固定・タブなし）。1課＝国産(default)／2課＝輸入(import） */
+function renderCourse(boardId, colsElId){
+  const board = state.boards.find(b => b.id === boardId);
+  _renderKanban(board, document.getElementById(colsElId));
+}
+
+/* 看板の列＋カードを描画（renderTask／renderCourse 共通） */
+function _renderKanban(board, cols){
+  if (!board || !cols) return;
   cols.innerHTML = board.cols.map(col => {
     const inCol = state.cards.filter(c =>
       c.status === col.id && c.boardId === board.id
@@ -42,6 +52,13 @@ function renderTask(){
   }).join('');
 }
 
+/* ◀▶やボード操作後の再描画先＝今見ているビューに合わせる（課ビューでも正しく更新） */
+function _rerenderActiveBoard(){
+  if (state.currentView === 'course1')      renderCourse('default', 'kanban-cols-1');
+  else if (state.currentView === 'course2') renderCourse('import',  'kanban-cols-2');
+  else renderTask();
+}
+
 function stageColor(id){
   const map = {
     check:'#3b82f6', estim:'#f59e0b', contact:'#a855f7', parts:'#06b6d4',
@@ -60,7 +77,7 @@ function advanceCard(cardId, dir){
   const flow = board.cols.filter(col => !col.side).map(col => col.id);
   let i = flow.indexOf(c.status);
   if (i < 0){
-    if (dir > 0){ c.status = flow[0]; if (window.logFlow) logFlow(c, statusLabel(flow[0]) + 'へ'); if (window.PitDB) PitDB.save(); renderTask(); }
+    if (dir > 0){ c.status = flow[0]; if (window.logFlow) logFlow(c, statusLabel(flow[0]) + 'へ'); if (window.PitDB) PitDB.save(); _rerenderActiveBoard(); }
     return;
   }
   const ni = i + dir;
@@ -68,7 +85,7 @@ function advanceCard(cardId, dir){
   c.status = flow[ni];
   if (window.logFlow) logFlow(c, statusLabel(flow[ni]) + 'へ');
   if (window.PitDB) PitDB.save();
-  renderTask();
+  _rerenderActiveBoard();
 }
 
 function switchBoard(boardId){

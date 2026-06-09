@@ -29,6 +29,8 @@ function showView(viewId){
   if (viewId === 'reserve') renderReserve();
   if (viewId === 'return')  renderReturn();
   if (viewId === 'task')    renderTask();
+  if (viewId === 'course1' && window.renderCourse) renderCourse('default', 'kanban-cols-1');
+  if (viewId === 'course2' && window.renderCourse) renderCourse('import',  'kanban-cols-2');
   if (viewId === 'work')    renderWork();
   if (viewId === 'result')  renderResult();
   if (viewId === 'loaner')  renderLoaner();
