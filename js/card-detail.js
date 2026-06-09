@@ -691,7 +691,7 @@ function plateInput(c){
   h += '<div class="cf-plate-guide">';
   h += '<div class="cf-plate-grid">';
   h += '<div><div class="cf-plate-l">地名（管轄）</div><input class="cf-input cf-plate-region" list="cf-plate-regions" data-plate="region" value="' + _pe(p.region) + '" placeholder="野田" autocomplete="off"></div>';
-  h += '<div><div class="cf-plate-l">分類番号</div><input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3"></div>';
+  h += '<div><div class="cf-plate-l">分類</div><input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3"></div>';
   h += '<div><div class="cf-plate-l">かな</div><input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="1"></div>';
   h += '<div><div class="cf-plate-l">ナンバー</div><input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="5555" inputmode="numeric" maxlength="4"></div>';
   h += '</div>';
