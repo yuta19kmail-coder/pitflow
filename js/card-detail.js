@@ -8,6 +8,7 @@ let _returnView = 'today';   // 全画面カードを閉じたとき戻る先
 let _cardTab = 'basic';      // カード内タブの現在地（card-tabs.js が参照）
 let _cardMode = 'page';      // 'page'＝新規入庫(全画面) / 'modal'＝各ビューから(ポップアップ)
 let _cardBodyId = 'md-body'; // フォームの描画先（card-tabs.js も参照）
+let _cardCheckOn = false;    // 入力チェックON中＝未入力を赤枠表示（再描画/入力ごとに再評価）
 
 function _cardTitleHtml(card){
   return '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span><br>' +
@@ -20,6 +21,7 @@ function openCard(cardId, mode){
   if (!card) return;
   _editingCardId = cardId;
   _cardTab = 'basic';
+  _cardCheckOn = false;   // 開いた直後は赤枠なし
   _cardMode = (mode === 'page') ? 'page' : 'modal';
 
   if (_cardMode === 'modal'){
@@ -418,14 +420,10 @@ window.cfsLgToday = function () {
   if (sc) sc.scrollTop = 0;
 };
 
-/* 🔎 入力チェック（v0.28.1）：漏れていそうな項目を赤くハイライト＋先頭へスクロール。強制はしない */
-window.pitCardCheck = function () {
-  const c = state.cards.find(x => x.id === _editingCardId);
-  if (!c) return;
-  const body = document.getElementById(_cardBodyId || 'md-body');
-  if (!body) return;
-  body.querySelectorAll('.cf-miss').forEach(el => el.classList.remove('cf-miss'));
-
+/* 未入力の項目に赤枠(.cf-miss)を付け直す共通処理。未入力ラベルの配列を返す（トーストは出さない）。
+   再描画ごと・入力ごとに呼ぶ＝埋めた項目はその場で赤が外れ、未入力だけ残る。 */
+function _cardMarkMisses(c, root){
+  if (!root) return [];
   const need = [
     ['customer',    'お客様名',        !!(c.customer || '').trim()],
     ['tel',         'TEL',             !!(c.tel || '').trim()],
@@ -441,24 +439,40 @@ window.pitCardCheck = function () {
     need.push(['loanerFrom', '貸出から', !!c.loanerFrom]);
     need.push(['loanerTo',   '貸出まで', !!c.loanerTo]);
   }
-
-  const misses = [];
-  let first = null;
-  need.forEach(function (n) {
-    if (n[2]) return;
-    misses.push(n[1]);
-    const el = body.querySelector('[data-key="' + n[0] + '"]');
-    if (el){
-      el.classList.add('cf-miss');
-      if (!first) first = el;
-    }
+  // 代車を「不要」にした時など、対象外になったキーの赤は消す
+  const activeKeys = need.map(n => n[0]);
+  ['loanerId', 'loanerFrom', 'loanerTo'].forEach(function (k){
+    if (activeKeys.indexOf(k) < 0){ const el = root.querySelector('[data-key="' + k + '"]'); if (el) el.classList.remove('cf-miss'); }
   });
-
+  const misses = [];
+  need.forEach(function (n) {
+    const el = root.querySelector('[data-key="' + n[0] + '"]');
+    // 未入力→赤を付ける／入力済→外す。toggle(force)なので既に赤の項目は再アニメしない（入力中のチラつき防止）
+    if (el) el.classList.toggle('cf-miss', !n[2]);
+    if (!n[2]) misses.push(n[1]);
+  });
+  return misses;
+}
+/* 再描画後に赤枠を貼り直す（チェックON中のみ）。bindCardFormEvents から呼ぶ。 */
+function _cardReapplyCheck(root){
+  if (!_cardCheckOn) return;
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (c) _cardMarkMisses(c, root);
+}
+/* 🔎 入力チェック（v0.28.1）：漏れていそうな項目を赤くハイライト＋先頭へスクロール。強制はしない */
+window.pitCardCheck = function () {
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+  const body = document.getElementById(_cardBodyId || 'md-body');
+  if (!body) return;
+  const misses = _cardMarkMisses(c, body);
+  _cardCheckOn = misses.length > 0;   // 以降の再描画・入力でも未入力だけ赤を保つ
   if (!misses.length){
     if (window.pitToast) pitToast('✅ 入力OK！漏れはありません');
     return;
   }
   if (window.pitToast) pitToast('⚠ 未入力 ' + misses.length + '件：' + misses.join('・'));
+  const first = body.querySelector('.cf-miss');
   if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
 };
 
@@ -676,6 +690,7 @@ function bindCardFormEvents(root){
       let v = el.value;
       if (el.type === 'number') v = v === '' ? null : Number(v);
       c[key] = v;
+      if (_cardCheckOn) _cardMarkMisses(c, root);   // 入力したら、その項目の赤枠はその場で外れる
     });
     el.addEventListener('change', () => {
       const key = el.dataset.key;
@@ -818,4 +833,8 @@ function bindCardFormEvents(root){
       });
     });
   });
+
+  // 入力チェックON中なら、再描画のたびに未入力だけ赤枠を貼り直す
+  // （チップ/トグルを押しても全部消えず、埋めた項目だけ赤が外れる）
+  _cardReapplyCheck(root);
 }
