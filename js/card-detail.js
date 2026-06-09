@@ -1011,7 +1011,8 @@ function bindCardFormEvents(root){
         }
         // 作業タイプ・受付タイプを選んだら概算（日数・金額）を自動セット（後から手で直せる）
         if (key === 'workType' || key === 'dropType'){
-          if (window.pitEstHold)   c.estHoldDays = pitEstHold(c.workType, c.dropType);
+          // 作業タイプ未選択のうちは概算 預かり日数は空欄（選んだら自動で入る）
+          if (window.pitEstHold)   c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType) : '';
           if (window.pitEstAmount && key === 'workType' && c.workType) c.estAmount = pitEstAmount(c.workType);
         }
         renderCardForm(c);

@@ -169,7 +169,7 @@ function openNewReserve(){
     log: [{ label: '予約作成', at: Date.now() }],
     customer: '', tel: '', maker: '', car: '', plate: '',
     reserveDate: ymd(new Date()), reserveTime: '', returnDate: '',
-    estHoldDays: (window.pitEstHold ? pitEstHold(null, null) : 5),   // 設定の「その他」初期値（作業タイプ選択後に自動更新）
+    estHoldDays: '',   // 作業タイプ選択前は空欄（選ぶと自動で入る）
     estAmount: null,   // 概算金額＝作業タイプ選択で自動セット
     menu: '', workType: null, dropType: null, consult: false,
     needLoaner: false, needWash: false, urgent: false, memo: ''
