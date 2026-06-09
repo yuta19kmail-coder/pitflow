@@ -159,7 +159,12 @@
     }
     wrap.innerHTML=h;
   };
-  window.custFilter=function(v){ _q=v; renderCustomers(); };
+  window.custFilter=function(v){
+    _q=v; renderCustomers();
+    // 再描画で検索ボックスが作り直されるのでフォーカスを戻す（1文字で止まる不具合の対処）
+    const s=document.querySelector('.cust-search');
+    if(s){ s.focus(); const n=s.value.length; try{ s.setSelectionRange(n,n); }catch(e){} }
+  };
   window.custDelete=function(id){
     const arr=list(); const i=arr.findIndex(r=>r.id===id);
     if(i<0) return;
