@@ -361,9 +361,9 @@
 .cf-plate-l{ font-size:10px; color:var(--text3); margin-bottom:3px; white-space:nowrap; }
 .cf-plate-guide .cf-input{ width:auto; padding:6px 8px; }
 .cf-plate-region{ width:7em; }
-.cf-plate-cls{ width:4em; text-align:center; }
-.cf-plate-kana{ width:3em; text-align:center; }
-.cf-plate-num{ width:5.5em; text-align:center; }
+.cf-plate-cls{ width:3.2em; text-align:center; }
+.cf-plate-kana{ width:2.2em; text-align:center; }
+.cf-plate-num{ width:4.2em; text-align:center; }
 /* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
 /* 内容セクション：テンプレを開いてクリックで挿入 */

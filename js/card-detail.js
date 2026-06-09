@@ -672,12 +672,12 @@ const PLATE_REGIONS = [
   '福岡','北九州','久留米','筑豊','佐賀','長崎','佐世保','熊本','大分','宮崎','鹿児島','奄美','沖縄'
 ];
 function _pe(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-/* 数字系の正規化：全角数字→半角、各種ダッシュ(－―ー−)→半角ハイフン。例「55－55」→「55-55」 */
-function _plateNorm(s){
-  return String(s == null ? '' : s)
+/* 分類番号・ナンバー(一連)＝半角数字のみ。全角数字→半角、ハイフン/文字は禁止（除去）、桁数で切る。例「55－55」→「5555」 */
+function _plateDigits(s, max){
+  const v = String(s == null ? '' : s)
     .replace(/[０-９]/g, function(d){ return String.fromCharCode(d.charCodeAt(0) - 0xFEE0); })
-    .replace(/[－―ー−—]/g, '-')
-    .trim();
+    .replace(/[^0-9]/g, '');
+  return v.slice(0, max || 4);
 }
 /* c.plate（"野田 300 ひ 55-55"）を4分割。保存は常にこの合成文字列＝既存の一覧/帳票はそのまま使える */
 function _platePartsOf(c){
@@ -692,8 +692,8 @@ function plateInput(c){
   h += '<div class="cf-plate-grid">';
   h += '<div><div class="cf-plate-l">地名（管轄）</div><input class="cf-input cf-plate-region" list="cf-plate-regions" data-plate="region" value="' + _pe(p.region) + '" placeholder="野田" autocomplete="off"></div>';
   h += '<div><div class="cf-plate-l">分類番号</div><input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3"></div>';
-  h += '<div><div class="cf-plate-l">かな</div><input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="2"></div>';
-  h += '<div><div class="cf-plate-l">ナンバー</div><input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="55-55" maxlength="5"></div>';
+  h += '<div><div class="cf-plate-l">かな</div><input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="1"></div>';
+  h += '<div><div class="cf-plate-l">ナンバー</div><input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="5555" inputmode="numeric" maxlength="4"></div>';
   h += '</div>';
   h += '<datalist id="cf-plate-regions">';
   PLATE_REGIONS.forEach(function (r){ h += '<option value="' + r + '"></option>'; });
@@ -778,16 +778,18 @@ function bindCardFormEvents(root){
   if (plateWrap){
     const mainEl = plateWrap.querySelector('[data-plate-main]');
     const recompose = () => {
-      const g = sel => { const x = plateWrap.querySelector(sel); return x ? x.value : ''; };
-      const region = g('.cf-plate-region').trim();
-      const cls  = _plateNorm(g('.cf-plate-cls'));
-      const kana = g('.cf-plate-kana').trim();
-      const num  = _plateNorm(g('.cf-plate-num'));   // 「55－55」等を半角に正規化
-      c.plate = [region, cls, kana, num].filter(Boolean).join(' ');
+      const g = sel => { const x = plateWrap.querySelector(sel); return x ? x.value.trim() : ''; };
+      c.plate = [g('.cf-plate-region'), g('.cf-plate-cls'), g('.cf-plate-kana'), g('.cf-plate-num')].filter(Boolean).join(' ');
       if (mainEl) mainEl.value = c.plate;
       if (window.PitDB) PitDB.save();
     };
-    plateWrap.querySelectorAll('[data-plate]').forEach(el => el.addEventListener('input', recompose));
+    plateWrap.querySelectorAll('[data-plate]').forEach(el => el.addEventListener('input', () => {
+      const part = el.dataset.plate;
+      if (part === 'cls') el.value = _plateDigits(el.value, 3);        // 分類＝半角数字3桁
+      else if (part === 'num') el.value = _plateDigits(el.value, 4);   // ナンバー＝半角数字4桁・ハイフン/文字禁止・全角→半角
+      else if (part === 'kana') el.value = el.value.slice(0, 1);       // かな＝1文字
+      recompose();
+    }));
     const openGuide = () => plateWrap.classList.add('open');
     if (mainEl){
       mainEl.addEventListener('focus', openGuide);
