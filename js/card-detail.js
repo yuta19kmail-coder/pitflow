@@ -115,7 +115,7 @@ function renderCardForm(c){
   /* 2行目：ナンバー｜TEL｜初回・リピーター */
   h += '<div class="cf-row">';
   h += field('ナンバー', plateInput(c));
-  h += field('TEL',      textIn(c, 'tel', ''));
+  h += field('TEL',      telInput(c));
   h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
   h += '</div>';
   /* 3行目：国産車/輸入車｜メーカー｜車種 */
@@ -708,6 +708,19 @@ function _plateDigits(s, max){
     .replace(/[^0-9]/g, '');
   return v.slice(0, max || 4);
 }
+/* TEL：ナンバー同様3枠に分割。各枠は半角数字のみ（全角→半角・ハイフン/文字は入れさせない）、
+   保存は "市外-市内-番号" にハイフン自動挿入。c.tel は従来どおり1文字列＝一覧/帳票そのまま。 */
+function telInput(c){
+  const p = String(c.tel || '').split('-');
+  const v1 = _pe(p[0] || ''), v2 = _pe(p[1] || ''), v3 = _pe(p.slice(2).join('') || '');
+  return '<div class="cf-tel">'
+    + '<input type="text" class="cf-input cf-tel-1" data-tel="1" value="' + v1 + '" inputmode="numeric" maxlength="5" placeholder="090">'
+    + '<span class="cf-tel-sep">-</span>'
+    + '<input type="text" class="cf-input cf-tel-2" data-tel="2" value="' + v2 + '" inputmode="numeric" maxlength="4" placeholder="1234">'
+    + '<span class="cf-tel-sep">-</span>'
+    + '<input type="text" class="cf-input cf-tel-3" data-tel="3" value="' + v3 + '" inputmode="numeric" maxlength="4" placeholder="5678">'
+    + '</div>';
+}
 /* c.plate（"野田 300 ひ 55-55"）を4分割。保存は常にこの合成文字列＝既存の一覧/帳票はそのまま使える */
 function _platePartsOf(c){
   const toks = String(c.plate || '').trim().split(/\s+/).filter(Boolean);
@@ -804,6 +817,22 @@ function bindCardFormEvents(root){
 
   // お客様名→カナ 自動フリガナ
   _bindAutoKana(root.querySelector('[data-key="customer"]'), root.querySelector('[data-key="kana"]'), c);
+
+  // TEL：3枠（半角数字のみ）→ c.tel に "市外-市内-番号" でハイフン自動挿入。枠が埋まったら次の枠へ自動移動
+  const telWrap = root.querySelector('.cf-tel');
+  if (telWrap){
+    const tg = sel => { const x = telWrap.querySelector(sel); return x ? x.value.trim() : ''; };
+    const telEls = [telWrap.querySelector('.cf-tel-1'), telWrap.querySelector('.cf-tel-2'), telWrap.querySelector('.cf-tel-3')];
+    telEls.forEach((el, i) => {
+      if (!el) return;
+      el.addEventListener('input', () => {
+        const max = (i === 0) ? 5 : 4;
+        el.value = _plateDigits(el.value, max);   // 全角→半角・数字以外/ハイフンは除去・桁数で切る
+        c.tel = [tg('.cf-tel-1'), tg('.cf-tel-2'), tg('.cf-tel-3')].filter(Boolean).join('-');
+        if (el.value.length >= max && telEls[i + 1]) telEls[i + 1].focus();   // 埋まったら次へ
+      });
+    });
+  }
 
   // ナンバー：見た目は1BOX。クリック/フォーカスでガイドを開き、4項目を入力→c.plate に合成（半角スペース1つ＝揺れ防止）
   const plateWrap = root.querySelector('.cf-plate');
