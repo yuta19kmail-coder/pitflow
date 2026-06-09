@@ -108,8 +108,9 @@ function renderCardForm(c){
   /* === 基本情報（車両もここに統合・v0.27.0） === */
   h += sec('基本情報', '👤');
   h += '<div class="cf-row">';
-  h += field('お客様名', textIn(c, 'customer', 'flex:2'));
-  h += field('TEL',      textIn(c, 'tel',      'flex:1'));
+  h += '<div class="cf-field" style="flex:2"><div class="cf-label">お客様名</div>' + textIn(c, 'customer', 'autocomplete="off"') + '</div>';
+  h += '<div class="cf-field" style="flex:2"><div class="cf-label">カナ</div>' + textIn(c, 'kana', 'placeholder="自動（名前を入力）" autocomplete="off"') + '</div>';
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">TEL</div>' + textIn(c, 'tel', '') + '</div>';
   h += '</div>';
   h += '<div class="cf-row">';
   h += field('ナンバー', plateInput(c));
@@ -672,6 +673,21 @@ const PLATE_REGIONS = [
   '福岡','北九州','久留米','筑豊','佐賀','長崎','佐世保','熊本','大分','宮崎','鹿児島','奄美','沖縄'
 ];
 function _pe(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* ひらがな→カタカナ */
+function _toKatakana(s){ return String(s == null ? '' : s).replace(/[ぁ-ゖ]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) + 0x60); }); }
+/* 自動フリガナ：お客様名をIMEで打つと、変換前の読み（ひらがな）を拾ってカナ欄へ。手で直せる。
+   仕組み：compositionupdate で変換前の読みを掴み、compositionend で確定ぶんをカナ欄に足す。
+   英字直接入力や貼り付けは拾えない＝その時はカナ欄を手入力（だから編集可）。 */
+function _bindAutoKana(nameEl, kanaEl, c){
+  if (!nameEl || !kanaEl) return;
+  let base = kanaEl.value || '';   // 確定済みカナ（再描画後も既存値から継続）
+  let comp = '';                   // 変換中の読み
+  nameEl.addEventListener('compositionstart', function(){ base = kanaEl.value || ''; comp = ''; });
+  nameEl.addEventListener('compositionupdate', function(e){ comp = e.data || ''; kanaEl.value = base + _toKatakana(comp); });
+  nameEl.addEventListener('compositionend', function(){ base = base + _toKatakana(comp); comp = ''; kanaEl.value = base; c.kana = base; if (window.PitDB) PitDB.save(); });
+  // 名前を空にしたらカナも空に（打ち直し時のゴミ防止）
+  nameEl.addEventListener('input', function(){ if (!nameEl.value){ base = ''; kanaEl.value = ''; c.kana = ''; } });
+}
 /* 分類番号・ナンバー(一連)＝半角数字のみ。全角数字→半角、ハイフン/文字は禁止（除去）、桁数で切る。例「55－55」→「5555」 */
 function _plateDigits(s, max){
   const v = String(s == null ? '' : s)
@@ -772,6 +788,9 @@ function bindCardFormEvents(root){
       }
     });
   });
+
+  // お客様名→カナ 自動フリガナ
+  _bindAutoKana(root.querySelector('[data-key="customer"]'), root.querySelector('[data-key="kana"]'), c);
 
   // ナンバー：見た目は1BOX。クリック/フォーカスでガイドを開き、4項目を入力→c.plate に合成（半角スペース1つ＝揺れ防止）
   const plateWrap = root.querySelector('.cf-plate');

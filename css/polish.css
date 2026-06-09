@@ -180,6 +180,24 @@
 .cm-hmid{ flex:1; min-width:0; font-size:13px; }
 .cm-hsub{ font-size:11px; color:var(--text3); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cm-hamt{ flex:0 0 auto; font-size:13px; font-weight:700; color:var(--brand); }
+/* 顧客テーブル（1行・均一フォント・ラベルでソート）v0.37.2 */
+.ct-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
+.ct{ width:100%; border-collapse:collapse; font-size:13px; }
+.ct th, .ct td{ text-align:left; padding:8px 10px; white-space:nowrap; border-bottom:1px solid var(--border); }
+.ct tbody tr:last-child td{ border-bottom:none; }
+.ct thead th{ background:var(--bg3); color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; user-select:none; }
+.ct-th:hover{ color:var(--brand); }
+.ct-th.on{ color:var(--brand); }
+.ct-acth{ cursor:default; text-align:right; }
+.ct tbody tr:hover{ background:var(--bg3); }
+.ct td{ color:var(--text); max-width:200px; overflow:hidden; text-overflow:ellipsis; }
+.ct-name{ font-weight:400; }
+.ct-mut{ color:var(--text2); }
+.ct-pill{ font-size:11px; font-weight:700; border:1px solid; border-radius:999px; padding:1px 8px; }
+.ct-act{ text-align:right; white-space:nowrap; }
+.ct-b{ background:transparent; border:1px solid var(--border); border-radius:6px; padding:3px 7px; cursor:pointer; color:var(--text2); font-size:12px; margin-left:2px; }
+.ct-b:hover{ border-color:var(--brand); color:var(--brand); }
+.ct-bd:hover{ border-color:var(--red); color:var(--red); }
 
 /* ===== カード設計サンプル（今だけ・たたき台） ===== */
 .sp-banner{ background:rgba(124,58,237,.10); border:1px solid rgba(124,58,237,.35); border-radius:10px; padding:11px 14px; font-size:12.5px; line-height:1.6; color:var(--text); margin-bottom:12px; }

@@ -11,7 +11,8 @@
    ======================================== */
 (function () {
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-  function norm(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+  // 空白除去＋カタカナ→ひらがな統一＋小文字化。これで「や」(ひらがな)でも「ヤマダ」(カナ)に当たる。
+  function norm(s){ return (s||'').replace(/\s+/g,'').replace(/[ァ-ヶ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60)).toLowerCase(); }
   function keyOf(r){ return norm(r.plate) || ('n:'+norm(r.name)+'|c:'+norm(r.car)); }
   function list(){ if(!Array.isArray(state.customers)) state.customers=[]; return state.customers; }
   function courseLabel(div){ const d=(state.divisions||[]).find(x=>x.id===div); return d?d.label:''; }
@@ -32,7 +33,7 @@
     const plate=(c.plate||'').trim();
     if(!name && !plate) return;                 // 空は登録しない
     const rec={
-      name, tel:(c.tel||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), plate,
+      name, kana:(c.kana||'').trim(), tel:(c.tel||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), plate,
       boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(),
       staff:(c.staff||'').trim(), updatedAt:Date.now()
     };
@@ -40,7 +41,7 @@
     const k=keyOf(rec);
     const ex=arr.find(r=>keyOf(r)===k);
     if(ex){
-      ex.name=rec.name||ex.name; ex.tel=rec.tel||ex.tel; ex.maker=rec.maker||ex.maker; ex.car=rec.car||ex.car;
+      ex.name=rec.name||ex.name; ex.kana=rec.kana||ex.kana; ex.tel=rec.tel||ex.tel; ex.maker=rec.maker||ex.maker; ex.car=rec.car||ex.car;
       ex.plate=rec.plate||ex.plate; ex.staff=rec.staff||ex.staff;
       ex.boardId=rec.boardId||ex.boardId; ex.division=rec.division||ex.division; ex.frontStaff=rec.frontStaff||ex.frontStaff;
       ex.updatedAt=rec.updatedAt;
@@ -52,11 +53,11 @@
   }
   window.upsertCustomerFromCard=upsertCustomerFromCard;
 
+  function match(r,q){ return norm(r.name).includes(q)||norm(r.kana).includes(q)||norm(r.plate).includes(q)||norm(r.car).includes(q)||norm(r.maker).includes(q); }
   function search(q){
     q=norm(q); if(!q) return [];
-    return list()
-      .filter(r=> norm(r.name).includes(q) || norm(r.plate).includes(q) || norm(r.car).includes(q) || norm(r.maker).includes(q))
-      .sort((a,b)=> (a.name+a.car).localeCompare(b.name+b.car,'ja'))
+    return list().filter(r=>match(r,q))
+      .sort((a,b)=> norm(a.kana+a.name).localeCompare(norm(b.kana+b.name),'ja'))
       .slice(0,8);
   }
   window.searchCustomers=search;
@@ -78,7 +79,7 @@
   window.custPick=function(id){
     const r=list().find(x=>x.id===id); if(!r) return;
     const c=state.cards.find(x=>x.id===_editingCardId); if(!c) return;
-    c.customer=r.name||c.customer; c.tel=r.tel||c.tel; c.maker=r.maker||c.maker; c.car=r.car||c.car; c.plate=r.plate||c.plate;
+    c.customer=r.name||c.customer; c.kana=r.kana||c.kana; c.tel=r.tel||c.tel; c.maker=r.maker||c.maker; c.car=r.car||c.car; c.plate=r.plate||c.plate;
     // 国産輸入・課・フロント担当は、未選択なら控えから補完（既に選んでいれば尊重）
     if(!c.boardId && r.boardId)        c.boardId=r.boardId;
     if(!c.division && r.division)       c.division=r.division;
@@ -87,43 +88,73 @@
     renderCardForm(c);
   };
 
-  /* === 顧客リスト ビュー === */
+  /* === 顧客リスト ビュー（1行テーブル＋ラベルでソート） === */
   let _q='';
+  let _sortKey='updatedAt', _sortDir='desc';   // 既定＝最終入庫が新しい順
+  function fmtDate(ms){ if(!ms) return '—'; const d=new Date(ms); return (d.getMonth()+1)+'/'+d.getDate(); }
+  function sortVal(r,k){
+    switch(k){
+      case 'name':  return norm(r.kana)||norm(r.name);
+      case 'kana':  return norm(r.kana);
+      case 'car':   return norm((r.maker||'')+(r.car||''));
+      case 'plate': return norm(r.plate);
+      case 'tel':   return (r.tel||'');
+      case 'board': return r.boardId==='default'?'1':(r.boardId==='import'?'2':'9');
+      case 'div':   return r.division||'z';
+      case 'front': return norm(r.frontStaff);
+      case 'updatedAt': return r.updatedAt||0;
+    }
+    return '';
+  }
+  window.custSort=function(k){
+    if(_sortKey===k){ _sortDir=_sortDir==='asc'?'desc':'asc'; }
+    else { _sortKey=k; _sortDir=(k==='updatedAt')?'desc':'asc'; }
+    renderCustomers();
+  };
   window.renderCustomers=function(){
     const wrap=document.getElementById('view-customers-body'); if(!wrap) return;
-    const arr=list().slice().sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+    const arr=list().slice();
     const q=norm(_q);
-    const shown=q?arr.filter(r=>norm(r.name).includes(q)||norm(r.plate).includes(q)||norm(r.car).includes(q)||norm(r.maker).includes(q)):arr;
+    let shown=q?arr.filter(r=>match(r,q)):arr;
+    const dir=_sortDir==='asc'?1:-1;
+    shown.sort((a,b)=>{ const va=sortVal(a,_sortKey), vb=sortVal(b,_sortKey); if(va<vb) return -dir; if(va>vb) return dir; return (b.updatedAt||0)-(a.updatedAt||0); });
+
+    const cols=[ ['name','名前'],['kana','カナ'],['car','車'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
+    const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
     let h='';
     h+='<div class="cust-head">'+
-       '<input class="cust-search" placeholder="🔍 名前・ナンバー・車で絞り込み" value="'+esc(_q)+'" oninput="custFilter(this.value)">'+
+       '<input class="cust-search" placeholder="🔍 名前・カナ(ひらがなOK)・ナンバー・車で絞り込み" value="'+esc(_q)+'" oninput="custFilter(this.value)">'+
        '<span class="cust-count">'+shown.length+' 件 / 全 '+arr.length+' 件</span>'+
        '<button class="vh-btn" onclick="custReseed()" title="サンプルを入れ替え">🎲 サンプル入替</button>'+
        '<button class="vh-btn" onclick="clearCustomers()" title="控えを全削除">🗑 全削除</button>'+
        '</div>';
-    h+='<div class="cust-note">整備ソフトが正式な顧客台帳です。ここは PitFlow の控え（入庫カードを保存すると自動で育つ）＋来店履歴ビュー。名前/ナンバーで呼び出すと、メーカー・車種・国産輸入・課・フロント担当まで自動で入ります。</div>';
+    h+='<div class="cust-note">整備ソフトが正式な顧客台帳。ここは控え＋来店履歴。名前を入れるとカナは自動。ラベルをクリックで並び替え（もう一度で昇順↔降順）。</div>';
     if(!shown.length){
       h+='<div class="cust-empty">'+(arr.length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>';
     } else {
-      h+='<div class="cust-list">';
+      h+='<div class="ct-wrap"><table class="ct"><thead><tr>';
+      cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
+      h+='<th class="ct-th ct-acth">操作</th></tr></thead><tbody>';
       shown.slice(0,300).forEach(r=>{
         const t=teamInfo(r);
         const carTxt=((r.maker?r.maker+' ':'')+(r.car||'')).trim()||'—';
-        const pill=s=>'<span class="cust-badge" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>';
-        const badges=(t.label?pill(t.label):'')+(t.course?pill(t.course):'');
-        h+='<div class="cust-row" style="border-left-color:'+(t.color||'var(--brand)')+'">'+
-           '<div class="cust-main">'+
-             '<div class="cust-name">'+esc(r.name||'(無名)')+badges+'</div>'+
-             '<div class="cust-sub">'+esc(carTxt)+(r.plate?' ・ '+esc(r.plate):'')+(r.tel?' ・ ☎ '+esc(r.tel):'')+(r.frontStaff?' ・ 担当 '+esc(r.frontStaff):'')+'</div>'+
-           '</div>'+
-           '<div class="cust-acts">'+
-             '<button class="cust-act" onclick="custHistory(\''+r.id+'\')">🕒 履歴</button>'+
-             '<button class="cust-act" onclick="custEdit(\''+r.id+'\')">✏ 編集</button>'+
-             '<button class="cust-del" onclick="custDelete(\''+r.id+'\')" title="削除">🗑</button>'+
-           '</div>'+
-           '</div>';
+        const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
+        h+='<tr>'+
+           '<td class="ct-name">'+esc(r.name||'(無名)')+'</td>'+
+           '<td class="ct-mut">'+esc(r.kana||'—')+'</td>'+
+           '<td>'+esc(carTxt)+'</td>'+
+           '<td class="ct-mut">'+esc(r.plate||'—')+'</td>'+
+           '<td class="ct-mut">'+esc(r.tel||'—')+'</td>'+
+           '<td>'+pill(t.label)+'</td>'+
+           '<td>'+pill(t.course)+'</td>'+
+           '<td>'+esc(r.frontStaff||'—')+'</td>'+
+           '<td class="ct-mut">'+fmtDate(r.updatedAt)+'</td>'+
+           '<td class="ct-act"><button class="ct-b" onclick="custHistory(\''+r.id+'\')" title="履歴">🕒</button>'+
+             '<button class="ct-b" onclick="custEdit(\''+r.id+'\')" title="編集">✏</button>'+
+             '<button class="ct-b ct-bd" onclick="custDelete(\''+r.id+'\')" title="削除">🗑</button></td>'+
+           '</tr>';
       });
-      h+='</div>';
+      h+='</tbody></table></div>';
       if(shown.length>300) h+='<div class="cust-empty">（先頭300件を表示）絞り込みで探してください</div>';
     }
     wrap.innerHTML=h;
@@ -161,7 +192,8 @@
     const frontOpt='<option value="">—</option>'+frontStaffList().map(n=>'<option value="'+esc(n)+'"'+(r.frontStaff===n?' selected':'')+'>'+esc(n)+'</option>').join('');
     let h='<div class="cm-head">✏ 顧客の控えを編集 <button class="cm-x" onclick="custCloseModal()">✕</button></div>';
     h+='<div class="cm-body">';
-    h+='<div class="cm-f"><label>お客様名</label><input id="cm-name" value="'+esc(r.name||'')+'"></div>';
+    h+='<div class="cm-2"><div class="cm-f"><label>お客様名</label><input id="cm-name" value="'+esc(r.name||'')+'"></div>'+
+       '<div class="cm-f"><label>カナ</label><input id="cm-kana" value="'+esc(r.kana||'')+'"></div></div>';
     h+='<div class="cm-f"><label>TEL</label><input id="cm-tel" value="'+esc(r.tel||'')+'"></div>';
     h+='<div class="cm-2"><div class="cm-f"><label>メーカー</label><input id="cm-maker" value="'+esc(r.maker||'')+'"></div>'+
        '<div class="cm-f"><label>車種</label><input id="cm-car" value="'+esc(r.car||'')+'"></div></div>';
@@ -176,7 +208,7 @@
   window.custSaveEdit=function(id){
     const r=list().find(x=>x.id===id); if(!r) return;
     const g=i=>{ const e=document.getElementById(i); return e?e.value.trim():''; };
-    r.name=g('cm-name'); r.tel=g('cm-tel'); r.maker=g('cm-maker'); r.car=g('cm-car'); r.plate=g('cm-plate');
+    r.name=g('cm-name'); r.kana=g('cm-kana'); r.tel=g('cm-tel'); r.maker=g('cm-maker'); r.car=g('cm-car'); r.plate=g('cm-plate');
     r.boardId=g('cm-board'); r.division=g('cm-div'); r.frontStaff=g('cm-front');
     r.updatedAt=Date.now();
     if(window.PitDB) PitDB.save();
