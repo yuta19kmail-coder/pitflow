@@ -98,6 +98,7 @@
     const cust=list().find(x=>x.id===custId); if(!cust) return;
     const c=state.cards.find(x=>x.id===_editingCardId); if(!c) return;
     c.customer=cust.name||c.customer; c.kana=cust.kana||c.kana; c.customerId=cust.id;
+    c.repeat='repeater';   // 呼び出した＝必ずリピーター（初回/リピーターを自動でリピーターに）
     if(Array.isArray(cust.contacts)&&cust.contacts.length){
       c.contacts=cust.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary}));
       const pri=c.contacts.find(x=>x.primary)||c.contacts[0]; c.tel=pri?(pri.tel||''):'';
