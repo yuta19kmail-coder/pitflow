@@ -118,12 +118,12 @@ function renderCardForm(c){
   h += field('TEL',      telInput(c));
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">連絡先</div>' + contactsBtn(c) + '</div>';
   h += '</div>';
-  /* 3行目：初回・リピーター｜国産車/輸入車｜メーカー(小)｜車種 */
+  /* 3行目：初回・リピーター/国産輸入は自然サイズで左詰め、メーカーは小さく、空きは車種を広く（v0.37.9） */
   h += '<div class="cf-row">';
-  h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
-  h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
-  h += '<div class="cf-field" style="flex:0 0 8em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
-  h += field('車種（グレード）', textIn(c, 'car', 'placeholder="例 アクアGz"'));
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">初回／リピーター</div>' + chips(c, 'repeat', state.repeatTypes) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">国産車／輸入車</div>' + chips(c, 'boardId', TEAM_ITEMS) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 7em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">車種（グレード）</div>' + textIn(c, 'car', 'placeholder="例 アクアGz"') + '</div>';
   h += '</div>';
   h += '<div class="cf-row">';
   h += field('入庫日', dateIn(c, 'reserveDate'));
@@ -746,14 +746,18 @@ function _cfRenderContacts(c){
   c.contacts.forEach(function(ct,i){
     const p = String(ct.tel || '').split('-');
     const v1 = _pe(p[0] || ''), v2 = _pe(p[1] || ''), v3 = _pe(p.slice(2).join('') || '');
+    // 番号は本体と同じ「1BOX＋クリックで3枠ガイド」方式
     h += '<div class="cf-ct-row" data-ctidx="' + i + '">'
       + '<label class="cf-ct-pri"><input type="radio" name="cf-ct-pri" ' + (ct.primary ? 'checked' : '') + ' onchange="cfContactSetPrimary(' + i + ')"> 優先</label>'
-      + '<div class="cf-ct-tel">'
-      +   '<input class="cf-input cf-ct-1" inputmode="numeric" maxlength="5" value="' + v1 + '" placeholder="090" oninput="cfContactTel(' + i + ')">'
-      +   '<span class="cf-tel-sep">-</span>'
-      +   '<input class="cf-input cf-ct-2" inputmode="numeric" maxlength="4" value="' + v2 + '" placeholder="1234" oninput="cfContactTel(' + i + ')">'
-      +   '<span class="cf-tel-sep">-</span>'
-      +   '<input class="cf-input cf-ct-3" inputmode="numeric" maxlength="4" value="' + v3 + '" placeholder="5678" oninput="cfContactTel(' + i + ')">'
+      + '<div class="cf-tel cf-ct-telw">'
+      +   '<input type="text" class="cf-input cf-tel-main" readonly value="' + _pe(ct.tel || '') + '" placeholder="クリックして入力" onclick="cfContactToggle(this)">'
+      +   '<div class="cf-tel-guide"><div class="cf-tel-row">'
+      +     '<input class="cf-input cf-ct-1" inputmode="numeric" maxlength="5" value="' + v1 + '" placeholder="090" oninput="cfContactTel(' + i + ')">'
+      +     '<span class="cf-tel-sep">-</span>'
+      +     '<input class="cf-input cf-ct-2" inputmode="numeric" maxlength="4" value="' + v2 + '" placeholder="1234" oninput="cfContactTel(' + i + ')">'
+      +     '<span class="cf-tel-sep">-</span>'
+      +     '<input class="cf-input cf-ct-3" inputmode="numeric" maxlength="4" value="' + v3 + '" placeholder="5678" oninput="cfContactTel(' + i + ')">'
+      +   '</div></div>'
       + '</div>'
       + '<input class="cf-input cf-ct-label" value="' + _pe(ct.label || '') + '" placeholder="ラベル（例 会社携帯）" oninput="cfContactLabel(' + i + ',this.value)">'
       + '<button type="button" class="cf-ct-del" onclick="cfContactDel(' + i + ')" title="削除">🗑</button>'
@@ -766,6 +770,7 @@ function _cfRenderContacts(c){
 }
 function _cfCard(){ return state.cards.find(x=>x.id===_editingCardId); }
 window.cfContactsOpen = function(){ const c=_cfCard(); if(!c) return; _cfEnsureContacts(c); _cfRenderContacts(c); };
+window.cfContactToggle = function(el){ const w=el.closest('.cf-tel'); if(w) w.classList.toggle('open'); };
 window.cfContactTel = function(i){
   const c=_cfCard(); if(!c||!c.contacts[i]) return;
   const row=document.querySelector('#cf-contacts-modal .cf-ct-row[data-ctidx="'+i+'"]'); if(!row) return;
@@ -773,6 +778,7 @@ window.cfContactTel = function(i){
   b1.value=_plateDigits(b1.value,5); b2.value=_plateDigits(b2.value,4); b3.value=_plateDigits(b3.value,4);
   const tel=[b1.value.trim(),b2.value.trim(),b3.value.trim()].filter(Boolean).join('-');
   c.contacts[i].tel=tel;
+  const main=row.querySelector('.cf-tel-main'); if(main) main.value=tel;
   if(c.contacts[i].primary) c.tel=tel;
   if(window.PitDB) PitDB.save();
 };
