@@ -121,12 +121,19 @@
     if(_filters.maker && !vs.some(v=>(v.maker||'')===_filters.maker)) return false;
     return true;
   }
+  function firstVeh(cust){ return (cust.vehicles||[])[0]||{}; }
   function sortVal(cust,k){
+    const v=firstVeh(cust);
     switch(k){
-      case 'name': return norm(cust.kana)||norm(cust.name);
-      case 'kana': return norm(cust.kana);
-      case 'tel':  return norm(primaryTel(cust));
-      case 'vcount': return (cust.vehicles||[]).length;
+      case 'name':  return norm(cust.kana)||norm(cust.name);
+      case 'kana':  return norm(cust.kana);
+      case 'maker': return norm(v.maker);
+      case 'car':   return norm(v.car);
+      case 'plate': return norm(v.plate);
+      case 'tel':   return norm(primaryTel(cust));
+      case 'board': return v.boardId==='default'?'1':(v.boardId==='import'?'2':'9');
+      case 'div':   return v.division||'z';
+      case 'front': return norm(v.frontStaff);
       case 'updatedAt': return cust.updatedAt||0;
     }
     return '';
@@ -138,7 +145,7 @@
     rows.sort((a,b)=>{ const va=sortVal(a,_sortKey), vb=sortVal(b,_sortKey); if(va<vb) return -dir; if(va>vb) return dir; return (b.updatedAt||0)-(a.updatedAt||0); });
     return rows;
   }
-  window.custSort=function(k){ if(_sortKey===k){_sortDir=_sortDir==='asc'?'desc':'asc';} else {_sortKey=k;_sortDir=(k==='updatedAt'||k==='vcount')?'desc':'asc';} renderCustTable(); };
+  window.custSort=function(k){ if(_sortKey===k){_sortDir=_sortDir==='asc'?'desc':'asc';} else {_sortKey=k;_sortDir=(k==='updatedAt')?'desc':'asc';} renderCustTable(); };
   window.custSetFilter=function(kind,val){ _filters[kind]=val; renderCustTable(); };
   window.custToggleExpand=function(id){ if(_expanded.has(id)) _expanded.delete(id); else _expanded.add(id); renderCustTable(); };
 
@@ -170,41 +177,40 @@
     const rows=_rows();
     const cnt=document.getElementById('cust-count'); if(cnt) cnt.textContent=rows.length+' 人 / 全 '+list().length+' 人';
     if(!rows.length){ host.innerHTML='<div class="cust-empty">'+(list().length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>'; return; }
-    const cols=[ ['name','名前'],['kana','カナ'],['tel','連絡先'],['vcount','台数'],['updatedAt','最終更新'] ];
+    // 以前の1行テーブル。基本1人1行＝先頭車両を表示。2台目以降は「車の欄だけ」を下に増やす（人の欄は空）
+    const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終更新'] ];
     const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
-    let h='<div class="ct-wrap"><table class="ct"><thead><tr><th class="ct-th ct-exth"></th>';
+    let h='<div class="ct-wrap"><table class="ct"><thead><tr>';
     cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
     h+='<th class="ct-th ct-acth">操作</th></tr></thead><tbody>';
-    rows.slice(0,300).forEach(cust=>{
-      const exp=_expanded.has(cust.id);
-      const vs=cust.vehicles||[];
-      h+='<tr class="ct-prow" onclick="custToggleExpand(\''+cust.id+'\')">'+
-         '<td class="ct-ex">'+(vs.length?(exp?'▾':'▸'):'')+'</td>'+
-         '<td class="ct-name">'+esc(cust.name||'(無名)')+'</td>'+
-         '<td class="ct-mut">'+esc(cust.kana||'—')+'</td>'+
-         '<td class="ct-mut">'+esc(primaryTel(cust)||'—')+'</td>'+
-         '<td>'+vs.length+'台</td>'+
-         '<td class="ct-mut">'+fmtDate(cust.updatedAt)+'</td>'+
-         '<td class="ct-act" onclick="event.stopPropagation()"><button class="ct-b" onclick="custHistory(\''+cust.id+'\')" title="履歴">🕒</button>'+
-           '<button class="ct-b" onclick="custEdit(\''+cust.id+'\')" title="編集">✏</button>'+
-           '<button class="ct-b ct-bd" onclick="custDelete(\''+cust.id+'\')" title="削除">🗑</button></td>'+
-         '</tr>';
-      if(exp){
-        if(!vs.length){ h+='<tr class="ct-vrow"><td></td><td colspan="6" class="ct-mut">車両なし</td></tr>'; }
-        vs.forEach(v=>{
-          const t=teamInfo(v);
-          const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'';
-          h+='<tr class="ct-vrow"><td></td><td colspan="6"><div class="ct-veh">'+
-             '<span class="ct-veh-car">🚗 '+esc(vehLabel(v))+'</span>'+
-             '<span class="ct-mut">'+esc(v.plate||'—')+'</span>'+
-             pill(t.label)+pill(t.course)+
-             (v.frontStaff?'<span class="ct-mut">担当 '+esc(v.frontStaff)+'</span>':'')+
-             '</div></td></tr>';
-        });
-      }
-    });
+    let shownRows=0;
+    for(let ri=0; ri<rows.length && shownRows<400; ri++){
+      const cust=rows[ri];
+      const vs=(cust.vehicles&&cust.vehicles.length)?cust.vehicles:[null];
+      vs.forEach(function(v,vi){
+        const first=vi===0, last=vi===vs.length-1;
+        const t=teamInfo(v||{});
+        const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
+        h+='<tr class="'+(last?'ct-rb':'ct-norb')+(first?'':' ct-cont')+'">'+
+           '<td class="ct-name">'+(first?esc(cust.name||'(無名)'):'')+'</td>'+
+           '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
+           '<td>'+(v?esc(v.maker||'—'):'—')+'</td>'+
+           '<td>'+(v?esc(v.car||'—'):'—')+'</td>'+
+           '<td class="ct-mut">'+(v?esc(v.plate||'—'):'—')+'</td>'+
+           '<td class="ct-mut">'+(first?esc(primaryTel(cust)||'—'):'')+'</td>'+
+           '<td>'+pill(t.label)+'</td>'+
+           '<td>'+pill(t.course)+'</td>'+
+           '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
+           '<td class="ct-mut">'+(first?fmtDate(cust.updatedAt):'')+'</td>'+
+           '<td class="ct-act">'+(first?('<button class="ct-b" onclick="custHistory(\''+cust.id+'\')" title="履歴">🕒</button>'+
+             '<button class="ct-b" onclick="custEdit(\''+cust.id+'\')" title="編集">✏</button>'+
+             '<button class="ct-b ct-bd" onclick="custDelete(\''+cust.id+'\')" title="削除">🗑</button>'):'')+'</td>'+
+           '</tr>';
+        shownRows++;
+      });
+    }
     h+='</tbody></table></div>';
-    if(rows.length>300) h+='<div class="cust-empty">（先頭300人を表示）絞り込みで探してください</div>';
+    if(rows.length>300) h+='<div class="cust-empty">（先頭の方を表示）絞り込みで探してください</div>';
     host.innerHTML=h;
   };
   window.custFilter=function(v){ _q=v; renderCustTable(); };   // 検索欄は据え置き＝IME(変換)が壊れない
