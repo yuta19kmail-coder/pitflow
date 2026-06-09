@@ -172,7 +172,7 @@ function renderCardForm(c){
   h += '<div class="cf-row cf-loaner-switchrow">';
   h += '<div class="cf-field" style="flex:0 0 auto">' + toggle(c, 'needLoaner', '必要', '不要') + '</div>';
   if (c.needLoaner){
-    h += '<div class="cf-field" style="flex:2"><div class="cf-label">使用代車</div>' + loanerSelect(c, 'loanerId') + '</div>';
+    h += '<div class="cf-field" style="flex:2">' + loanerSelect(c, 'loanerId') + '</div>';   // ラベルなし＝1行高さ（スイッチがブレない）
     h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-chips"><button type="button" id="cf-fixed-btn" class="cf-chip' + (c.loanerFixed ? ' active' : '') + '"' + (c.loanerFixed ? ' style="background:#1db97a;color:#fff;border-color:#1db97a;"' : '') + '>車種固定</button></div></div>';
   }
   h += '</div>';
@@ -843,7 +843,7 @@ function plateInput(c){
 
 function loanerSelect(c, key){
   let h = '<select class="cf-input" data-key="' + key + '">';
-  h += '<option value="">―</option>';
+  h += '<option value="">使用代車を選ぶ</option>';
   state.loaners.forEach(l => {
     const sel = c[key] === l.id ? ' selected' : '';
     h += '<option value="' + l.id + '"' + sel + '>' + l.name + ' ' + l.model + '</option>';
