@@ -202,6 +202,29 @@
 .ct-b{ background:transparent; border:1px solid var(--border); border-radius:6px; padding:3px 7px; cursor:pointer; color:var(--text2); font-size:12px; margin-left:2px; }
 .ct-b:hover{ border-color:var(--brand); color:var(--brand); }
 .ct-bd:hover{ border-color:var(--red); color:var(--red); }
+/* 人の行＋展開で車両（v0.38.0） */
+.ct-exth{ width:24px; }
+.ct-ex{ width:24px; color:var(--text3); text-align:center; }
+.ct-prow{ cursor:pointer; }
+.ct-prow:hover{ background:var(--bg3); }
+.ct-vrow td{ background:var(--bg); border-bottom:1px solid var(--border); }
+.ct-veh{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:2px 0 2px 8px; font-size:12.5px; }
+.ct-veh-car{ font-weight:500; }
+/* 編集モーダル：連絡先・車両 */
+.ce-sec{ font-size:11px; font-weight:700; color:var(--text2); margin:14px 0 6px; padding-top:8px; border-top:1px dashed var(--border); }
+.ce-ct{ display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.ce-ct .ce-ctel{ flex:0 0 11em; }
+.ce-ct .ce-clabel{ flex:1 1 7em; }
+.ce-veh{ display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px; }
+.ce-veh-l{ display:flex; gap:6px; flex:1 1 auto; flex-wrap:wrap; }
+.ce-veh-l .ce-plate{ flex:1 1 12em; }
+.ce-veh-l .ce-maker{ flex:0 0 6em; }
+.ce-veh-l .ce-car{ flex:1 1 7em; }
+.ce-veh-r{ display:flex; gap:6px; align-items:center; }
+.ce-board, .ce-div, .ce-front, .ce-veh input, .ce-ct input.ce-ctel, .ce-ct input.ce-clabel{ background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:7px 9px; font-size:12.5px; font-family:inherit; box-sizing:border-box; }
+.ce-board, .ce-div, .ce-front{ cursor:pointer; }
+.ce-add{ background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:6px 12px; font-size:12px; cursor:pointer; margin-top:2px; }
+.ce-add:hover{ border-color:var(--brand); color:var(--brand); }
 
 /* ===== カード設計サンプル（今だけ・たたき台） ===== */
 .sp-banner{ background:rgba(124,58,237,.10); border:1px solid rgba(124,58,237,.35); border-radius:10px; padding:11px 14px; font-size:12.5px; line-height:1.6; color:var(--text); margin-bottom:12px; }
