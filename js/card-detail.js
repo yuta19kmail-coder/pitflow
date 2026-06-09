@@ -107,18 +107,21 @@ function renderCardForm(c){
 
   /* === 基本情報（車両もここに統合・v0.27.0） === */
   h += sec('基本情報', '👤');
+  /* 1行目：お客様名｜カナ（スクショ配置・v0.37.4） */
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:2"><div class="cf-label">お客様名</div>' + textIn(c, 'customer', 'autocomplete="off"') + '</div>';
+  h += '<div class="cf-field" style="flex:3"><div class="cf-label">お客様名</div>' + textIn(c, 'customer', 'autocomplete="off"') + '</div>';
   h += '<div class="cf-field" style="flex:2"><div class="cf-label">カナ</div>' + textIn(c, 'kana', 'placeholder="自動（名前を入力）" autocomplete="off"') + '</div>';
-  h += '<div class="cf-field" style="flex:1"><div class="cf-label">TEL</div>' + textIn(c, 'tel', '') + '</div>';
   h += '</div>';
+  /* 2行目：ナンバー｜TEL｜初回・リピーター */
   h += '<div class="cf-row">';
   h += field('ナンバー', plateInput(c));
+  h += field('TEL',      textIn(c, 'tel', ''));
   h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
-  h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
   h += '</div>';
+  /* 3行目：国産車/輸入車｜メーカー｜車種 */
   h += '<div class="cf-row">';
-  h += field('メーカー', textIn(c, 'maker', 'placeholder="例 トヨタ" style="max-width:160px"'));
+  h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
+  h += field('メーカー', textIn(c, 'maker', 'placeholder="例 トヨタ"'));
   h += field('車種（グレード）', textIn(c, 'car', 'placeholder="例 アクアGz"'));
   h += '</div>';
   h += '<div class="cf-row">';
@@ -680,13 +683,23 @@ function _toKatakana(s){ return String(s == null ? '' : s).replace(/[ぁ-ゖ]/g,
    英字直接入力や貼り付けは拾えない＝その時はカナ欄を手入力（だから編集可）。 */
 function _bindAutoKana(nameEl, kanaEl, c){
   if (!nameEl || !kanaEl) return;
+  const hasKanji = function(s){ return /[㐀-䶿一-鿿豈-﫿々々]/.test(s || ''); };
   let base = kanaEl.value || '';   // 確定済みカナ（再描画後も既存値から継続）
-  let comp = '';                   // 変換中の読み
+  let comp = '';                   // 変換“前”の読み（ひらがな）だけを保持
   nameEl.addEventListener('compositionstart', function(){ base = kanaEl.value || ''; comp = ''; });
-  nameEl.addEventListener('compositionupdate', function(e){ comp = e.data || ''; kanaEl.value = base + _toKatakana(comp); });
-  nameEl.addEventListener('compositionend', function(){ base = base + _toKatakana(comp); comp = ''; kanaEl.value = base; c.kana = base; if (window.PitDB) PitDB.save(); });
+  nameEl.addEventListener('compositionupdate', function(e){
+    const d = e.data || '';
+    if (hasKanji(d)) return;       // ★変換後（漢字候補）は拾わない＝「小林」がカナ欄に出ない
+    comp = d;                      // 変換前の読みだけ更新
+    kanaEl.value = base + _toKatakana(comp);
+  });
+  nameEl.addEventListener('compositionend', function(){
+    base = base + _toKatakana(comp); comp = '';
+    kanaEl.value = base; c.kana = base;
+    if (window.PitDB) PitDB.save();
+  });
   // 名前を空にしたらカナも空に（打ち直し時のゴミ防止）
-  nameEl.addEventListener('input', function(){ if (!nameEl.value){ base = ''; kanaEl.value = ''; c.kana = ''; } });
+  nameEl.addEventListener('input', function(){ if (!nameEl.value){ base = ''; comp = ''; kanaEl.value = ''; c.kana = ''; } });
 }
 /* 分類番号・ナンバー(一連)＝半角数字のみ。全角数字→半角、ハイフン/文字は禁止（除去）、桁数で切る。例「55－55」→「5555」 */
 function _plateDigits(s, max){
