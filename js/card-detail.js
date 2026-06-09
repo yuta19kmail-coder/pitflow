@@ -171,6 +171,7 @@ function renderCardForm(c){
   h += '<div class="cf-subhead">🚙 代車</div>';
   h += '<div class="cf-row cf-loaner-switchrow">';
   h += '<div class="cf-field" style="flex:0 0 auto">' + toggle(c, 'needLoaner', '必要', '不要') + '</div>';
+  if (_prevIntakeLoaner(c)) h += '<span class="cf-prevloaner">⚠ 前回入庫時 代車あり</span>';
   if (c.needLoaner){
     h += '<div class="cf-field" style="flex:2">' + loanerSelect(c, 'loanerId') + '</div>';   // ラベルなし＝1行高さ（スイッチがブレない）
     h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-chips"><button type="button" id="cf-fixed-btn" class="cf-chip' + (c.loanerFixed ? ' active' : '') + '"' + (c.loanerFixed ? ' style="background:#1db97a;color:#fff;border-color:#1db97a;"' : '') + '>車種固定</button></div></div>';
@@ -772,6 +773,26 @@ function _cfRenderContacts(c){
   m.onclick = function(e){ if(e.target === m) cfContactsClose(); };
 }
 function _cfCard(){ return state.cards.find(x=>x.id===_editingCardId); }
+/* 前回入庫（＝この顧客の直近の別カード。車両ではなく顧客単位）が代車を使っていたか */
+function _prevIntakeLoaner(c){
+  if (!c) return false;
+  const np = s => String(s || '').replace(/\s+/g, '');
+  const arr = state.cards || [];
+  const myName = (c.customer || '').trim();
+  let plates = [];
+  if (c.customerId && state.customers){
+    const cust = state.customers.find(x => x.id === c.customerId);
+    if (cust) plates = (cust.vehicles || []).map(v => np(v.plate)).filter(Boolean);
+  }
+  const others = arr.filter(x => x.id !== c.id && (
+    (c.customerId && x.customerId === c.customerId) ||
+    (myName && (x.customer || '').trim() === myName) ||
+    (plates.length && plates.indexOf(np(x.plate)) >= 0)
+  ));
+  if (!others.length) return false;
+  others.sort((a, b) => (((b.returnDate || b.reserveDate) || '').localeCompare((a.returnDate || a.reserveDate) || '')));
+  return !!others[0].needLoaner;
+}
 /* この顧客で新規車両を追加：ナンバー/メーカー/車種だけクリア（人・連絡先・担当/課/区分は継承）。
    保存すると c.customerId の人に新しいナンバーの車両として upsert される。 */
 window.cfAddVehicle = function(){

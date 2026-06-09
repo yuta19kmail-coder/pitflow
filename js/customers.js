@@ -326,8 +326,10 @@
         const st=(typeof statusLabel==='function')?statusLabel(c.status):(c.status||'');
         const amt=(c.estAmount!=null&&c.estAmount!=='')?('¥'+Number(c.estAmount).toLocaleString()):'—';
         const dt=cardDate(c)||'日付未定';
+        let loa='';
+        if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa='🚙代車'+(l?('（'+l.name+'）'):''); }
         h+='<div class="cm-hrow"><div class="cm-hdt">'+esc(dt)+'</div>'+
-           '<div class="cm-hmid"><b>'+esc(wl)+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+'<div class="cm-hsub">'+esc(st)+(c.menu?' ・ '+esc(String(c.menu).split('\n')[0]):'')+'</div></div>'+
+           '<div class="cm-hmid"><b>'+esc(wl)+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+(loa?' ・ <span style="color:#1db97a">'+esc(loa)+'</span>':'')+'<div class="cm-hsub">'+esc(st)+(c.menu?' ・ '+esc(String(c.menu).split('\n')[0]):'')+'</div></div>'+
            '<div class="cm-hamt">'+esc(amt)+'</div></div>';
       });
       h+='</div><div class="cust-note" style="margin-top:10px">確定売上・台数の実績集計（当月予測→月末締め）は今後ここに足していく予定。いまは入庫カードの概算金額を表示しています。</div>';
