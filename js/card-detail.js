@@ -112,16 +112,17 @@ function renderCardForm(c){
   h += '<div class="cf-field" style="flex:3"><div class="cf-label">お客様名</div>' + textIn(c, 'customer', 'autocomplete="off"') + '</div>';
   h += '<div class="cf-field" style="flex:2"><div class="cf-label">カナ</div>' + textIn(c, 'kana', 'placeholder="自動（名前を入力）" autocomplete="off"') + '</div>';
   h += '</div>';
-  /* 2行目：ナンバー｜TEL｜初回・リピーター */
+  /* 2行目：ナンバー｜TEL｜その他連絡先（v0.37.8） */
   h += '<div class="cf-row">';
   h += field('ナンバー', plateInput(c));
   h += field('TEL',      telInput(c));
-  h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">連絡先</div>' + contactsBtn(c) + '</div>';
   h += '</div>';
-  /* 3行目：国産車/輸入車｜メーカー｜車種 */
+  /* 3行目：初回・リピーター｜国産車/輸入車｜メーカー(小)｜車種 */
   h += '<div class="cf-row">';
+  h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
   h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
-  h += field('メーカー', textIn(c, 'maker', 'placeholder="例 トヨタ"'));
+  h += '<div class="cf-field" style="flex:0 0 8em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
   h += field('車種（グレード）', textIn(c, 'car', 'placeholder="例 アクアGz"'));
   h += '</div>';
   h += '<div class="cf-row">';
@@ -724,6 +725,82 @@ function telInput(c){
   h += '</div></div></div>';
   return h;
 }
+
+/* ===== その他連絡先（複数番号＋ラベル＋優先）。代表(優先)の番号が TEL 欄＝c.tel。全件は c.contacts に保持し顧客控え・検索に乗る ===== */
+function _cfEnsureContacts(c){
+  if(!Array.isArray(c.contacts) || !c.contacts.length){
+    c.contacts = [{ tel: c.tel || '', label: '個人携帯', primary: true }];
+  }
+  if(!c.contacts.some(x=>x.primary)) c.contacts[0].primary = true;
+  return c.contacts;
+}
+function contactsBtn(c){
+  const n = (Array.isArray(c.contacts) && c.contacts.length) ? c.contacts.length : (c.tel ? 1 : 0);
+  const extra = n > 1 ? ('<span class="cf-ct-badge">+' + (n - 1) + '</span>') : '';
+  return '<button type="button" class="cf-contacts-btn" onclick="cfContactsOpen()">📞 その他連絡先' + extra + '</button>';
+}
+function _cfRenderContacts(c){
+  let m = document.getElementById('cf-contacts-modal');
+  if(!m){ m = document.createElement('div'); m.id = 'cf-contacts-modal'; m.className = 'cm-overlay'; document.body.appendChild(m); }
+  let h = '<div class="cm-box"><div class="cm-head">📞 連絡先 <span class="cm-sub">「優先」の番号がカードのTEL欄に出ます</span><button class="cm-x" onclick="cfContactsClose()">✕</button></div><div class="cm-body">';
+  c.contacts.forEach(function(ct,i){
+    const p = String(ct.tel || '').split('-');
+    const v1 = _pe(p[0] || ''), v2 = _pe(p[1] || ''), v3 = _pe(p.slice(2).join('') || '');
+    h += '<div class="cf-ct-row" data-ctidx="' + i + '">'
+      + '<label class="cf-ct-pri"><input type="radio" name="cf-ct-pri" ' + (ct.primary ? 'checked' : '') + ' onchange="cfContactSetPrimary(' + i + ')"> 優先</label>'
+      + '<div class="cf-ct-tel">'
+      +   '<input class="cf-input cf-ct-1" inputmode="numeric" maxlength="5" value="' + v1 + '" placeholder="090" oninput="cfContactTel(' + i + ')">'
+      +   '<span class="cf-tel-sep">-</span>'
+      +   '<input class="cf-input cf-ct-2" inputmode="numeric" maxlength="4" value="' + v2 + '" placeholder="1234" oninput="cfContactTel(' + i + ')">'
+      +   '<span class="cf-tel-sep">-</span>'
+      +   '<input class="cf-input cf-ct-3" inputmode="numeric" maxlength="4" value="' + v3 + '" placeholder="5678" oninput="cfContactTel(' + i + ')">'
+      + '</div>'
+      + '<input class="cf-input cf-ct-label" value="' + _pe(ct.label || '') + '" placeholder="ラベル（例 会社携帯）" oninput="cfContactLabel(' + i + ',this.value)">'
+      + '<button type="button" class="cf-ct-del" onclick="cfContactDel(' + i + ')" title="削除">🗑</button>'
+      + '</div>';
+  });
+  h += '</div><div class="cm-foot"><button class="cm-cancel" onclick="cfContactAdd()">＋ 連絡先を追加</button><button class="cm-save" onclick="cfContactsClose()">完了</button></div></div>';
+  m.innerHTML = h;
+  m.classList.add('show');
+  m.onclick = function(e){ if(e.target === m) cfContactsClose(); };
+}
+function _cfCard(){ return state.cards.find(x=>x.id===_editingCardId); }
+window.cfContactsOpen = function(){ const c=_cfCard(); if(!c) return; _cfEnsureContacts(c); _cfRenderContacts(c); };
+window.cfContactTel = function(i){
+  const c=_cfCard(); if(!c||!c.contacts[i]) return;
+  const row=document.querySelector('#cf-contacts-modal .cf-ct-row[data-ctidx="'+i+'"]'); if(!row) return;
+  const b1=row.querySelector('.cf-ct-1'), b2=row.querySelector('.cf-ct-2'), b3=row.querySelector('.cf-ct-3');
+  b1.value=_plateDigits(b1.value,5); b2.value=_plateDigits(b2.value,4); b3.value=_plateDigits(b3.value,4);
+  const tel=[b1.value.trim(),b2.value.trim(),b3.value.trim()].filter(Boolean).join('-');
+  c.contacts[i].tel=tel;
+  if(c.contacts[i].primary) c.tel=tel;
+  if(window.PitDB) PitDB.save();
+};
+window.cfContactLabel = function(i,val){ const c=_cfCard(); if(!c||!c.contacts[i]) return; c.contacts[i].label=val; if(window.PitDB) PitDB.save(); };
+window.cfContactSetPrimary = function(i){ const c=_cfCard(); if(!c||!c.contacts[i]) return; c.contacts.forEach(x=>x.primary=false); c.contacts[i].primary=true; c.tel=c.contacts[i].tel||''; if(window.PitDB) PitDB.save(); };
+window.cfContactAdd = function(){ const c=_cfCard(); if(!c) return; _cfEnsureContacts(c); c.contacts.push({tel:'',label:'',primary:false}); _cfRenderContacts(c); };
+window.cfContactDel = function(i){
+  const c=_cfCard(); if(!c||!Array.isArray(c.contacts)) return;
+  c.contacts.splice(i,1);
+  if(!c.contacts.length) c.contacts=[{tel:'',label:'個人携帯',primary:true}];
+  if(!c.contacts.some(x=>x.primary)){ c.contacts[0].primary=true; }
+  const pri=c.contacts.find(x=>x.primary); c.tel=pri?(pri.tel||''):'';
+  _cfRenderContacts(c);
+};
+window.cfContactsClose = function(){
+  const c=_cfCard();
+  if(c && Array.isArray(c.contacts)){
+    // 空（番号もラベルも空）の行は捨てる
+    c.contacts=c.contacts.filter(x=>(x.tel||'').trim() || (x.label||'').trim());
+    if(!c.contacts.length){ if(c.tel) c.contacts=[{tel:c.tel,label:'個人携帯',primary:true}]; }
+    else if(!c.contacts.some(x=>x.primary)){ c.contacts[0].primary=true; }
+    const pri=(c.contacts||[]).find(x=>x.primary);
+    if(pri) c.tel=pri.tel||'';
+    if(window.PitDB) PitDB.save();
+  }
+  const m=document.getElementById('cf-contacts-modal'); if(m){ m.classList.remove('show'); m.innerHTML=''; }
+  if(c) renderCardForm(c);
+};
 /* c.plate（"野田 300 ひ 55-55"）を4分割。保存は常にこの合成文字列＝既存の一覧/帳票はそのまま使える */
 function _platePartsOf(c){
   const toks = String(c.plate || '').trim().split(/\s+/).filter(Boolean);
@@ -830,6 +907,7 @@ function bindCardFormEvents(root){
     const recompose = () => {
       c.tel = [tg('.cf-tel-1'), tg('.cf-tel-2'), tg('.cf-tel-3')].filter(Boolean).join('-');
       if (mainEl) mainEl.value = c.tel;
+      if (Array.isArray(c.contacts)){ const pri = c.contacts.find(x=>x.primary); if (pri) pri.tel = c.tel; }   // 代表連絡先も同期
       if (window.PitDB) PitDB.save();
     };
     telEls.forEach((el, i) => {

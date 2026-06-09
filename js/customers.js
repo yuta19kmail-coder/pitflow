@@ -32,8 +32,11 @@
     const name=(c.customer||'').trim();
     const plate=(c.plate||'').trim();
     if(!name && !plate) return;                 // 空は登録しない
+    const contacts = Array.isArray(c.contacts)
+      ? c.contacts.filter(x=>(x.tel||'').trim()||(x.label||'').trim()).map(x=>({tel:(x.tel||'').trim(),label:(x.label||'').trim(),primary:!!x.primary}))
+      : ((c.tel||'').trim() ? [{tel:(c.tel||'').trim(),label:'個人携帯',primary:true}] : []);
     const rec={
-      name, kana:(c.kana||'').trim(), tel:(c.tel||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), plate,
+      name, kana:(c.kana||'').trim(), tel:(c.tel||'').trim(), contacts, maker:(c.maker||'').trim(), car:(c.car||'').trim(), plate,
       boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(),
       staff:(c.staff||'').trim(), updatedAt:Date.now()
     };
@@ -42,6 +45,7 @@
     const ex=arr.find(r=>keyOf(r)===k);
     if(ex){
       ex.name=rec.name||ex.name; ex.kana=rec.kana||ex.kana; ex.tel=rec.tel||ex.tel; ex.maker=rec.maker||ex.maker; ex.car=rec.car||ex.car;
+      if(rec.contacts && rec.contacts.length) ex.contacts=rec.contacts;
       ex.plate=rec.plate||ex.plate; ex.staff=rec.staff||ex.staff;
       ex.boardId=rec.boardId||ex.boardId; ex.division=rec.division||ex.division; ex.frontStaff=rec.frontStaff||ex.frontStaff;
       ex.updatedAt=rec.updatedAt;
@@ -53,7 +57,12 @@
   }
   window.upsertCustomerFromCard=upsertCustomerFromCard;
 
-  function match(r,q){ return norm(r.name).includes(q)||norm(r.kana).includes(q)||norm(r.plate).includes(q)||norm(r.car).includes(q)||norm(r.maker).includes(q); }
+  function match(r,q){
+    if(norm(r.name).includes(q)||norm(r.kana).includes(q)||norm(r.plate).includes(q)||norm(r.car).includes(q)||norm(r.maker).includes(q)) return true;
+    if(norm(r.tel).includes(q)) return true;
+    if(Array.isArray(r.contacts) && r.contacts.some(ct=>norm(ct.tel).includes(q))) return true;   // その他連絡先の番号も検索対象
+    return false;
+  }
   function search(q){
     q=norm(q); if(!q) return [];
     return list().filter(r=>match(r,q))
@@ -80,6 +89,7 @@
     const r=list().find(x=>x.id===id); if(!r) return;
     const c=state.cards.find(x=>x.id===_editingCardId); if(!c) return;
     c.customer=r.name||c.customer; c.kana=r.kana||c.kana; c.tel=r.tel||c.tel; c.maker=r.maker||c.maker; c.car=r.car||c.car; c.plate=r.plate||c.plate;
+    if(Array.isArray(r.contacts) && r.contacts.length) c.contacts=r.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary}));   // その他連絡先も呼び出し
     // 国産輸入・課・フロント担当は、未選択なら控えから補完（既に選んでいれば尊重）
     if(!c.boardId && r.boardId)        c.boardId=r.boardId;
     if(!c.division && r.division)       c.division=r.division;

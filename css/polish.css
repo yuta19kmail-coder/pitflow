@@ -419,6 +419,17 @@
 .cf-plate-guide .cf-plate-cls{ width:3.4em; text-align:center; }
 .cf-plate-guide .cf-plate-kana{ width:2.6em; text-align:center; }
 .cf-plate-guide .cf-plate-num{ width:4.6em; text-align:center; }
+/* その他連絡先ボタン＋ポップ内の連絡先行 */
+.cf-contacts-btn{ background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:12.5px; cursor:pointer; white-space:nowrap; }
+.cf-contacts-btn:hover{ border-color:var(--brand); color:var(--brand); }
+.cf-ct-badge{ display:inline-block; margin-left:5px; background:#ef4444; color:#fff; border-radius:999px; font-size:10px; padding:0 6px; line-height:16px; }
+.cf-ct-row{ display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+.cf-ct-pri{ display:flex; align-items:center; gap:3px; font-size:11px; color:var(--text2); white-space:nowrap; }
+.cf-ct-tel{ display:flex; align-items:center; gap:4px; }
+.cf-ct-tel .cf-input{ width:3.6em; text-align:center; padding:6px 5px; box-sizing:border-box; }
+.cf-ct-label{ flex:1 1 8em; min-width:7em; }
+.cf-ct-del{ background:transparent; border:1px solid var(--border); border-radius:6px; padding:4px 8px; cursor:pointer; color:var(--text3); }
+.cf-ct-del:hover{ border-color:var(--red); color:var(--red); }
 /* TEL：見た目は1BOX、クリックで3枠ガイドがポップ（ナンバーと同じ作り・ハイフン自動・全角→半角） */
 .cf-tel{ position:relative; }
 .cf-tel-main{ width:100%; cursor:pointer; }
