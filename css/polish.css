@@ -180,6 +180,10 @@
 .cm-hmid{ flex:1; min-width:0; font-size:13px; }
 .cm-hsub{ font-size:11px; color:var(--text3); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .cm-hamt{ flex:0 0 auto; font-size:13px; font-weight:700; color:var(--brand); }
+/* 顧客ビューの列フィルタ（区分/課/担当/メーカー） */
+.cust-filters{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.cust-fsel{ background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:6px 9px; font-size:12px; font-family:inherit; cursor:pointer; }
+.cust-fsel:focus{ outline:none; border-color:var(--brand); }
 /* 顧客テーブル（1行・均一フォント・ラベルでソート）v0.37.2 */
 .ct-wrap{ overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
 .ct{ width:100%; border-collapse:collapse; font-size:13px; }

@@ -91,12 +91,13 @@
   /* === 顧客リスト ビュー（1行テーブル＋ラベルでソート） === */
   let _q='';
   let _sortKey='updatedAt', _sortDir='desc';   // 既定＝最終入庫が新しい順
-  function fmtDate(ms){ if(!ms) return '—'; const d=new Date(ms); return (d.getMonth()+1)+'/'+d.getDate(); }
+  function fmtDate(ms){ if(!ms) return '—'; const d=new Date(ms); return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
   function sortVal(r,k){
     switch(k){
       case 'name':  return norm(r.kana)||norm(r.name);
       case 'kana':  return norm(r.kana);
-      case 'car':   return norm((r.maker||'')+(r.car||''));
+      case 'maker': return norm(r.maker);
+      case 'car':   return norm(r.car);
       case 'plate': return norm(r.plate);
       case 'tel':   return (r.tel||'');
       case 'board': return r.boardId==='default'?'1':(r.boardId==='import'?'2':'9');
@@ -106,65 +107,88 @@
     }
     return '';
   }
+  // 列フィルタ（空＝すべて）。例：担当→社長だけ
+  const _filters = { board:'', div:'', front:'', maker:'' };
+  function _distinct(key){ const s=new Set(); list().forEach(r=>{ const v=(r[key]||'').trim(); if(v) s.add(v); }); return Array.from(s).sort((a,b)=>norm(a).localeCompare(norm(b),'ja')); }
+  function _rows(){
+    const q=norm(_q);
+    let rows=list().filter(r=>{
+      if(q && !match(r,q)) return false;
+      if(_filters.board && (r.boardId||'')!==_filters.board) return false;
+      if(_filters.div   && (r.division||'')!==_filters.div) return false;
+      if(_filters.front && (r.frontStaff||'')!==_filters.front) return false;
+      if(_filters.maker && (r.maker||'')!==_filters.maker) return false;
+      return true;
+    });
+    const dir=_sortDir==='asc'?1:-1;
+    rows.sort((a,b)=>{ const va=sortVal(a,_sortKey), vb=sortVal(b,_sortKey); if(va<vb) return -dir; if(va>vb) return dir; return (b.updatedAt||0)-(a.updatedAt||0); });
+    return rows;
+  }
   window.custSort=function(k){
     if(_sortKey===k){ _sortDir=_sortDir==='asc'?'desc':'asc'; }
     else { _sortKey=k; _sortDir=(k==='updatedAt')?'desc':'asc'; }
-    renderCustomers();
+    renderCustTable();
   };
+  window.custSetFilter=function(kind,val){ _filters[kind]=val; renderCustTable(); };
+  // 外枠（検索＋フィルタ＋テーブル器）。検索欄は再生成しない＝IME(変換)中も壊れない
   window.renderCustomers=function(){
     const wrap=document.getElementById('view-customers-body'); if(!wrap) return;
-    const arr=list().slice();
-    const q=norm(_q);
-    let shown=q?arr.filter(r=>match(r,q)):arr;
-    const dir=_sortDir==='asc'?1:-1;
-    shown.sort((a,b)=>{ const va=sortVal(a,_sortKey), vb=sortVal(b,_sortKey); if(va<vb) return -dir; if(va>vb) return dir; return (b.updatedAt||0)-(a.updatedAt||0); });
-
-    const cols=[ ['name','名前'],['kana','カナ'],['car','車'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
-    const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
+    const opt=(arr,sel,ph)=>'<option value="">'+ph+'</option>'+arr.map(v=>'<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(v)+'</option>').join('');
     let h='';
     h+='<div class="cust-head">'+
        '<input class="cust-search" placeholder="🔍 名前・カナ(ひらがなOK)・ナンバー・車で絞り込み" value="'+esc(_q)+'" oninput="custFilter(this.value)">'+
-       '<span class="cust-count">'+shown.length+' 件 / 全 '+arr.length+' 件</span>'+
+       '<span class="cust-count" id="cust-count"></span>'+
        '<button class="vh-btn" onclick="custReseed()" title="サンプルを入れ替え">🎲 サンプル入替</button>'+
        '<button class="vh-btn" onclick="clearCustomers()" title="控えを全削除">🗑 全削除</button>'+
        '</div>';
-    h+='<div class="cust-note">整備ソフトが正式な顧客台帳。ここは控え＋来店履歴。名前を入れるとカナは自動。ラベルをクリックで並び替え（もう一度で昇順↔降順）。</div>';
-    if(!shown.length){
-      h+='<div class="cust-empty">'+(arr.length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>';
-    } else {
-      h+='<div class="ct-wrap"><table class="ct"><thead><tr>';
-      cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
-      h+='<th class="ct-th ct-acth">操作</th></tr></thead><tbody>';
-      shown.slice(0,300).forEach(r=>{
-        const t=teamInfo(r);
-        const carTxt=((r.maker?r.maker+' ':'')+(r.car||'')).trim()||'—';
-        const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
-        h+='<tr>'+
-           '<td class="ct-name">'+esc(r.name||'(無名)')+'</td>'+
-           '<td class="ct-mut">'+esc(r.kana||'—')+'</td>'+
-           '<td>'+esc(carTxt)+'</td>'+
-           '<td class="ct-mut">'+esc(r.plate||'—')+'</td>'+
-           '<td class="ct-mut">'+esc(r.tel||'—')+'</td>'+
-           '<td>'+pill(t.label)+'</td>'+
-           '<td>'+pill(t.course)+'</td>'+
-           '<td>'+esc(r.frontStaff||'—')+'</td>'+
-           '<td class="ct-mut">'+fmtDate(r.updatedAt)+'</td>'+
-           '<td class="ct-act"><button class="ct-b" onclick="custHistory(\''+r.id+'\')" title="履歴">🕒</button>'+
-             '<button class="ct-b" onclick="custEdit(\''+r.id+'\')" title="編集">✏</button>'+
-             '<button class="ct-b ct-bd" onclick="custDelete(\''+r.id+'\')" title="削除">🗑</button></td>'+
-           '</tr>';
-      });
-      h+='</tbody></table></div>';
-      if(shown.length>300) h+='<div class="cust-empty">（先頭300件を表示）絞り込みで探してください</div>';
-    }
+    h+='<div class="cust-filters">'+
+       '<select class="cust-fsel" onchange="custSetFilter(\'board\',this.value)"><option value="">区分：すべて</option>'+
+         '<option value="default"'+(_filters.board==='default'?' selected':'')+'>国産車</option>'+
+         '<option value="import"'+(_filters.board==='import'?' selected':'')+'>輸入車</option></select>'+
+       '<select class="cust-fsel" onchange="custSetFilter(\'div\',this.value)"><option value="">課：すべて</option>'+
+         (state.divisions||[]).map(d=>'<option value="'+d.id+'"'+(_filters.div===d.id?' selected':'')+'>'+esc(d.label)+'</option>').join('')+'</select>'+
+       '<select class="cust-fsel" onchange="custSetFilter(\'front\',this.value)">'+opt(_distinct('frontStaff'),_filters.front,'担当：すべて')+'</select>'+
+       '<select class="cust-fsel" onchange="custSetFilter(\'maker\',this.value)">'+opt(_distinct('maker'),_filters.maker,'メーカー：すべて')+'</select>'+
+       '</div>';
+    h+='<div id="cust-thost"></div>';
     wrap.innerHTML=h;
+    renderCustTable();
   };
-  window.custFilter=function(v){
-    _q=v; renderCustomers();
-    // 再描画で検索ボックスが作り直されるのでフォーカスを戻す（1文字で止まる不具合の対処）
-    const s=document.querySelector('.cust-search');
-    if(s){ s.focus(); const n=s.value.length; try{ s.setSelectionRange(n,n); }catch(e){} }
+  // テーブル本体だけ更新（検索・フィルタ欄は触らない）
+  window.renderCustTable=function(){
+    const host=document.getElementById('cust-thost'); if(!host) return;
+    const rows=_rows();
+    const cnt=document.getElementById('cust-count'); if(cnt) cnt.textContent=rows.length+' 件 / 全 '+list().length+' 件';
+    if(!rows.length){ host.innerHTML='<div class="cust-empty">'+(list().length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>'; return; }
+    const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
+    const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
+    let h='<div class="ct-wrap"><table class="ct"><thead><tr>';
+    cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
+    h+='<th class="ct-th ct-acth">操作</th></tr></thead><tbody>';
+    rows.slice(0,300).forEach(r=>{
+      const t=teamInfo(r);
+      const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
+      h+='<tr>'+
+         '<td class="ct-name">'+esc(r.name||'(無名)')+'</td>'+
+         '<td class="ct-mut">'+esc(r.kana||'—')+'</td>'+
+         '<td>'+esc(r.maker||'—')+'</td>'+
+         '<td>'+esc(r.car||'—')+'</td>'+
+         '<td class="ct-mut">'+esc(r.plate||'—')+'</td>'+
+         '<td class="ct-mut">'+esc(r.tel||'—')+'</td>'+
+         '<td>'+pill(t.label)+'</td>'+
+         '<td>'+pill(t.course)+'</td>'+
+         '<td>'+esc(r.frontStaff||'—')+'</td>'+
+         '<td class="ct-mut">'+fmtDate(r.updatedAt)+'</td>'+
+         '<td class="ct-act"><button class="ct-b" onclick="custHistory(\''+r.id+'\')" title="履歴">🕒</button>'+
+           '<button class="ct-b" onclick="custEdit(\''+r.id+'\')" title="編集">✏</button>'+
+           '<button class="ct-b ct-bd" onclick="custDelete(\''+r.id+'\')" title="削除">🗑</button></td>'+
+         '</tr>';
+    });
+    h+='</tbody></table></div>';
+    if(rows.length>300) h+='<div class="cust-empty">（先頭300件を表示）絞り込みで探してください</div>';
+    host.innerHTML=h;
   };
+  window.custFilter=function(v){ _q=v; renderCustTable(); };  // 検索欄は据え置き＝IME(変換)が壊れない
   window.custDelete=function(id){
     const arr=list(); const i=arr.findIndex(r=>r.id===id);
     if(i<0) return;
