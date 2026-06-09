@@ -112,7 +112,7 @@ function renderCardForm(c){
   h += field('TEL',      textIn(c, 'tel',      'flex:1'));
   h += '</div>';
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:2"><div class="cf-label">ナンバー</div>' + plateInput(c) + '</div>';
+  h += field('ナンバー', plateInput(c));
   h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
   h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
   h += '</div>';
@@ -642,26 +642,44 @@ function cfMenuAddTpl(i){
 window.cfMenuTplToggle = cfMenuTplToggle;
 window.cfMenuAddTpl = cfMenuAddTpl;
 
-/* ===== ナンバー：地名/分類番号/かな/一連番号を小分けBOXで入力（スペース揺れ防止） ===== */
-/* 地名＝陸運局（ナンバー管轄）。datalistで候補表示＝オート入力。未収録でも手入力可。2025年のご当地(十勝/日光/江戸川/安曇野/南信州/彦根)まで反映 */
+/* ===== ナンバー：見た目は1BOX、クリックで「地名/分類番号/かな/ナンバー」のガイドが開く（スペース揺れ防止） ===== */
+/* 地名＝陸運局（ナンバー管轄）。datalistで候補表示＝オート入力。未収録でも手入力可。
+   並びは関東（地元の千葉エリア）から＝よく使う順。2025年のご当地(十勝/日光/江戸川/安曇野/南信州/彦根)まで反映 */
 const PLATE_REGIONS = [
+  // 千葉（地元）
+  '野田','柏','習志野','千葉','松戸','船橋','市川','成田','袖ヶ浦',
+  // 東京
+  '品川','練馬','足立','多摩','八王子','世田谷','杉並','板橋','江東','葛飾','江戸川',
+  // 埼玉
+  '大宮','川口','所沢','川越','熊谷','春日部','越谷','さいたま',
+  // 神奈川
+  '横浜','川崎','湘南','相模',
+  // 茨城・栃木・群馬
+  '水戸','土浦','つくば','宇都宮','栃木','とちぎ','那須','日光','群馬','前橋','高崎',
+  // 北海道
   '札幌','函館','旭川','室蘭','苫小牧','釧路','帯広','北見','知床','十勝',
-  '青森','八戸','弘前','岩手','盛岡','平泉','宮城','仙台','秋田','山形','庄内',
-  '福島','会津','いわき','水戸','土浦','つくば','宇都宮','栃木','とちぎ','那須','日光',
-  '群馬','前橋','高崎','大宮','川口','所沢','川越','熊谷','春日部','越谷','さいたま',
-  '千葉','成田','習志野','袖ヶ浦','市川','船橋','野田','松戸','柏',
-  '品川','世田谷','練馬','杉並','板橋','足立','葛飾','江戸川','八王子','多摩','江東',
-  '横浜','川崎','湘南','相模','新潟','長岡','上越','富山','金沢','石川','福井',
-  '山梨','富士山','長野','松本','諏訪','飯田','安曇野','南信州','岐阜','飛騨',
-  '静岡','浜松','沼津','伊豆','名古屋','尾張小牧','一宮','春日井','三河','岡崎','豊田','豊橋',
-  '三重','鈴鹿','四日市','伊勢志摩','滋賀','彦根','京都','大阪','なにわ','和泉','堺',
-  '神戸','姫路','奈良','飛鳥','和歌山','鳥取','島根','出雲','岡山','倉敷','広島','福山',
-  '山口','下関','周南','徳島','香川','高松','愛媛','高知',
-  '福岡','北九州','久留米','筑豊','佐賀','長崎','佐世保','熊本','大分','宮崎',
-  '鹿児島','奄美','沖縄'
+  // 東北
+  '青森','八戸','弘前','岩手','盛岡','平泉','宮城','仙台','秋田','山形','庄内','福島','会津','いわき',
+  // 甲信越・北陸
+  '新潟','長岡','上越','富山','金沢','石川','福井','山梨','富士山','長野','松本','諏訪','飯田','安曇野','南信州',
+  // 東海
+  '岐阜','飛騨','静岡','浜松','沼津','伊豆','名古屋','尾張小牧','一宮','春日井','三河','岡崎','豊田','豊橋','三重','鈴鹿','四日市','伊勢志摩',
+  // 近畿
+  '滋賀','彦根','京都','大阪','なにわ','和泉','堺','神戸','姫路','奈良','飛鳥','和歌山',
+  // 中国・四国
+  '鳥取','島根','出雲','岡山','倉敷','広島','福山','山口','下関','周南','徳島','香川','高松','愛媛','高知',
+  // 九州・沖縄
+  '福岡','北九州','久留米','筑豊','佐賀','長崎','佐世保','熊本','大分','宮崎','鹿児島','奄美','沖縄'
 ];
 function _pe(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-/* c.plate（"野田 300 ひ 26-54"）を4分割。保存は常にこの合成文字列＝既存の一覧/帳票はそのまま使える */
+/* 数字系の正規化：全角数字→半角、各種ダッシュ(－―ー−)→半角ハイフン。例「55－55」→「55-55」 */
+function _plateNorm(s){
+  return String(s == null ? '' : s)
+    .replace(/[０-９]/g, function(d){ return String.fromCharCode(d.charCodeAt(0) - 0xFEE0); })
+    .replace(/[－―ー−—]/g, '-')
+    .trim();
+}
+/* c.plate（"野田 300 ひ 55-55"）を4分割。保存は常にこの合成文字列＝既存の一覧/帳票はそのまま使える */
 function _platePartsOf(c){
   const toks = String(c.plate || '').trim().split(/\s+/).filter(Boolean);
   return { region: toks[0] || '', cls: toks[1] || '', kana: toks[2] || '', num: toks[3] || '' };
@@ -669,14 +687,18 @@ function _platePartsOf(c){
 function plateInput(c){
   const p = _platePartsOf(c);
   let h = '<div class="cf-plate">';
-  h += '<input class="cf-input cf-plate-region" list="cf-plate-regions" data-plate="region" value="' + _pe(p.region) + '" placeholder="地名" autocomplete="off">';
-  h += '<input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3">';
-  h += '<input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="2">';
-  h += '<input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="26-54" maxlength="5">';
+  h += '<input type="text" class="cf-input cf-plate-main" data-plate-main readonly value="' + _pe(c.plate || '') + '" placeholder="クリックして入力" autocomplete="off">';
+  h += '<div class="cf-plate-guide">';
+  h += '<div class="cf-plate-grid">';
+  h += '<div><div class="cf-plate-l">地名（管轄）</div><input class="cf-input cf-plate-region" list="cf-plate-regions" data-plate="region" value="' + _pe(p.region) + '" placeholder="野田" autocomplete="off"></div>';
+  h += '<div><div class="cf-plate-l">分類番号</div><input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3"></div>';
+  h += '<div><div class="cf-plate-l">かな</div><input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="2"></div>';
+  h += '<div><div class="cf-plate-l">ナンバー</div><input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="55-55" maxlength="5"></div>';
+  h += '</div>';
   h += '<datalist id="cf-plate-regions">';
   PLATE_REGIONS.forEach(function (r){ h += '<option value="' + r + '"></option>'; });
   h += '</datalist>';
-  h += '</div>';
+  h += '</div></div>';
   return h;
 }
 
@@ -751,15 +773,29 @@ function bindCardFormEvents(root){
     });
   });
 
-  // ナンバーの小分けBOX：4つの値を読んで c.plate に合成（スペースは常に半角1つ＝揺れ防止）
-  root.querySelectorAll('[data-plate]').forEach(el => {
-    el.addEventListener('input', () => {
-      const wrap = el.closest('.cf-plate'); if (!wrap) return;
-      const g = sel => { const x = wrap.querySelector(sel); return x ? x.value.trim() : ''; };
-      c.plate = [g('.cf-plate-region'), g('.cf-plate-cls'), g('.cf-plate-kana'), g('.cf-plate-num')].filter(Boolean).join(' ');
+  // ナンバー：見た目は1BOX。クリック/フォーカスでガイドを開き、4項目を入力→c.plate に合成（半角スペース1つ＝揺れ防止）
+  const plateWrap = root.querySelector('.cf-plate');
+  if (plateWrap){
+    const mainEl = plateWrap.querySelector('[data-plate-main]');
+    const recompose = () => {
+      const g = sel => { const x = plateWrap.querySelector(sel); return x ? x.value : ''; };
+      const region = g('.cf-plate-region').trim();
+      const cls  = _plateNorm(g('.cf-plate-cls'));
+      const kana = g('.cf-plate-kana').trim();
+      const num  = _plateNorm(g('.cf-plate-num'));   // 「55－55」等を半角に正規化
+      c.plate = [region, cls, kana, num].filter(Boolean).join(' ');
+      if (mainEl) mainEl.value = c.plate;
       if (window.PitDB) PitDB.save();
-    });
-  });
+    };
+    plateWrap.querySelectorAll('[data-plate]').forEach(el => el.addEventListener('input', recompose));
+    const openGuide = () => plateWrap.classList.add('open');
+    if (mainEl){
+      mainEl.addEventListener('focus', openGuide);
+      mainEl.addEventListener('click', () => { openGuide(); const r = plateWrap.querySelector('.cf-plate-region'); if (r) setTimeout(() => r.focus(), 0); });
+    }
+    // フォーカスがガイドの外へ出たら閉じる（クリック外し・Tab抜け両対応）
+    plateWrap.addEventListener('focusout', (e) => { if (!plateWrap.contains(e.relatedTarget)) plateWrap.classList.remove('open'); });
+  }
 
   // チップ（単一選択）
   root.querySelectorAll('.cf-chips:not([data-multi])').forEach(group => {

@@ -351,13 +351,19 @@
 .cf-flowt{ font-size:13.5px; font-weight:600; }
 .cf-flowrow.now .cf-flowt{ color:var(--brand); }
 .cf-flowd{ font-size:11.5px; color:var(--text3); margin-top:1px; }
-/* ナンバー：地名/分類/かな/一連番号の小分けBOX（スペース揺れ防止） */
-.cf-plate{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-.cf-plate .cf-input{ width:auto; padding:6px 6px; }
-.cf-plate-region{ flex:0 0 6.5em; min-width:5.5em; }
-.cf-plate-cls{ flex:0 0 3.4em; text-align:center; }
-.cf-plate-kana{ flex:0 0 2.6em; text-align:center; }
-.cf-plate-num{ flex:0 0 5em; text-align:center; }
+/* ナンバー：見た目は1BOX、クリックでガイド（地名/分類/かな/ナンバー）がポップで開く */
+.cf-plate{ position:relative; }
+.cf-plate-main{ width:100%; cursor:pointer; }
+.cf-plate-guide{ position:absolute; top:calc(100% + 4px); left:0; z-index:30; display:none; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.cf-plate.open .cf-plate-guide{ display:block; }
+.cf-plate-grid{ display:flex; gap:8px; align-items:flex-end; }
+.cf-plate-grid > div{ display:flex; flex-direction:column; }
+.cf-plate-l{ font-size:10px; color:var(--text3); margin-bottom:3px; white-space:nowrap; }
+.cf-plate-guide .cf-input{ width:auto; padding:6px 8px; }
+.cf-plate-region{ width:7em; }
+.cf-plate-cls{ width:4em; text-align:center; }
+.cf-plate-kana{ width:3em; text-align:center; }
+.cf-plate-num{ width:5.5em; text-align:center; }
 /* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
 /* 内容セクション：テンプレを開いてクリックで挿入 */
