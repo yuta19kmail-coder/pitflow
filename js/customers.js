@@ -48,11 +48,11 @@
     else { p.name=name||p.name; p.kana=(c.kana||'').trim()||p.kana; if(contacts.length) p.contacts=contacts; }
     if(!Array.isArray(p.vehicles)) p.vehicles=[];
     let v = vehicle.plate ? p.vehicles.find(x=>norm(x.plate)===norm(vehicle.plate)) : null;
-    if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff)v.frontStaff=vehicle.frontStaff; }
+    if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff)v.frontStaff=vehicle.frontStaff; v.updatedAt=Date.now(); }
     else if(vehicle.plate||vehicle.maker||vehicle.car){
       const base=p.vehicles[p.vehicles.length-1]||{};   // 新車両：未指定の担当/課/区分は既存からデフォ継承
       p.vehicles.push({ id:'v'+Date.now()+Math.floor(Math.random()*1000), plate:vehicle.plate, maker:vehicle.maker, car:vehicle.car,
-        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'' });
+        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', updatedAt:Date.now() });
     }
     p.updatedAt=Date.now();
     c.customerId=p.id;
@@ -178,7 +178,7 @@
     const cnt=document.getElementById('cust-count'); if(cnt) cnt.textContent=rows.length+' 人 / 全 '+list().length+' 人';
     if(!rows.length){ host.innerHTML='<div class="cust-empty">'+(list().length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>'; return; }
     // 以前の1行テーブル。基本1人1行＝先頭車両を表示。2台目以降は「車の欄だけ」を下に増やす（人の欄は空）
-    const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終更新'] ];
+    const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
     const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
     let h='<div class="ct-wrap"><table class="ct"><thead><tr>';
     cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
@@ -201,7 +201,7 @@
            '<td>'+pill(t.label)+'</td>'+
            '<td>'+pill(t.course)+'</td>'+
            '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
-           '<td class="ct-mut">'+(first?fmtDate(cust.updatedAt):'')+'</td>'+
+           '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
            '<td class="ct-act">'+
              (v?'<button class="ct-b" onclick="custHistory(\''+cust.id+'\',\''+v.id+'\')" title="この車の履歴">🕒</button>':'')+
              (first?('<button class="ct-b" onclick="custEdit(\''+cust.id+'\')" title="編集">✏</button>'+

@@ -50,7 +50,8 @@
     }
     // メーカーが国産/輸入と食い違わないよう、boardIdに合わせてメーカーを確定（継承時の整合）
     if (boardId === 'import' && kokusan) { /* 国産メーカーだが輸入扱い…サンプルなので許容 */ }
-    return { id: uid('v'), plate, maker: mk, car, boardId, division, frontStaff };
+    const updatedAt = Date.now() - Math.floor(Math.random() * 540) * 86400000;   // 過去約1年半内のランダムな入庫日
+    return { id: uid('v'), plate, maker: mk, car, boardId, division, frontStaff, updatedAt };
   }
 
   function genPerson(i, usedPlate) {
@@ -65,10 +66,11 @@
     const n = r < 0.70 ? 1 : (r < 0.92 ? 2 : 3);
     const vehicles = [];
     for (let k = 0; k < n; k++) vehicles.push(genVehicle(usedPlate, vehicles[0]));
+    const lastVisit = vehicles.reduce((m, v) => Math.max(m, v.updatedAt || 0), 0);
     return {
       id: 'cu_s' + Date.now().toString(36) + i,
       name: sei[0] + ' ' + mei[0], kana: sei[1] + mei[1],
-      contacts, vehicles, updatedAt: Date.now() - i * 60000
+      contacts, vehicles, updatedAt: lastVisit || (Date.now() - i * 60000)
     };
   }
 
@@ -98,7 +100,8 @@
     const cs = Array.isArray(state.customers) ? state.customers : [];
     if (cs.length === 0) { window.seedSampleCustomers(400, false); return; }
     const allSample = cs.every(r => typeof r.id === 'string' && r.id.indexOf('cu_s') === 0);
-    const oldFormat = !cs.some(r => Array.isArray(r.vehicles));   // 誰も vehicles を持たない＝旧型
-    if (allSample && oldFormat) { window.seedSampleCustomers(400, true); }
+    const noVehicles = !cs.some(r => Array.isArray(r.vehicles));                          // 旧型（1台1レコード）
+    const noVehDate  = !cs.some(r => (r.vehicles || []).some(v => v.updatedAt));          // 車両に入庫日が無い
+    if (allSample && (noVehicles || noVehDate)) { window.seedSampleCustomers(400, true); }
   })();
 })();
