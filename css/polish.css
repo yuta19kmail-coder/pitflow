@@ -419,9 +419,13 @@
 .cf-plate-guide .cf-plate-cls{ width:3.4em; text-align:center; }
 .cf-plate-guide .cf-plate-kana{ width:2.6em; text-align:center; }
 .cf-plate-guide .cf-plate-num{ width:4.6em; text-align:center; }
-/* TEL：3枠（ハイフンは自動・手入力不可・全角→半角） */
-.cf-tel{ display:flex; align-items:center; gap:5px; }
-.cf-tel .cf-input{ width:auto; text-align:center; padding:6px 6px; box-sizing:border-box; }
+/* TEL：見た目は1BOX、クリックで3枠ガイドがポップ（ナンバーと同じ作り・ハイフン自動・全角→半角） */
+.cf-tel{ position:relative; }
+.cf-tel-main{ width:100%; cursor:pointer; }
+.cf-tel-guide{ position:absolute; top:calc(100% + 4px); left:0; z-index:30; display:none; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.cf-tel.open .cf-tel-guide{ display:block; }
+.cf-tel-row{ display:flex; align-items:center; gap:5px; }
+.cf-tel-guide .cf-input{ width:auto; text-align:center; padding:6px 6px; box-sizing:border-box; }
 .cf-tel-1{ width:3.8em; }
 .cf-tel-2{ width:3.4em; }
 .cf-tel-3{ width:3.4em; }
