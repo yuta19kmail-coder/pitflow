@@ -106,7 +106,10 @@ function renderCardForm(c){
   h += '<div class="cf-panel" data-tab="basic"' + (_cardTab === 'basic' ? '' : ' hidden') + '>';
 
   /* === 基本情報（車両もここに統合・v0.27.0） === */
-  h += sec('基本情報', '👤');
+  /* 顧客を呼び出し済み（c.customerId あり）なら、右端に「この顧客で新規車両を追加」ボタン（v0.38.4） */
+  h += '<div class="cf-section"><div class="cf-section-head">👤 <span>基本情報</span>'
+     + (c.customerId ? '<button type="button" class="cf-addveh-btn" onclick="cfAddVehicle()">＋ この顧客で新規車両を追加</button>' : '')
+     + '</div><div class="cf-section-body">';
   /* 1行目：お客様名｜カナ（スクショ配置・v0.37.4） */
   h += '<div class="cf-row">';
   h += '<div class="cf-field" style="flex:3"><div class="cf-label">お客様名</div>' + textIn(c, 'customer', 'autocomplete="off"') + '</div>';
@@ -769,6 +772,14 @@ function _cfRenderContacts(c){
   m.onclick = function(e){ if(e.target === m) cfContactsClose(); };
 }
 function _cfCard(){ return state.cards.find(x=>x.id===_editingCardId); }
+/* この顧客で新規車両を追加：ナンバー/メーカー/車種だけクリア（人・連絡先・担当/課/区分は継承）。
+   保存すると c.customerId の人に新しいナンバーの車両として upsert される。 */
+window.cfAddVehicle = function(){
+  const c=_cfCard(); if(!c) return;
+  c.plate=''; c.maker=''; c.car='';
+  if(window.PitDB) PitDB.save();
+  renderCardForm(c);
+};
 window.cfContactsOpen = function(){ const c=_cfCard(); if(!c) return; _cfEnsureContacts(c); _cfRenderContacts(c); };
 window.cfContactToggle = function(el){ const w=el.closest('.cf-tel'); if(w) w.classList.toggle('open'); };
 window.cfContactTel = function(i){
