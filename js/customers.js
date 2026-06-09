@@ -18,8 +18,8 @@
   /* 国産/輸入＋課 の表示情報（色つき） */
   function teamInfo(r){
     const course=courseLabel(r.division);
-    if(r.boardId==='import')  return { label:'輸入', course:course||'2課', color:'#ec4899' };
-    if(r.boardId==='default') return { label:'国産', course:course||'1課', color:'#1db97a' };
+    if(r.boardId==='import')  return { label:'輸入車', course:course||'2課', color:'#ec4899' };
+    if(r.boardId==='default') return { label:'国産車', course:course||'1課', color:'#1db97a' };
     return { label:'', course:course||'', color:'#64748b' };
   }
   /* フロント業務ありのスタッフ（フロント担当の候補） */
@@ -109,10 +109,11 @@
       shown.slice(0,300).forEach(r=>{
         const t=teamInfo(r);
         const carTxt=((r.maker?r.maker+' ':'')+(r.car||'')).trim()||'—';
-        const badge=t.label?'<span class="cust-badge" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(t.label)+(t.course?' '+esc(t.course):'')+'</span>':'';
+        const pill=s=>'<span class="cust-badge" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>';
+        const badges=(t.label?pill(t.label):'')+(t.course?pill(t.course):'');
         h+='<div class="cust-row" style="border-left-color:'+(t.color||'var(--brand)')+'">'+
            '<div class="cust-main">'+
-             '<div class="cust-name">'+esc(r.name||'(無名)')+badge+'</div>'+
+             '<div class="cust-name">'+esc(r.name||'(無名)')+badges+'</div>'+
              '<div class="cust-sub">'+esc(carTxt)+(r.plate?' ・ '+esc(r.plate):'')+(r.tel?' ・ ☎ '+esc(r.tel):'')+(r.frontStaff?' ・ 担当 '+esc(r.frontStaff):'')+'</div>'+
            '</div>'+
            '<div class="cust-acts">'+
