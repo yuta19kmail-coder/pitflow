@@ -147,6 +147,7 @@ window.state = {
     //    空き0以上＝緑／超過1〜warn台＝オレンジ／warn超〜danger未満＝濃いオレンジ／danger台以上＝赤
     lotOver: { warn: 5, danger: 10 },
     holdDaysDefault: 3,   // 最短入庫の計算で使う「預かり想定日数」
+    longHoldDays: 7,      // 整備ダッシュボードの「預かりが長い」アラートしきい値（入庫からの日数）
     reserveCap: { default: 5, import: 3 },   // 1日の予約上限（default＝国産 / import＝輸入・人が別なのでチーム別）
     // 概算預かり日数の既定（作業タイプ別・入庫予約時の初期値。_default＝表にないタイプ用）
     estHold: { shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 },

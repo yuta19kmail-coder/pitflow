@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=17">
-<link rel="stylesheet" href="css/polish.css?v=64">
+<link rel="stylesheet" href="css/polish.css?v=65">
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -59,7 +59,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.39.2</div>
+    <div class="pl-ver">PitFlow v0.40.0</div>
   </div>
 </div>
 
@@ -71,7 +71,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.39.2</span>
+      <span class="ver">v0.40.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -100,7 +100,7 @@
     <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon">🚐</span><span>代車・自社車両管理</span></div>
 
     <div class="si-section-title">整備</div>
-    <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span></div>
     <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span><span class="si-soon">準備中</span></div>
     <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span><span class="si-soon">準備中</span></div>
     <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🔧</span><span>作業</span></div>
@@ -324,8 +324,9 @@
     </section>
 
     <section id="view-maintdash" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">📊</span>整備ダッシュボード</div></div>
-      <div class="soon-card"><div class="soon-emoji">📊</div><h3>整備側のまとめ（準備中）</h3><p>1課・2課の進捗、工程の詰まり、当日の作業量などを整備視点でまとめるダッシュボードを作ります。</p></div>
+      <div class="view-header"><div class="view-title"><span class="icon">📊</span>整備ダッシュボード</div>
+        <div class="view-actions"><button class="vh-btn" onclick="renderMaintDash()">🔄 更新</button></div></div>
+      <div id="view-maintdash-body"></div>
     </section>
 
     <section id="view-course1" class="view">
@@ -461,8 +462,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=29"></script>
-<script src="js/sample-data.js?v=9"></script>
+<script src="js/state.js?v=30"></script>
+<script src="js/sample-data.js?v=10"></script>
 <script src="js/sample-fleet.js?v=8"></script>
 <script src="js/firebase-init.js?v=8"></script>
 <script src="js/db-pit.js?v=24"></script>
@@ -474,6 +475,7 @@
 <script src="js/sample-customers.js?v=6"></script>
 <script src="js/sample-patterns.js?v=2"></script>
 <script src="js/dashboard.js?v=11"></script>
+<script src="js/maintdash.js?v=1"></script>
 <script src="js/settings.js?v=7"></script>
 <script src="js/rules.js?v=9"></script>
 <script src="js/today.js?v=14"></script>

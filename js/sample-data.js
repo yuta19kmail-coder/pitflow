@@ -38,6 +38,10 @@
     { id:'c030', reserveDate:ymd(addDays(today,-10)), reserveTime:'10:00', returnDate:ymd(addDays(today,-7)), status:'scrap', boardId:'default', bayId:null, customer:'池上',     car:'R55',  plate:'品川 580 こ 7777', menu:'廃車手続き', workType:'general', dropType:'drop', needLoaner:false, needWash:false, staff:'蓮沼', memo:'', urgent:false },
     { id:'c031', reserveDate:ymd(addDays(today,-8)),  reserveTime:'14:00', returnDate:ymd(addDays(today,-5)), status:'scrap', boardId:'default', bayId:null, customer:'ワクヤ',   car:'R55',  plate:'品川 580 さ 8888', menu:'乗替',       workType:'used',    dropType:'drop', needLoaner:false, needWash:false, staff:'箱崎', memo:'', urgent:false },
 
+    // 長期預かり（整備ダッシュボードのアラート用・工程が滞っている在庫車）
+    { id:'c014', reserveDate:ymd(addDays(today,-9)),  reserveTime:'10:00', returnDate:'', status:'parts', boardId:'default', bayId:null, customer:'タカハシ',  car:'プリウス', plate:'練馬 300 す 1212', menu:'車検 / 部品待ち', workType:'shaken', dropType:'drop', needLoaner:true,  needWash:false, staff:'椎名', memo:'部品入荷待ち', urgent:false },
+    { id:'c015', reserveDate:ymd(addDays(today,-12)), reserveTime:'14:00', returnDate:'', status:'estim', boardId:'import',  bayId:null, customer:'シュミット', car:'パサート', plate:'品川 580 せ 3434', menu:'B.P / 見積り中', workType:'bp',     dropType:'drop', needLoaner:true,  needWash:false, staff:'社長', memo:'保険会社確認中', urgent:false },
+
     // 過去の完全完了（実績ビュー用）
     { id:'c100', reserveDate:ymd(addDays(today,-2)), reserveTime:'10:00', returnDate:ymd(addDays(today,-2)), status:'returned', boardId:'default', bayId:'bay1', customer:'青木',  car:'タント',  plate:'練馬 580 き 3333', menu:'バッテリー交換',       workType:'general', dropType:'wait', needLoaner:false, needWash:false, staff:'蓮沼', memo:'', urgent:false, completedAt:ymd(addDays(today,-2)) },
     { id:'c101', reserveDate:ymd(addDays(today,-3)), reserveTime:'14:00', returnDate:ymd(addDays(today,-3)), status:'returned', boardId:'default', bayId:null,   customer:'森下',  car:'ハリアー',plate:'品川 300 く 4444', menu:'ブレーキパッド交換', workType:'general', dropType:'drop', needLoaner:false, needWash:false, staff:'椎名', memo:'返車待ち', urgent:false, completedAt:ymd(addDays(today,-3)) },
