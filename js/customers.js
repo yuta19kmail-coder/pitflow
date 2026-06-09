@@ -202,9 +202,11 @@
            '<td>'+pill(t.course)+'</td>'+
            '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(first?fmtDate(cust.updatedAt):'')+'</td>'+
-           '<td class="ct-act">'+(first?('<button class="ct-b" onclick="custHistory(\''+cust.id+'\')" title="履歴">🕒</button>'+
-             '<button class="ct-b" onclick="custEdit(\''+cust.id+'\')" title="編集">✏</button>'+
-             '<button class="ct-b ct-bd" onclick="custDelete(\''+cust.id+'\')" title="削除">🗑</button>'):'')+'</td>'+
+           '<td class="ct-act">'+
+             (v?'<button class="ct-b" onclick="custHistory(\''+cust.id+'\',\''+v.id+'\')" title="この車の履歴">🕒</button>':'')+
+             (first?('<button class="ct-b" onclick="custEdit(\''+cust.id+'\')" title="編集">✏</button>'+
+               '<button class="ct-b ct-bd" onclick="custDelete(\''+cust.id+'\')" title="削除">🗑</button>'):'')+
+           '</td>'+
            '</tr>';
         shownRows++;
       });
@@ -303,21 +305,18 @@
   window.custEditDelVehicle=function(btn){ const cust=_editTarget(); if(!cust) return; _readEdit(cust); const row=btn.closest('.ce-veh'); const rows=[].slice.call(document.querySelectorAll('#ce-vehicles .ce-veh')); const i=rows.indexOf(row); if(i>=0) cust.vehicles.splice(i,1); _renderEdit(cust); };
   function _editTarget(){ const head=document.querySelector('#cust-modal .cm-save'); if(!head) return null; const m=head.getAttribute('onclick')||''; const id=(m.match(/custSaveEdit\('([^']+)'\)/)||[])[1]; return id?list().find(x=>x.id===id):null; }
 
-  /* ===== 履歴（その人の全車両のカード） ===== */
-  function cardsForCustomer(cust){
-    const arr=Array.isArray(state.cards)?state.cards:[];
-    const plates=(cust.vehicles||[]).map(v=>norm(v.plate)).filter(Boolean);
-    if(plates.length) return arr.filter(c=>plates.indexOf(norm(c.plate))>=0);
-    const nm=norm(cust.name);
-    return nm?arr.filter(c=>norm(c.customer)===nm):[];
-  }
+  /* ===== 履歴（車両＝そのナンバー単位） ===== */
   function cardDate(c){ return c.returnDate || c.reserveDate || ''; }
-  window.custHistory=function(id){
-    const cust=list().find(x=>x.id===id); if(!cust) return;
-    const cards=cardsForCustomer(cust).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
-    let h='<div class="cm-head">🕒 来店履歴 <span class="cm-sub">'+esc(cust.name||'(無名)')+' ・ '+((cust.vehicles||[]).length)+'台</span><button class="cm-x" onclick="custCloseModal()">✕</button></div><div class="cm-body">';
+  window.custHistory=function(custId, vehId){
+    const cust=list().find(x=>x.id===custId); if(!cust) return;
+    const v=(cust.vehicles||[]).find(x=>x.id===vehId);
+    const plate=v?(v.plate||''):'';
+    const arr=Array.isArray(state.cards)?state.cards:[];
+    const cards=(plate?arr.filter(c=>norm(c.plate)===norm(plate)):[]).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
+    const vlabel=v?(vehLabel(v)+(plate?' / '+plate:'')):'（車両不明）';
+    let h='<div class="cm-head">🕒 来店履歴 <span class="cm-sub">'+esc(cust.name||'(無名)')+' ・ '+esc(vlabel)+'</span><button class="cm-x" onclick="custCloseModal()">✕</button></div><div class="cm-body">';
     if(!cards.length){
-      h+='<div class="cust-empty">この顧客の入庫カードはまだありません。<br>（整備ソフトに正式履歴があります）</div>';
+      h+='<div class="cust-empty">この車の入庫カードはまだありません。<br>（整備ソフトに正式履歴があります）</div>';
     } else {
       h+='<div class="cm-hist">';
       cards.forEach(c=>{
