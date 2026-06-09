@@ -351,6 +351,13 @@
 .cf-flowt{ font-size:13.5px; font-weight:600; }
 .cf-flowrow.now .cf-flowt{ color:var(--brand); }
 .cf-flowd{ font-size:11.5px; color:var(--text3); margin-top:1px; }
+/* ナンバー：地名/分類/かな/一連番号の小分けBOX（スペース揺れ防止） */
+.cf-plate{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.cf-plate .cf-input{ width:auto; padding:6px 6px; }
+.cf-plate-region{ flex:0 0 6.5em; min-width:5.5em; }
+.cf-plate-cls{ flex:0 0 3.4em; text-align:center; }
+.cf-plate-kana{ flex:0 0 2.6em; text-align:center; }
+.cf-plate-num{ flex:0 0 5em; text-align:center; }
 /* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
 /* 内容セクション：テンプレを開いてクリックで挿入 */

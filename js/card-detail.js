@@ -112,7 +112,7 @@ function renderCardForm(c){
   h += field('TEL',      textIn(c, 'tel',      'flex:1'));
   h += '</div>';
   h += '<div class="cf-row">';
-  h += field('ナンバー', textIn(c, 'plate'));
+  h += '<div class="cf-field" style="flex:2"><div class="cf-label">ナンバー</div>' + plateInput(c) + '</div>';
   h += field('初回／リピーター', chips(c, 'repeat', state.repeatTypes));
   h += field('国産車／輸入車', chips(c, 'boardId', TEAM_ITEMS));
   h += '</div>';
@@ -642,6 +642,44 @@ function cfMenuAddTpl(i){
 window.cfMenuTplToggle = cfMenuTplToggle;
 window.cfMenuAddTpl = cfMenuAddTpl;
 
+/* ===== ナンバー：地名/分類番号/かな/一連番号を小分けBOXで入力（スペース揺れ防止） ===== */
+/* 地名＝陸運局（ナンバー管轄）。datalistで候補表示＝オート入力。未収録でも手入力可。2025年のご当地(十勝/日光/江戸川/安曇野/南信州/彦根)まで反映 */
+const PLATE_REGIONS = [
+  '札幌','函館','旭川','室蘭','苫小牧','釧路','帯広','北見','知床','十勝',
+  '青森','八戸','弘前','岩手','盛岡','平泉','宮城','仙台','秋田','山形','庄内',
+  '福島','会津','いわき','水戸','土浦','つくば','宇都宮','栃木','とちぎ','那須','日光',
+  '群馬','前橋','高崎','大宮','川口','所沢','川越','熊谷','春日部','越谷','さいたま',
+  '千葉','成田','習志野','袖ヶ浦','市川','船橋','野田','松戸','柏',
+  '品川','世田谷','練馬','杉並','板橋','足立','葛飾','江戸川','八王子','多摩','江東',
+  '横浜','川崎','湘南','相模','新潟','長岡','上越','富山','金沢','石川','福井',
+  '山梨','富士山','長野','松本','諏訪','飯田','安曇野','南信州','岐阜','飛騨',
+  '静岡','浜松','沼津','伊豆','名古屋','尾張小牧','一宮','春日井','三河','岡崎','豊田','豊橋',
+  '三重','鈴鹿','四日市','伊勢志摩','滋賀','彦根','京都','大阪','なにわ','和泉','堺',
+  '神戸','姫路','奈良','飛鳥','和歌山','鳥取','島根','出雲','岡山','倉敷','広島','福山',
+  '山口','下関','周南','徳島','香川','高松','愛媛','高知',
+  '福岡','北九州','久留米','筑豊','佐賀','長崎','佐世保','熊本','大分','宮崎',
+  '鹿児島','奄美','沖縄'
+];
+function _pe(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+/* c.plate（"野田 300 ひ 26-54"）を4分割。保存は常にこの合成文字列＝既存の一覧/帳票はそのまま使える */
+function _platePartsOf(c){
+  const toks = String(c.plate || '').trim().split(/\s+/).filter(Boolean);
+  return { region: toks[0] || '', cls: toks[1] || '', kana: toks[2] || '', num: toks[3] || '' };
+}
+function plateInput(c){
+  const p = _platePartsOf(c);
+  let h = '<div class="cf-plate">';
+  h += '<input class="cf-input cf-plate-region" list="cf-plate-regions" data-plate="region" value="' + _pe(p.region) + '" placeholder="地名" autocomplete="off">';
+  h += '<input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3">';
+  h += '<input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="2">';
+  h += '<input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="26-54" maxlength="5">';
+  h += '<datalist id="cf-plate-regions">';
+  PLATE_REGIONS.forEach(function (r){ h += '<option value="' + r + '"></option>'; });
+  h += '</datalist>';
+  h += '</div>';
+  return h;
+}
+
 function loanerSelect(c, key){
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">―</option>';
@@ -687,6 +725,7 @@ function bindCardFormEvents(root){
     if (el.dataset.key === 'reserveDate') el.dataset.prev = el.value;   // 受付○△×ガード用に元の日付を控える
     el.addEventListener('input', () => {
       const key = el.dataset.key;
+      if (!key) return;   // data-key の無い入力（ナンバー小分け等）は別ハンドラで処理
       let v = el.value;
       if (el.type === 'number') v = v === '' ? null : Number(v);
       c[key] = v;
@@ -694,6 +733,7 @@ function bindCardFormEvents(root){
     });
     el.addEventListener('change', () => {
       const key = el.dataset.key;
+      if (!key) return;
       let v = el.value;
       if (el.type === 'number') v = v === '' ? null : Number(v);
       // 入庫日の変更は受付○△×ガードを通す（×＝「それでも入れますか？」・△＝一言トースト・強制はしない）
@@ -708,6 +748,16 @@ function bindCardFormEvents(root){
         const d = _staffDivision(v);
         if (d && c.division !== d) { c.division = d; renderCardForm(c); return; }
       }
+    });
+  });
+
+  // ナンバーの小分けBOX：4つの値を読んで c.plate に合成（スペースは常に半角1つ＝揺れ防止）
+  root.querySelectorAll('[data-plate]').forEach(el => {
+    el.addEventListener('input', () => {
+      const wrap = el.closest('.cf-plate'); if (!wrap) return;
+      const g = sel => { const x = wrap.querySelector(sel); return x ? x.value.trim() : ''; };
+      c.plate = [g('.cf-plate-region'), g('.cf-plate-cls'), g('.cf-plate-kana'), g('.cf-plate-num')].filter(Boolean).join(' ');
+      if (window.PitDB) PitDB.save();
     });
   });
 
