@@ -71,7 +71,7 @@
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto;
 }
 .pcm-car{
-  font-size:13px; color:var(--text2);
+  font-size:15px; font-weight:700; color:var(--text);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1 1 auto;
 }
 .pcm-tags{ display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; align-items:center; }
