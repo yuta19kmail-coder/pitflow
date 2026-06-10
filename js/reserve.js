@@ -335,6 +335,38 @@ function cardHtml(c, opts){
   const wt = state.workTypes.find(w => w.id === c.workType);
   const dt = state.dropTypes.find(d => d.id === c.dropType);
   const accent = wt ? wt.color : 'var(--brand)';
+
+  /* === コンパクト版（整備ビュー＝看板/作業で統一）：客名・車種・作業内容(最大2)・預かり・代車・フロントだけ === */
+  if (opts.compact){
+    const DROP_COLOR = { wait: '#f59e0b', sameDay: '#3b82f6', drop: '#26a269' };
+    const wts = (Array.isArray(c.workTypes) && c.workTypes.length)
+      ? c.workTypes : (c.workType ? [c.workType] : []);
+    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + accent + ';">';
+    h += '<div class="pcm-head"><span class="pcm-name">' + (c.customer || '（未入力）') + '</span>';
+    if (c.car) h += '<span class="pcm-car">' + c.car + '</span>';
+    h += '</div>';
+    h += '<div class="pcm-tags">';
+    wts.slice(0, 2).forEach(function(id){
+      const w = state.workTypes.find(x => x.id === id);
+      if (w) h += '<span class="pcm-wt" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
+    });
+    if (dt){
+      const dc = DROP_COLOR[dt.id] || 'var(--text2)';
+      h += '<span class="pcm-drop" title="' + (dt.desc || '預かり区分') + '" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + dt.label + '</span>';
+    }
+    if (c.needLoaner) h += '<span class="pcm-loaner" title="代車あり">代車</span>';
+    if (c.frontStaff) h += '<span class="pcm-front" title="フロント担当">' + c.frontStaff + '</span>';
+    h += '</div>';
+    if (opts.kanban){
+      h += '<div class="pcm-kbtns" onclick="event.stopPropagation()">';
+      h += '<button class="pcm-kbtn" title="前の工程へ" onclick="advanceCard(\'' + c.id + '\',-1)">◀</button>';
+      h += '<button class="pcm-kbtn" title="次の工程へ" onclick="advanceCard(\'' + c.id + '\',1)">▶</button>';
+      h += '</div>';
+    }
+    h += '</div>';
+    return h;
+  }
+
   let html = '';
   html += '<div class="pit-card' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent + ';">';
   html += '<div class="pc-line1">';

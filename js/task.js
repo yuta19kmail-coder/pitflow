@@ -45,7 +45,7 @@ function _renderKanban(board, cols){
     if (inCol.length === 0){
       html += '<div class="kanban-empty">なし</div>';
     } else {
-      html += inCol.map(c => cardHtml(c, { kanban: !col.side })).join('');
+      html += inCol.map(c => cardHtml(c, { kanban: !col.side, compact: true })).join('');
     }
     html += '</div></div>';
     return html;

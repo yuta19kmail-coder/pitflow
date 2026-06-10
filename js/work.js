@@ -24,7 +24,7 @@ function renderWork(){
         </div>
         ${inBay.length === 0
           ? '<div class="pit-bay-empty">空き枠</div>'
-          : inBay.map(c => cardHtml(c)).join('')
+          : inBay.map(c => cardHtml(c, { compact: true })).join('')
         }
       </div>
     `;
@@ -41,7 +41,7 @@ function renderWork(){
           <span class="bay-meta">${unassigned.length} 件</span>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          ${unassigned.map(c => cardHtml(c)).join('')}
+          ${unassigned.map(c => cardHtml(c, { compact: true })).join('')}
         </div>
       </div>
     `;

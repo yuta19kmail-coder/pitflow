@@ -56,6 +56,43 @@
   padding:14px 0; color:var(--text3);
 }
 
+/* ===== コンパクトカード（整備ビュー＝看板/作業で統一・約1/3サイズ） ===== */
+.pit-card.pcm{
+  min-width:0;
+  padding:6px 8px;
+  border-radius:6px;
+  border-left-width:3px;
+  cursor:pointer;
+}
+.pcm-head{ display:flex; align-items:baseline; gap:6px; min-width:0; }
+.pcm-name{
+  font-weight:700; font-size:12.5px; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto;
+}
+.pcm-car{
+  font-size:11px; color:var(--text2);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1 1 auto;
+}
+.pcm-tags{ display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; align-items:center; }
+.pcm-tags > span{
+  font-size:10px; line-height:1.6; padding:0 6px; border-radius:8px;
+  white-space:nowrap;
+}
+.pcm-wt{ border:1px solid; font-weight:700; }
+.pcm-drop{ border:1px solid; font-weight:700; }
+.pcm-loaner{ background:#1db97a22; color:#1db97a; border:1px solid #1db97a55; }
+.pcm-front{
+  margin-left:auto; background:var(--bg3); color:var(--text2);
+  border:1px solid var(--border); font-weight:600;
+}
+.pcm-kbtns{ display:flex; gap:4px; margin-top:5px; }
+.pcm-kbtn{
+  flex:1; padding:2px 0; font-size:11px; line-height:1.4;
+  background:var(--bg3); border:1px solid var(--border); border-radius:5px;
+  color:var(--text2); cursor:pointer;
+}
+.pcm-kbtn:hover{ background:var(--brand); color:#fff; border-color:var(--brand); }
+
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{
   border:1px solid var(--border);
