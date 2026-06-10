@@ -305,7 +305,7 @@
   min-height:0;
 }
 .kanban-col{
-  flex:0 0 260px;
+  flex:0 0 220px;
   background:var(--bg2);
   border:1px solid var(--border);
   border-radius:var(--r);
@@ -503,7 +503,7 @@
 
 /* ===== レスポンシブ ===== */
 @media (max-width:768px){
-  .kanban-col{flex:0 0 220px}
+  .kanban-col{flex:0 0 200px}
   #view-work .pit-grid{grid-template-columns:1fr}
   #view-loaner .loaner-grid{grid-template-columns:120px repeat(7,minmax(50px,1fr))}
 }
