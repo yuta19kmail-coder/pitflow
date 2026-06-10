@@ -288,13 +288,21 @@
   border-bottom-color:var(--brand);
   font-weight:600;
 }
+/* 看板ビューは縦フレックス＝ヘッダー固定＋看板が残り高さいっぱい
+   → 横スクロールバーがカードの高さでなくウィンドウ下部に固定される */
+#view-task.active, #view-course1.active, #view-course2.active{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
 .kanban{
   display:flex;
   gap:12px;
   overflow-x:auto;
+  overflow-y:hidden;
   align-items:flex-start;
-  padding-bottom:12px;
-  min-height:400px;
+  flex:1 1 auto;
+  min-height:0;
 }
 .kanban-col{
   flex:0 0 260px;
@@ -303,7 +311,7 @@
   border-radius:var(--r);
   display:flex;
   flex-direction:column;
-  max-height:calc(100dvh - 220px);
+  max-height:100%;
 }
 .kanban-col-head{
   padding:10px 12px;
