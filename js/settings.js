@@ -80,11 +80,15 @@
     h += '<div class="ps-hint">※ 空き0台まではずっと<b style="color:#1db97a">緑</b>。ちょい超過は緊急＋α・コインパで吸収できる「普通」なので、赤を安売りして受付が萎縮しないように（間の台数は濃いオレンジ）。</div>';
     h += '</div>';
 
-    /* ===== 🏭 PIT配置図（工場の簡易平面図エディタ・v0.46.0） ===== */
+    /* ===== 🏭 PIT配置図（専用エディタを別画面で開く・v0.47.0） ===== */
+    var pitN = (window.PitFloorEditor && PitFloorEditor.countPits) ? PitFloorEditor.countPits() : (Array.isArray(state.bays) ? state.bays.length : 0);
     h += '<div class="ps-card">';
     h += '<div class="ps-h">🏭 PIT配置図（工場の簡易レイアウト）</div>';
-    h += '<div class="ps-desc">PIT枠を置いて工場の<b>簡易的な平面図</b>を作ります。ここで作った図に、作業中の車（カード）をはめていきます（次の段で「Pitリスト」「Pit配置」に表示）。枠＝ドラッグで移動・右下角で大きさ変更・クリックで名前や課を編集。壁や通路の線も引けます。</div>';
-    h += '<div id="pf-editor-mount"></div>';
+    h += '<div class="ps-desc">工場の<b>簡易的な平面図</b>を作ります。専用の編集画面で、PIT枠（平PIT／リフトPIT）をグリッドに沿って並べ、建物・ドア・シャッター・通路も置けます。ここで作った図に、作業中の車（カード）をはめていきます（次の段で「Pitリスト」「Pit配置」に表示）。</div>';
+    h += '<div class="pf-launch">';
+    h += '<button class="vh-btn primary" onclick="if(window.PitFloorEditor)PitFloorEditor.open()">🏭 PIT配置図を編集する</button>';
+    h += '<span class="pf-launch-meta">現在のPIT枠：' + pitN + ' 個</span>';
+    h += '</div>';
     h += '</div>';
 
     /* ===== 作業タイプ（増減できる・v0.27.0） ===== */
@@ -157,9 +161,6 @@
     h += '</div>';
 
     body.innerHTML = h;
-
-    // PIT配置図エディタをマウント（自己管理ウィジェット＝設定の再描画では作り直さない）
-    if (window.PitFloorEditor) PitFloorEditor.mount('pf-editor-mount');
   };
 
   /* 画面の入力をすべて読み取って state.settings に反映 → 保存 */
