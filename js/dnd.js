@@ -26,6 +26,10 @@
       const nv = val || null;
       if (c.bayId === nv) return;
       c.bayId = nv;
+      c.baySlot = null;                       // 枠の空きエリアへ落とした＝末尾扱い
+    } else if (kind === 'baycell') {
+      const p = val.split('|');               // "bayId|スロット番号"
+      reorderIntoBay(c, p[0], parseInt(p[1], 10));
     } else if (kind === 'reserveTime') {
       c.reserveTime = val;
       if (state.reserveDate) c.reserveDate = ymd(state.reserveDate);
@@ -57,6 +61,19 @@
     if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();  // PiP小窓も同期（2画面連携）
   }
   window.applyCardDrop = applyCardDrop;
+
+  /* 同じPIT枠内の並べ替え／別枠からの差し込み。idx＝落としたスロット位置に入れて baySlot を振り直す */
+  function reorderIntoBay(c, bid, idx) {
+    if (!bid) return;
+    const statuses = window.WORK_STATUSES || ['check', 'estim', 'contact', 'parts', 'work'];
+    const list = state.cards
+      .filter(function (x) { return x !== c && x.bayId === bid && statuses.indexOf(x.status) >= 0; })
+      .sort(function (a, b) { return (a.baySlot == null ? 1e9 : a.baySlot) - (b.baySlot == null ? 1e9 : b.baySlot); });
+    if (isNaN(idx) || idx < 0 || idx > list.length) idx = list.length;  // 空きスロット等は末尾へ
+    c.bayId = bid;
+    list.splice(idx, 0, c);
+    list.forEach(function (x, i) { x.baySlot = i; });                   // 0,1,2… で確定
+  }
 
   let draggingId = null;
 

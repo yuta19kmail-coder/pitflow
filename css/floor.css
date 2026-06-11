@@ -75,6 +75,9 @@
 /* 読み取り専用の枠＝掴めない見た目。リフト飾りはSVG層なのでクリップされない */
 .pfv-bay{ cursor:default; }
 .pfv-bay.dnd-over{ box-shadow:0 0 0 3px rgba(29,185,122,.55); }
+/* 同枠内の並べ替え：落とす先のスロットを強調 */
+.pfv-card.dnd-over, .pf-cardbar.dnd-over{ outline:2px solid var(--green); outline-offset:-1px; background:rgba(29,185,122,.18); }
+.pfv-card.dnd-dragging{ opacity:.4; }
 .pfv-static{ pointer-events:none; }
 .pfv-over{ position:absolute; right:2px; top:2px; font-size:9px; font-weight:700; color:#fff; background:#ef4444; padding:0 5px; border-radius:999px; pointer-events:none; }
 

@@ -542,10 +542,10 @@
   // エディタと同じ幾何（壁・建物・ドア/シャッター・リフト飾り・bayMetrics）をそのまま使い、
   // 空きスロットの代わりに実カード（state.cards）をPIT枠にはめ込む。編集はしない。
   // opts = { cardsByBay:{bayId:[card,...]}, stage:HTMLElement(幅計測用), cell:固定セル, minCell }
-  function slotCard(c) {
-    var m = arguments[1];
+  function slotCard(c, m, dropVal) {
     var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
     return '<span class="pfv-card" draggable="true" data-card-id="' + c.id + '"'
+      + ' data-drop="baycell" data-drop-val="' + dropVal + '"'    // 同枠内の並べ替え＝このスロット位置へ差し込む
       + ' onclick="if(window.openDetail)openDetail(\'' + c.id + '\')"'
       + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + '"'
       + ' title="' + esc((c.customer || '') + (c.car ? ' / ' + c.car : '')) + '">'
@@ -562,6 +562,8 @@
     d.style.borderColor = col0; d.style.color = col0;
     d.setAttribute('data-drop', 'bay'); d.setAttribute('data-drop-val', b.id); // ドロップ先＝この枠
     var cards = (opts.cardsByBay && opts.cardsByBay[b.id]) || [];
+    // 同枠内の並び順＝baySlot（小さい順）。未設定は後ろ（追加順）。
+    cards = cards.slice().sort(function (x, y) { return (x.baySlot == null ? 1e9 : x.baySlot) - (y.baySlot == null ? 1e9 : y.baySlot); });
     var cap = m.ncol * m.rows;
     var h = '<div class="pf-box-hd" style="height:' + m.headH + 'px"><span class="pf-box-nm">' + esc((b.icon ? b.icon + ' ' : '') + (b.name || '')) + '</span></div>';
     h += '<div class="pf-cards" style="gap:' + m.gap + 'px;padding:' + m.pad + 'px">';
@@ -569,8 +571,10 @@
     for (var cc = 0; cc < m.ncol; cc++) {
       h += '<div class="pf-cardcol" style="gap:' + m.gap + 'px">';
       for (var r = 0; r < m.rows; r++) {
-        var card = cards[idx++];
-        h += card ? slotCard(card, m) : '<span class="pf-cardbar" style="width:' + m.cardW + 'px;height:' + m.cardH + 'px"></span>';
+        var card = cards[idx], dv = b.id + '|' + idx;
+        h += card ? slotCard(card, m, dv)
+                  : '<span class="pf-cardbar" data-drop="baycell" data-drop-val="' + dv + '" style="width:' + m.cardW + 'px;height:' + m.cardH + 'px"></span>';
+        idx++;
       }
       h += '</div>';
     }
