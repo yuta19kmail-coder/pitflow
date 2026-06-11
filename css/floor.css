@@ -1,0 +1,67 @@
+/* ========================================
+   floor.css  -  PIT配置図エディタ（v0.46.0 / 第1段）
+   ======================================== */
+
+.pf-toolbar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+}
+.pf-tip{ font-size:11.5px; color:var(--text3); }
+
+.pf-canvas{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/10;
+  background:
+    linear-gradient(var(--border) 1px, transparent 1px) 0 0 / 100% 10%,
+    linear-gradient(90deg, var(--border) 1px, transparent 1px) 0 0 / 6.25% 100%,
+    var(--bg2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;
+  touch-action:none;
+  user-select:none;
+}
+
+.pf-svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.pf-svg line{ pointer-events:stroke; cursor:pointer; }
+.pf-svg circle{ pointer-events:all; cursor:grab; }
+
+.pf-frame{
+  position:absolute;
+  border:2px solid #64748b;
+  border-radius:9px;
+  background:rgba(127,140,160,.14);
+  cursor:grab;
+  box-sizing:border-box;
+  display:flex; flex-direction:column; gap:2px;
+  padding:6px 8px;
+  overflow:hidden;
+}
+.pf-frame:active{ cursor:grabbing; }
+.pf-frame.sel{ box-shadow:0 0 0 3px rgba(245,158,11,.45); }
+.pf-frame-name{ font-size:12.5px; font-weight:700; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pf-frame-div{
+  align-self:flex-start; font-size:9.5px; font-weight:700; color:#fff;
+  padding:1px 7px; border-radius:999px;
+}
+.pf-resize{
+  position:absolute; right:0; bottom:0; width:16px; height:16px;
+  cursor:nwse-resize;
+  background:
+    linear-gradient(135deg, transparent 50%, currentColor 50%);
+  color:rgba(120,130,150,.55);
+  border-bottom-right-radius:8px;
+}
+
+.pf-props{ margin-top:12px; }
+.pf-prop-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pf-prop-t{ font-size:12.5px; font-weight:700; color:var(--text2); }
+.pf-prop-empty{ font-size:12px; color:var(--text3); }
+.pf-in{
+  font-family:inherit; font-size:13px; background:var(--bg3); color:var(--text);
+  border:1px solid var(--border); border-radius:7px; padding:6px 8px;
+}
+.pf-in-icon{ width:46px; text-align:center; }
+.pf-in-name{ width:160px; }
+.vh-btn.danger{ color:#ef4444; border-color:rgba(239,68,68,.4); }
+.vh-btn.danger:hover{ background:rgba(239,68,68,.1); }

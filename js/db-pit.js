@@ -35,6 +35,8 @@
             if (Array.isArray(d.customers))     state.customers     = d.customers;
             if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
             if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
+            if (Array.isArray(d.bays))          state.bays          = d.bays;          // v0.46.0：PIT配置図の枠
+            if (d.floorPlan && typeof d.floorPlan === 'object') state.floorPlan = d.floorPlan; // v0.46.0：壁・通路線
             if (d.aiVerdicts && typeof d.aiVerdicts === 'object') state.aiVerdicts = d.aiVerdicts;
             this._mergeSettings(d.settings);
             // 作業タイプは設定で増減できる＝保存があれば実行リストを上書き
@@ -67,6 +69,8 @@
             customers: state.customers,
             companyCars: state.companyCars,
             fleetEvents: state.fleetEvents,
+            bays: state.bays,                          // v0.46.0：PIT配置図の枠（位置・大きさ・課）
+            floorPlan: state.floorPlan || { shapes: [] }, // v0.46.0：壁・通路線
             aiVerdicts: state.aiVerdicts || {},
             settings: state.settings,
             savedAt: Date.now(),

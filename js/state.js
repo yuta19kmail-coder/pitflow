@@ -42,12 +42,17 @@ window.state = {
     },
   ],
 
+  // PIT配置図の枠。x/y/w/h はキャンバスに対する%（設定の図面エディタで配置）。
+  // division は '' (共通) / 'div1' (1課) / 'div2' (2課)。座標が無い枠は初回に自動配置される。
   bays: [
-    { id: 'bay1', name: 'PIT 1',   icon: '🛠️', note: '車検対応' },
-    { id: 'bay2', name: 'PIT 2',   icon: '🛠️', note: '一般整備' },
-    { id: 'bay3', name: 'PIT 3',   icon: '🛠️', note: '板金・塗装' },
-    { id: 'bay4', name: 'リフト',  icon: '⬆️',  note: 'タイヤ交換' },
+    { id: 'bay1', name: 'PIT 1',   icon: '🛠️', note: '車検対応',  x: 5,  y: 8,  w: 20, h: 26, division: 'div1' },
+    { id: 'bay2', name: 'PIT 2',   icon: '🛠️', note: '一般整備',  x: 28, y: 8,  w: 20, h: 26, division: 'div1' },
+    { id: 'bay3', name: 'PIT 3',   icon: '🛠️', note: '板金・塗装', x: 51, y: 8,  w: 20, h: 26, division: 'div2' },
+    { id: 'bay4', name: 'リフト',  icon: '⬆️',  note: 'タイヤ交換', x: 74, y: 8,  w: 20, h: 26, division: 'div2' },
   ],
+
+  // 配置図の壁・通路線など（設定の図面エディタで追加）。shapes: [{id,type:'line',x1,y1,x2,y2}]
+  floorPlan: { shapes: [] },
 
   resultMonth: new Date(),
 
