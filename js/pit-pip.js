@@ -59,7 +59,8 @@
     });
     var byBay = {};
     targets.forEach(function (c) { if (c.bayId) { (byBay[c.bayId] = byBay[c.bayId] || []).push(c); } });
-    PitFloorView.render(grid, { cardsByBay: byBay, stage: body, minCell: 40 });
+    // fit:true ＝ PIT全体を窓に収める（窓を縮めたら全体が縮小・スクロールは出さない）
+    PitFloorView.render(grid, { cardsByBay: byBay, stage: body, fit: true });
   }
 
   // ===== ヘッダを掴んで移動 =====
@@ -93,10 +94,12 @@
       h.setPointerCapture(e.pointerId);
       e.preventDefault(); e.stopPropagation();
     });
+    var raf = 0;
     h.addEventListener('pointermove', function (e) {
       if (!st) return;
-      el.style.width = clamp(st.w + (e.clientX - st.x), 260, window.innerWidth - 20) + 'px';
-      el.style.height = clamp(st.ht + (e.clientY - st.y), 200, window.innerHeight - 20) + 'px';
+      el.style.width = clamp(st.w + (e.clientX - st.x), 220, window.innerWidth - 20) + 'px';
+      el.style.height = clamp(st.ht + (e.clientY - st.y), 180, window.innerHeight - 20) + 'px';
+      if (!raf) raf = requestAnimationFrame(function () { raf = 0; refresh(); }); // リサイズ中もライブで全体フィット
     });
     h.addEventListener('pointerup', function () { if (st) { st = null; refresh(); } });
   }

@@ -603,11 +603,23 @@
     ensureModel();
     var f = fp(), savedSel = sel, savedTool = tool;
     sel = null; tool = 'select';                       // 選択ハイライト・編集ハンドルを出さない
-    var avail = opts.cell ? 0 : (opts.width || (opts.stage && opts.stage.clientWidth) || grid.clientWidth || 900);
-    // セルの大きさ（＝図の縮尺）は従来どおり。図は拡大せず、ノードの無い余白だけを切る。
-    cell = opts.cell || Math.max(opts.minCell || 44, Math.floor((avail - 24) / f.cols));
-    var bb = contentBBox(0.7);
     var crop = (opts.crop !== false);
+    var bb;
+    if (opts.fit && opts.stage) {
+      // PiP等：内容全体が窓（幅・高さ両方）に収まるよう縮尺を決める＝縮小はするがスクロールは出さない。
+      var availW = opts.stage.clientWidth || 400, availH = opts.stage.clientHeight || 300;
+      cell = 44; bb = contentBBox(0.7);
+      for (var it = 0; it < 4; it++) {                  // 枠幅がセル依存なので数回で収束
+        var cwc = Math.max(1, bb.maxX - bb.minX), chr = Math.max(1, bb.maxY - bb.minY);
+        cell = Math.max(8, Math.floor(Math.min((availW - 16) / cwc, (availH - 16) / chr)));
+        bb = contentBBox(0.7);
+      }
+    } else {
+      var avail = opts.cell ? 0 : (opts.width || (opts.stage && opts.stage.clientWidth) || grid.clientWidth || 900);
+      // セルの大きさ（＝図の縮尺）は従来どおり。図は拡大せず、ノードの無い余白だけを切る。
+      cell = opts.cell || Math.max(opts.minCell || 44, Math.floor((avail - 24) / f.cols));
+      bb = contentBBox(0.7);
+    }
     var ox = crop ? bb.minX : 0, oy = crop ? bb.minY : 0;
     var fullW = f.cols * cell, fullH = f.rows * cell;
     var cropW = crop ? (bb.maxX - bb.minX) * cell : fullW;
