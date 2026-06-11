@@ -184,26 +184,40 @@
   function pos(el, o) { el.style.left = (o.gx * cell) + 'px'; el.style.top = (o.gy * cell) + 'px'; el.style.width = (o.gw * cell) + 'px'; el.style.height = (o.gh * cell) + 'px'; }
   function lockChip(kind, o) { return '<span class="pf-lock' + (o.locked ? ' on' : '') + '" data-lock="' + kind + '|' + o.id + '" title="' + (o.locked ? 'ロック中（クリックで解除）' : 'ロックする') + '">' + (o.locked ? '🔒' : '🔓') + '</span>'; }
   function liftSvg() {
-    return '<svg class="pf-lift-ill" viewBox="0 0 100 70" preserveAspectRatio="xMidYMid meet">'
-      + '<rect x="14" y="24" width="72" height="8" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>'
-      + '<rect x="14" y="40" width="72" height="8" rx="4" fill="none" stroke="currentColor" stroke-width="3"/>'
-      + '<circle cx="18" cy="28" r="3" fill="currentColor"/><circle cx="82" cy="28" r="3" fill="currentColor"/>'
-      + '<circle cx="18" cy="44" r="3" fill="currentColor"/><circle cx="82" cy="44" r="3" fill="currentColor"/></svg>';
+    // 2柱リフトの“上から見た平面図”＝左右の柱＋内側に伸びる4本のスイングアーム＋先端パッド
+    return '<svg class="pf-lift-ill" viewBox="0 0 120 80" preserveAspectRatio="xMidYMid meet">'
+      + '<rect x="7" y="27" width="11" height="26" rx="2" fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="2.5"/>'
+      + '<rect x="102" y="27" width="11" height="26" rx="2" fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="2.5"/>'
+      + '<path d="M18 36 Q39 23 52 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
+      + '<path d="M18 44 Q39 57 52 59" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
+      + '<path d="M102 36 Q81 23 68 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
+      + '<path d="M102 44 Q81 57 68 59" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
+      + '<rect x="49" y="18" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="49" y="55" width="7" height="7" rx="1.5" fill="currentColor"/>'
+      + '<rect x="64" y="18" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="64" y="55" width="7" height="7" rx="1.5" fill="currentColor"/></svg>';
   }
   function makeBayEl(b) {
     var d = document.createElement('div');
     d.className = 'pf-box pf-pit pf-' + b.kind + (isSel('bay', b.id) ? ' sel' : '') + (b.locked ? ' locked' : '');
     pos(d, b); d.style.borderColor = divColor(b.division); d.style.color = divColor(b.division);
     d.setAttribute('data-bay', b.id);
-    var cap = b.gw * b.gh;
     var h = '<div class="pf-box-hd"><span class="pf-box-nm">' + esc((b.icon ? b.icon + ' ' : '') + (b.name || '')) + '</span>' + lockChip('bay', b) + '</div>';
-    if (b.kind === 'lift') h += liftSvg();
+    var cap = 1;
+    if (b.kind === 'lift') { h += liftSvg(); }
     else {
-      h += '<div class="pf-slots" style="grid-template-columns:repeat(' + b.gw + ',1fr);grid-template-rows:repeat(' + b.gh + ',1fr)">';
-      for (var i = 0; i < cap; i++) h += '<span class="pf-slot"></span>';
+      // カードは“横長カード”を縦に積む（広い枠は複数列）。正方形グリッドとは別の見た目。
+      var barH = clamp(Math.round(cell * 0.42), 11, 22), gap = 3;
+      var innerH = Math.max(barH, b.gh * cell - 20);
+      var rows = Math.max(1, Math.floor((innerH + gap) / (barH + gap)));
+      cap = b.gw * rows;
+      h += '<div class="pf-cards">';
+      for (var col = 0; col < b.gw; col++) {
+        h += '<div class="pf-cardcol">';
+        for (var r = 0; r < rows; r++) h += '<span class="pf-cardbar" style="height:' + barH + 'px"></span>';
+        h += '</div>';
+      }
       h += '</div>';
     }
-    h += '<span class="pf-cap" style="background:' + divColor(b.division) + '">' + cap + '台</span>';
+    h += '<span class="pf-cap" style="background:' + divColor(b.division) + '">' + (b.kind === 'lift' ? '1台' : cap + '枚') + '</span>';
     if (!b.locked) h += '<span class="pf-resize" data-rz="' + b.id + '"></span>';
     d.innerHTML = h; return d;
   }
@@ -227,7 +241,7 @@
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'icon\',this.value)">' + icons + '</select>'
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'kind\',this.value)"><option value="flat"' + (o.kind === 'flat' ? ' selected' : '') + '>平PIT</option><option value="lift"' + (o.kind === 'lift' ? ' selected' : '') + '>リフトPIT</option></select>'
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'division\',this.value)">' + dop('', '共通') + dop('div1', '1課') + dop('div2', '2課') + '</select>'
-        + '<span class="pf-cap-note">' + (o.gw * o.gh) + '台（横' + o.gw + '×縦' + o.gh + '）</span>'
+        + '<span class="pf-cap-note">' + (o.kind === 'lift' ? 'リフト＝1台' : ('横' + o.gw + '列・縦に積む（枚数は縮尺で変化）')) + '</span>'
         + zlockBtns() + '<button class="pf-del" onclick="PitFloorEditor.removeSel()">🗑 削除</button>';
     } else if (sel && sel.kind === 'shape' && o) {
       var nm = o.type === 'building' ? '建物' : (o.type === 'door' ? 'ドア' : (o.type === 'shutter' ? 'シャッター' : '壁・通路'));
