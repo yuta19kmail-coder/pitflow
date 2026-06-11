@@ -579,6 +579,24 @@
     h += over + '<span class="pf-cap" style="background:' + col0 + '">' + cards.length + '/' + cap + '</span>';
     d.innerHTML = h; return d;
   }
+  // 内容（枠・建物・壁）の占有範囲をマス単位で算出。ノードの無い余白を自動カットするのに使う。
+  // pad＝範囲の外周に足す余白（リフト飾りが枠の外に出る分を含める）。
+  function contentBBox(pad) {
+    var f = fp(), minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, any = false;
+    function ext(x0, y0, x1, y1) { any = true; if (x0 < minX) minX = x0; if (y0 < minY) minY = y0; if (x1 > maxX) maxX = x1; if (y1 > maxY) maxY = y1; }
+    bays().forEach(function (b) { var m = bayMetrics(b); ext(b.gx, b.gy, b.gx + m.w / cell, b.gy + m.h / cell); });
+    shapes().forEach(function (s) {
+      if (s.type === 'building') ext(s.gx, s.gy, s.gx + s.gw, s.gy + s.gh);
+      else if (s.type === 'wall') ext(Math.min(s.x1, s.x2), Math.min(s.y1, s.y2), Math.max(s.x1, s.x2), Math.max(s.y1, s.y2));
+      // ドア/シャッターは壁・建物の縁に付くので host の範囲に含まれる
+    });
+    if (!any) return { minX: 0, minY: 0, maxX: f.cols, maxY: f.rows };
+    var p = (pad == null) ? 0.7 : pad;
+    return {
+      minX: Math.max(0, minX - p), minY: Math.max(0, minY - p),
+      maxX: Math.min(f.cols, maxX + p), maxY: Math.min(f.rows, maxY + p)
+    };
+  }
   function renderStatic(grid, opts) {
     opts = opts || {};
     if (!grid) return;
@@ -586,27 +604,48 @@
     var f = fp(), savedSel = sel, savedTool = tool;
     sel = null; tool = 'select';                       // 選択ハイライト・編集ハンドルを出さない
     var avail = opts.cell ? 0 : (opts.width || (opts.stage && opts.stage.clientWidth) || grid.clientWidth || 900);
+    // 1) 仮セルで内容範囲を測る → 余白を除いた列数で再フィット（ノードの無い余白を自動カット）
     cell = opts.cell || Math.max(opts.minCell || 44, Math.floor((avail - 24) / f.cols));
-    var W = f.cols * cell, H = f.rows * cell;
-    grid.style.width = W + 'px'; grid.style.height = H + 'px'; grid.style.backgroundSize = cell + 'px ' + cell + 'px';
+    var bb = contentBBox(0.7);
+    if (!opts.cell && opts.crop !== false) {
+      var cwCols = Math.max(1, bb.maxX - bb.minX);
+      cell = Math.max(opts.minCell || 44, Math.floor((avail - 24) / cwCols));
+      bb = contentBBox(0.7);                            // 新セルで測り直し（枠幅がセル依存のため）
+    }
+    var crop = (opts.crop !== false);
+    var ox = crop ? bb.minX : 0, oy = crop ? bb.minY : 0;
+    var fullW = f.cols * cell, fullH = f.rows * cell;
+    var cropW = crop ? (bb.maxX - bb.minX) * cell : fullW;
+    var cropH = crop ? (bb.maxY - bb.minY) * cell : fullH;
+    grid.style.width = cropW + 'px'; grid.style.height = cropH + 'px';
+    grid.style.overflow = 'hidden';                    // 余白の外へはみ出した分を隠す
+    grid.style.backgroundSize = cell + 'px ' + cell + 'px';
+    grid.style.backgroundPosition = (-ox * cell) + 'px ' + (-oy * cell) + 'px';
+    grid.innerHTML = '';
+    // 内側レイヤを -ox,-oy だけずらす＝座標は原寸のまま余白だけ詰める
+    var inner = document.createElement('div');
+    inner.className = 'pfv-inner';
+    inner.style.position = 'absolute'; inner.style.left = (-ox * cell) + 'px'; inner.style.top = (-oy * cell) + 'px';
+    inner.style.width = fullW + 'px'; inner.style.height = fullH + 'px';
+    grid.appendChild(inner);
     // 第1層：壁＋リフト飾り
-    var s = '<svg class="pf-walls" width="' + W + '" height="' + H + '">';
+    var s = '<svg class="pf-walls" width="' + fullW + '" height="' + fullH + '">';
     walls().forEach(function (w) { s += '<line x1="' + (w.x1 * cell) + '" y1="' + (w.y1 * cell) + '" x2="' + (w.x2 * cell) + '" y2="' + (w.y2 * cell) + '" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>'; });
     bays().forEach(function (b) { if (b.kind === 'lift') s += liftDeco(b); });
     s += '</svg>';
-    grid.innerHTML = s;
+    inner.innerHTML = s;
     // 建物（DOM）
     shapes().filter(function (x) { return x.type === 'building'; }).forEach(function (b) {
       var e = document.createElement('div'); e.className = 'pf-box pf-building pfv-static'; pos(e, b);
-      e.innerHTML = '<span class="pf-box-tag">建物</span>'; grid.appendChild(e);
+      e.innerHTML = '<span class="pf-box-tag">建物</span>'; inner.appendChild(e);
     });
     // 第2層：ドア/シャッター
-    var s2 = '<svg class="pf-walls" width="' + W + '" height="' + H + '">';
+    var s2 = '<svg class="pf-walls" width="' + fullW + '" height="' + fullH + '">';
     shapes().filter(function (x) { return x.type === 'door' || x.type === 'shutter'; }).forEach(function (a) { s2 += attachMarker(a); });
     s2 += '</svg>';
-    grid.insertAdjacentHTML('beforeend', s2);
+    inner.insertAdjacentHTML('beforeend', s2);
     // PIT枠（実カードをはめる）
-    bays().forEach(function (b) { grid.appendChild(makeBayElStatic(b, opts)); });
+    bays().forEach(function (b) { inner.appendChild(makeBayElStatic(b, opts)); });
     sel = savedSel; tool = savedTool;
   }
   window.PitFloorView = { render: renderStatic };
