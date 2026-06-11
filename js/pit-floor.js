@@ -109,6 +109,7 @@
     TOOLS.forEach(function (t) { h += '<button class="pf-tool' + (tool === t.id ? ' on' : '') + '" data-tool="' + t.id + '" onclick="PitFloorEditor.setTool(\'' + t.id + '\')">' + t.lb + '</button>'; });
     h += '</div>';
     h += '<span class="pf-scale-wrap">縮尺<input type="range" id="pf-scale" min="8" max="30" step="1" value="' + f.cols + '"><span id="pf-scale-lb">横' + f.cols + 'マス</span></span>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.loadSample()">🏭 サンプル工場</button>';
     h += '<button class="pf-done" onclick="PitFloorEditor.close()">完了して閉じる</button></div>';
     h += '<div class="pf-hint" id="pf-hint">' + toolHint() + '</div>';
     h += '<div class="pf-stage" id="pf-stage"><div class="pf-grid" id="pf-grid"></div></div>';
@@ -204,15 +205,17 @@
     var cap = 1;
     if (b.kind === 'lift') { h += liftSvg(); }
     else {
-      // カードは“横長カード”を縦に積む（広い枠は複数列）。正方形グリッドとは別の見た目。
-      var barH = clamp(Math.round(cell * 0.42), 11, 22), gap = 3;
-      var innerH = Math.max(barH, b.gh * cell - 20);
-      var rows = Math.max(1, Math.floor((innerH + gap) / (barH + gap)));
-      cap = b.gw * rows;
+      // カードは“横長カード”を【1列5枚】で積む。箱の高さに合わせて1枚の高さを詰めるので
+      // 縦長になりすぎない。幅が広い枠だけ複数列になる（2.5マスごとに1列）。
+      var per = 5, gap = 3;
+      var ncol = Math.max(1, Math.round(b.gw / 2.5));
+      var innerH = Math.max(34, b.gh * cell - 22);
+      var barH = clamp(Math.floor((innerH - (per - 1) * gap) / per), 7, 26);
+      cap = ncol * per;
       h += '<div class="pf-cards">';
-      for (var col = 0; col < b.gw; col++) {
+      for (var col = 0; col < ncol; col++) {
         h += '<div class="pf-cardcol">';
-        for (var r = 0; r < rows; r++) h += '<span class="pf-cardbar" style="height:' + barH + 'px"></span>';
+        for (var r = 0; r < per; r++) h += '<span class="pf-cardbar" style="height:' + barH + 'px"></span>';
         h += '</div>';
       }
       h += '</div>';
@@ -373,9 +376,32 @@
     unbind();
   }
 
+  // サンプル工場（建物の外壁＋シャッター＋PIT＝1列5枚を2列に並べる）を一発で入れる
+  function loadSample() {
+    if (!confirm('サンプルの工場レイアウトを読み込みます。今の配置は置き換わります。よろしいですか？')) return;
+    var W = 20, H = 12, m = 0.4;
+    var f = fp(); f.cols = W; f.rows = H;
+    f.shapes = [
+      { id: 'w_top', type: 'wall', x1: m, y1: m, x2: W - m, y2: m },
+      { id: 'w_bot', type: 'wall', x1: m, y1: H - m, x2: W - m, y2: H - m },
+      { id: 'w_left', type: 'wall', x1: m, y1: m, x2: m, y2: H - m },
+      { id: 'w_right', type: 'wall', x1: W - m, y1: m, x2: W - m, y2: H - m },
+      { id: 'sh_in', type: 'shutter', wallId: 'w_bot', t: 0.46 }
+    ];
+    var xs = [1.5, 6, 10.5, 15];
+    var list = [];
+    xs.forEach(function (x, i) { list.push({ id: uid('bay'), name: (i === 3 ? 'リフト' : 'PIT ' + (i + 1)), icon: '', kind: (i === 3 ? 'lift' : 'flat'), division: 'div1', gx: x, gy: 1.4, gw: 3, gh: 4 }); });
+    xs.forEach(function (x, i) { list.push({ id: uid('bay'), name: (i === 0 ? 'リフト' : 'PIT ' + (i + 4)), icon: '', kind: (i === 0 ? 'lift' : 'flat'), division: 'div2', gx: x, gy: 6.6, gw: 3, gh: 4 }); });
+    state.bays = list; sel = null; save();
+    var sc = document.getElementById('pf-scale'); if (sc) sc.value = W;
+    var lb = document.getElementById('pf-scale-lb'); if (lb) lb.textContent = '横' + W + 'マス';
+    render(); paintProps();
+  }
+
   window.PitFloorEditor = {
     open: open, close: close, setTool: setTool, edit: edit, removeSel: removeSel,
     toFront: function () { moveZ(1); }, toBack: function () { moveZ(-1); }, toggleLock: toggleLock,
+    loadSample: loadSample,
     countPits: function () { ensureModel(); return bays().length; }
   };
   console.log('[pit-floor] v3 ready');
