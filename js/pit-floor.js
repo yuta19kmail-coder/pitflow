@@ -604,14 +604,9 @@
     var f = fp(), savedSel = sel, savedTool = tool;
     sel = null; tool = 'select';                       // 選択ハイライト・編集ハンドルを出さない
     var avail = opts.cell ? 0 : (opts.width || (opts.stage && opts.stage.clientWidth) || grid.clientWidth || 900);
-    // 1) 仮セルで内容範囲を測る → 余白を除いた列数で再フィット（ノードの無い余白を自動カット）
+    // セルの大きさ（＝図の縮尺）は従来どおり。図は拡大せず、ノードの無い余白だけを切る。
     cell = opts.cell || Math.max(opts.minCell || 44, Math.floor((avail - 24) / f.cols));
     var bb = contentBBox(0.7);
-    if (!opts.cell && opts.crop !== false) {
-      var cwCols = Math.max(1, bb.maxX - bb.minX);
-      cell = Math.max(opts.minCell || 44, Math.floor((avail - 24) / cwCols));
-      bb = contentBBox(0.7);                            // 新セルで測り直し（枠幅がセル依存のため）
-    }
     var crop = (opts.crop !== false);
     var ox = crop ? bb.minX : 0, oy = crop ? bb.minY : 0;
     var fullW = f.cols * cell, fullH = f.rows * cell;
