@@ -153,6 +153,7 @@
     shapes().filter(function (x) { return x.type === 'door' || x.type === 'shutter'; }).forEach(function (a) {
       s += attachMarker(a);
     });
+    bays().forEach(function (b) { if (b.kind === 'lift') s += liftDeco(b); }); // リフト飾りは枠の外
     s += '</svg>';
     grid.innerHTML = s;
 
@@ -184,43 +185,52 @@
 
   function pos(el, o) { el.style.left = (o.gx * cell) + 'px'; el.style.top = (o.gy * cell) + 'px'; el.style.width = (o.gw * cell) + 'px'; el.style.height = (o.gh * cell) + 'px'; }
   function lockChip(kind, o) { return '<span class="pf-lock' + (o.locked ? ' on' : '') + '" data-lock="' + kind + '|' + o.id + '" title="' + (o.locked ? 'ロック中（クリックで解除）' : 'ロックする') + '">' + (o.locked ? '🔒' : '🔓') + '</span>'; }
-  function liftSvg() {
-    // 2柱リフトの“上から見た平面図”＝左右の柱＋内側に伸びる4本のスイングアーム＋先端パッド
-    return '<svg class="pf-lift-ill" viewBox="0 0 120 80" preserveAspectRatio="xMidYMid meet">'
-      + '<rect x="7" y="27" width="11" height="26" rx="2" fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="2.5"/>'
-      + '<rect x="102" y="27" width="11" height="26" rx="2" fill="currentColor" fill-opacity="0.22" stroke="currentColor" stroke-width="2.5"/>'
-      + '<path d="M18 36 Q39 23 52 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
-      + '<path d="M18 44 Q39 57 52 59" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
-      + '<path d="M102 36 Q81 23 68 21" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
-      + '<path d="M102 44 Q81 57 68 59" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>'
-      + '<rect x="49" y="18" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="49" y="55" width="7" height="7" rx="1.5" fill="currentColor"/>'
-      + '<rect x="64" y="18" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="64" y="55" width="7" height="7" rx="1.5" fill="currentColor"/></svg>';
+  // リフトの飾り（枠の外＝SVG層に描く）。柱＋直線足＋正方形パッド＋内側ブラケット＋外側ピンク出っ張り。
+  // 着地状態で外側にはねる。色は課（divisionColor）。
+  function liftDeco(b) {
+    var c = cell;
+    var bx = b.gx * c, by = b.gy * c, bw = b.gw * c, bh = b.gh * c, cy = by + bh / 2;
+    var col = divColor(b.division);
+    var pw = Math.max(4, c * 0.18), ph = clamp(bh * 0.42, c * 0.9, c * 2.4), gap = c * 0.12;
+    var armDX = c * 0.32, armDY = c * 0.9, ps = Math.max(5, c * 0.2);
+    var aw = Math.max(2, c * 0.07), pkw = Math.max(1.4, c * 0.05), protW = c * 0.2, protH = ph * 0.4, brkT = c * 0.12, brkH = ph * 0.13;
+    function side(s) {
+      var edge = (s < 0) ? bx : (bx + bw);
+      var px = (s < 0) ? (edge - gap - pw) : (edge + gap);
+      var pcx = px + pw / 2, ptop = cy - ph / 2, pbot = cy + ph / 2;
+      var innerX = (s < 0) ? (px + pw) : px, outerX = (s < 0) ? px : (px + pw);
+      var tickDir = -s, tipX = pcx + s * armDX;
+      var protX = (s < 0) ? (outerX - protW) : outerX;
+      var g = '';
+      g += '<rect x="' + px + '" y="' + ptop + '" width="' + pw + '" height="' + ph + '" rx="2" fill="' + col + '" fill-opacity="0.18" stroke="' + col + '" stroke-width="' + pkw + '"/>';
+      g += '<path d="M' + (innerX + tickDir * brkT) + ' ' + (cy - brkH) + ' L' + innerX + ' ' + (cy - brkH) + ' L' + innerX + ' ' + (cy + brkH) + ' L' + (innerX + tickDir * brkT) + ' ' + (cy + brkH) + '" fill="none" stroke="' + col + '" stroke-width="' + pkw + '" stroke-linecap="round" stroke-linejoin="round"/>';
+      g += '<rect x="' + protX + '" y="' + (cy - protH / 2) + '" width="' + protW + '" height="' + protH + '" rx="2" fill="' + col + '"/>';
+      g += '<line x1="' + pcx + '" y1="' + ptop + '" x2="' + tipX + '" y2="' + (ptop - armDY) + '" stroke="' + col + '" stroke-width="' + aw + '" stroke-linecap="round"/>';
+      g += '<rect x="' + (tipX - ps / 2) + '" y="' + (ptop - armDY - ps / 2) + '" width="' + ps + '" height="' + ps + '" rx="1.5" fill="' + col + '"/>';
+      g += '<line x1="' + pcx + '" y1="' + pbot + '" x2="' + tipX + '" y2="' + (pbot + armDY) + '" stroke="' + col + '" stroke-width="' + aw + '" stroke-linecap="round"/>';
+      g += '<rect x="' + (tipX - ps / 2) + '" y="' + (pbot + armDY - ps / 2) + '" width="' + ps + '" height="' + ps + '" rx="1.5" fill="' + col + '"/>';
+      return g;
+    }
+    return '<g style="pointer-events:none">' + side(-1) + side(1) + '</g>';
   }
   function makeBayEl(b) {
     var d = document.createElement('div');
     d.className = 'pf-box pf-pit pf-' + b.kind + (isSel('bay', b.id) ? ' sel' : '') + (b.locked ? ' locked' : '');
     pos(d, b); d.style.borderColor = divColor(b.division); d.style.color = divColor(b.division);
     d.setAttribute('data-bay', b.id);
+    // 平PITもリフトPITも中身は同じカード（1列5枚を箱の高さに均等フィル）。リフトは飾りだけ枠の外。
+    var per = 5;
+    var ncol = Math.max(1, Math.round(b.gw / 2.5));
+    var cap = ncol * per;
     var h = '<div class="pf-box-hd"><span class="pf-box-nm">' + esc((b.icon ? b.icon + ' ' : '') + (b.name || '')) + '</span>' + lockChip('bay', b) + '</div>';
-    var cap = 1;
-    if (b.kind === 'lift') { h += liftSvg(); }
-    else {
-      // カードは“横長カード”を【1列5枚】で積む。箱の高さに合わせて1枚の高さを詰めるので
-      // 縦長になりすぎない。幅が広い枠だけ複数列になる（2.5マスごとに1列）。
-      var per = 5, gap = 3;
-      var ncol = Math.max(1, Math.round(b.gw / 2.5));
-      var innerH = Math.max(34, b.gh * cell - 22);
-      var barH = clamp(Math.floor((innerH - (per - 1) * gap) / per), 7, 26);
-      cap = ncol * per;
-      h += '<div class="pf-cards">';
-      for (var col = 0; col < ncol; col++) {
-        h += '<div class="pf-cardcol">';
-        for (var r = 0; r < per; r++) h += '<span class="pf-cardbar" style="height:' + barH + 'px"></span>';
-        h += '</div>';
-      }
+    h += '<div class="pf-cards">';
+    for (var col = 0; col < ncol; col++) {
+      h += '<div class="pf-cardcol">';
+      for (var r = 0; r < per; r++) h += '<span class="pf-cardbar"></span>';
       h += '</div>';
     }
-    h += '<span class="pf-cap" style="background:' + divColor(b.division) + '">' + (b.kind === 'lift' ? '1台' : cap + '枚') + '</span>';
+    h += '</div>';
+    h += '<span class="pf-cap" style="background:' + divColor(b.division) + '">' + cap + '枚</span>';
     if (!b.locked) h += '<span class="pf-resize" data-rz="' + b.id + '"></span>';
     d.innerHTML = h; return d;
   }
@@ -361,7 +371,7 @@
   function unbind() { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); }
   function onMove(e) {
     if (!drag) return; var f = fp(), c = cellAt(e);
-    if (drag.type === 'move') { var o = drag.o; o.gx = clamp(Math.round(c.cx - drag.ox), 0, f.cols - o.gw); o.gy = clamp(Math.round(c.cy - drag.oy), 0, f.rows - o.gh); }
+    if (drag.type === 'move') { var o = drag.o; o.gx = clamp(Math.round((c.cx - drag.ox) * 2) / 2, 0, f.cols - o.gw); o.gy = clamp(Math.round((c.cy - drag.oy) * 2) / 2, 0, f.rows - o.gh); } // 位置は0.5マス刻み＝間隔を自由に
     else if (drag.type === 'resize') { var r = drag.o; r.gw = clamp(Math.round(c.cx) - r.gx, 1, f.cols - r.gx); r.gh = clamp(Math.round(c.cy) - r.gy, 1, f.rows - r.gy); }
     else if (drag.type === 'attach') { var nw = nearestWall(c.cx, c.cy); if (nw) { drag.a.wallId = nw.w.id; drag.a.t = nw.t; } }
     else if (drag.type === 'wallpt') { var w = drag.w; var ot = (drag.n === '1') ? { x: w.x2, y: w.y2 } : { x: w.x1, y: w.y1 }; var sn = snapWall(ot.x, ot.y, c.cx, c.cy); if (drag.n === '1') { w.x1 = sn.x2; w.y1 = sn.y2; } else { w.x2 = sn.x2; w.y2 = sn.y2; } }
@@ -379,7 +389,7 @@
   // サンプル工場（建物の外壁＋シャッター＋PIT＝1列5枚を2列に並べる）を一発で入れる
   function loadSample() {
     if (!confirm('サンプルの工場レイアウトを読み込みます。今の配置は置き換わります。よろしいですか？')) return;
-    var W = 20, H = 12, m = 0.4;
+    var W = 22, H = 14, m = 0.4;
     var f = fp(); f.cols = W; f.rows = H;
     f.shapes = [
       { id: 'w_top', type: 'wall', x1: m, y1: m, x2: W - m, y2: m },
@@ -388,10 +398,10 @@
       { id: 'w_right', type: 'wall', x1: W - m, y1: m, x2: W - m, y2: H - m },
       { id: 'sh_in', type: 'shutter', wallId: 'w_bot', t: 0.46 }
     ];
-    var xs = [1.5, 6, 10.5, 15];
+    var xs = [2, 6.5, 11, 15.5];
     var list = [];
-    xs.forEach(function (x, i) { list.push({ id: uid('bay'), name: (i === 3 ? 'リフト' : 'PIT ' + (i + 1)), icon: '', kind: (i === 3 ? 'lift' : 'flat'), division: 'div1', gx: x, gy: 1.4, gw: 3, gh: 4 }); });
-    xs.forEach(function (x, i) { list.push({ id: uid('bay'), name: (i === 0 ? 'リフト' : 'PIT ' + (i + 4)), icon: '', kind: (i === 0 ? 'lift' : 'flat'), division: 'div2', gx: x, gy: 6.6, gw: 3, gh: 4 }); });
+    xs.forEach(function (x, i) { list.push({ id: uid('bay'), name: (i === 3 ? 'リフト' : 'PIT ' + (i + 1)), icon: '', kind: (i === 3 ? 'lift' : 'flat'), division: 'div1', gx: x, gy: 1.5, gw: 3, gh: 5 }); });
+    xs.forEach(function (x, i) { list.push({ id: uid('bay'), name: (i === 0 ? 'リフト' : 'PIT ' + (i + 4)), icon: '', kind: (i === 0 ? 'lift' : 'flat'), division: 'div2', gx: x, gy: 8, gw: 3, gh: 5 }); });
     state.bays = list; sel = null; save();
     var sc = document.getElementById('pf-scale'); if (sc) sc.value = W;
     var lb = document.getElementById('pf-scale-lb'); if (lb) lb.textContent = '横' + W + 'マス';
