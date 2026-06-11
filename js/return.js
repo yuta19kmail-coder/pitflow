@@ -133,15 +133,16 @@ function renderReturnWeek(){
       const isClosed = state.settings.closedDow.includes(d.getDay());
       const inCell = state.cards.filter(c =>
         c.returnDate === dStr &&
-        (c.reserveTime || '').startsWith(hh) &&
+        (c.returnTime || c.reserveTime || '').startsWith(hh) &&
         c.status !== 'returned'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
       inCell.forEach(c => {
+        const tt = (c.returnTime || c.reserveTime || '');
         html += '<div class="reserve-week-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
         html += ' onclick="openDetail(\'' + c.id + '\')"';
-        html += ' title="' + c.customer + '様 / ' + c.menu + '">';
-        html += c.customer;
+        html += ' title="' + tt + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
+        html += (tt ? tt + ' ' : '') + c.customer + (c.car ? ' ' + c.car : '');
         html += '</div>';
       });
       html += '</div>';
@@ -151,13 +152,78 @@ function renderReturnWeek(){
   wrap.innerHTML = html;
 }
 
+/* 月ビュー（v0.45.0）＝入庫(予約)ビューと同じ日付リスト型（左に日付・右にその日の返車を時刻順・下へ無限スクロール）。
+   reserve.js の renderReserveMonth のミラー。フィルタは returnDate。 */
 function renderReturnMonth(){
   document.getElementById('return-day-list').style.display = 'none';
   document.getElementById('return-week').style.display = 'none';
   document.getElementById('return-2month').style.display = 'none';
   const wrap = document.getElementById('return-month');
+  wrap.classList.add('rml-host');
   wrap.style.display = '';
-  wrap.innerHTML = monthGridCellsReturn(state.returnDate);
+
+  const base = new Date(state.returnDate.getFullYear(), state.returnDate.getMonth(), 1);
+  window._rmlStartR = base;
+  window._rmlNR = 42;   // 初期6週間ぶん
+  wrap.innerHTML = '<div class="rml-scroll" id="rml-scroll-r"><div id="rml-list-r">' + _rmlRowsReturn(0, window._rmlNR) + '</div></div>';
+
+  const sc = document.getElementById('rml-scroll-r');
+  if (sc){
+    sc.addEventListener('scroll', function(){
+      if (sc.scrollTop + sc.clientHeight > sc.scrollHeight - 320){
+        const from = window._rmlNR;
+        window._rmlNR += 21;
+        const list = document.getElementById('rml-list-r');
+        if (list) list.insertAdjacentHTML('beforeend', _rmlRowsReturn(from, window._rmlNR));
+      }
+    });
+    const t = sc.querySelector('.rml-date.today');
+    if (t) sc.scrollTop = Math.max(0, t.closest('.rml-row').offsetTop - 8);
+  }
+}
+
+function _rmlRowsReturn(from, to){
+  const todayStr = ymd(new Date());
+  let html = '';
+  for (let i = from; i < to; i++){
+    const d = addDays(window._rmlStartR, i);
+    const ds = ymd(d);
+    if (d.getDate() === 1 || i === 0){
+      html += '<div class="rml-mhead">' + d.getFullYear() + '年 ' + (d.getMonth()+1) + '月</div>';
+    }
+    const dow = d.getDay();
+    const isClosed = state.settings.closedDow.includes(dow);
+    const hol = (window.Holidays && Holidays.name(ds)) || null;
+    const cardsOfDay = state.cards
+      .filter(c => c.returnDate === ds && c.status !== 'returned')
+      .sort((a, b) => ((a.returnTime || a.reserveTime || '99:99') < (b.returnTime || b.reserveTime || '99:99') ? -1 : 1));
+
+    let dCls = '';
+    if (ds === todayStr) dCls += ' today';
+    if (dow === 0 || hol) dCls += ' red';
+    else if (dow === 6) dCls += ' sat';
+
+    html += '<div class="rml-row' + (isClosed ? ' closed' : '') + '">';
+    html += '<div class="rml-date' + dCls + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + (ds === todayStr ? '・今日' : '') + '</span>'
+         + (hol ? '<span class="rml-hol">🎌' + hol + '</span>' : '')
+         + (isClosed ? '<span class="rml-hol">定休</span>' : '') + '</div>';
+    html += '<div class="rml-cards" data-drop="returnDate" data-drop-val="' + ds + '">';
+    if (!cardsOfDay.length){
+      html += '<span class="rml-empty">' + (isClosed ? '休' : '—') + '</span>';
+    } else {
+      cardsOfDay.forEach(c => {
+        const tt = (c.returnTime || c.reserveTime || '--:--');
+        html += '<div class="rml-ev return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"'
+             + ' onclick="openDetail(\'' + c.id + '\')"'
+             + ' title="' + tt + ' ' + (c.customer || '') + '様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
+             + '<b>' + tt + '</b> ' + (c.customer || '（未入力）') + (c.car ? ' ' + c.car : '')
+             + (c.needLoaner ? '<span class="rml-wt">代車返却</span>' : '')
+             + '</div>';
+      });
+    }
+    html += '</div></div>';
+  }
+  return html;
 }
 
 function renderReturn2Month(){
@@ -223,10 +289,11 @@ function monthGridCellsReturn(refDate){
     html += '<div class="day-num">' + dd + '</div>';
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
+      const tt = (c.returnTime || c.reserveTime || '');
       html += '<div class="reserve-month-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       html += ' onclick="openDetail(\'' + c.id + '\')"';
-      html += ' title="' + c.customer + '様 / ' + c.menu + '">';
-      html += c.customer;
+      html += ' title="' + tt + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
+      html += (tt ? tt + ' ' : '') + c.customer + (c.car ? ' ' + c.car : '');
       html += '</div>';
     });
     if (remaining > 0){
@@ -270,22 +337,8 @@ function returnToday(){
   renderReturn();
 }
 
+/* v0.45.0：返車カードを入庫(予約)ビューと同じリッチカードに統一。
+   返車時刻を表示し、左アクセントは緑（返車アイデンティティを維持）。 */
 function returnCardHtml(c){
-  const wt = state.workTypes.find(w => w.id === c.workType);
-  const dt = state.dropTypes.find(d => d.id === c.dropType);
-  let html = '';
-  html += '<div class="pit-card return" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:var(--green);">';
-  html += '<div class="pc-line1">';
-  html += '<span style="color:var(--green);font-weight:600;">' + (c.reserveTime || '時刻未定') + '</span>';
-  html += '<span style="color:var(--text3);">' + statusLabel(c.status) + '</span>';
-  html += '</div>';
-  html += '<div class="pc-customer">' + c.customer + ' 様</div>';
-  html += '<div class="pc-car">' + c.car + ' ／ ' + c.menu + '</div>';
-  html += '<div class="pc-tags">';
-  if (dt) html += '<span class="pc-tag">' + dt.label + '</span>';
-  if (wt) html += '<span class="pc-tag">' + wt.label + '</span>';
-  if (c.needWash)   html += '<span class="pc-tag" style="background:rgba(59,130,246,.1);color:#3b82f6;border-color:#3b82f6;">洗車</span>';
-  if (c.needLoaner) html += '<span class="pc-tag staff">代車返却</span>';
-  html += '</div></div>';
-  return html;
+  return (typeof cardHtml === 'function') ? cardHtml(c, { returnView: true }) : '';
 }

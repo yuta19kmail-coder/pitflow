@@ -363,10 +363,15 @@ function cardHtml(c, opts){
     return h;
   }
 
+  /* === 返車ビュー（returnView）：入庫カードと同じ作りのまま、時刻＝返車時刻・左アクセント＝緑で統一 === */
+  const isRet = !!opts.returnView;
+  const accent2 = isRet ? 'var(--green)' : accent;
+  const timeStr = isRet ? (c.returnTime || c.reserveTime || '') : (c.reserveTime || '');
+
   let html = '';
-  html += '<div class="pit-card' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent + ';">';
+  html += '<div class="pit-card' + (isRet ? ' return' : '') + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent2 + ';">';
   html += '<div class="pc-line1">';
-  html += '<span class="pc-time">' + (c.reserveTime || '') + '</span>';
+  html += '<span class="pc-time">' + timeStr + '</span>';
   html += '<span class="pc-status" style="--sc:' + statusColor(c.status) + ';">' + statusLabel(c.status) + '</span>';
   if (c.urgent) html += '<span class="pc-urg">緊急</span>';
   html += '</div>';

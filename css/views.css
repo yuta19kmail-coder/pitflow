@@ -712,6 +712,15 @@
 .pit-card.return{
   border-left-color:var(--green) !important;
 }
+/* 月＝日付リスト型（rml）でも返車は緑で統一（入庫＝作業色との区別） */
+.rml-ev.return{
+  border-left-color:var(--green) !important;
+  background:rgba(29,185,122,.12);
+}
+.rml-ev.return:hover{
+  background:var(--green);
+  color:#fff;
+}
 
 /* ========================================
    カード詳細フォーム
