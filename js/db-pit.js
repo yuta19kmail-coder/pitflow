@@ -24,6 +24,8 @@
 
     /* 起動：localStorage 優先で state を上書き。無ければサンプルを初期保存 */
     init: function () {
+      // state.js の既定（＝自社レイアウト）を退避。古いサンプル端末の移行に使う。
+      const DEF_BAYS = state.bays, DEF_FP = state.floorPlan;
       try {
         const raw = localStorage.getItem(LS_KEY);
         if (raw) {
@@ -35,15 +37,26 @@
             if (Array.isArray(d.customers))     state.customers     = d.customers;
             if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
             if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
-            if (Array.isArray(d.bays))          state.bays          = d.bays;          // v0.46.0：PIT配置図の枠
-            if (d.floorPlan && typeof d.floorPlan === 'object') state.floorPlan = d.floorPlan; // v0.46.0：壁・通路線
+            // ★PIT配置図：旧サンプル（PIT1〜4の初期4枠）のままの端末は、自社レイアウト既定へ自動移行。
+            //   ゆうたが自分で配置を作った端末（枠IDが bay1〜4 以外）は一切触らない。
+            const oldSample = Array.isArray(d.bays) && d.bays.length > 0 && d.bays.length <= 4 &&
+              d.bays.every(function (b) { return /^bay[1-4]$/.test(b.id || ''); });
+            let migrated = false;
+            if (oldSample) {
+              state.bays = DEF_BAYS; state.floorPlan = DEF_FP; migrated = true;   // 自社配置へ差し替え
+            } else {
+              if (Array.isArray(d.bays))          state.bays          = d.bays;          // v0.46.0：PIT配置図の枠
+              if (d.floorPlan && typeof d.floorPlan === 'object') state.floorPlan = d.floorPlan; // v0.46.0：壁・建物・ドア
+            }
             if (d.aiVerdicts && typeof d.aiVerdicts === 'object') state.aiVerdicts = d.aiVerdicts;
             this._mergeSettings(d.settings);
             // 作業タイプは設定で増減できる＝保存があれば実行リストを上書き
             if (Array.isArray(state.settings.workTypes) && state.settings.workTypes.length) {
               state.workTypes = state.settings.workTypes;
             }
-            console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）');
+            console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）'
+              + (migrated ? '／PIT配置図を自社レイアウト既定へ移行しました' : ''));
+            if (migrated) this.save(true);   // 移行結果を保存（次回以降は移行不要）
           }
         } else {
           this.save(true);   // 初回：サンプルを初期データとして保存

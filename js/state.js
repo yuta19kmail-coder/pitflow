@@ -42,17 +42,29 @@ window.state = {
     },
   ],
 
-  // PIT配置図の枠。x/y/w/h はキャンバスに対する%（設定の図面エディタで配置）。
-  // division は '' (共通) / 'div1' (1課) / 'div2' (2課)。座標が無い枠は初回に自動配置される。
+  // PIT配置図の枠。マス基準（gx,gy）＝図面エディタの座標。division '' (共通)/'div1'(1課)/'div2'(2課)。
+  // ★初期値＝小林モータースの自社レイアウト（自社PIT配置図.json と同じ）。
+  //   端末ごとにブラウザ保存（localStorage）なので、未編集の端末はこの自社配置で表示される。
   bays: [
-    { id: 'bay1', name: 'PIT 1',   icon: '🛠️', note: '車検対応',  x: 5,  y: 8,  w: 20, h: 26, division: 'div1' },
-    { id: 'bay2', name: 'PIT 2',   icon: '🛠️', note: '一般整備',  x: 28, y: 8,  w: 20, h: 26, division: 'div1' },
-    { id: 'bay3', name: 'PIT 3',   icon: '🛠️', note: '板金・塗装', x: 51, y: 8,  w: 20, h: 26, division: 'div2' },
-    { id: 'bay4', name: 'リフト',  icon: '⬆️',  note: 'タイヤ交換', x: 74, y: 8,  w: 20, h: 26, division: 'div2' },
+    { id: 'baymq99q0w9862', name: '3PIT', icon: '', kind: 'lift', division: 'div2', gx: 1.5,  gy: 6,  gw: 3, gh: 5, dir: 'v', ncol: 1, rows: 5 },
+    { id: 'baymq99qi0p112', name: '2番',  icon: '', kind: 'lift', division: 'div1', gx: 6,    gy: 6,  gw: 3, gh: 5, dir: 'v', ncol: 1, rows: 5 },
+    { id: 'baymq99qve324', name: '1PIT', icon: '', kind: 'lift', division: 'div1', gx: 10.5, gy: 6,  gw: 3, gh: 5, dir: 'v', ncol: 1, rows: 5 },
+    { id: 'baymq9gfkf8184', name: 'PIT 4', icon: '', kind: 'flat', division: '',    gx: 1.5,  gy: 13, dir: 'h', ncol: 2, rows: 2 },
+    { id: 'baymq9gftkt76',  name: '4PIT', icon: '', kind: 'lift', division: 'div2', gx: 8.5,  gy: 13, dir: 'h', ncol: 2, rows: 2 },
+    { id: 'baymq9gitve44',  name: '3前（青空1番）', icon: '', kind: 'flat', division: '', gx: 1,   gy: 2, dir: 'h', ncol: 2, rows: 2 },
+    { id: 'baymq9gj24g50',  name: '1前', icon: '', kind: 'flat', division: '',    gx: 7.5,  gy: 2,  dir: 'h', ncol: 2, rows: 2 },
   ],
 
-  // 配置図の壁・通路線など（設定の図面エディタで追加）。shapes: [{id,type:'line',x1,y1,x2,y2}]
-  floorPlan: { shapes: [] },
+  // 配置図の建物・壁・ドア・シャッター（図面エディタで編集）。★初期値＝自社レイアウト。
+  floorPlan: {
+    cols: 30, rows: 18, shapes: [
+      { id: 'shmq9gg71m912', type: 'building', gx: 0.5, gy: 5, gw: 15, gh: 12, locked: true },
+      { id: 'shmq9ghc5t866', type: 'door', t: 0.5833333333333334, hostKind: 'bld', hostId: 'shmq9gg71m912', edge: 1, doorDir: 'out', doorSide: 'r' },
+      { id: 'shmq9ghr8j107', type: 'shutter', t: 0.21818181818181825, hostKind: 'bld', hostId: 'shmq9gg71m912', edge: 3, len: 3.1999999999999997 },
+      { id: 'shmq9gi2h482', type: 'shutter', t: 0.21515151515151515, hostKind: 'bld', hostId: 'shmq9gg71m912', edge: 0, len: 5.6000000000000005 },
+      { id: 'shmq9gibiy991', type: 'shutter', t: 0.7024242424242425, hostKind: 'bld', hostId: 'shmq9gg71m912', edge: 0, len: 5.6000000000000005 }
+    ]
+  },
 
   resultMonth: new Date(),
 
