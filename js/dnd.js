@@ -54,6 +54,7 @@
 
     if (window.PitDB) PitDB.save();
     if (state.currentView) showView(state.currentView);
+    if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();  // PiP小窓も同期（2画面連携）
   }
   window.applyCardDrop = applyCardDrop;
 

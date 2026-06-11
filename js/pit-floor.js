@@ -119,7 +119,9 @@
     TOOLS.forEach(function (t) { h += '<button class="pf-tool' + (tool === t.id ? ' on' : '') + '" data-tool="' + t.id + '" onclick="PitFloorEditor.setTool(\'' + t.id + '\')">' + t.lb + '</button>'; });
     h += '</div>';
     h += '<span class="pf-scale-wrap">縮尺<input type="range" id="pf-scale" min="8" max="30" step="1" value="' + f.cols + '"><span id="pf-scale-lb">横' + f.cols + 'マス</span></span>';
-    h += '<button class="pf-sample" onclick="PitFloorEditor.loadSample()">🏭 サンプル工場</button>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.exportPlan()">💾 書き出し</button>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.importPlan()">📂 読み込み</button>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.loadSample()">🏭 サンプル</button>';
     h += '<button class="pf-done" onclick="PitFloorEditor.close()">完了して閉じる</button></div>';
     h += '<div class="pf-hint" id="pf-hint">' + toolHint() + '</div>';
     h += '<div class="pf-stage" id="pf-stage"><div class="pf-grid" id="pf-grid"></div></div>';
@@ -505,8 +507,113 @@
     render(); paintProps();
   }
 
+  // 配置図を別ファイルに書き出し（バックアップ）／読み込み（復元）
+  function exportPlan() {
+    var data = JSON.stringify({ _type: 'pitflow-floorplan', savedAt: new Date().toISOString(), bays: bays(), floorPlan: fp() }, null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'PIT配置図_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  function importPlan() {
+    var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
+    inp.onchange = function () {
+      var fl = inp.files && inp.files[0]; if (!fl) return;
+      if (!confirm('読み込むと今の配置は置き換わります。よろしいですか？')) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var d = JSON.parse(rd.result);
+          if (Array.isArray(d.bays)) state.bays = d.bays;
+          if (d.floorPlan && typeof d.floorPlan === 'object') state.floorPlan = d.floorPlan;
+          ensureModel(); sel = null; save();
+          var sc = document.getElementById('pf-scale'); if (sc) sc.value = fp().cols;
+          var lb = document.getElementById('pf-scale-lb'); if (lb) lb.textContent = '横' + fp().cols + 'マス';
+          render(); paintProps();
+        } catch (e) { alert('読み込みに失敗しました: ' + e.message); }
+      };
+      rd.readAsText(fl);
+    };
+    inp.click();
+  }
+
+  // ===== 読み取り専用レンダラ（Pitリスト／PiP共通） =====
+  // エディタと同じ幾何（壁・建物・ドア/シャッター・リフト飾り・bayMetrics）をそのまま使い、
+  // 空きスロットの代わりに実カード（state.cards）をPIT枠にはめ込む。編集はしない。
+  // opts = { cardsByBay:{bayId:[card,...]}, stage:HTMLElement(幅計測用), cell:固定セル, minCell }
+  function slotCard(c) {
+    var m = arguments[1];
+    var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
+    return '<span class="pfv-card" draggable="true" data-card-id="' + c.id + '"'
+      + ' onclick="if(window.openDetail)openDetail(\'' + c.id + '\')"'
+      + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + '"'
+      + ' title="' + esc((c.customer || '') + (c.car ? ' / ' + c.car : '')) + '">'
+      + '<b class="pfv-cn">' + esc(c.customer || '（未入力）') + '</b>'
+      + (c.car ? '<span class="pfv-cc">' + esc(c.car) + '</span>' : '')
+      + '</span>';
+  }
+  function makeBayElStatic(b, opts) {
+    var m = bayMetrics(b), col0 = divColor(b.division);
+    var d = document.createElement('div');
+    d.className = 'pf-box pf-pit pf-' + b.kind + ' pfv-bay';
+    d.style.left = (b.gx * cell) + 'px'; d.style.top = (b.gy * cell) + 'px';
+    d.style.width = m.w + 'px'; d.style.height = m.h + 'px';
+    d.style.borderColor = col0; d.style.color = col0;
+    d.setAttribute('data-drop', 'bay'); d.setAttribute('data-drop-val', b.id); // ドロップ先＝この枠
+    var cards = (opts.cardsByBay && opts.cardsByBay[b.id]) || [];
+    var cap = m.ncol * m.rows;
+    var h = '<div class="pf-box-hd" style="height:' + m.headH + 'px"><span class="pf-box-nm">' + esc((b.icon ? b.icon + ' ' : '') + (b.name || '')) + '</span></div>';
+    h += '<div class="pf-cards" style="gap:' + m.gap + 'px;padding:' + m.pad + 'px">';
+    var idx = 0;
+    for (var cc = 0; cc < m.ncol; cc++) {
+      h += '<div class="pf-cardcol" style="gap:' + m.gap + 'px">';
+      for (var r = 0; r < m.rows; r++) {
+        var card = cards[idx++];
+        h += card ? slotCard(card, m) : '<span class="pf-cardbar" style="width:' + m.cardW + 'px;height:' + m.cardH + 'px"></span>';
+      }
+      h += '</div>';
+    }
+    h += '</div>';
+    var over = cards.length > cap ? ('<span class="pfv-over">+' + (cards.length - cap) + '</span>') : '';
+    h += over + '<span class="pf-cap" style="background:' + col0 + '">' + cards.length + '/' + cap + '</span>';
+    d.innerHTML = h; return d;
+  }
+  function renderStatic(grid, opts) {
+    opts = opts || {};
+    if (!grid) return;
+    ensureModel();
+    var f = fp(), savedSel = sel, savedTool = tool;
+    sel = null; tool = 'select';                       // 選択ハイライト・編集ハンドルを出さない
+    var avail = opts.cell ? 0 : (opts.width || (opts.stage && opts.stage.clientWidth) || grid.clientWidth || 900);
+    cell = opts.cell || Math.max(opts.minCell || 44, Math.floor((avail - 24) / f.cols));
+    var W = f.cols * cell, H = f.rows * cell;
+    grid.style.width = W + 'px'; grid.style.height = H + 'px'; grid.style.backgroundSize = cell + 'px ' + cell + 'px';
+    // 第1層：壁＋リフト飾り
+    var s = '<svg class="pf-walls" width="' + W + '" height="' + H + '">';
+    walls().forEach(function (w) { s += '<line x1="' + (w.x1 * cell) + '" y1="' + (w.y1 * cell) + '" x2="' + (w.x2 * cell) + '" y2="' + (w.y2 * cell) + '" stroke="#94a3b8" stroke-width="6" stroke-linecap="round"/>'; });
+    bays().forEach(function (b) { if (b.kind === 'lift') s += liftDeco(b); });
+    s += '</svg>';
+    grid.innerHTML = s;
+    // 建物（DOM）
+    shapes().filter(function (x) { return x.type === 'building'; }).forEach(function (b) {
+      var e = document.createElement('div'); e.className = 'pf-box pf-building pfv-static'; pos(e, b);
+      e.innerHTML = '<span class="pf-box-tag">建物</span>'; grid.appendChild(e);
+    });
+    // 第2層：ドア/シャッター
+    var s2 = '<svg class="pf-walls" width="' + W + '" height="' + H + '">';
+    shapes().filter(function (x) { return x.type === 'door' || x.type === 'shutter'; }).forEach(function (a) { s2 += attachMarker(a); });
+    s2 += '</svg>';
+    grid.insertAdjacentHTML('beforeend', s2);
+    // PIT枠（実カードをはめる）
+    bays().forEach(function (b) { grid.appendChild(makeBayElStatic(b, opts)); });
+    sel = savedSel; tool = savedTool;
+  }
+  window.PitFloorView = { render: renderStatic };
+
   window.PitFloorEditor = {
     open: open, close: close, setTool: setTool, edit: edit, removeSel: removeSel,
+    exportPlan: exportPlan, importPlan: importPlan,
     toFront: function () { moveZ(1); }, toBack: function () { moveZ(-1); }, toggleLock: toggleLock,
     toggleDoor: toggleDoor, toggleDoorSide: toggleDoorSide, shutterLen: shutterLen,
     loadSample: loadSample,

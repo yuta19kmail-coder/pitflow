@@ -64,3 +64,47 @@
 .pf-zbtn.on{ background:var(--green); color:#fff; border-color:var(--green); }
 .pf-del{ font-family:inherit; font-size:12.5px; color:#ef4444; background:transparent; border:1px solid rgba(239,68,68,.4); border-radius:7px; padding:6px 11px; cursor:pointer; margin-left:auto; }
 .pf-del:hover{ background:rgba(239,68,68,.1); }
+
+/* ========================================
+   Pitリスト（読み取り専用・配置図に実カードをはめる）＋ PiP小窓  v0.58.0
+   ======================================== */
+.pitlist-stage{ overflow:auto; padding:18px; background:var(--bg); border:1px solid var(--border); border-radius:8px; max-height:calc(100vh - 200px); }
+.pfv-grid{ margin:0 auto; }
+.pitlist-nofloor{ padding:40px 24px; text-align:center; color:var(--text3); font-size:13px; line-height:1.9; }
+
+/* 読み取り専用の枠＝掴めない見た目。リフト飾りはSVG層なのでクリップされない */
+.pfv-bay{ cursor:default; }
+.pfv-bay.dnd-over{ box-shadow:0 0 0 3px rgba(29,185,122,.55); }
+.pfv-static{ pointer-events:none; }
+.pfv-over{ position:absolute; right:2px; top:2px; font-size:9px; font-weight:700; color:#fff; background:#ef4444; padding:0 5px; border-radius:999px; pointer-events:none; }
+
+/* スロットにはまる実カード */
+.pfv-card{ box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:1px; padding:1px 6px; background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--green); border-radius:3px; cursor:grab; overflow:hidden; }
+.pfv-card:hover{ background:var(--bg3); }
+.pfv-card:active{ cursor:grabbing; }
+.pfv-card.dnd-dragging{ opacity:.5; }
+.pfv-cn{ font-size:11px; font-weight:700; color:var(--text); line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pfv-cc{ font-size:10px; color:var(--text2); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* 未割当トレイ */
+.pitlist-unassigned{ margin-top:14px; }
+.pitlist-tray-head{ display:flex; align-items:center; gap:10px; font-size:12.5px; font-weight:700; color:var(--text2); margin-bottom:8px; }
+.pitlist-tray-meta{ font-size:11px; font-weight:400; color:var(--text3); }
+.pitlist-tray-body{ display:flex; gap:8px; flex-wrap:wrap; min-height:48px; padding:10px; border:1px dashed var(--border); border-radius:8px; background:var(--bg2); }
+.pitlist-tray-body.dnd-over{ border-color:var(--green); box-shadow:0 0 0 2px rgba(29,185,122,.35) inset; }
+
+/* タスク看板：Pitリストへ配置済みカードのグレーアウト */
+.pcm.pcm-placed{ opacity:.5; filter:grayscale(.4); }
+.pcm-placed-tag{ font-size:9.5px; font-weight:700; color:var(--text2); background:var(--bg3); border:1px solid var(--border); border-radius:999px; padding:0 6px; }
+
+/* PiP小窓（最前面・移動/リサイズ可） */
+.pitpip{ position:fixed; top:84px; right:24px; width:460px; height:360px; z-index:90; display:none; flex-direction:column;
+  background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,.5); overflow:hidden; }
+.pitpip-bar{ display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg3); border-bottom:1px solid var(--border); cursor:move; user-select:none; touch-action:none; }
+.pitpip-title{ font-size:12.5px; font-weight:700; color:var(--text); flex:1; }
+.pitpip-btn{ font-family:inherit; font-size:12.5px; background:transparent; border:none; color:var(--text2); cursor:pointer; padding:3px 7px; border-radius:6px; }
+.pitpip-btn:hover{ background:var(--bg); color:var(--text); }
+.pitpip-body{ flex:1; overflow:auto; padding:12px; }
+.pitpip-body .pf-grid{ margin:0 auto; }
+.pitpip-resize{ position:absolute; right:0; bottom:0; width:16px; height:16px; cursor:nwse-resize; touch-action:none;
+  background:linear-gradient(135deg, transparent 50%, var(--text3) 50%); opacity:.65; border-bottom-right-radius:10px; }

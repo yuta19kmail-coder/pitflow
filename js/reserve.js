@@ -343,11 +343,15 @@ function cardHtml(c, opts){
     const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
     const wts = (Array.isArray(c.workTypes) && c.workTypes.length)
       ? c.workTypes : (c.workType ? [c.workType] : []);
-    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+    /* タスク看板（kanban）で、Pitリストの枠に配置済みのカードはグレーアウト（移動済み表示） */
+    const placed = !!(opts.kanban && c.bayId);
+    const placedBay = placed && Array.isArray(state.bays) ? state.bays.find(b => b.id === c.bayId) : null;
+    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
     h += '<div class="pcm-head"><span class="pcm-name">' + (c.customer || '（未入力）') + '</span>';
     if (c.car) h += '<span class="pcm-car">' + c.car + '</span>';
     h += '</div>';
     h += '<div class="pcm-tags">';
+    if (placed) h += '<span class="pcm-placed-tag" title="Pitリストの枠に配置済み">🏭 ' + (placedBay ? placedBay.name : '配置済') + '</span>';
     wts.slice(0, 2).forEach(function(id){
       const w = state.workTypes.find(x => x.id === id);
       if (w) h += '<span class="pcm-wt" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
