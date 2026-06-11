@@ -66,6 +66,7 @@
       if (!b.kind) b.kind = /リフト|lift/i.test(b.name || '') ? 'lift' : 'flat';
       if (b.division == null) b.division = '';
       if (b.icon == null) b.icon = '';
+      if (b.kind === 'lift' && !b.liftDir) b.liftDir = 'v';
       clampBox(b);
     });
     f.shapes.forEach(function (s) { if (s.gx != null) clampBox(s); });
@@ -135,7 +136,8 @@
     if (!grid || !stage) return;
     var f = fp();
     var sw = (stage.clientWidth || 900) - 40;
-    cell = Math.max(20, Math.floor(sw / f.cols));
+    // カードが読める最低サイズ(46px)を下限に。これより詰めたい時は幅いっぱい＝横スクロール（縮小はしない）
+    cell = Math.max(46, Math.floor(sw / f.cols));
     var W = f.cols * cell, H = f.rows * cell;
     grid.style.width = W + 'px'; grid.style.height = H + 'px';
     grid.style.backgroundSize = cell + 'px ' + cell + 'px';
@@ -189,29 +191,44 @@
   // 着地状態で外側にはねる。色は課（divisionColor）。
   function liftDeco(b) {
     var c = cell;
-    var bx = b.gx * c, by = b.gy * c, bw = b.gw * c, bh = b.gh * c, cy = by + bh / 2;
-    var col = divColor(b.division);
-    var pw = Math.max(4, c * 0.18), ph = clamp(bh * 0.42, c * 0.9, c * 2.4), gap = c * 0.12;
-    var armDX = c * 0.32, armDY = c * 0.9, ps = Math.max(5, c * 0.2);
-    var aw = Math.max(2, c * 0.07), pkw = Math.max(1.4, c * 0.05), protW = c * 0.2, protH = ph * 0.4, brkT = c * 0.12, brkH = ph * 0.13;
-    function side(s) {
-      var edge = (s < 0) ? bx : (bx + bw);
-      var px = (s < 0) ? (edge - gap - pw) : (edge + gap);
-      var pcx = px + pw / 2, ptop = cy - ph / 2, pbot = cy + ph / 2;
-      var innerX = (s < 0) ? (px + pw) : px, outerX = (s < 0) ? px : (px + pw);
-      var tickDir = -s, tipX = pcx + s * armDX;
-      var protX = (s < 0) ? (outerX - protW) : outerX;
-      var g = '';
-      g += '<rect x="' + px + '" y="' + ptop + '" width="' + pw + '" height="' + ph + '" rx="2" fill="' + col + '" fill-opacity="0.18" stroke="' + col + '" stroke-width="' + pkw + '"/>';
-      g += '<path d="M' + (innerX + tickDir * brkT) + ' ' + (cy - brkH) + ' L' + innerX + ' ' + (cy - brkH) + ' L' + innerX + ' ' + (cy + brkH) + ' L' + (innerX + tickDir * brkT) + ' ' + (cy + brkH) + '" fill="none" stroke="' + col + '" stroke-width="' + pkw + '" stroke-linecap="round" stroke-linejoin="round"/>';
-      g += '<rect x="' + protX + '" y="' + (cy - protH / 2) + '" width="' + protW + '" height="' + protH + '" rx="2" fill="' + col + '"/>';
-      g += '<line x1="' + pcx + '" y1="' + ptop + '" x2="' + tipX + '" y2="' + (ptop - armDY) + '" stroke="' + col + '" stroke-width="' + aw + '" stroke-linecap="round"/>';
-      g += '<rect x="' + (tipX - ps / 2) + '" y="' + (ptop - armDY - ps / 2) + '" width="' + ps + '" height="' + ps + '" rx="1.5" fill="' + col + '"/>';
-      g += '<line x1="' + pcx + '" y1="' + pbot + '" x2="' + tipX + '" y2="' + (pbot + armDY) + '" stroke="' + col + '" stroke-width="' + aw + '" stroke-linecap="round"/>';
-      g += '<rect x="' + (tipX - ps / 2) + '" y="' + (pbot + armDY - ps / 2) + '" width="' + ps + '" height="' + ps + '" rx="1.5" fill="' + col + '"/>';
-      return g;
+    var bx = b.gx * c, by = b.gy * c, bw = b.gw * c, bh = b.gh * c;
+    var cxc = bx + bw / 2, cyc = by + bh / 2, col = divColor(b.division);
+    // 飾りは“セル基準の一定サイズ”＝箱を大きくしてもデカくならない（控えめに添える）
+    var pw = Math.max(4, c * 0.18), gap = c * 0.12;
+    var armDX = c * 0.3, armDY = c * 0.82, ps = Math.max(5, c * 0.2);
+    var aw = Math.max(2, c * 0.07), pkw = Math.max(1.4, c * 0.05), protW = c * 0.2, brkT = c * 0.12;
+    var horiz = (b.liftDir === 'h');
+    var pl = horiz ? Math.min(c * 1.5, bw * 0.7) : Math.min(c * 1.5, bh * 0.7); // 柱の長さ
+    var protB = pl * 0.42, brkH = pl * 0.13;                                    // 出っ張り/ブラケットの幅
+    var pad = function (cx, cy2) { return '<rect x="' + (cx - ps / 2) + '" y="' + (cy2 - ps / 2) + '" width="' + ps + '" height="' + ps + '" rx="1.5" fill="' + col + '"/>'; };
+    var arm = function (x1, y1, x2, y2) { return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + col + '" stroke-width="' + aw + '" stroke-linecap="round"/>' + pad(x2, y2); };
+    var g = '';
+    if (!horiz) {
+      [-1, 1].forEach(function (s) {
+        var edge = (s < 0) ? bx : (bx + bw);
+        var px = (s < 0) ? (edge - gap - pw) : (edge + gap), pcx = px + pw / 2;
+        var ptop = cyc - pl / 2, pbot = cyc + pl / 2;
+        var innerX = (s < 0) ? (px + pw) : px, outerX = (s < 0) ? px : (px + pw), tickDir = -s, tipX = pcx + s * armDX;
+        var protX = (s < 0) ? (outerX - protW) : outerX;
+        g += '<rect x="' + px + '" y="' + ptop + '" width="' + pw + '" height="' + pl + '" rx="2" fill="' + col + '" fill-opacity="0.18" stroke="' + col + '" stroke-width="' + pkw + '"/>';
+        g += '<path d="M' + (innerX + tickDir * brkT) + ' ' + (cyc - brkH) + ' L' + innerX + ' ' + (cyc - brkH) + ' L' + innerX + ' ' + (cyc + brkH) + ' L' + (innerX + tickDir * brkT) + ' ' + (cyc + brkH) + '" fill="none" stroke="' + col + '" stroke-width="' + pkw + '" stroke-linejoin="round"/>';
+        g += '<rect x="' + protX + '" y="' + (cyc - protB / 2) + '" width="' + protW + '" height="' + protB + '" rx="2" fill="' + col + '"/>';
+        g += arm(pcx, ptop, tipX, ptop - armDY) + arm(pcx, pbot, tipX, pbot + armDY);
+      });
+    } else {
+      [-1, 1].forEach(function (s) {
+        var edge = (s < 0) ? by : (by + bh);
+        var py = (s < 0) ? (edge - gap - pw) : (edge + gap), pcy = py + pw / 2;
+        var pleft = cxc - pl / 2, pright = cxc + pl / 2;
+        var innerY = (s < 0) ? (py + pw) : py, outerY = (s < 0) ? py : (py + pw), tickDir = -s, tipY = pcy + s * armDY;
+        var protY = (s < 0) ? (outerY - protW) : outerY;
+        g += '<rect x="' + pleft + '" y="' + py + '" width="' + pl + '" height="' + pw + '" rx="2" fill="' + col + '" fill-opacity="0.18" stroke="' + col + '" stroke-width="' + pkw + '"/>';
+        g += '<path d="M' + (cxc - brkH) + ' ' + (innerY + tickDir * brkT) + ' L' + (cxc - brkH) + ' ' + innerY + ' L' + (cxc + brkH) + ' ' + innerY + ' L' + (cxc + brkH) + ' ' + (innerY + tickDir * brkT) + '" fill="none" stroke="' + col + '" stroke-width="' + pkw + '" stroke-linejoin="round"/>';
+        g += '<rect x="' + (cxc - protB / 2) + '" y="' + protY + '" width="' + protB + '" height="' + protW + '" rx="2" fill="' + col + '"/>';
+        g += arm(pleft, pcy, pleft - armDX, tipY) + arm(pright, pcy, pright + armDX, tipY);
+      });
     }
-    return '<g style="pointer-events:none">' + side(-1) + side(1) + '</g>';
+    return '<g style="pointer-events:none">' + g + '</g>';
   }
   function makeBayEl(b) {
     var d = document.createElement('div');
@@ -254,7 +271,8 @@
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'icon\',this.value)">' + icons + '</select>'
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'kind\',this.value)"><option value="flat"' + (o.kind === 'flat' ? ' selected' : '') + '>平PIT</option><option value="lift"' + (o.kind === 'lift' ? ' selected' : '') + '>リフトPIT</option></select>'
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'division\',this.value)">' + dop('', '共通') + dop('div1', '1課') + dop('div2', '2課') + '</select>'
-        + '<span class="pf-cap-note">' + (o.kind === 'lift' ? 'リフト＝1台' : ('横' + o.gw + '列・縦に積む（枚数は縮尺で変化）')) + '</span>'
+        + (o.kind === 'lift' ? '<select class="pf-in" onchange="PitFloorEditor.edit(\'liftDir\',this.value)"><option value="v"' + ((o.liftDir || 'v') === 'v' ? ' selected' : '') + '>リフト縦向き</option><option value="h"' + (o.liftDir === 'h' ? ' selected' : '') + '>リフト横向き</option></select>' : '')
+        + '<span class="pf-cap-note">横' + Math.max(1, Math.round(o.gw / 2.5)) + '列・各5枚</span>'
         + zlockBtns() + '<button class="pf-del" onclick="PitFloorEditor.removeSel()">🗑 削除</button>';
     } else if (sel && sel.kind === 'shape' && o) {
       var nm = o.type === 'building' ? '建物' : (o.type === 'door' ? 'ドア' : (o.type === 'shutter' ? 'シャッター' : '壁・通路'));
@@ -276,7 +294,10 @@
   function placeAt(cx, cy) {
     var f = fp(), gx = clamp(Math.floor(cx), 0, f.cols - 1), gy = clamp(Math.floor(cy), 0, f.rows - 1);
     if (tool === 'flat' || tool === 'lift') {
-      var b = { id: uid('bay'), name: tool === 'lift' ? 'リフト' : 'PIT ' + (bays().length + 1), icon: '', kind: tool, division: '', gx: gx, gy: gy, gw: 1, gh: 1 };
+      // 既定は1列5枚が読めるサイズ＝横3×縦5。リフトは縦向き(liftDir='v')。
+      var gw = Math.min(3, f.cols - gx), gh = Math.min(5, f.rows - gy);
+      var b = { id: uid('bay'), name: tool === 'lift' ? 'リフト' : 'PIT ' + (bays().length + 1), icon: '', kind: tool, division: '', gx: gx, gy: gy, gw: gw, gh: gh };
+      if (tool === 'lift') b.liftDir = 'v';
       bays().push(b); sel = { kind: 'bay', id: b.id };
     } else if (tool === 'building') {
       var bw = Math.min(4, f.cols - gx), bh = Math.min(3, f.rows - gy);
@@ -295,7 +316,9 @@
   function flashHint(msg) { var hn = document.getElementById('pf-hint'); if (hn) { hn.textContent = msg; setTimeout(function () { hn.textContent = toolHint(); }, 1800); } }
   function edit(field, val) {
     if (!sel || sel.kind !== 'bay') return; var b = getBay(sel.id); if (!b) return;
-    b[field] = val; save(); render(); paintProps();
+    b[field] = val;
+    if (b.kind === 'lift' && !b.liftDir) b.liftDir = 'v';
+    save(); render(); paintProps();
   }
   function removeSel() {
     if (!sel) return;
