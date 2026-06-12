@@ -26,6 +26,7 @@
   ];
 
   var cell = 30;
+  var slotMaxFont = 13;   // カード文字の最大px（PiPは小さめを渡せる）。renderStaticでopts.maxFontから設定
   var tool = 'select';
   var sel = null;       // { kind:'bay'|'shape', id }
   var drag = null;
@@ -546,7 +547,7 @@
     var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
     var at = (window.escAttr ? escAttr : esc);
     // 枠が小さくなって今のサイズ(最大13px)を保てなくなったら文字を自動で縮小（PiPで文字が被るのを防ぐ）
-    var fs = Math.max(7, Math.min(13, Math.floor((m.cardH - 4) / 2.4)));
+    var fs = Math.max(7, Math.min(slotMaxFont, Math.floor((m.cardH - 4) / 2.4)));
     var twoLine = (m.cardH - 4) >= fs * 2.4;     // 2行が入らない小ささなら1行（客名だけ）表示
     // 作業名バッジ（右上）＝最初の作業タイプ。ホバーで「預かり 6/10〜（〇日目）」
     var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
@@ -635,6 +636,7 @@
   function renderStatic(grid, opts) {
     opts = opts || {};
     if (!grid) return;
+    slotMaxFont = opts.maxFont || 13;   // カード文字の最大px（PiPは一回り小さく渡せる）
     ensureModel();
     var f = fp(), savedSel = sel, savedTool = tool;
     sel = null; tool = 'select';                       // 選択ハイライト・編集ハンドルを出さない

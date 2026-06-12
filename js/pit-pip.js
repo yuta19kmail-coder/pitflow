@@ -60,7 +60,8 @@
     var byBay = {};
     targets.forEach(function (c) { if (c.bayId) { (byBay[c.bayId] = byBay[c.bayId] || []).push(c); } });
     // fit:true ＝ PIT全体を窓に収める（窓を縮めたら全体が縮小・スクロールは出さない）
-    PitFloorView.render(grid, { cardsByBay: byBay, stage: body, fit: true });
+    // maxFont 11＝PiPは文字を一回り小さく上限（車種名などが切れにくい）
+    PitFloorView.render(grid, { cardsByBay: byBay, stage: body, fit: true, maxFont: 11 });
   }
 
   // ===== ヘッダを掴んで移動 =====
