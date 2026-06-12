@@ -544,13 +544,23 @@
   // opts = { cardsByBay:{bayId:[card,...]}, stage:HTMLElement(幅計測用), cell:固定セル, minCell }
   function slotCard(c, m, dropVal) {
     var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
+    // 作業名バッジ（右上）＝最初の作業タイプ
+    var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
+    var wt = (wts.length && window.state && Array.isArray(state.workTypes)) ? state.workTypes.find(function (w) { return w.id === wts[0]; }) : null;
+    var wtBadge = wt ? '<span class="pfv-wt" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
+    // 担当者・代車バッジ（右下）
+    var staff = c.frontStaff || c.staff || '';
+    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="代車あり">代車</span>' : '';
+    var staffBadge = staff ? '<span class="pfv-staff">' + esc(staff) + '</span>' : '';
     return '<span class="pfv-card" draggable="true" data-card-id="' + c.id + '"'
       + ' data-drop="baycell" data-drop-val="' + dropVal + '"'    // 同枠内の並べ替え＝このスロット位置へ差し込む
       + ' onclick="if(window.openDetail)openDetail(\'' + c.id + '\')"'
       + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + '"'
       + ' title="' + esc((c.customer || '') + (c.car ? ' / ' + c.car : '')) + '">'
-      + '<b class="pfv-cn">' + esc(c.customer || '（未入力）') + '</b>'
-      + (c.car ? '<span class="pfv-cc">' + esc(c.car) + '</span>' : '')
+      + '<span class="pfv-main"><b class="pfv-cn">' + esc(c.customer || '（未入力）') + ' 様</b>'
+      + '<b class="pfv-cc">' + esc(c.car || '') + '</b></span>'
+      + '<span class="pfv-side"><span class="pfv-side-t">' + wtBadge + '</span>'
+      + '<span class="pfv-side-b">' + loanerBadge + staffBadge + '</span></span>'
       + '</span>';
   }
   function makeBayElStatic(b, opts) {

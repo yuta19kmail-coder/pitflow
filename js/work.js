@@ -45,11 +45,12 @@ function renderWork(){
   var byBay = {};
   targets.forEach(function(c){ if (c.bayId){ (byBay[c.bayId] = byBay[c.bayId] || []).push(c); } });
 
-  // 図は領域（幅・高さ）に合わせて表示＝トレイを畳むと縦に余裕ができ図が大きくなる。
+  // 図は領域（幅・高さ）に合わせて表示。フルHD全画面で全景が収まるよう、トレイ＋余白分を引いてから高さを決める。
   // 高さはビューポート基準で算出（stageのclientHeightは内容依存で不安定なため）。
   var sr = stage.getBoundingClientRect();
-  var availH = Math.max(240, window.innerHeight - sr.top - 18);
-  PitFloorView.render(grid, { cardsByBay: byBay, stage: stage, fit: true, minCell: 44, maxCell: 90, availH: availH });
+  var reserve = _pitlistTrayOpen() ? 232 : 96;   // 下の未割当トレイ＋余白の確保分（畳=細い／開=2カラム）
+  var availH = Math.max(220, window.innerHeight - sr.top - reserve);
+  PitFloorView.render(grid, { cardsByBay: byBay, stage: stage, fit: true, minCell: 38, maxCell: 58, availH: availH });
 
   // 未割当（PIT枠未指定）をトレイへ
   _renderUnassigned(targets.filter(function(c){ return !c.bayId; }));
