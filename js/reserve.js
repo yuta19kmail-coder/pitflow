@@ -356,8 +356,9 @@ function cardHtml(c, opts){
       if (w) top += '<span class="pcm-wt" title="' + at(window.holdDaysLabel ? holdDaysLabel(c, w.label) : w.label) + '" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
     });
     const staff = c.frontStaff || c.staff || '';
+    const placed = !!(opts.kanban && c.bayId);   // PITボードに配置済み→看板ではグレーアウト（ラベル無し）
     // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当。名前/車種はホバーでフル表示
-    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
     h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
     h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
     h += '</div>';

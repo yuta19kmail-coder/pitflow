@@ -34,6 +34,8 @@
     open = true;
     var el = ensureEl();
     el.style.display = 'flex';
+    // 毎回デフォルトサイズ/位置で開き直す（前回のリサイズ・移動は持ち越さない）
+    el.style.width = ''; el.style.height = ''; el.style.left = ''; el.style.top = ''; el.style.right = '';
     refresh();
   }
   function close() {
@@ -60,8 +62,8 @@
     var byBay = {};
     targets.forEach(function (c) { if (c.bayId) { (byBay[c.bayId] = byBay[c.bayId] || []).push(c); } });
     // fit:true ＝ PIT全体を窓に収める（窓を縮めたら全体が縮小・スクロールは出さない）
-    // maxFont 11＝PiPは文字を一回り小さく上限／abbrSmall＝基準より小さくなったらバッジを先頭1文字に略す
-    PitFloorView.render(grid, { cardsByBay: byBay, stage: body, fit: true, maxFont: 11, abbrSmall: true });
+    // maxFont 11＝基準フォント上限／zoom＝小さい時は車種だけ表示・クリックで拡大→詳細
+    PitFloorView.render(grid, { cardsByBay: byBay, stage: body, fit: true, maxFont: 11, zoom: true });
   }
 
   // ===== ヘッダを掴んで移動 =====

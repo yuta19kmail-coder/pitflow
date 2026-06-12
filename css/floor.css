@@ -87,8 +87,17 @@
 .pfv-card:active{ cursor:grabbing; }
 .pfv-card.dnd-dragging{ opacity:.4; }
 /* 文字サイズはカードの font-size（JSが枠サイズに応じてpx指定・最大13px）に追従＝em指定 */
-/* 枠が小さい時は1行（客名だけ）＝行方向にして中央寄せ */
+/* 枠が小さい時は1行（車種だけ）＝行方向にして中央寄せ */
 .pfv-card.pfv-1line{ flex-direction:row; align-items:center; }
+
+/* カード拡大：クリックでその場にフルカードを前面表示・背面は暗転／もう一度クリックで詳細 */
+.pcz-dim{ position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:120; }
+.pcz-card{ position:fixed; z-index:121; width:158px; font-size:12px; cursor:pointer;
+  box-shadow:0 16px 44px rgba(0,0,0,.6); border-color:rgba(255,255,255,.28);
+  transition:transform .12s ease; transform-origin:center; }
+
+/* 看板：PITボードに配置済みのカードはグレーアウト（ラベルは無し） */
+.pcm.pcm-placed{ opacity:.5; filter:grayscale(.35); }
 .pfv-r{ display:flex; align-items:center; gap:4px; min-width:0; }
 .pfv-cn, .pfv-cc{ flex:1 1 auto; min-width:0; font-size:1em; font-weight:700; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pfv-badges{ flex:0 0 auto; display:flex; gap:3px; align-items:center; }
