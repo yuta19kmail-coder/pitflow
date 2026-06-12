@@ -610,12 +610,17 @@
     var crop = (opts.crop !== false);
     var bb;
     if (opts.fit && opts.stage) {
-      // PiP等：内容全体が窓（幅・高さ両方）に収まるよう縮尺を決める＝縮小はするがスクロールは出さない。
-      var availW = opts.stage.clientWidth || 400, availH = opts.stage.clientHeight || 300;
+      // 内容全体が領域（幅・高さ両方）に収まる縮尺を決める。
+      //  minCell未満なら下限で止めスクロール許容（Pitリスト）／minCell小ならスクロール無しで縮小（PiP）。
+      var availW = opts.availW || opts.stage.clientWidth || 400;
+      var availH = opts.availH || opts.stage.clientHeight || 300;
+      var floorCell = opts.minCell || 8;
       cell = 44; bb = contentBBox(0.7);
       for (var it = 0; it < 4; it++) {                  // 枠幅がセル依存なので数回で収束
         var cwc = Math.max(1, bb.maxX - bb.minX), chr = Math.max(1, bb.maxY - bb.minY);
-        cell = Math.max(8, Math.floor(Math.min((availW - 16) / cwc, (availH - 16) / chr)));
+        var ce = Math.floor(Math.min((availW - 16) / cwc, (availH - 16) / chr));
+        cell = Math.max(floorCell, ce);
+        if (opts.maxCell) cell = Math.min(cell, opts.maxCell);
         bb = contentBBox(0.7);
       }
     } else {

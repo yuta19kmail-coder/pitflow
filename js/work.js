@@ -2,10 +2,10 @@
    work.js
    Pitリスト（PIT配置図にカードがハマる）
    ----------------------------------------
-   エディタ（pit-floor.js）で作った工場の平面図そのものを読み取り専用で描画し、
+   エディタ（pit-floor.js）で作った工場の平面図を読み取り専用で描画し、
    各PIT枠の固定スロットに実カード（state.cards）をはめ込む。
    ・対象＝作業工程のカード（点検待ち〜作業待ち）。bayId で枠に割り当て。
-   ・ドラッグで枠へ割り当て（dnd.js の data-drop="bay"）。未割当は下のトレイに並ぶ。
+   ・未割当は下部トレイ（1課/2課に分割・通常は折りたたみ）。ドラッグで枠へ。
    ======================================== */
 
 var WORK_STATUSES = ['check', 'estim', 'contact', 'parts', 'work'];
@@ -14,18 +14,30 @@ function _workTargets(){
   return state.cards.filter(function(c){ return WORK_STATUSES.indexOf(c.status) >= 0; });
 }
 
+/* 未割当トレイの開閉（既定＝閉じる＝PIT図を広く） */
+function _pitlistTrayOpen(){
+  try { return localStorage.getItem('pitlist_tray_open') === '1'; } catch (e) { return false; }
+}
+function togglePitlistTray(){
+  try { localStorage.setItem('pitlist_tray_open', _pitlistTrayOpen() ? '' : '1'); } catch (e) {}
+  renderWork();
+}
+window.togglePitlistTray = togglePitlistTray;
+
 function renderWork(){
   var grid  = document.getElementById('pitlist-grid');
   var stage = document.getElementById('pitlist-stage');
+  var sec   = document.getElementById('view-work');
+  if (sec) sec.classList.toggle('tray-open', _pitlistTrayOpen());   // 開いてる時だけ図エリアを少し詰める
   if (!grid) return;
 
   var targets = _workTargets();
 
-  // 配置図エディタの枠が無い（未設定）場合は案内
+  // 配置図の枠が無い場合は案内
   if (!window.PitFloorView || !Array.isArray(state.bays) || state.bays.length === 0){
     grid.style.width = ''; grid.style.height = '';
-    grid.innerHTML = '<div class="pitlist-nofloor">まだPIT配置図がありません。<br>右上の「🏭 配置図を編集」から工場の平面図を作るか、保存済みの配置図を📂読み込みしてください。</div>';
-    _renderUnassigned(targets, true);
+    grid.innerHTML = '<div class="pitlist-nofloor">まだPIT配置図がありません。<br>設定 → 🏭 PIT配置図を編集 から工場の平面図を作るか、保存済みの配置図を読み込んでください。</div>';
+    _renderUnassigned(targets);
     return;
   }
 
@@ -33,24 +45,43 @@ function renderWork(){
   var byBay = {};
   targets.forEach(function(c){ if (c.bayId){ (byBay[c.bayId] = byBay[c.bayId] || []).push(c); } });
 
-  PitFloorView.render(grid, { cardsByBay: byBay, stage: stage });
+  // 図は領域（幅・高さ）に合わせて表示＝トレイを畳むと縦に余裕ができ図が大きくなる。
+  // 高さはビューポート基準で算出（stageのclientHeightは内容依存で不安定なため）。
+  var sr = stage.getBoundingClientRect();
+  var availH = Math.max(240, window.innerHeight - sr.top - 18);
+  PitFloorView.render(grid, { cardsByBay: byBay, stage: stage, fit: true, minCell: 44, maxCell: 90, availH: availH });
 
-  // 未割当（PIT枠未指定）を下のトレイへ
-  var unassigned = targets.filter(function(c){ return !c.bayId; });
-  _renderUnassigned(unassigned);
+  // 未割当（PIT枠未指定）をトレイへ
+  _renderUnassigned(targets.filter(function(c){ return !c.bayId; }));
 }
 
-function _renderUnassigned(list, hideIfEmpty){
+function _renderUnassigned(list){
   var tray = document.getElementById('pitlist-unassigned');
   if (!tray) return;
-  if (!list || list.length === 0){
-    tray.innerHTML = hideIfEmpty ? '' :
-      '<div class="pitlist-tray-head"><span>📥 未割当</span><span class="pitlist-tray-meta">なし（作業工程のカードはすべて枠に配置済み）</span></div>';
-    return;
+  list = list || [];
+  var open = _pitlistTrayOpen();
+
+  var head = '<div class="pitlist-tray-head" onclick="togglePitlistTray()" title="クリックで開閉">'
+    + '<span class="ptl-caret">' + (open ? '▼' : '▶') + '</span>'
+    + '<span>📥 未割当（PIT枠未指定）</span>'
+    + '<span class="pitlist-tray-meta">' + list.length + ' 件' + (open ? '・ドラッグで枠へ' : '（クリックで開く）') + '</span>'
+    + '</div>';
+
+  if (!open){ tray.innerHTML = head; return; }
+
+  // 1課（国産）＝boardId が import 以外 ／ 2課（輸入）＝import
+  var c1 = list.filter(function(c){ return c.boardId !== 'import'; });
+  var c2 = list.filter(function(c){ return c.boardId === 'import'; });
+  function col(title, cls, arr){
+    return '<div class="ptl-col ' + cls + '">'
+      + '<div class="ptl-col-h">' + title + ' <span class="ptl-col-n">' + arr.length + '</span></div>'
+      + '<div class="ptl-col-body" data-drop="bay" data-drop-val="">'
+      + (arr.length ? arr.map(function(c){ return cardHtml(c, { compact: true }); }).join('') : '<div class="ptl-empty">なし</div>')
+      + '</div></div>';
   }
-  var h = '<div class="pitlist-tray-head"><span>📥 未割当（PIT枠未指定）</span><span class="pitlist-tray-meta">' + list.length + ' 件・ドラッグで枠へ</span></div>';
-  h += '<div class="pitlist-tray-body" data-drop="bay" data-drop-val="">';
-  h += list.map(function(c){ return cardHtml(c, { compact: true }); }).join('');
-  h += '</div>';
-  tray.innerHTML = h;
+  tray.innerHTML = head
+    + '<div class="pitlist-tray-cols">'
+    + col('1課（国産）', 'ptl-c1', c1)
+    + col('2課（輸入）', 'ptl-c2', c2)
+    + '</div>';
 }

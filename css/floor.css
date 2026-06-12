@@ -89,12 +89,25 @@
 .pfv-cn{ font-size:11px; font-weight:700; color:var(--text); line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pfv-cc{ font-size:10px; color:var(--text2); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-/* 未割当トレイ */
-.pitlist-unassigned{ margin-top:14px; }
-.pitlist-tray-head{ display:flex; align-items:center; gap:10px; font-size:12.5px; font-weight:700; color:var(--text2); margin-bottom:8px; }
-.pitlist-tray-meta{ font-size:11px; font-weight:400; color:var(--text3); }
-.pitlist-tray-body{ display:flex; gap:8px; flex-wrap:wrap; min-height:48px; padding:10px; border:1px dashed var(--border); border-radius:8px; background:var(--bg2); }
-.pitlist-tray-body.dnd-over{ border-color:var(--green); box-shadow:0 0 0 2px rgba(29,185,122,.35) inset; }
+/* 図エリア＝図はビューポート高さに合わせてフィット（JS側 availH）。max-heightは保険で広め */
+#view-work .pitlist-stage{ max-height:calc(100vh - 120px); }
+#view-work.tray-open .pitlist-stage{ max-height:calc(100vh - 290px); }
+
+/* 未割当トレイ（折りたたみ式・1課/2課に分割） */
+.pitlist-unassigned{ margin-top:12px; }
+.pitlist-tray-head{ display:flex; align-items:center; gap:9px; font-size:12.5px; font-weight:700; color:var(--text2); padding:9px 13px; background:var(--bg2); border:1px solid var(--border); border-radius:8px; cursor:pointer; user-select:none; }
+.pitlist-tray-head:hover{ color:var(--text); border-color:var(--border2); }
+.ptl-caret{ font-size:10px; color:var(--text3); }
+.pitlist-tray-meta{ font-size:11px; font-weight:400; color:var(--text3); margin-left:auto; }
+.pitlist-tray-cols{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px; }
+.ptl-col{ border:1px solid var(--border); border-radius:8px; background:var(--bg2); overflow:hidden; }
+.ptl-col-h{ font-size:12px; font-weight:700; padding:6px 11px; border-bottom:1px solid var(--border); }
+.ptl-c1 .ptl-col-h{ color:#1db97a; border-bottom-color:rgba(29,185,122,.35); }
+.ptl-c2 .ptl-col-h{ color:#ec4899; border-bottom-color:rgba(236,72,153,.35); }
+.ptl-col-n{ font-weight:400; color:var(--text3); }
+.ptl-col-body{ display:flex; gap:8px; flex-wrap:wrap; align-content:flex-start; min-height:56px; padding:10px; }
+.ptl-col-body.dnd-over{ background:rgba(29,185,122,.1); box-shadow:0 0 0 2px rgba(29,185,122,.35) inset; }
+.ptl-empty{ font-size:11px; color:var(--text3); padding:8px; }
 
 /* タスク看板：Pitリストへ配置済みカードのグレーアウト */
 .pcm.pcm-placed{ opacity:.5; filter:grayscale(.4); }
