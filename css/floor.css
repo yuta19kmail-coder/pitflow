@@ -86,13 +86,14 @@
 .pfv-card:hover{ background:var(--bg3); }
 .pfv-card:active{ cursor:grabbing; }
 .pfv-card.dnd-dragging{ opacity:.4; }
+/* 文字サイズはカードの font-size（JSが枠サイズに応じてpx指定・最大13px）に追従＝em指定 */
 .pfv-r{ display:flex; align-items:center; gap:4px; min-width:0; }
-.pfv-cn, .pfv-cc{ flex:1 1 auto; min-width:0; font-size:13px; font-weight:700; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pfv-cn, .pfv-cc{ flex:1 1 auto; min-width:0; font-size:1em; font-weight:700; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pfv-badges{ flex:0 0 auto; display:flex; gap:3px; align-items:center; }
 /* バッジはパツパツ＝文字を大きく・余白を詰める */
-.pfv-wt{ flex:0 0 auto; font-size:13px; font-weight:700; padding:0 4px; border:1px solid; border-radius:6px; line-height:1.26; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:88px; }
-.pfv-staff{ flex:0 0 auto; font-size:13px; font-weight:700; color:var(--text); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:0 5px; line-height:1.26; white-space:nowrap; }
-.pfv-loaner{ flex:0 0 auto; font-size:13px; font-weight:700; color:#f59e0b; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.55); border-radius:6px; padding:0 4px; line-height:1.26; white-space:nowrap; }
+.pfv-wt{ flex:0 0 auto; font-size:1em; font-weight:700; padding:0 .32em; border:1px solid; border-radius:.46em; line-height:1.26; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:7em; }
+.pfv-staff{ flex:0 0 auto; font-size:1em; font-weight:700; color:var(--text); background:var(--bg3); border:1px solid var(--border2); border-radius:.46em; padding:0 .4em; line-height:1.26; white-space:nowrap; }
+.pfv-loaner{ flex:0 0 auto; font-size:1em; font-weight:700; color:#f59e0b; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.55); border-radius:.46em; padding:0 .32em; line-height:1.26; white-space:nowrap; }
 
 /* 図エリア＝図はビューポート高さに合わせてフィット（JS側 availH）。max-heightは保険で広め */
 #view-work .pitlist-stage{ max-height:calc(100vh - 120px); }

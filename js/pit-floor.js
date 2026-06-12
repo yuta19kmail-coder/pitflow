@@ -544,25 +544,28 @@
   // opts = { cardsByBay:{bayId:[card,...]}, stage:HTMLElement(幅計測用), cell:固定セル, minCell }
   function slotCard(c, m, dropVal) {
     var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
-    // 作業名バッジ（右上）＝最初の作業タイプ
+    var at = (window.escAttr ? escAttr : esc);
+    // 枠が小さくなって今のサイズ(最大13px)を保てなくなったら文字を自動で縮小（PiPで文字が被るのを防ぐ）
+    var fs = Math.max(7, Math.min(13, Math.floor((m.cardH - 4) / 2.4)));
+    // 作業名バッジ（右上）＝最初の作業タイプ。ホバーで「預かり 6/10〜（〇日目）」
     var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
     var wt = (wts.length && window.state && Array.isArray(state.workTypes)) ? state.workTypes.find(function (w) { return w.id === wts[0]; }) : null;
-    var wtBadge = wt ? '<span class="pfv-wt" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
+    var wtTitle = window.holdDaysLabel ? holdDaysLabel(c, wt ? wt.label : '') : '';
+    var wtBadge = wt ? '<span class="pfv-wt" title="' + at(wtTitle) + '" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
     // 当/待のみ（預かりは出さない・ある時だけ）
     var DROPC = { wait: '#f59e0b', sameDay: '#3b82f6' };
     var dt = (window.state && Array.isArray(state.dropTypes)) ? state.dropTypes.find(function (d) { return d.id === c.dropType; }) : null;
-    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
-    // 担当者・代車バッジ
+    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" title="' + at(dt.desc || '') + '" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
+    // 代車バッジ＝ホバーで「代車期限 〜7/4（あと〇日）」／担当バッジ
     var staff = c.frontStaff || c.staff || '';
-    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="代車あり">代車</span>' : '';
-    var staffBadge = staff ? '<span class="pfv-staff">' + esc(staff) + '</span>' : '';
+    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">代車</span>' : '';
+    var staffBadge = staff ? '<span class="pfv-staff" title="担当 ' + at(staff) + '">' + esc(staff) + '</span>' : '';
     return '<span class="pfv-card" draggable="true" data-card-id="' + c.id + '"'
       + ' data-drop="baycell" data-drop-val="' + dropVal + '"'    // 同枠内の並べ替え＝このスロット位置へ差し込む
       + ' onclick="if(window.openDetail)openDetail(\'' + c.id + '\')"'
-      + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + '"'
-      + ' title="' + esc((c.customer || '') + (c.car ? ' / ' + c.car : '')) + '">'
-      + '<span class="pfv-r"><b class="pfv-cn">' + esc(c.customer || '（未入力）') + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
-      + '<span class="pfv-r"><b class="pfv-cc">' + esc(c.car || '') + '</b>' + staffBadge + '</span>'
+      + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + ';font-size:' + fs + 'px">'
+      + '<span class="pfv-r"><b class="pfv-cn" title="' + at((c.customer || '') + ' 様') + '">' + esc(c.customer || '（未入力）') + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
+      + '<span class="pfv-r"><b class="pfv-cc" title="' + at(c.car || '') + '">' + esc(c.car || '') + '</b>' + staffBadge + '</span>'
       + '</span>';
   }
   function makeBayElStatic(b, opts) {

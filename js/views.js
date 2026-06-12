@@ -164,6 +164,35 @@ function ymd(d){
 function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
 function startOfWeek(d){ const x = new Date(d); x.setDate(x.getDate() - x.getDay()); return x; }
 
+/* ===== カードのホバー詳細用ヘルパー（共通） ===== */
+function fmtMD(s){                                   // 'YYYY-MM-DD' → 'M/D'
+  if (!s) return '';
+  const p = String(s).split('-');
+  return (p.length >= 3) ? (+p[1] + '/' + +p[2]) : s;
+}
+function daysFromToday(s){                            // s - 今日（整数日・未来=+）
+  if (!s) return null;
+  const d = new Date(s + 'T00:00:00'); if (isNaN(d)) return null;
+  const t = new Date(); t.setHours(0,0,0,0);
+  return Math.round((d - t) / 86400000);
+}
+function loanerDueLabel(c){                           // 代車期限：〜7/4（あと3日）
+  if (!c.needLoaner) return '';
+  if (!c.returnDate) return '代車（返車日 未定）';
+  const n = daysFromToday(c.returnDate);
+  let tail = '';
+  if (n != null) tail = n > 0 ? '（あと' + n + '日）' : (n === 0 ? '（本日）' : '（' + Math.abs(n) + '日超過）');
+  return '代車期限　〜' + fmtMD(c.returnDate) + tail;
+}
+function holdDaysLabel(c, workLabel){                 // 預かり：6/10〜（5日目）
+  const head = workLabel ? (workLabel + '　') : '';
+  if (!c.reserveDate) return head + '預かり日 未定';
+  const n = daysFromToday(c.reserveDate);             // 入庫日（過去=マイナス）
+  const dayNo = (n == null) ? null : (1 - n);         // 入庫日当日＝1日目
+  return head + '預かり ' + fmtMD(c.reserveDate) + '〜' + (dayNo ? '（' + dayNo + '日目）' : '');
+}
+function escAttr(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
 function openNewReserve(){
   const id = 'c' + Date.now();
   const card = {

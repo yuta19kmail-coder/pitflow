@@ -18,7 +18,7 @@
     el.id = 'pitpip'; el.className = 'pitpip';
     el.innerHTML =
       '<div class="pitpip-bar" id="pitpip-bar">'
-      + '<span class="pitpip-title">🏭 PIT配置</span>'
+      + '<span class="pitpip-title">🏭 PITボード</span>'
       + '<button class="pitpip-btn" title="更新" onclick="PitPip.refresh()">🔄</button>'
       + '<button class="pitpip-btn" title="閉じる" onclick="PitPip.close()">✕</button>'
       + '</div>'

@@ -84,7 +84,7 @@
     var pitN = (window.PitFloorEditor && PitFloorEditor.countPits) ? PitFloorEditor.countPits() : (Array.isArray(state.bays) ? state.bays.length : 0);
     h += '<div class="ps-card">';
     h += '<div class="ps-h">🏭 PIT配置図（工場の簡易レイアウト）</div>';
-    h += '<div class="ps-desc">工場の<b>簡易的な平面図</b>を作ります。専用の編集画面で、PIT枠（平PIT／リフトPIT）をグリッドに沿って並べ、建物・ドア・シャッター・通路も置けます。ここで作った図に、作業中の車（カード）をはめていきます（次の段で「Pitリスト」「Pit配置」に表示）。</div>';
+    h += '<div class="ps-desc">工場の<b>簡易的な平面図</b>を作ります。専用の編集画面で、PIT枠（平PIT／リフトPIT）をグリッドに沿って並べ、建物・ドア・シャッター・通路も置けます。ここで作った図に、作業中の車（カード）をはめていきます（次の段で「Pitリスト」「PITボード」に表示）。</div>';
     h += '<div class="pf-launch">';
     h += '<button class="vh-btn primary" onclick="if(window.PitFloorEditor)PitFloorEditor.open()">🏭 PIT配置図を編集する</button>';
     h += '<span class="pf-launch-meta">現在のPIT枠：' + pitN + ' 個</span>';
