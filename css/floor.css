@@ -131,7 +131,8 @@
 .pitpip{ position:fixed; top:84px; right:24px; width:733px; height:753px; z-index:90; display:none; flex-direction:column;
   background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 18px 50px rgba(0,0,0,.5); overflow:hidden; }
 .pitpip-bar{ display:flex; align-items:center; gap:6px; padding:8px 10px; background:var(--bg3); border-bottom:1px solid var(--border); cursor:move; user-select:none; touch-action:none; }
-.pitpip-title{ font-size:12.5px; font-weight:700; color:var(--text); flex:1; }
+.pitpip-title{ font-size:12.5px; font-weight:700; color:var(--text); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pitpip-tip{ font-size:10px; font-weight:400; color:var(--text3); margin-left:6px; }
 .pitpip-btn{ font-family:inherit; font-size:12.5px; background:transparent; border:none; color:var(--text2); cursor:pointer; padding:3px 7px; border-radius:6px; }
 .pitpip-btn:hover{ background:var(--bg); color:var(--text); }
 /* PiPは全体フィット表示＝スクロールを出さず、縮小した図を中央に置く */

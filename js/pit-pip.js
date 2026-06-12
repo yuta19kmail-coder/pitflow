@@ -10,6 +10,7 @@
   'use strict';
 
   var open = false;
+  var srcView = 'course1';   // PiPを開いた元のタスクボード（戻る先）
 
   function ensureEl() {
     var el = document.getElementById('pitpip');
@@ -18,7 +19,7 @@
     el.id = 'pitpip'; el.className = 'pitpip';
     el.innerHTML =
       '<div class="pitpip-bar" id="pitpip-bar">'
-      + '<span class="pitpip-title">🏭 PITボード</span>'
+      + '<span class="pitpip-title">🏭 PITボード <span class="pitpip-tip">カードをPiPの外にドラッグ＝枠から外す</span></span>'
       + '<button class="pitpip-btn" title="更新" onclick="PitPip.refresh()">🔄</button>'
       + '<button class="pitpip-btn" title="閉じる" onclick="PitPip.close()">✕</button>'
       + '</div>'
@@ -30,7 +31,9 @@
     return el;
   }
 
-  function show() {
+  function show(src) {
+    if (src) srcView = src;
+    else if (window.state && /^course[12]$|^task$/.test(state.currentView)) srcView = state.currentView;
     open = true;
     var el = ensureEl();
     el.style.display = 'flex';
@@ -43,7 +46,7 @@
     var el = document.getElementById('pitpip');
     if (el) el.style.display = 'none';
   }
-  function toggle() { open ? close() : show(); }
+  function toggle(src) { open ? close() : show(src); }
   function isOpen() { return open; }
 
   function refresh() {

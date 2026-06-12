@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.62.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.62.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=21">
 <link rel="stylesheet" href="css/polish.css?v=72">
-<link rel="stylesheet" href="css/floor.css?v=21">
+<link rel="stylesheet" href="css/floor.css?v=22">
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -61,7 +61,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.62.0</div>
+    <div class="pl-ver">PitFlow v0.62.1</div>
   </div>
 </div>
 
@@ -73,7 +73,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.62.0</span>
+      <span class="ver">v0.62.1</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -334,13 +334,13 @@
 
     <section id="view-course1" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">1️⃣</span>1課（国産）タスクボード</div>
-        <div class="view-actions"><button class="vh-btn" onclick="PitPip.toggle()">🏭 PITボード</button></div></div>
+        <div class="view-actions"><button class="vh-btn" onclick="PitPip.toggle('course1')">🏭 PITボード</button></div></div>
       <div class="kanban" id="kanban-cols-1"></div>
     </section>
 
     <section id="view-course2" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">2️⃣</span>2課（輸入）タスクボード</div>
-        <div class="view-actions"><button class="vh-btn" onclick="PitPip.toggle()">🏭 PITボード</button></div></div>
+        <div class="view-actions"><button class="vh-btn" onclick="PitPip.toggle('course2')">🏭 PITボード</button></div></div>
       <div class="kanban" id="kanban-cols-2"></div>
     </section>
 
@@ -496,8 +496,8 @@
 <script src="js/auth-pit.js?v=8"></script>
 <script src="js/launcher.js?v=7"></script>
 <script src="js/holidays.js?v=1"></script>
-<script src="js/dnd.js?v=7"></script>
-<script src="js/pit-pip.js?v=6"></script>
+<script src="js/dnd.js?v=8"></script>
+<script src="js/pit-pip.js?v=7"></script>
 <script src="js/main.js?v=11"></script>
 <script src="js/auto-update.js?v=1"></script>
 

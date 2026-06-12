@@ -76,11 +76,13 @@
   }
 
   let draggingId = null;
+  let draggingFromPip = false;   // PiP内のカードをドラッグ中か（PiP外へ落としたら枠から外す）
 
   document.addEventListener('dragstart', function (e) {
     const card = e.target.closest('[data-card-id][draggable="true"]');
     if (!card) return;
     draggingId = card.dataset.cardId;
+    draggingFromPip = !!card.closest('#pitpip');
     card.classList.add('dnd-dragging');
     if (e.dataTransfer) {
       e.dataTransfer.effectAllowed = 'move';
@@ -92,9 +94,17 @@
     document.querySelectorAll('.dnd-dragging').forEach(el => el.classList.remove('dnd-dragging'));
     document.querySelectorAll('.dnd-over').forEach(z => z.classList.remove('dnd-over'));
     draggingId = null;
+    draggingFromPip = false;
   });
 
   document.addEventListener('dragover', function (e) {
+    // PiPのカードをPiPの外へ＝枠から外す操作。どこでもドロップ可（ゾーン強調はしない）
+    if (draggingFromPip && !e.target.closest('#pitpip')) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('.dnd-over').forEach(z => z.classList.remove('dnd-over'));
+      return;
+    }
     const zone = e.target.closest('[data-drop]');
     if (!zone) return;
     e.preventDefault();
@@ -111,11 +121,18 @@
   });
 
   document.addEventListener('drop', function (e) {
+    let id = draggingId;
+    if (!id && e.dataTransfer) { try { id = e.dataTransfer.getData('text/plain'); } catch (_) {} }
+    // PiPのカードをPiPの外に落とした → PIT枠から外す（bayId=null）。看板のグレーアウトも解除。
+    if (id && draggingFromPip && !e.target.closest('#pitpip')) {
+      e.preventDefault();
+      document.querySelectorAll('.dnd-over').forEach(z => z.classList.remove('dnd-over'));
+      applyCardDrop(id, 'bay', '');
+      return;
+    }
     const zone = e.target.closest('[data-drop]');
     if (!zone) return;
     e.preventDefault();
-    let id = draggingId;
-    if (!id && e.dataTransfer) { try { id = e.dataTransfer.getData('text/plain'); } catch (_) {} }
     zone.classList.remove('dnd-over');
     if (id) applyCardDrop(id, zone.dataset.drop, zone.dataset.dropVal || '');
   });
