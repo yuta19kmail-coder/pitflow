@@ -49,6 +49,8 @@
               if (d.floorPlan && typeof d.floorPlan === 'object') state.floorPlan = d.floorPlan; // v0.46.0：壁・建物・ドア
             }
             if (d.aiVerdicts && typeof d.aiVerdicts === 'object') state.aiVerdicts = d.aiVerdicts;
+            if (Array.isArray(d.boardNotes)) state.boardNotes = d.boardNotes;            // v0.63.0：付箋ボード
+            if (d.boardLabels && typeof d.boardLabels === 'object') state.boardLabels = d.boardLabels; // v0.63.0：色ラベル
             this._mergeSettings(d.settings);
             // 作業タイプは設定で増減できる＝保存があれば実行リストを上書き
             if (Array.isArray(state.settings.workTypes) && state.settings.workTypes.length) {
@@ -85,6 +87,8 @@
             bays: state.bays,                          // v0.46.0：PIT配置図の枠（位置・大きさ・課）
             floorPlan: state.floorPlan || { shapes: [] }, // v0.46.0：壁・通路線
             aiVerdicts: state.aiVerdicts || {},
+            boardNotes: state.boardNotes || [],       // v0.63.0：ダッシュボードの付箋ボード
+            boardLabels: state.boardLabels || {},      // v0.63.0：付箋の色ラベル
             settings: state.settings,
             savedAt: Date.now(),
           }));

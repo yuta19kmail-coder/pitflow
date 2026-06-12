@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.62.2"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.63.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=21">
 <link rel="stylesheet" href="css/polish.css?v=72">
 <link rel="stylesheet" href="css/floor.css?v=22">
+<link rel="stylesheet" href="css/board-notes.css?v=1">
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -61,7 +62,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.62.2</div>
+    <div class="pl-ver">PitFlow v0.63.0</div>
   </div>
 </div>
 
@@ -73,7 +74,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.62.2</span>
+      <span class="ver">v0.63.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -461,17 +462,121 @@
   </div>
 </div>
 
+<!-- ===== 📌 付箋ボード（全体タスク・v0.63.0） ===== -->
+<!-- ⋮ アクションシート -->
+<div class="modal-backdrop" id="modal-bn-actions" onclick="if(event.target.id==='modal-bn-actions')closeBoardNoteActions()">
+  <div class="bn-actionsheet" onclick="event.stopPropagation()">
+    <div class="bn-actionsheet-title" id="bn-actionsheet-title">付箋メニュー</div>
+    <button class="bn-actionsheet-btn" onclick="bnActionEdit()">✏️ 編集</button>
+    <button class="bn-actionsheet-btn" id="bn-action-done" onclick="bnActionDone()">✅ 済にする</button>
+    <button class="bn-actionsheet-btn" id="bn-action-undone" onclick="bnActionUndone()" style="display:none">↩️ 未済に戻す</button>
+    <button class="bn-actionsheet-btn" id="bn-action-reply" onclick="bnActionReply()">💬 返信する</button>
+    <button class="bn-actionsheet-btn bn-danger" onclick="bnActionDelete()">🗑 消去</button>
+    <button class="bn-actionsheet-btn bn-cancel" onclick="closeBoardNoteActions()">キャンセル</button>
+  </div>
+</div>
+
+<!-- 返信モーダル -->
+<div class="modal-backdrop" id="modal-bn-reply" onclick="if(event.target.id==='modal-bn-reply')closeBoardNoteReply()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-head">
+      <div class="modal-title">💬 返信する</div>
+      <button class="modal-close" onclick="closeBoardNoteReply()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text3)">対象：<span id="bn-reply-note-title" style="color:var(--text2)"></span></div>
+      <div class="bn-modal-body">
+        <div>
+          <label class="bn-lb">返信</label>
+          <textarea id="bn-reply-text" rows="3" maxlength="300" placeholder="例：まだ途中です／対応しました"></textarea>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">本文の下にあなたのアイコンと一緒に表示されます。「済にする」は別操作です。</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="vh-btn" onclick="closeBoardNoteReply()">キャンセル</button>
+        <button class="vh-btn primary" onclick="submitBoardNoteReply()">送信</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="modal-backdrop" id="modal-board-note" onclick="if(event.target.id==='modal-board-note')closeBoardNoteModal()">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-head">
+      <div class="modal-title" id="bn-modal-title">付箋を追加</div>
+      <button class="modal-close" onclick="closeBoardNoteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="bn-modal-body">
+        <div>
+          <label class="bn-lb">タイトル</label>
+          <input type="text" id="bn-inp-title" maxlength="60" placeholder="例：◯◯様 急ぎ洗車">
+        </div>
+        <div>
+          <label class="bn-lb">本文</label>
+          <textarea id="bn-inp-body" rows="3" maxlength="600" placeholder="例：来店予定あり、本日午後までに洗ってほしいです"></textarea>
+        </div>
+        <div>
+          <label class="bn-lb">色</label>
+          <div class="bn-color-picker">
+            <label><input type="radio" name="bn-color" id="bn-color-red"><span class="bn-color-swatch bn-sw-red"></span><span class="bn-color-pick-label">赤</span></label>
+            <label><input type="radio" name="bn-color" id="bn-color-orange"><span class="bn-color-swatch bn-sw-orange"></span><span class="bn-color-pick-label">橙</span></label>
+            <label><input type="radio" name="bn-color" id="bn-color-yellow" checked><span class="bn-color-swatch bn-sw-yellow"></span><span class="bn-color-pick-label">黄</span></label>
+            <label><input type="radio" name="bn-color" id="bn-color-green"><span class="bn-color-swatch bn-sw-green"></span><span class="bn-color-pick-label">緑</span></label>
+            <label><input type="radio" name="bn-color" id="bn-color-blue"><span class="bn-color-swatch bn-sw-blue"></span><span class="bn-color-pick-label">青</span></label>
+          </div>
+        </div>
+        <div>
+          <label class="bn-lb">種類</label>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;padding:2px 0">
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text1)"><input type="radio" name="bn-type" id="bn-type-execute" value="execute" checked> 実行（誰か1人がやればOK）</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text1)"><input type="radio" name="bn-type" id="bn-type-circulate" value="circulate"> 回覧（担当全員が各自で確認）</label>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">実行＝洗車などの作業向け（誰かが「済」にしたら完了）。回覧＝連絡の確認向け（担当全員が各自で「済」を入れたら完了）。</div>
+        </div>
+        <div>
+          <label class="bn-lb">期限（任意）</label>
+          <input type="date" id="bn-inp-deadline">
+        </div>
+        <div>
+          <label class="bn-lb">担当メンバー（任意・複数選択可）</label>
+          <div id="bn-group-quick" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"></div>
+          <div id="bn-inp-members" class="bn-member-list"></div>
+        </div>
+        <div>
+          <label class="bn-lb">画像（任意）</label>
+          <input type="file" accept="image/*" onchange="bnOnPhotoChange(this)" style="font-size:12px;color:var(--text2)">
+          <div id="bn-inp-photo-preview" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="vh-btn" onclick="closeBoardNoteModal()">キャンセル</button>
+        <button class="vh-btn primary" onclick="saveBoardNoteFromModal()">💾 保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 画像プレビュー -->
+<div class="modal-backdrop" id="modal-bn-image" onclick="closeBnImage()">
+  <button class="bn-image-close" onclick="closeBnImage()">✕</button>
+  <div class="bn-image-wrap" onclick="event.stopPropagation()">
+    <img id="bn-image-img" src="" alt="" onclick="closeBnImage()">
+  </div>
+</div>
+
 <!-- ===== Firebase SDK（クラウド保存の足場・現状は初期化のみ／認証は後日） ===== -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=32"></script>
+<script src="js/state.js?v=33"></script>
 <script src="js/sample-data.js?v=10"></script>
 <script src="js/sample-fleet.js?v=8"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=26"></script>
+<script src="js/db-pit.js?v=27"></script>
 <script src="js/views.js?v=28"></script>
 <script src="js/card-detail.js?v=53"></script>
 <script src="js/avail.js?v=2"></script>
@@ -479,7 +584,8 @@
 <script src="js/customers.js?v=14"></script>
 <script src="js/sample-customers.js?v=6"></script>
 <script src="js/sample-patterns.js?v=2"></script>
-<script src="js/dashboard.js?v=11"></script>
+<script src="js/dashboard.js?v=12"></script>
+<script src="js/board-notes.js?v=1"></script>
 <script src="js/maintdash.js?v=1"></script>
 <script src="js/pit-floor.js?v=27"></script>
 <script src="js/settings.js?v=10"></script>

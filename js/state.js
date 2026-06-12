@@ -6,6 +6,12 @@
 window.state = {
   currentView: 'today',
 
+  // 📌 ダッシュボードの「全体タスク（付箋ボード）」（CarFlow式・v0.63.0）
+  //   付箋＝5色・タイトル/本文/期限/担当メンバー/画像・実行/回覧・済スタンプ・DnD並べ替え。
+  boardNotes: [],
+  // 色ごとのラベル（緊急/今日中…）。設定で変えられる器（既定値）。
+  boardLabels: { red: '緊急', orange: '今日中', yellow: '今週中', green: '連絡', blue: '余裕' },
+
   reserveRange: 'day',
   reserveDate: new Date(),
 

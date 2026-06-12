@@ -196,6 +196,9 @@ function renderDashboard(){
   h += '</table>';
   h += '</div>';
 
+  // 📌 全体タスク（付箋ボード・v0.63.0）＝最短入庫日の直下。中身は board-notes.js が描画
+  h += '<div id="board-notes-area"></div>';
+
   // チーム別の状況（国産／輸入）
   const teams = [{ key:'default', name:'🚗 国産車チーム' }, { key:'import', name:'🌍 輸入車チーム' }];
   h += '<div class="dash-card"><div class="dash-h"><span>👥 チーム別の状況</span><span class="dash-note">国産 : 輸入 ＝ ざっくり 6 : 4</span></div><div class="dash-teams">';
@@ -249,6 +252,9 @@ function renderDashboard(){
   h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は <a href="javascript:showView(\'settings\')" style="color:inherit;font-weight:700">⚙️ 設定</a> から変更できます。</div>';
 
   wrap.innerHTML = h;
+
+  // 📌 付箋ボードを描画（最短入庫日の下）
+  if (window.renderBoardNotes) renderBoardNotes();
 
   // 🗓 予約の埋まり：右端近くで30日継ぎ足し（スクロール位置はそのまま＝カクつかない）
   const sc = document.getElementById('drc-scroll');
