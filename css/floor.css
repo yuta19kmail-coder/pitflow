@@ -88,11 +88,12 @@
 .pfv-card.dnd-dragging{ opacity:.4; }
 .pfv-main{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1px; }
 .pfv-cn, .pfv-cc{ font-size:11px; font-weight:700; color:var(--text); line-height:1.18; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pfv-side{ flex:0 0 auto; max-width:50%; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:2px; }
-.pfv-side-t, .pfv-side-b{ display:flex; gap:2px; align-items:center; max-width:100%; overflow:hidden; }
-.pfv-wt{ font-size:8.5px; font-weight:700; padding:0 4px; border:1px solid; border-radius:999px; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.pfv-staff{ font-size:8.5px; font-weight:700; color:var(--text2); background:var(--bg3); border:1px solid var(--border); border-radius:999px; padding:0 5px; line-height:1.5; white-space:nowrap; }
-.pfv-loaner{ font-size:8.5px; font-weight:700; color:#f59e0b; background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.5); border-radius:999px; padding:0 4px; line-height:1.5; white-space:nowrap; }
+.pfv-side{ flex:0 0 auto; max-width:54%; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:2px; }
+.pfv-side-t, .pfv-side-b{ display:flex; gap:3px; align-items:center; max-width:100%; overflow:hidden; }
+/* バッジはパツパツ＝文字大きめ＋余白詰め */
+.pfv-wt{ font-size:10.5px; font-weight:700; padding:0 4px; border:1px solid; border-radius:6px; line-height:1.34; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.pfv-staff{ font-size:10.5px; font-weight:700; color:var(--text); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:0 5px; line-height:1.34; white-space:nowrap; }
+.pfv-loaner{ font-size:10.5px; font-weight:700; color:#f59e0b; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.55); border-radius:6px; padding:0 4px; line-height:1.34; white-space:nowrap; }
 
 /* 図エリア＝図はビューポート高さに合わせてフィット（JS側 availH）。max-heightは保険で広め */
 #view-work .pitlist-stage{ max-height:calc(100vh - 120px); }
