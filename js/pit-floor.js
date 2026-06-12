@@ -557,10 +557,8 @@
       + ' onclick="if(window.openDetail)openDetail(\'' + c.id + '\')"'
       + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + '"'
       + ' title="' + esc((c.customer || '') + (c.car ? ' / ' + c.car : '')) + '">'
-      + '<span class="pfv-main"><b class="pfv-cn">' + esc(c.customer || '（未入力）') + ' 様</b>'
-      + '<b class="pfv-cc">' + esc(c.car || '') + '</b></span>'
-      + '<span class="pfv-side"><span class="pfv-side-t">' + wtBadge + '</span>'
-      + '<span class="pfv-side-b">' + loanerBadge + staffBadge + '</span></span>'
+      + '<span class="pfv-r"><b class="pfv-cn">' + esc(c.customer || '（未入力）') + ' 様</b><span class="pfv-badges">' + wtBadge + loanerBadge + '</span></span>'
+      + '<span class="pfv-r"><b class="pfv-cc">' + esc(c.car || '') + '</b>' + staffBadge + '</span>'
       + '</span>';
   }
   function makeBayElStatic(b, opts) {

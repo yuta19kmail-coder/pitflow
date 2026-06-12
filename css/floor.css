@@ -81,19 +81,18 @@
 .pfv-static{ pointer-events:none; }
 .pfv-over{ position:absolute; right:2px; top:2px; font-size:9px; font-weight:700; color:#fff; background:#ef4444; padding:0 5px; border-radius:999px; pointer-events:none; }
 
-/* スロットにはまる実カード：左＝客名＋様／車名（同じ表示）、右＝上に作業バッジ・下に担当/代車 */
-.pfv-card{ box-sizing:border-box; display:flex; align-items:stretch; gap:3px; padding:2px 4px 2px 6px; background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--green); border-radius:3px; cursor:grab; overflow:hidden; }
+/* スロットにはまる実カード：1行目＝客名＋様／右に車検・代車、2行目＝車種名（横幅たっぷり）／右に担当者 */
+.pfv-card{ box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:2px; padding:2px 5px 2px 7px; background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--green); border-radius:3px; cursor:grab; overflow:hidden; }
 .pfv-card:hover{ background:var(--bg3); }
 .pfv-card:active{ cursor:grabbing; }
 .pfv-card.dnd-dragging{ opacity:.4; }
-.pfv-main{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:1px; }
-.pfv-cn, .pfv-cc{ font-size:11px; font-weight:700; color:var(--text); line-height:1.18; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.pfv-side{ flex:0 0 auto; max-width:54%; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; gap:2px; }
-.pfv-side-t, .pfv-side-b{ display:flex; gap:3px; align-items:center; max-width:100%; overflow:hidden; }
-/* バッジはパツパツ＝文字大きめ＋余白詰め */
-.pfv-wt{ font-size:10.5px; font-weight:700; padding:0 4px; border:1px solid; border-radius:6px; line-height:1.34; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
-.pfv-staff{ font-size:10.5px; font-weight:700; color:var(--text); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:0 5px; line-height:1.34; white-space:nowrap; }
-.pfv-loaner{ font-size:10.5px; font-weight:700; color:#f59e0b; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.55); border-radius:6px; padding:0 4px; line-height:1.34; white-space:nowrap; }
+.pfv-r{ display:flex; align-items:center; gap:4px; min-width:0; }
+.pfv-cn, .pfv-cc{ flex:1 1 auto; min-width:0; font-size:13px; font-weight:700; color:var(--text); line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pfv-badges{ flex:0 0 auto; display:flex; gap:3px; align-items:center; }
+/* バッジはパツパツ＝文字を大きく・余白を詰める */
+.pfv-wt{ flex:0 0 auto; font-size:13px; font-weight:700; padding:0 4px; border:1px solid; border-radius:6px; line-height:1.26; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:88px; }
+.pfv-staff{ flex:0 0 auto; font-size:13px; font-weight:700; color:var(--text); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:0 5px; line-height:1.26; white-space:nowrap; }
+.pfv-loaner{ flex:0 0 auto; font-size:13px; font-weight:700; color:#f59e0b; background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.55); border-radius:6px; padding:0 4px; line-height:1.26; white-space:nowrap; }
 
 /* 図エリア＝図はビューポート高さに合わせてフィット（JS側 availH）。max-heightは保険で広め */
 #view-work .pitlist-stage{ max-height:calc(100vh - 120px); }
