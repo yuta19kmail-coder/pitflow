@@ -548,7 +548,11 @@
     var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
     var wt = (wts.length && window.state && Array.isArray(state.workTypes)) ? state.workTypes.find(function (w) { return w.id === wts[0]; }) : null;
     var wtBadge = wt ? '<span class="pfv-wt" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
-    // 担当者・代車バッジ（右下）
+    // 当/待のみ（預かりは出さない・ある時だけ）
+    var DROPC = { wait: '#f59e0b', sameDay: '#3b82f6' };
+    var dt = (window.state && Array.isArray(state.dropTypes)) ? state.dropTypes.find(function (d) { return d.id === c.dropType; }) : null;
+    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
+    // 担当者・代車バッジ
     var staff = c.frontStaff || c.staff || '';
     var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="代車あり">代車</span>' : '';
     var staffBadge = staff ? '<span class="pfv-staff">' + esc(staff) + '</span>' : '';
@@ -557,7 +561,7 @@
       + ' onclick="if(window.openDetail)openDetail(\'' + c.id + '\')"'
       + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + '"'
       + ' title="' + esc((c.customer || '') + (c.car ? ' / ' + c.car : '')) + '">'
-      + '<span class="pfv-r"><b class="pfv-cn">' + esc(c.customer || '（未入力）') + ' 様</b><span class="pfv-badges">' + wtBadge + loanerBadge + '</span></span>'
+      + '<span class="pfv-r"><b class="pfv-cn">' + esc(c.customer || '（未入力）') + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
       + '<span class="pfv-r"><b class="pfv-cc">' + esc(c.car || '') + '</b>' + staffBadge + '</span>'
       + '</span>';
   }

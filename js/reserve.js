@@ -343,22 +343,22 @@ function cardHtml(c, opts){
     const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
     const wts = (Array.isArray(c.workTypes) && c.workTypes.length)
       ? c.workTypes : (c.workType ? [c.workType] : []);
-    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
-    h += '<div class="pcm-head"><span class="pcm-name">' + (c.customer || '（未入力）') + '</span>';
-    if (c.car) h += '<span class="pcm-car">' + c.car + '</span>';
-    h += '</div>';
-    h += '<div class="pcm-tags">';
+    // 右上＝左から：代車（ある時）→ 当/待（ある時・預かりは出さない）→ 作業内容（一番右固定）
+    let top = '';
+    if (c.needLoaner) top += '<span class="pcm-loaner" title="代車あり">代車</span>';
+    if (dt && (dt.id === 'wait' || dt.id === 'sameDay')){
+      const dc = DROP_COLOR[dt.id] || 'var(--text2)';
+      top += '<span class="pcm-drop" title="' + (dt.desc || '入庫区分') + '" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + dt.label + '</span>';
+    }
     wts.slice(0, 2).forEach(function(id){
       const w = state.workTypes.find(x => x.id === id);
-      if (w) h += '<span class="pcm-wt" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
+      if (w) top += '<span class="pcm-wt" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
     });
-    if (dt){
-      const dc = DROP_COLOR[dt.id] || 'var(--text2)';
-      h += '<span class="pcm-drop" title="' + (dt.desc || '預かり区分') + '" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + dt.label + '</span>';
-    }
-    if (c.needLoaner) h += '<span class="pcm-loaner" title="代車あり">代車</span>';
-    if (c.frontStaff) h += '<span class="pcm-front" title="フロント担当">' + c.frontStaff + '</span>';
-    h += '</div>';
+    const staff = c.frontStaff || c.staff || '';
+    // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当
+    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+    h += '<div class="pcm-r"><span class="pcm-name">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
+    h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当">' + staff + '</span>' : '') + '</div>';
     h += '</div>';
     return h;
   }
