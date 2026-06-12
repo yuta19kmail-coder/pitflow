@@ -59,34 +59,35 @@
 /* ===== コンパクトカード（整備ビュー＝看板/作業で統一・小さく／文字は大きく見やすく・移動はドラッグのみ） ===== */
 .pit-card.pcm{
   min-width:0;
-  padding:7px 9px;
-  border-radius:6px;
-  border-left-width:4px;       /* 左ライン＝国産緑/輸入ピンク（JSで色指定） */
+  padding:8px 10px;
+  background:var(--bg2);
+  border:1px solid var(--border2);   /* ピットボードと同じくはっきり角丸で囲む */
+  border-left-width:4px;             /* 左ライン＝国産緑/輸入ピンク（JSで色指定） */
+  border-radius:8px;
   cursor:grab;
 }
 .pit-card.pcm:active{ cursor:grabbing; }
-.pcm-head{ display:flex; align-items:baseline; gap:6px; min-width:0; }
+/* PITカードと同じ2行構成：1行目=客名＋様／右に内容・代車、2行目=車種／右に担当 */
+.pcm-r{ display:flex; align-items:center; gap:6px; min-width:0; }
+.pcm-r + .pcm-r{ margin-top:3px; }
 .pcm-name{
-  font-weight:800; font-size:15px; color:var(--text);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto;
+  flex:1 1 auto; min-width:0; font-weight:800; font-size:15px; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .pcm-car{
-  font-size:15px; font-weight:700; color:var(--text);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1 1 auto;
+  flex:1 1 auto; min-width:0; font-size:15px; font-weight:700; color:var(--text);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-.pcm-tags{ display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; align-items:center; }
-/* PITカードのバッジ（pfv-*）に準じた見た目＝13px・角丸6px・パツパツ */
-.pcm-tags > span{
-  font-size:13px; line-height:1.42; padding:0 6px; border-radius:6px;
+.pcm-badges{ flex:0 0 auto; display:flex; gap:4px; align-items:center; }
+/* バッジ＝PITカード（pfv-*）に準じた13px・角丸6px・パツパツ */
+.pcm-badges > span, .pcm-front{
+  flex:0 0 auto; font-size:13px; line-height:1.42; padding:0 6px; border-radius:6px;
   font-weight:700; white-space:nowrap;
 }
 .pcm-wt{ border:1px solid; }
 .pcm-drop{ border:1px solid; }
 .pcm-loaner{ background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.55); }
-.pcm-front{
-  margin-left:auto; background:var(--bg3); color:var(--text);
-  border:1px solid var(--border2); font-weight:700;
-}
+.pcm-front{ background:var(--bg3); color:var(--text); border:1px solid var(--border2); }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{
