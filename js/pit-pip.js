@@ -40,11 +40,17 @@
     // 毎回デフォルトサイズ/位置で開き直す（前回のリサイズ・移動は持ち越さない）
     el.style.width = ''; el.style.height = ''; el.style.left = ''; el.style.top = ''; el.style.right = '';
     refresh();
+    syncBoard();   // 看板のグレーアウトを反映（開＝グレー）
   }
   function close() {
     open = false;
     var el = document.getElementById('pitpip');
     if (el) el.style.display = 'none';
+    syncBoard();   // 看板のグレーアウト解除（閉＝普通）
+  }
+  // PiP開閉でタスクボードを再描画＝配置済みカードのグレーアウトを切り替える
+  function syncBoard() {
+    if (window._rerenderActiveBoard && window.state && /^course[12]$|^task$/.test(state.currentView)) _rerenderActiveBoard();
   }
   function toggle(src) { open ? close() : show(src); }
   function isOpen() { return open; }
