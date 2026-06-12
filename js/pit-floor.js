@@ -27,6 +27,7 @@
 
   var cell = 30;
   var slotMaxFont = 13;   // カード文字の最大px（PiPは小さめを渡せる）。renderStaticでopts.maxFontから設定
+  var slotAbbr = false;   // 基準サイズより小さい時にバッジを先頭1文字へ略す（PiP用・opts.abbrSmall）
   var tool = 'select';
   var sel = null;       // { kind:'bay'|'shape', id }
   var drag = null;
@@ -543,25 +544,29 @@
   // エディタと同じ幾何（壁・建物・ドア/シャッター・リフト飾り・bayMetrics）をそのまま使い、
   // 空きスロットの代わりに実カード（state.cards）をPIT枠にはめ込む。編集はしない。
   // opts = { cardsByBay:{bayId:[card,...]}, stage:HTMLElement(幅計測用), cell:固定セル, minCell }
+  // バッジ略用：先頭の数字・記号を飛ばした最初の1文字（車検→車／12点→点／一般→一／高橋→高）
+  function oneChar(s) { s = String(s == null ? '' : s); var m = s.match(/[^\d\s.\-・]/); return m ? m[0] : (s.charAt(0) || ''); }
   function slotCard(c, m, dropVal) {
     var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
     var at = (window.escAttr ? escAttr : esc);
     // 枠が小さくなって今のサイズ(最大13px)を保てなくなったら文字を自動で縮小（PiPで文字が被るのを防ぐ）
     var fs = Math.max(7, Math.min(slotMaxFont, Math.floor((m.cardH - 4) / 2.4)));
     var twoLine = (m.cardH - 4) >= fs * 2.4;     // 2行が入らない小ささなら1行（客名だけ）表示
+    // 略表示＝基準サイズより小さい(=最大フォントに届かない)時。バッジを先頭1文字へ・待/当は省略。
+    var abbr = slotAbbr && (fs < slotMaxFont);
     // 作業名バッジ（右上）＝最初の作業タイプ。ホバーで「預かり 6/10〜（〇日目）」
     var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
     var wt = (wts.length && window.state && Array.isArray(state.workTypes)) ? state.workTypes.find(function (w) { return w.id === wts[0]; }) : null;
     var wtTitle = window.holdDaysLabel ? holdDaysLabel(c, wt ? wt.label : '') : '';
-    var wtBadge = wt ? '<span class="pfv-wt" title="' + at(wtTitle) + '" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
-    // 当/待のみ（預かりは出さない・ある時だけ）
+    var wtBadge = wt ? '<span class="pfv-wt" title="' + at(wtTitle) + '" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(abbr ? oneChar(wt.label) : wt.label) + '</span>' : '';
+    // 当/待（略表示の時は省略・通常はある時だけ）
     var DROPC = { wait: '#f59e0b', sameDay: '#3b82f6' };
     var dt = (window.state && Array.isArray(state.dropTypes)) ? state.dropTypes.find(function (d) { return d.id === c.dropType; }) : null;
-    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" title="' + at(dt.desc || '') + '" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
-    // 代車バッジ＝ホバーで「代車期限 〜7/4（あと〇日）」／担当バッジ
+    var dropBadge = (!abbr && dt && DROPC[dt.id]) ? '<span class="pfv-wt" title="' + at(dt.desc || '') + '" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
+    // 代車バッジ（略＝「代」）／担当バッジ（略＝先頭1文字）。ホバーはフル。
     var staff = c.frontStaff || c.staff || '';
-    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">代車</span>' : '';
-    var staffBadge = staff ? '<span class="pfv-staff" title="担当 ' + at(staff) + '">' + esc(staff) + '</span>' : '';
+    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">' + (abbr ? '代' : '代車') + '</span>' : '';
+    var staffBadge = staff ? '<span class="pfv-staff" title="担当 ' + at(staff) + '">' + esc(abbr ? oneChar(staff) : staff) + '</span>' : '';
     var openTag = function (cls, title) {
       return '<span class="pfv-card' + cls + '" draggable="true" data-card-id="' + c.id + '"'
         + ' data-drop="baycell" data-drop-val="' + dropVal + '"'    // 同枠内の並べ替え＝このスロット位置へ差し込む
@@ -637,6 +642,7 @@
     opts = opts || {};
     if (!grid) return;
     slotMaxFont = opts.maxFont || 13;   // カード文字の最大px（PiPは一回り小さく渡せる）
+    slotAbbr = !!opts.abbrSmall;        // 小さい時バッジを略すか（PiP=true）
     ensureModel();
     var f = fp(), savedSel = sel, savedTool = tool;
     sel = null; tool = 'select';                       // 選択ハイライト・編集ハンドルを出さない
