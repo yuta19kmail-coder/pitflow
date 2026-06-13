@@ -231,9 +231,10 @@
     box.classList.add('open');
   };
 
-  // 顧客の結果クリック＝顧客詳細を直接開く
+  // 顧客の結果クリック＝顧客詳細を直接開く（戻れるようにワードは残す）
   window.pitSearchOpenCust = function (custId) {
-    pitSearchClose();
+    window._pitReturnToSearch = true;
+    if (window.pitSearchHide) pitSearchHide();
     if (window.custOpen) custOpen(custId);
   };
 
@@ -248,6 +249,16 @@
     const inp = document.getElementById('pit-search-input');
     if (box) { box.classList.remove('open'); box.innerHTML = ''; }
     if (inp) inp.value = '';
+  };
+  // パネルだけ隠す（入力ワードは残す＝あとで戻れる）
+  window.pitSearchHide = function () {
+    const box = document.getElementById('pit-search-results');
+    if (box) box.classList.remove('open');
+  };
+  // 直前の検索ワードで結果を出し直す（顧客情報を見て戻る用）
+  window.pitSearchReopen = function () {
+    const inp = document.getElementById('pit-search-input');
+    if (inp && inp.value.trim()) window.pitSearchInput(inp.value);
   };
 
   // 外側クリックで結果を閉じる（入力は残す）

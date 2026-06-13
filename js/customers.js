@@ -110,6 +110,7 @@
 
   /* ===== 顧客ビュー（人の行＋展開で車両） ===== */
   let _q='', _sortKey='updatedAt', _sortDir='desc';
+  let _detailFromSearch=false;   // 顧客詳細を検索結果から開いたか（閉じたら検索結果に戻す）
   const _filters={ board:'', div:'', front:'', maker:'' };
   const _expanded=new Set();
   function fmtDate(ms){ if(!ms) return '—'; const d=new Date(ms); return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
@@ -234,7 +235,10 @@
     m.classList.add('show');
     m.onclick=function(e){ if(e.target===m) closeModal(); };
   }
-  function closeModal(){ const m=document.getElementById('cust-modal'); if(m){ m.classList.remove('show'); m.innerHTML=''; } }
+  function closeModal(){
+    const m=document.getElementById('cust-modal'); if(m){ m.classList.remove('show'); m.innerHTML=''; }
+    if(_detailFromSearch){ _detailFromSearch=false; if(window.pitSearchReopen) pitSearchReopen(); }   // 検索結果に戻す
+  }
   window.custCloseModal=closeModal;
 
   /* ===== 編集（人＋連絡先＋車両） ===== */
@@ -352,6 +356,8 @@
   }
   window.custOpen=function(id){
     const cust=list().find(x=>x.id===id); if(!cust) return;
+    _detailFromSearch = !!window._pitReturnToSearch; window._pitReturnToSearch=false;   // 検索由来かを取り込む
+    const backLbl = _detailFromSearch ? '← 検索結果へ戻る' : '← 顧客一覧へ戻る';
     const vehicles=cust.vehicles||[];
     const cards=_custCards(cust);
     const visits=cards.length;
@@ -361,7 +367,7 @@
 
     let h='';
     // 上部バー
-    h+='<div class="cd-top"><button class="cd-back" onclick="custCloseModal()">← 顧客一覧へ戻る</button>'+
+    h+='<div class="cd-top"><button class="cd-back" onclick="custCloseModal()">'+backLbl+'</button>'+
        '<div class="cd-acts"><button class="cd-btn" onclick="custEdit(\''+cust.id+'\')">✏️ 編集</button>'+
        '<button class="cd-btn danger" onclick="custDelete(\''+cust.id+'\')">🗑 削除</button></div></div>';
     // ヘッダー
@@ -436,6 +442,8 @@
   };
   /* この車で新規予約＝新規予約カードを作ってこの顧客＋車両で埋める */
   window.custNewReserveFor=function(custId, vehId){
+    window._pitReturnToSearch=false;           // 新規予約へ進む＝検索には戻らない
+    _detailFromSearch=false;
     custCloseModal();
     if(window.openNewReserve){ openNewReserve(); if(window.custPick) custPick(custId, vehId); }
   };
@@ -452,7 +460,8 @@
   // 顧客情報を開く＝そのカードのお客様の詳細（控えが無ければカードから作ってから開く）
   window.custOpenForCard=function(cardId){
     const c=(state.cards||[]).find(x=>x.id===cardId); if(!c) return;
-    if(window.pitSearchClose) pitSearchClose();
+    window._pitReturnToSearch=true;            // 戻れるように検索ワードは残す
+    if(window.pitSearchHide) pitSearchHide();
     let cust=custFindForCard(c);
     if(!cust && window.upsertCustomerFromCard){ upsertCustomerFromCard(c); cust=custFindForCard(c); }
     if(cust) custOpen(cust.id);
@@ -460,6 +469,7 @@
   // そのカードのお客様＋車両で新規予約を開始
   window.custNewReserveForCardId=function(cardId){
     const c=(state.cards||[]).find(x=>x.id===cardId); if(!c) return;
+    window._pitReturnToSearch=false;           // 新規予約へ進む＝検索には戻らない
     if(window.pitSearchClose) pitSearchClose();
     let cust=custFindForCard(c);
     if(!cust && window.upsertCustomerFromCard){ upsertCustomerFromCard(c); cust=custFindForCard(c); }
