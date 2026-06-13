@@ -192,8 +192,8 @@
         const first=vi===0, last=vi===vs.length-1;
         const t=teamInfo(v||{});
         const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
-        h+='<tr class="'+(last?'ct-rb':'ct-norb')+(first?'':' ct-cont')+'">'+
-           '<td class="ct-name">'+(first?'<span class="ct-namelink" onclick="custOpen(\''+cust.id+'\')" title="顧客詳細を開く">'+esc(cust.name||'(無名)')+'</span>':'')+'</td>'+
+        h+='<tr class="'+(last?'ct-rb':'ct-norb')+(first?'':' ct-cont')+' ct-clickrow" onclick="custOpen(\''+cust.id+'\')" title="顧客詳細を開く">'+
+           '<td class="ct-name">'+(first?esc(cust.name||'(無名)'):'')+'</td>'+
            '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
            '<td>'+(v?esc(v.maker||'—'):'—')+'</td>'+
            '<td>'+(v?esc(v.car||'—'):'—')+'</td>'+
@@ -204,9 +204,7 @@
            '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
            '<td class="ct-act">'+
-             (v?'<button class="ct-b" onclick="custHistory(\''+cust.id+'\',\''+v.id+'\')" title="この車の履歴">🕒</button>':'')+
-             (first?('<button class="ct-b" onclick="custEdit(\''+cust.id+'\')" title="編集">✏</button>'+
-               '<button class="ct-b ct-bd" onclick="custDelete(\''+cust.id+'\')" title="削除">🗑</button>'):'')+
+             '<button class="ct-b ct-bnew" onclick="event.stopPropagation();custNewReserveFor(\''+cust.id+'\',\''+((v&&v.id)||'')+'\')" title="この車で新規予約">🆕 新規予約</button>'+
            '</td>'+
            '</tr>';
         shownRows++;

@@ -4,9 +4,13 @@
  * モック「モック_顧客詳細.html」準拠
  * ======================================== */
 
-/* 一覧の名前をリンク化 */
-.ct-namelink{ color:var(--brand); cursor:pointer; font-weight:700; }
-.ct-namelink:hover{ text-decoration:underline; }
+/* 一覧：行（欄）全体クリックで詳細を開く */
+.ct-clickrow{ cursor:pointer; }
+.ct-clickrow:hover > td{ background:var(--bg3); }
+.ct-clickrow .ct-name{ font-weight:700; color:var(--brand); }
+/* 一覧の操作＝「この車で新規予約」だけ */
+.ct-bnew{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; font-size:11.5px; font-weight:700; color:var(--brand); background:var(--brand-soft); border:1px solid rgba(38,162,105,.35); border-radius:7px; padding:4px 9px; cursor:pointer; }
+.ct-bnew:hover{ background:var(--brand); color:#fff; }
 
 /* ワイドなモーダル箱（cm-box を上書き） */
 .cm-box.cd-box{ width:960px; max-width:100%; padding:18px 22px 26px; overflow:visible; }
