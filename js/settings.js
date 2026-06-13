@@ -160,7 +160,13 @@
     h += '<div class="ps-hint">※ 定休曜日は<b>仮の設定</b>です。将来は MHS（会社カレンダー＝全社の基準マスター）から自動で取得する予定。祝日は現在「表示のみ」（営業日判定には使っていません）。</div>';
     h += '</div>';
 
+    // 🧰 作業内容テンプレート（症状ホイール）の編集（work-content.js・v0.70.0）
+    h += (window.WorkContent ? WorkContent.settingsCardHtml() : '');
+
     body.innerHTML = h;
+
+    // 編集UIを描画（内容が動的なので innerHTML 後に）
+    if (window.WorkContent && WorkContent.mountSettings) WorkContent.mountSettings();
   };
 
   /* 画面の入力をすべて読み取って state.settings に反映 → 保存 */

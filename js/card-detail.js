@@ -200,12 +200,8 @@ function renderCardForm(c){
   h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
   h += '<div class="cf-label">作業内容（自由記入）</div>';
   h += textareaIn(c, 'menu', 3);
-  h += '<div class="cf-tpl">';
-  h += '<button type="button" class="cf-tpl-toggle" onclick="cfMenuTplToggle(this)">＋ テンプレートから入れる ▾</button>';
-  h += '<div class="cf-tpl-panel">';
-  CF_MENU_TPL.forEach(function(t, i){ h += '<button type="button" class="cf-tpl-chip" onclick="cfMenuAddTpl(' + i + ')">' + t + '</button>'; });
-  h += '</div>';
-  h += '</div>';
+  // 🧰 作業内容テンプレート＝症状ホイール＋チップ（work-content.js が描画・設定で編集可・v0.70.0）
+  h += (window.WorkContent ? WorkContent.builderHtml() : '');
   h += '</div></div>';
   h += secEnd();
 
@@ -241,6 +237,9 @@ function renderCardForm(c){
 
   // === イベントバインド ===
   bindCardFormEvents(body);
+
+  // 🧰 作業内容テンプレート（症状ホイール）を起動（内容セクションがある時だけ）
+  if (window.WorkContent && WorkContent.mount) WorkContent.mount(body);
 }
 
 /* ========================================
