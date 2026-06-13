@@ -155,17 +155,17 @@
     h+='<div class="pk-tline l3" style="bottom:'+px(c.FULL)+'px"><span class="pk-tlbl">満'+c.FULL+'</span></div>';
     list.forEach(function(x){
       if(x.closed){ h+='<div class="pk-bar"></div>'; return; }
-      const total=totalOf(x.ds,x.date), D=dist(total);
-      let top;
-      if(D.over>0) top='<div class="pk-top over">⚠超過<br>'+D.over+'台</div>';
-      else if(D.coin>0) top='<div class="pk-top coin">🅿️コインパ<br>'+D.coin+'台</div>';
-      else if(D.akai>0) top='<div class="pk-top akai">🚶赤井斉<br>'+D.akai+'台</div>';
-      else top='<div class="pk-top ok">自社OK<br>空'+(c.F1-total)+'</div>';
+      const total=totalOf(x.ds,x.date), D=dist(total), totalPx=px(total);
+      let tc, tt;
+      if(D.over>0){ tc='over'; tt='⚠超過<br>'+D.over+'台'; }
+      else if(D.coin>0){ tc='coin'; tt='🅿️コインパ<br>'+D.coin+'台'; }
+      else if(D.akai>0){ tc='akai'; tt='🚶赤井斉<br>'+D.akai+'台'; }
+      else { tc='ok'; tt='自社OK<br>空'+(c.F1-total); }
       const segs=[['over',D.over],['coin',D.coin],['akai',D.akai],['home',D.home]];
       let stack='<div class="pk-stack">'; let first=true;
       segs.forEach(function(s){ if(s[1]>0){ stack+='<div class="pk-seg '+s[0]+(first?' topseg':'')+'" style="height:'+px(s[1])+'px"></div>'; first=false; } });
       stack+='</div>';
-      h+='<div class="pk-bar" onclick="pkSel(\''+x.ds+'\')">'+top+stack+'</div>';
+      h+='<div class="pk-bar" onclick="pkSel(\''+x.ds+'\')"><div class="pk-top '+tc+'" style="bottom:'+(totalPx+4)+'px">'+tt+'</div>'+stack+'</div>';
     });
     h+='</div>';
     return h;
