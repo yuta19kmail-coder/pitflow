@@ -100,14 +100,34 @@
   function actBtn(label, onclick) {
     return '<button class="psr-act" onclick="event.stopPropagation();' + onclick + '">' + label + '</button>';
   }
+  // 工程（車検等）・代車・当/待のバッジ（顧客情報の横に素直に並べる）
+  function rowBadges(c) {
+    let b = '';
+    const wt = (state.workTypes || []).find(w => w.id === c.workType);
+    if (wt) b += '<span class="psr-b" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>';
+    if (c.loanerId || c.needLoaner) b += '<span class="psr-b psr-b-loaner">代車</span>';
+    if (c.dropType === 'wait' || c.dropType === 'sameDay') {
+      const dt = (state.dropTypes || []).find(d => d.id === c.dropType);
+      b += '<span class="psr-b psr-b-drop">' + esc(dt ? dt.label : '') + '</span>';
+    }
+    return b ? ('<span class="psr-bs">' + b + '</span>') : '';
+  }
   function resultRow(c) {
     const id = esc(c.id);
     const no = c.resNo ? '<span class="psr-no">' + esc(c.resNo) + '</span>' : '';
     const st = statusLabel(c);
     const team = c.boardId === 'import' ? '#ec4899' : '#1db97a';
-    const loaner = c.loanerId ? ' ・代車' : '';
-    // ステータスバッジは左へ
+    // ステータスバッジは左（予約番号の下）
     const stBadge = '<span class="psr-st" style="border-color:' + team + ';color:' + team + '">' + esc(st) + '</span>';
+    // 日時：返車済み＝完了日(＋金額)、それ以外＝予約日(＋時刻・期間)
+    let dstr;
+    if (c.status === 'returned') {
+      const amt = (c.amountFinal != null && c.amountFinal !== '') ? Number(c.amountFinal) : null;
+      dstr = (c.returnDate || '') + ' 完了' + ((amt != null && isFinite(amt)) ? ('　¥' + amt.toLocaleString('ja-JP')) : '');
+    } else {
+      dstr = (c.reserveDate || '') + (c.reserveTime ? (' ' + c.reserveTime) : '') + (c.returnDate && c.returnDate !== c.reserveDate ? ('〜' + c.returnDate) : '');
+    }
+    const tel = c.tel || ((c.contacts || []).find(x => x.primary) || {}).tel || '';
     // 右に操作ボタン：入庫前(予約)＝予約詳細/予約カレンダー/顧客情報/新規予約
     const rd = esc(c.reserveDate || '');
     let acts;
@@ -124,32 +144,46 @@
       acts = actBtn('予約詳細', "pitOpenCardDetail('" + id + "')")
            + actBtn('顧客情報', "custOpenForCard('" + id + "')");
     }
-    return '<div class="psr-row" onclick="pitOpenCardDetail(\'' + id + '\')">'
+    return '<div class="psr-row">'
       + '<div class="psr-lead">' + no + stBadge + '</div>'
       + '<div class="psr-main">'
-      + '<div class="psr-l1"><b>' + esc(c.customer || '（未入力）') + ' 様</b>'
-      + '<span class="psr-car">' + esc(c.car || '') + (c.maker ? '（' + esc(c.maker) + '）' : '') + '</span></div>'
-      + '<div class="psr-l2">' + esc(c.plate || '') + '　' + esc(c.reserveDate || '') + (c.returnDate && c.returnDate !== c.reserveDate ? '〜' + esc(c.returnDate) : '') + loaner + '</div>'
+      + '<div class="psr-l1"><b class="psr-name">' + esc(c.customer || '（未入力）') + ' 様</b>'
+      + (c.car ? '<span class="psr-car">' + esc(c.car) + '</span>' : '')
+      + (c.plate ? '<span class="psr-plate">' + esc(c.plate) + '</span>' : '')
+      + rowBadges(c)
+      + '</div>'
+      + '<div class="psr-l2">' + (tel ? ('📞 ' + esc(tel)) : '') + (dstr ? ((tel ? '　・　' : '') + '📅 ' + esc(dstr)) : '') + '</div>'
       + '</div>'
       + '<div class="psr-acts">' + acts + '</div>'
       + '</div>';
   }
 
-  // 顧客（人）1件の結果行
+  function custLastVisit(cust) {
+    let last = cust.updatedAt || 0;
+    (cust.vehicles || []).forEach(v => { if ((v.updatedAt || 0) > last) last = v.updatedAt || 0; });
+    if (!last) return '';
+    const d = new Date(last);
+    return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+  }
+  // 顧客（人）1件の結果行：上＝名前・車種・ナンバー／下＝電話・最終入庫。右に操作ボタン
   function custRow(cust) {
     const tel = custPrimaryTel(cust);
     const vs = cust.vehicles || [];
     const v0 = vs[0] || {};
-    const carStr = ((v0.maker ? v0.maker + ' ' : '') + (v0.car || '')).trim();
-    const more = vs.length > 1 ? '　ほか' + (vs.length - 1) + '台' : '';
-    return '<div class="psr-row" onclick="pitSearchOpenCust(\'' + esc(cust.id) + '\')">'
-      + '<span class="psr-no psr-cust">👤</span>'
+    const car = v0.car ? '<span class="psr-car">' + esc(v0.car) + '</span>' : '';
+    const plate = v0.plate ? '<span class="psr-plate">' + esc(v0.plate) + '</span>' : '';
+    const more = vs.length > 1 ? '<span class="psr-more">ほか' + (vs.length - 1) + '台</span>' : '';
+    const last = custLastVisit(cust);
+    return '<div class="psr-row">'
+      + '<div class="psr-lead"><span class="psr-cust-tag">👤</span></div>'
       + '<div class="psr-main">'
-      + '<div class="psr-l1"><b>' + esc(cust.name || '（無名）') + ' 様</b>'
-      + (cust.kana ? '<span class="psr-car">' + esc(cust.kana) + '</span>' : '') + '</div>'
-      + '<div class="psr-l2">' + esc(tel || '') + (carStr ? '　' + esc(carStr) : '') + (v0.plate ? '　' + esc(v0.plate) : '') + more + '</div>'
+      + '<div class="psr-l1"><b class="psr-name">' + esc(cust.name || '（無名）') + ' 様</b>' + car + plate + more + '</div>'
+      + '<div class="psr-l2">' + (tel ? ('📞 ' + esc(tel)) : '') + (last ? ((tel ? '　・　' : '') + '最終入庫 ' + esc(last)) : '') + '</div>'
       + '</div>'
-      + '<span class="psr-st" style="border-color:var(--text3);color:var(--text2)">顧客</span>'
+      + '<div class="psr-acts">'
+      + actBtn('顧客情報', "pitSearchOpenCust('" + esc(cust.id) + "')")
+      + actBtn('新規予約', "pitSearchClose();custNewReserveFor('" + esc(cust.id) + "','" + esc(v0.id || '') + "')")
+      + '</div>'
       + '</div>';
   }
 

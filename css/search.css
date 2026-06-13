@@ -61,11 +61,9 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px;
+  padding: 8px 10px;
   border-radius: 9px;
-  cursor: pointer;
 }
-.psr-row:hover { background: var(--bg3); }
 
 .psr-no {
   flex: 0 0 auto;
@@ -89,8 +87,9 @@
   justify-content: center;
 }
 
-/* 左：予約番号＋ステータスバッジ */
-.psr-lead { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+/* 左：予約番号＋ステータスバッジ（縦積み） */
+.psr-lead { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-width: 78px; }
+.psr-cust-tag { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 9px; background: var(--brand-soft); color: var(--brand); font-size: 15px; }
 
 .psr-main { flex: 1; min-width: 0; }
 
@@ -109,21 +108,24 @@
 .psr-l1 {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 7px;
+  flex-wrap: wrap;
   font-size: 14px;
   color: var(--text1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.psr-l1 .psr-car { font-size: 12.5px; color: var(--text2); font-weight: 600; }
+.psr-name { font-size: 14px; font-weight: 800; }
+.psr-l1 .psr-car { font-size: 14px; color: var(--text1); font-weight: 700; } /* 車種は名前と同格 */
+.psr-plate { font-size: 12px; color: var(--text2); font-weight: 600; }
+.psr-more { font-size: 11px; color: var(--text3); }
+/* 工程・代車・当待バッジ（1/2課ボードのカードと同じ小さいスタイル・顧客の横に） */
+.psr-bs { display: inline-flex; gap: 5px; flex-wrap: wrap; }
+.psr-b { font-size: 11.5px; line-height: 1.4; font-weight: 700; padding: 1px 6px; border-radius: 6px; border: 1px solid; white-space: nowrap; }
+.psr-b-loaner { background: rgba(245,158,11,.16); color: #f59e0b; border-color: rgba(245,158,11,.55); }
+.psr-b-drop { background: var(--bg3); color: var(--text); border-color: var(--border2); }
 .psr-l2 {
   font-size: 11.5px;
   color: var(--text3);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 3px;
 }
 
 .psr-st {
