@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.65.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.65.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="css/polish.css?v=72">
 <link rel="stylesheet" href="css/floor.css?v=22">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
-<link rel="stylesheet" href="css/search.css?v=1">
+<link rel="stylesheet" href="css/search.css?v=2">
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -63,7 +63,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.65.0</div>
+    <div class="pl-ver">PitFlow v0.65.1</div>
   </div>
 </div>
 
@@ -75,7 +75,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.65.0</span>
+      <span class="ver">v0.65.1</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -143,7 +143,7 @@
       <!-- 🔍 マスター検索（名前/車/ナンバー/予約番号/代車/日付…を横断・v0.65.0） -->
       <div id="pit-search-wrap">
         <input id="pit-search-input" type="search" autocomplete="off"
-               placeholder="🔍 検索（名前・車・ナンバー・予約番号・代車・日付…）"
+               placeholder="🔍 検索（顧客・名前・車・ナンバー・予約番号・代車・日付…）"
                oninput="pitSearchInput(this.value)">
         <div id="pit-search-results" class="pit-search-results"></div>
       </div>
@@ -594,7 +594,7 @@
 <script src="js/sample-patterns.js?v=2"></script>
 <script src="js/dashboard.js?v=12"></script>
 <script src="js/board-notes.js?v=1"></script>
-<script src="js/search.js?v=1"></script>
+<script src="js/search.js?v=2"></script>
 <script src="js/maintdash.js?v=1"></script>
 <script src="js/pit-floor.js?v=27"></script>
 <script src="js/settings.js?v=10"></script>

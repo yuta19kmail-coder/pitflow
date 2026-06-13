@@ -58,6 +58,29 @@
     return norm(parts.filter(Boolean).join(' '));
   }
 
+  // 顧客台帳（人＋車両）の検索用テキスト
+  function custPrimaryTel(cust) {
+    const cs = (cust && cust.contacts) || [];
+    const p = cs.find(x => x.primary) || cs[0];
+    return p ? (p.tel || '') : '';
+  }
+  function custBlob(cust) {
+    const parts = [cust.name, cust.kana];
+    (cust.contacts || []).forEach(ct => { parts.push(ct.tel, ct.label); });
+    (cust.vehicles || []).forEach(v => { parts.push(v.plate, v.maker, v.car); });
+    return norm(parts.filter(Boolean).join(' '));
+  }
+  function searchCustomers(words) {
+    const list = state.customers || [];
+    const hits = [];
+    for (let i = 0; i < list.length; i++) {
+      const blob = custBlob(list[i]);
+      if (words.every(w => blob.indexOf(w) >= 0)) hits.push(list[i]);
+    }
+    hits.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    return hits;
+  }
+
   // 検索本体：全語(AND)を含むカードを新しい順で返す
   function search(qStr) {
     // norm は空白を消すので、入力時のスペースで先に語分割してから各語を正規化
@@ -90,22 +113,58 @@
       + '</div>';
   }
 
+  // 顧客（人）1件の結果行
+  function custRow(cust) {
+    const tel = custPrimaryTel(cust);
+    const vs = cust.vehicles || [];
+    const v0 = vs[0] || {};
+    const carStr = ((v0.maker ? v0.maker + ' ' : '') + (v0.car || '')).trim();
+    const more = vs.length > 1 ? '　ほか' + (vs.length - 1) + '台' : '';
+    return '<div class="psr-row" onclick="pitSearchOpenCust(\'' + esc(cust.id) + '\')">'
+      + '<span class="psr-no psr-cust">👤</span>'
+      + '<div class="psr-main">'
+      + '<div class="psr-l1"><b>' + esc(cust.name || '（無名）') + ' 様</b>'
+      + (cust.kana ? '<span class="psr-car">' + esc(cust.kana) + '</span>' : '') + '</div>'
+      + '<div class="psr-l2">' + esc(tel || '') + (carStr ? '　' + esc(carStr) : '') + (v0.plate ? '　' + esc(v0.plate) : '') + more + '</div>'
+      + '</div>'
+      + '<span class="psr-st" style="border-color:var(--text3);color:var(--text2)">顧客</span>'
+      + '</div>';
+  }
+
   // 入力ハンドラ
   window.pitSearchInput = function (q) {
     const box = document.getElementById('pit-search-results');
     if (!box) return;
     const raw = String(q || '').trim();
     if (!raw) { box.classList.remove('open'); box.innerHTML = ''; return; }
-    const hits = search(q);
-    if (!hits.length) {
-      box.innerHTML = '<div class="psr-empty">「' + esc(raw) + '」に当てはまるカードはありません</div>';
+    const words = raw.split(/\s+/).map(norm).filter(Boolean);
+    const cardHits = search(q);
+    const custHits = searchCustomers(words);
+    if (!cardHits.length && !custHits.length) {
+      box.innerHTML = '<div class="psr-empty">「' + esc(raw) + '」に当てはまるものはありません</div>';
       box.classList.add('open');
       return;
     }
-    const max = 40;
-    const head = '<div class="psr-head">' + hits.length + '件' + (hits.length > max ? '（上位' + max + '件を表示）' : '') + '</div>';
-    box.innerHTML = head + hits.slice(0, max).map(resultRow).join('');
+    const MAXC = 30, MAXP = 30;
+    let html = '';
+    if (cardHits.length) {
+      html += '<div class="psr-head">🗂 カード ' + cardHits.length + '件' + (cardHits.length > MAXC ? '（上位' + MAXC + '件）' : '') + '</div>';
+      html += cardHits.slice(0, MAXC).map(resultRow).join('');
+    }
+    if (custHits.length) {
+      html += '<div class="psr-head">👤 顧客 ' + custHits.length + '件' + (custHits.length > MAXP ? '（上位' + MAXP + '件）' : '') + '</div>';
+      html += custHits.slice(0, MAXP).map(custRow).join('');
+    }
+    box.innerHTML = html;
     box.classList.add('open');
+  };
+
+  // 顧客の結果クリック＝顧客ビューを開いてその人で絞り込み
+  window.pitSearchOpenCust = function (custId) {
+    const cust = (state.customers || []).find(c => c.id === custId);
+    pitSearchClose();
+    if (window.showView) showView('customers');
+    if (cust && window.custFilter) custFilter(cust.name || '');
   };
 
   // 結果クリック＝カードを開く

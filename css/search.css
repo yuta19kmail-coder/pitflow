@@ -80,6 +80,15 @@
   padding: 3px 8px;
 }
 
+.psr-no.psr-cust {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .psr-main { flex: 1; min-width: 0; }
 .psr-l1 {
   display: flex;
