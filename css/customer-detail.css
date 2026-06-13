@@ -63,6 +63,7 @@
 .cd-vehs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
 .cd-veh{ position:relative; background:var(--bg2); border:1px solid var(--border); border-left:5px solid var(--green); border-radius:14px; padding:14px 16px 12px; }
 .cd-veh.import{ border-left-color:var(--pink); }
+.cd-veh.unset{ border-left-color:#64748b; }
 .cd-vplate{ font-size:18px; font-weight:800; letter-spacing:1px; }
 .cd-vcar{ font-size:14px; color:var(--text2); font-weight:600; margin-top:3px; }
 .cd-vpills{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center; }

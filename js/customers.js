@@ -389,11 +389,15 @@
       h+='<div class="cd-vehs">';
       vehicles.forEach(function(v){
         const t=teamInfo(v||{});
-        const imp=(v.boardId==='import')?' import':'';
-        h+='<div class="cd-veh'+imp+'">'+
+        // ベースルール：輸入＝ピンク／国産＝緑／未設定＝グレー
+        const isImp=(v.boardId==='import');
+        const isDom=(v.boardId==='default');
+        const teamCls=isImp?' import':(isDom?'':' unset');
+        const teamPill=isImp?'<span class="cd-pill pink">輸入車</span>':(isDom?'<span class="cd-pill green">国産車</span>':'<span class="cd-pill mut">未設定</span>');
+        h+='<div class="cd-veh'+teamCls+'">'+
            '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
-           '<div class="cd-vpills">'+(t.label?'<span class="cd-pill '+(v.boardId==='import'?'pink':'green')+'">'+esc(t.label)+'</span>':'')+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff">担当 '+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff">担当 '+esc(v.frontStaff)+'</span>':'')+'</div>'+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')">🕒 履歴</span>'+
            '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+
            '</div>';
