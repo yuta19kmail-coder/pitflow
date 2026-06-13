@@ -62,7 +62,7 @@
 /* 車両カード */
 .cd-vehs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
 .cd-veh{ position:relative; background:var(--bg2); border:1px solid var(--border); border-left:5px solid var(--green); border-radius:14px; padding:14px 16px 12px; }
-.cd-veh.import{ border-left-color:var(--pink); }
+.cd-veh.import{ border-left-color:#ec4899; }
 .cd-veh.unset{ border-left-color:#64748b; }
 .cd-vplate{ font-size:18px; font-weight:800; letter-spacing:1px; color:var(--text1); }
 /* 車種名はナンバーと同格（濃さ・サイズを揃える） */

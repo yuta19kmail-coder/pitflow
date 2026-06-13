@@ -256,9 +256,12 @@
     if (box) box.classList.remove('open');
   };
   // 直前の検索ワードで結果を出し直す（顧客情報を見て戻る用）
+  // ※クリックで閉じた直後の「枠外クリックで閉じる」処理に巻き込まれないよう、次の周期で復元
   window.pitSearchReopen = function () {
-    const inp = document.getElementById('pit-search-input');
-    if (inp && inp.value.trim()) window.pitSearchInput(inp.value);
+    setTimeout(function () {
+      const inp = document.getElementById('pit-search-input');
+      if (inp && inp.value.trim()) window.pitSearchInput(inp.value);
+    }, 0);
   };
 
   // 外側クリックで結果を閉じる（入力は残す）
