@@ -97,19 +97,41 @@
     return hits;
   }
 
+  function actBtn(label, onclick) {
+    return '<button class="psr-act" onclick="event.stopPropagation();' + onclick + '">' + label + '</button>';
+  }
   function resultRow(c) {
+    const id = esc(c.id);
     const no = c.resNo ? '<span class="psr-no">' + esc(c.resNo) + '</span>' : '';
     const st = statusLabel(c);
     const team = c.boardId === 'import' ? '#ec4899' : '#1db97a';
     const loaner = c.loanerId ? ' ・代車' : '';
-    return '<div class="psr-row" onclick="pitSearchOpen(\'' + esc(c.id) + '\')">'
-      + no
+    // ステータスバッジは左へ
+    const stBadge = '<span class="psr-st" style="border-color:' + team + ';color:' + team + '">' + esc(st) + '</span>';
+    // 右に操作ボタン：入庫前(予約)＝予約詳細/予約カレンダー/顧客情報/新規予約
+    const rd = esc(c.reserveDate || '');
+    let acts;
+    if (c.status === 'reserved') {
+      acts = actBtn('予約詳細', "pitOpenCardDetail('" + id + "')")
+           + actBtn('予約カレンダー', "pitGotoReserveDate('" + rd + "')")
+           + actBtn('顧客情報', "custOpenForCard('" + id + "')")
+           + actBtn('新規予約', "custNewReserveForCardId('" + id + "')");
+    } else if (c.status === 'returned') {
+      acts = actBtn('予約詳細', "pitOpenCardDetail('" + id + "')")
+           + actBtn('実績カレンダー', "pitGotoResultMonth('" + esc(c.returnDate || c.reserveDate || '') + "')")
+           + actBtn('顧客情報', "custOpenForCard('" + id + "')");
+    } else {
+      acts = actBtn('予約詳細', "pitOpenCardDetail('" + id + "')")
+           + actBtn('顧客情報', "custOpenForCard('" + id + "')");
+    }
+    return '<div class="psr-row" onclick="pitOpenCardDetail(\'' + id + '\')">'
+      + '<div class="psr-lead">' + no + stBadge + '</div>'
       + '<div class="psr-main">'
       + '<div class="psr-l1"><b>' + esc(c.customer || '（未入力）') + ' 様</b>'
       + '<span class="psr-car">' + esc(c.car || '') + (c.maker ? '（' + esc(c.maker) + '）' : '') + '</span></div>'
       + '<div class="psr-l2">' + esc(c.plate || '') + '　' + esc(c.reserveDate || '') + (c.returnDate && c.returnDate !== c.reserveDate ? '〜' + esc(c.returnDate) : '') + loaner + '</div>'
       + '</div>'
-      + '<span class="psr-st" style="border-color:' + team + ';color:' + team + '">' + esc(st) + '</span>'
+      + '<div class="psr-acts">' + acts + '</div>'
       + '</div>';
   }
 
@@ -159,12 +181,10 @@
     box.classList.add('open');
   };
 
-  // 顧客の結果クリック＝顧客ビューを開いてその人で絞り込み
+  // 顧客の結果クリック＝顧客詳細を直接開く
   window.pitSearchOpenCust = function (custId) {
-    const cust = (state.customers || []).find(c => c.id === custId);
     pitSearchClose();
-    if (window.showView) showView('customers');
-    if (cust && window.custFilter) custFilter(cust.name || '');
+    if (window.custOpen) custOpen(custId);
   };
 
   // 結果クリック＝カードを開く

@@ -397,7 +397,7 @@
         h+='<div class="cd-veh'+teamCls+'">'+
            '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
-           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff">担当 '+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')">🕒 履歴</span>'+
            '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+
            '</div>';
@@ -415,10 +415,17 @@
         const amt=(c.amountFinal!=null&&c.amountFinal!=='')?Number(c.amountFinal):(c.estAmount!=null&&c.estAmount!==''?Number(c.estAmount):null);
         const amtStr=(amt!=null&&isFinite(amt))?yen(amt):'—';
         let loa=''; if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa=' ・ <span class="cd-loa">🚙代車'+(l?('（'+esc(l.name)+'）'):'')+'</span>'; }
-        const menu=c.menu?(' ・ '+esc(String(c.menu).split('\n')[0])):'';
-        h+='<div class="cd-hrow"><div class="cd-hdt">'+esc(cardDate(c)||'日付未定')+'</div>'+
+        const menuTxt=c.menu?esc(String(c.menu).split('\n')[0]):'';
+        // ステータスバッジ：予約→予約カレンダー／返車済み→実績カレンダー（行クリックは予約詳細）
+        const isResv=(c.status==='reserved'), isRet=(c.status==='returned');
+        const stClick=isResv?("event.stopPropagation();pitGotoReserveDate('"+esc(c.reserveDate||'')+"')")
+                    :isRet?("event.stopPropagation();pitGotoResultMonth('"+esc(c.returnDate||c.reserveDate||'')+"')"):'';
+        const stBadge='<span class="cd-hst'+((isResv||isRet)?' clickable':'')+'"'+(stClick?(' onclick="'+stClick+'" title="'+(isResv?'予約カレンダーへ':'実績カレンダーへ')+'"'):'')+'>'+esc(_statusLbl(c))+(isResv?' 📅':isRet?' 📊':'')+'</span>';
+        h+='<div class="cd-hrow clickable" onclick="pitOpenCardDetail(\''+esc(c.id)+'\')" title="クリックで予約詳細">'+
+           '<div class="cd-hdt">'+esc(cardDate(c)||'日付未定')+'</div>'+
            '<div class="cd-hwt" style="background:'+wc+'">'+esc(wl)+'</div>'+
-           '<div class="cd-hmid"><b>'+esc(c.car||'')+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+loa+'<div class="cd-hsub">'+esc(_statusLbl(c))+menu+'</div></div>'+
+           '<div class="cd-hmid"><b>'+esc(c.car||'')+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+loa+(menuTxt?'<div class="cd-hsub">'+menuTxt+'</div>':'')+'</div>'+
+           stBadge+
            '<div class="cd-hamt">'+amtStr+'</div></div>';
       });
       h+='</div>';
@@ -431,5 +438,33 @@
   window.custNewReserveFor=function(custId, vehId){
     custCloseModal();
     if(window.openNewReserve){ openNewReserve(); if(window.custPick) custPick(custId, vehId); }
+  };
+
+  /* ===== カード→顧客の橋渡し（検索結果の「顧客情報」「新規予約」用） ===== */
+  // カードから顧客レコードを探す（customerId 優先・無ければナンバー一致）
+  window.custFindForCard=function(c){
+    if(!c) return null;
+    if(c.customerId){ const byId=list().find(x=>x.id===c.customerId); if(byId) return byId; }
+    const p=norm(c.plate);
+    if(p){ const byP=list().find(x=>(x.vehicles||[]).some(v=>norm(v.plate)===p)); if(byP) return byP; }
+    return null;
+  };
+  // 顧客情報を開く＝そのカードのお客様の詳細（控えが無ければカードから作ってから開く）
+  window.custOpenForCard=function(cardId){
+    const c=(state.cards||[]).find(x=>x.id===cardId); if(!c) return;
+    if(window.pitSearchClose) pitSearchClose();
+    let cust=custFindForCard(c);
+    if(!cust && window.upsertCustomerFromCard){ upsertCustomerFromCard(c); cust=custFindForCard(c); }
+    if(cust) custOpen(cust.id);
+  };
+  // そのカードのお客様＋車両で新規予約を開始
+  window.custNewReserveForCardId=function(cardId){
+    const c=(state.cards||[]).find(x=>x.id===cardId); if(!c) return;
+    if(window.pitSearchClose) pitSearchClose();
+    let cust=custFindForCard(c);
+    if(!cust && window.upsertCustomerFromCard){ upsertCustomerFromCard(c); cust=custFindForCard(c); }
+    if(!cust){ if(window.openNewReserve) openNewReserve(); return; }
+    const v=(cust.vehicles||[]).find(x=>norm(x.plate)===norm(c.plate))||(cust.vehicles||[])[0];
+    custNewReserveFor(cust.id, v?v.id:'');
   };
 })();

@@ -43,6 +43,36 @@ function showView(viewId){
   if (viewId === 'rules' && window.renderRules) renderRules();
 }
 
+/* 📅 予約カレンダー（その日）へ飛ぶ（顧客履歴・検索結果から） */
+function pitGotoReserveDate(dateStr){
+  if (window.custCloseModal) custCloseModal();
+  if (window.pitSearchClose) pitSearchClose();
+  if (dateStr){
+    const d = new Date(String(dateStr) + 'T00:00:00');
+    if (!isNaN(d)){ state.reserveDate = d; state.reserveRange = 'day'; }
+  }
+  showView('reserve');
+}
+window.pitGotoReserveDate = pitGotoReserveDate;
+
+/* 📊 実績カレンダー（その月）へ飛ぶ（返車済みから） */
+function pitGotoResultMonth(dateStr){
+  if (window.custCloseModal) custCloseModal();
+  if (window.pitSearchClose) pitSearchClose();
+  const d = dateStr ? new Date(String(dateStr) + 'T00:00:00') : new Date();
+  if (!isNaN(d)) state.resultMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  showView('result');
+}
+window.pitGotoResultMonth = pitGotoResultMonth;
+
+/* 🗂 カードを詳細で開く（モーダル等を閉じてから） */
+function pitOpenCardDetail(cardId){
+  if (window.custCloseModal) custCloseModal();
+  if (window.pitSearchClose) pitSearchClose();
+  if (window.openDetail) openDetail(cardId);
+}
+window.pitOpenCardDetail = pitOpenCardDetail;
+
 /* ===== サイドバー フライアウト（親をホバー/タップ→右に小メニュー・StockFlow流用を汎用化）v0.33.0 =====
    HTML側：<div class="si-flyout" id="fly-<key>" onmouseenter="openFlyout('<key>')" onmouseleave="scheduleCloseFlyout()">
              <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'<key>')">…<span class="si-caret">▸</span></div>

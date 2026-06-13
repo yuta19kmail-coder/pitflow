@@ -64,10 +64,12 @@
 .cd-veh{ position:relative; background:var(--bg2); border:1px solid var(--border); border-left:5px solid var(--green); border-radius:14px; padding:14px 16px 12px; }
 .cd-veh.import{ border-left-color:var(--pink); }
 .cd-veh.unset{ border-left-color:#64748b; }
-.cd-vplate{ font-size:18px; font-weight:800; letter-spacing:1px; }
-.cd-vcar{ font-size:14px; color:var(--text2); font-weight:600; margin-top:3px; }
-.cd-vpills{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center; }
-.cd-vstaff{ font-size:11.5px; color:var(--text3); margin-left:auto; }
+.cd-vplate{ font-size:18px; font-weight:800; letter-spacing:1px; color:var(--text1); }
+/* 車種名はナンバーと同格（濃さ・サイズを揃える） */
+.cd-vcar{ font-size:17px; color:var(--text1); font-weight:700; margin-top:4px; }
+.cd-vpills{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+/* 担当＝1/2課ボードのカード（.pcm-front）と同じ角丸四角バッジ・名前のみ */
+.cd-vstaff{ margin-left:auto; font-size:12px; font-weight:700; line-height:1.42; padding:2px 9px; border-radius:7px; background:var(--bg3); color:var(--text); border:1px solid var(--border2); white-space:nowrap; }
 .cd-vacts{ display:flex; gap:8px; margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }
 .cd-vb{ flex:1; text-align:center; font-size:12px; font-weight:700; border-radius:8px; padding:7px 0; cursor:pointer; border:1px solid var(--border); background:var(--bg3); color:var(--text2); }
 .cd-vb:hover{ background:var(--bg4); color:var(--text); }
@@ -83,6 +85,12 @@
 .cd-hsub{ font-size:11.5px; color:var(--text3); margin-top:2px; }
 .cd-hamt{ flex:0 0 auto; font-size:14px; font-weight:800; }
 .cd-loa{ color:var(--green); font-weight:700; }
+.cd-hrow.clickable{ cursor:pointer; }
+.cd-hrow.clickable:hover{ background:var(--bg3); }
+/* 来店履歴のステータスバッジ */
+.cd-hst{ flex:0 0 auto; font-size:10.5px; font-weight:700; padding:3px 9px; border:1px solid var(--border2); border-radius:999px; color:var(--text2); background:var(--bg1); white-space:nowrap; }
+.cd-hst.clickable{ cursor:pointer; }
+.cd-hst.clickable:hover{ border-color:var(--brand); color:var(--brand); background:var(--brand-soft); }
 
 @media (max-width:768px){
   .cd-hero{ flex-direction:column; align-items:stretch; gap:14px; }
