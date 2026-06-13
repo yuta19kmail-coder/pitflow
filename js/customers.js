@@ -193,7 +193,7 @@
         const t=teamInfo(v||{});
         const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
         h+='<tr class="'+(last?'ct-rb':'ct-norb')+(first?'':' ct-cont')+'">'+
-           '<td class="ct-name">'+(first?esc(cust.name||'(無名)'):'')+'</td>'+
+           '<td class="ct-name">'+(first?'<span class="ct-namelink" onclick="custOpen(\''+cust.id+'\')" title="顧客詳細を開く">'+esc(cust.name||'(無名)')+'</span>':'')+'</td>'+
            '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
            '<td>'+(v?esc(v.maker||'—'):'—')+'</td>'+
            '<td>'+(v?esc(v.car||'—'):'—')+'</td>'+
@@ -221,7 +221,7 @@
     const arr=list(); const i=arr.findIndex(r=>r.id===id);
     if(i<0) return;
     if(!confirm('この顧客（控え）を削除しますか？\n（整備ソフトの台帳には影響しません）')) return;
-    arr.splice(i,1); _expanded.delete(id); if(window.PitDB) PitDB.save(); renderCustomers();
+    arr.splice(i,1); _expanded.delete(id); if(window.PitDB) PitDB.save(); closeModal(); renderCustomers();
   };
   window.custReseed=function(){
     if(!confirm('サンプル顧客を入れ替えます（今の控えは消えます）。よろしいですか？')) return;
@@ -229,10 +229,10 @@
   };
 
   /* ===== モーダル共通 ===== */
-  function openModal(html){
+  function openModal(html, boxClass){
     let m=document.getElementById('cust-modal');
     if(!m){ m=document.createElement('div'); m.id='cust-modal'; m.className='cm-overlay'; document.body.appendChild(m); }
-    m.innerHTML='<div class="cm-box">'+html+'</div>';
+    m.innerHTML='<div class="cm-box '+(boxClass||'')+'">'+html+'</div>';
     m.classList.add('show');
     m.onclick=function(e){ if(e.target===m) closeModal(); };
   }
@@ -336,5 +336,98 @@
     }
     h+='</div><div class="cm-foot"><button class="cm-cancel" onclick="custCloseModal()">閉じる</button></div>';
     openModal(h);
+  };
+
+  /* ===== 顧客詳細（グラフィカル・一覧の名前クリックで開く／編集・削除もここから） ===== */
+  function _statusLbl(c){
+    if(c.status==='reserved') return '予約';
+    if(c.status==='returned') return '返車済み';
+    const b=(state.boards||[]).find(x=>x.id===c.boardId)||(state.boards||[])[0];
+    const col=b&&(b.cols||[]).find(x=>x.id===c.status);
+    return col?col.name:(c.status||'');
+  }
+  function _custCards(cust){
+    const plates=(cust.vehicles||[]).map(v=>norm(v.plate)).filter(Boolean);
+    return (Array.isArray(state.cards)?state.cards:[]).filter(function(c){
+      return (c.customerId&&c.customerId===cust.id) || (c.plate&&plates.indexOf(norm(c.plate))>=0);
+    }).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
+  }
+  window.custOpen=function(id){
+    const cust=list().find(x=>x.id===id); if(!cust) return;
+    const vehicles=cust.vehicles||[];
+    const cards=_custCards(cust);
+    const visits=cards.length;
+    const total=cards.reduce(function(s,c){ const a=(c.amountFinal!=null&&c.amountFinal!=='')?Number(c.amountFinal):(Number(c.estAmount)||0); return s+(isFinite(a)?a:0); },0);
+    let last=cust.updatedAt||0; vehicles.forEach(function(v){ if((v.updatedAt||0)>last) last=v.updatedAt||0; });
+    const yen=function(n){ return '¥'+Number(n||0).toLocaleString('ja-JP'); };
+
+    let h='';
+    // 上部バー
+    h+='<div class="cd-top"><button class="cd-back" onclick="custCloseModal()">← 顧客一覧へ戻る</button>'+
+       '<div class="cd-acts"><button class="cd-btn" onclick="custEdit(\''+cust.id+'\')">✏️ 編集</button>'+
+       '<button class="cd-btn danger" onclick="custDelete(\''+cust.id+'\')">🗑 削除</button></div></div>';
+    // ヘッダー
+    h+='<div class="cd-hero"><div class="cd-hmain">'+
+       '<div class="cd-hname">'+esc(cust.name||'(無名)')+' <small>様</small></div>'+
+       (cust.kana?'<div class="cd-hkana">'+esc(cust.kana)+'</div>':'')+
+       '<div class="cd-hpills"><span class="cd-pill mut">最終入庫 '+fmtDate(last)+'</span></div>'+
+       '</div><div class="cd-stats"><div class="cd-statrow">'+
+       '<div class="cd-stat"><b>'+visits+'</b><span>来店回数</span></div>'+
+       '<div class="cd-stat"><b>'+vehicles.length+'</b><span>保有台数</span></div>'+
+       '</div><div class="cd-total"><span>累計概算（合計金額）</span><b>'+yen(total)+'</b></div></div></div>';
+    // 連絡先
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">📞 連絡先 <span class="cd-cnt">'+(cust.contacts||[]).length+'件</span></div></div>';
+    if((cust.contacts||[]).length){
+      h+='<div class="cd-contacts">';
+      (cust.contacts||[]).forEach(function(ct){
+        h+='<div class="cd-ct"><div class="cd-ctic">'+(ct.primary?'📱':'📞')+'</div><div class="cd-ctmain"><div class="cd-cttel">'+esc(ct.tel||'—')+'</div><div class="cd-ctlab">'+esc(ct.label||'')+'</div></div>'+(ct.primary?'<span class="cd-ctpri">優先</span>':'')+'</div>';
+      });
+      h+='</div>';
+    } else { h+='<div class="cd-empty">連絡先は未登録です</div>'; }
+    h+='</div>';
+    // 車両
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">🚗 車両 <span class="cd-cnt">'+vehicles.length+'台</span></div></div>';
+    if(vehicles.length){
+      h+='<div class="cd-vehs">';
+      vehicles.forEach(function(v){
+        const t=teamInfo(v||{});
+        const imp=(v.boardId==='import')?' import':'';
+        h+='<div class="cd-veh'+imp+'">'+
+           '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
+           '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
+           '<div class="cd-vpills">'+(t.label?'<span class="cd-pill '+(v.boardId==='import'?'pink':'green')+'">'+esc(t.label)+'</span>':'')+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff">担当 '+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')">🕒 履歴</span>'+
+           '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+
+           '</div>';
+      });
+      h+='</div>';
+    } else { h+='<div class="cd-empty">車両は未登録です</div>'; }
+    h+='</div>';
+    // 来店履歴
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">🕒 来店履歴 <span class="cd-cnt">'+(visits?('直近'+Math.min(visits,12)+'件'):'なし')+'</span></div></div>';
+    if(visits){
+      h+='<div class="cd-hist">';
+      cards.slice(0,12).forEach(function(c){
+        const wt=(state.workTypes||[]).find(w=>w.id===c.workType);
+        const wl=wt?wt.label:(c.workType||'—'); const wc=wt?wt.color:'#64748b';
+        const amt=(c.amountFinal!=null&&c.amountFinal!=='')?Number(c.amountFinal):(c.estAmount!=null&&c.estAmount!==''?Number(c.estAmount):null);
+        const amtStr=(amt!=null&&isFinite(amt))?yen(amt):'—';
+        let loa=''; if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa=' ・ <span class="cd-loa">🚙代車'+(l?('（'+esc(l.name)+'）'):'')+'</span>'; }
+        const menu=c.menu?(' ・ '+esc(String(c.menu).split('\n')[0])):'';
+        h+='<div class="cd-hrow"><div class="cd-hdt">'+esc(cardDate(c)||'日付未定')+'</div>'+
+           '<div class="cd-hwt" style="background:'+wc+'">'+esc(wl)+'</div>'+
+           '<div class="cd-hmid"><b>'+esc(c.car||'')+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+loa+'<div class="cd-hsub">'+esc(_statusLbl(c))+menu+'</div></div>'+
+           '<div class="cd-hamt">'+amtStr+'</div></div>';
+      });
+      h+='</div>';
+    } else { h+='<div class="cd-empty">入庫カードの履歴はまだありません（整備ソフトに正式履歴があります）</div>'; }
+    h+='</div>';
+
+    openModal(h, 'cd-box');
+  };
+  /* この車で新規予約＝新規予約カードを作ってこの顧客＋車両で埋める */
+  window.custNewReserveFor=function(custId, vehId){
+    custCloseModal();
+    if(window.openNewReserve){ openNewReserve(); if(window.custPick) custPick(custId, vehId); }
   };
 })();

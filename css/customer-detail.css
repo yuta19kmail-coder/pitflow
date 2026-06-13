@@ -1,0 +1,86 @@
+/* ========================================
+ * customer-detail.css （PitFlow v0.66.0）
+ * 顧客詳細画面（一覧の名前クリックで開く・cm-overlay内のワイドモーダル）
+ * モック「モック_顧客詳細.html」準拠
+ * ======================================== */
+
+/* 一覧の名前をリンク化 */
+.ct-namelink{ color:var(--brand); cursor:pointer; font-weight:700; }
+.ct-namelink:hover{ text-decoration:underline; }
+
+/* ワイドなモーダル箱（cm-box を上書き） */
+.cm-box.cd-box{ width:960px; max-width:100%; padding:18px 22px 26px; overflow:visible; }
+
+/* 上部バー */
+.cd-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.cd-back{ display:inline-flex; align-items:center; gap:6px; color:var(--text2); font-size:13px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:7px 12px; cursor:pointer; }
+.cd-back:hover{ background:var(--bg4); }
+.cd-acts{ display:flex; gap:8px; }
+.cd-btn{ display:inline-flex; align-items:center; gap:6px; border-radius:9px; padding:8px 15px; font-size:13px; font-weight:700; cursor:pointer; border:1px solid var(--border); background:var(--bg3); color:var(--text); }
+.cd-btn:hover{ background:var(--bg4); }
+.cd-btn.danger{ color:#ff6b6b; border-color:#5b2230; background:rgba(255,107,107,.08); }
+
+/* ヘッダーカード */
+.cd-hero{ display:flex; align-items:center; gap:18px; background:linear-gradient(135deg,var(--bg2),var(--bg3)); border:1px solid var(--border); border-radius:16px; padding:18px 22px; margin-bottom:20px; }
+.cd-hmain{ flex:1; min-width:0; }
+.cd-hname{ font-size:24px; font-weight:800; letter-spacing:.5px; }
+.cd-hname small{ font-size:14px; font-weight:600; color:var(--text2); margin-left:8px; }
+.cd-hkana{ font-size:13px; color:var(--text3); margin-top:2px; }
+.cd-hpills{ display:flex; gap:7px; margin-top:9px; flex-wrap:wrap; align-items:center; }
+.cd-pill{ font-size:11.5px; font-weight:700; padding:3px 11px; border-radius:999px; border:1px solid; }
+.cd-pill.green{ background:rgba(29,185,122,.16); color:#37d39a; border-color:rgba(29,185,122,.4); }
+.cd-pill.pink{ background:rgba(236,72,153,.16); color:#f472b6; border-color:rgba(236,72,153,.4); }
+.cd-pill.mut{ background:var(--bg1); color:var(--text2); border-color:var(--border); }
+.cd-stats{ display:flex; flex-direction:column; gap:10px; flex:0 0 auto; padding-left:18px; border-left:1px solid var(--border); }
+.cd-statrow{ display:flex; gap:24px; justify-content:center; }
+.cd-stat{ text-align:center; }
+.cd-stat b{ display:block; font-size:22px; font-weight:800; color:var(--brand); }
+.cd-stat span{ font-size:11px; color:var(--text3); }
+.cd-total{ text-align:center; border-top:1px dashed var(--border); padding-top:9px; }
+.cd-total span{ display:block; font-size:11px; color:var(--text3); margin-bottom:1px; }
+.cd-total b{ font-size:20px; font-weight:800; color:var(--brand); letter-spacing:.5px; }
+
+/* セクション */
+.cd-sec{ margin-bottom:20px; }
+.cd-sech{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.cd-sect{ font-size:14px; font-weight:800; color:var(--text1); display:flex; align-items:center; gap:7px; }
+.cd-sect .cd-cnt{ font-size:11px; color:var(--text3); font-weight:600; }
+.cd-empty{ font-size:12.5px; color:var(--text3); background:var(--bg1); border:1px dashed var(--border); border-radius:10px; padding:14px; text-align:center; }
+
+/* 連絡先 */
+.cd-contacts{ display:flex; gap:10px; flex-wrap:wrap; }
+.cd-ct{ display:flex; align-items:center; gap:11px; background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 14px; min-width:230px; }
+.cd-ctic{ width:34px; height:34px; border-radius:9px; background:var(--brand-soft); color:var(--brand); display:flex; align-items:center; justify-content:center; font-size:16px; flex:0 0 auto; }
+.cd-cttel{ font-size:16px; font-weight:700; letter-spacing:.5px; }
+.cd-ctlab{ font-size:11px; color:var(--text3); margin-top:1px; }
+.cd-ctpri{ font-size:10px; font-weight:800; color:#fff; background:var(--brand); border-radius:5px; padding:2px 6px; margin-left:auto; }
+
+/* 車両カード */
+.cd-vehs{ display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px; }
+.cd-veh{ position:relative; background:var(--bg2); border:1px solid var(--border); border-left:5px solid var(--green); border-radius:14px; padding:14px 16px 12px; }
+.cd-veh.import{ border-left-color:var(--pink); }
+.cd-vplate{ font-size:18px; font-weight:800; letter-spacing:1px; }
+.cd-vcar{ font-size:14px; color:var(--text2); font-weight:600; margin-top:3px; }
+.cd-vpills{ display:flex; gap:6px; margin-top:9px; flex-wrap:wrap; align-items:center; }
+.cd-vstaff{ font-size:11.5px; color:var(--text3); margin-left:auto; }
+.cd-vacts{ display:flex; gap:8px; margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }
+.cd-vb{ flex:1; text-align:center; font-size:12px; font-weight:700; border-radius:8px; padding:7px 0; cursor:pointer; border:1px solid var(--border); background:var(--bg3); color:var(--text2); }
+.cd-vb:hover{ background:var(--bg4); color:var(--text); }
+.cd-vb.go{ color:var(--brand); border-color:rgba(38,162,105,.35); background:var(--brand-soft); }
+
+/* 来店履歴 */
+.cd-hist{ background:var(--bg2); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.cd-hrow{ display:flex; align-items:center; gap:14px; padding:11px 16px; border-bottom:1px solid var(--border); }
+.cd-hrow:last-child{ border-bottom:none; }
+.cd-hdt{ flex:0 0 92px; font-size:12px; color:var(--text2); font-weight:700; }
+.cd-hwt{ flex:0 0 auto; font-size:11px; font-weight:800; color:#fff; padding:3px 10px; border-radius:7px; }
+.cd-hmid{ flex:1; min-width:0; }
+.cd-hsub{ font-size:11.5px; color:var(--text3); margin-top:2px; }
+.cd-hamt{ flex:0 0 auto; font-size:14px; font-weight:800; }
+.cd-loa{ color:var(--green); font-weight:700; }
+
+@media (max-width:768px){
+  .cd-hero{ flex-direction:column; align-items:stretch; gap:14px; }
+  .cd-stats{ border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:12px; }
+  .cd-vehs{ grid-template-columns:1fr; }
+}
