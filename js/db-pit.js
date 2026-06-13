@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v10';   // v10: フロント担当・返車時刻 追加（当日ビュー刷新）で再シード
+  const LS_KEY = 'pitflow_data_v11';   // v11: サンプル全面刷新（現行スキーマ＋付箋サンプル）で再シード
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'
