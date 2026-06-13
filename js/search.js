@@ -24,6 +24,11 @@
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+  // N日前の日付文字列（YYYY-MM-DD）＝返車済みの「直近1か月」判定に使う
+  function _daysAgoStr(n) {
+    const d = new Date(); d.setDate(d.getDate() - n);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
 
   // ステータスの日本語ラベル
   function statusLabel(c) {
@@ -201,16 +206,27 @@
       box.classList.add('open');
       return;
     }
-    const MAXC = 30, MAXP = 30;
+    // 返車済みは溜まる一方なので「直近1か月」だけ🗂カードに、それより前は📦過去入庫へ分離
+    const cut = _daysAgoStr(31);
+    const recent = [], past = [];
+    cardHits.forEach(function (c) {
+      const isPast = (c.status === 'returned') && ((c.returnDate || c.reserveDate || '') < cut);
+      (isPast ? past : recent).push(c);
+    });
+    const MAX = 30;
+    const sec = function (icon, name, list, note) {
+      if (!list.length) return '';
+      return '<div class="psr-head">' + icon + ' ' + name + ' ' + list.length + '件'
+        + (list.length > MAX ? '（上位' + MAX + '件）' : '') + (note ? '　' + note : '') + '</div>'
+        + list.slice(0, MAX).map(resultRow).join('');
+    };
     let html = '';
-    if (cardHits.length) {
-      html += '<div class="psr-head">🗂 カード ' + cardHits.length + '件' + (cardHits.length > MAXC ? '（上位' + MAXC + '件）' : '') + '</div>';
-      html += cardHits.slice(0, MAXC).map(resultRow).join('');
-    }
+    html += sec('🗂', 'カード', recent, '');                       // 予約・作業中・直近1か月の返車済み
     if (custHits.length) {
-      html += '<div class="psr-head">👤 顧客 ' + custHits.length + '件' + (custHits.length > MAXP ? '（上位' + MAXP + '件）' : '') + '</div>';
-      html += custHits.slice(0, MAXP).map(custRow).join('');
+      html += '<div class="psr-head">👤 顧客 ' + custHits.length + '件' + (custHits.length > MAX ? '（上位' + MAX + '件）' : '') + '</div>';
+      html += custHits.slice(0, MAX).map(custRow).join('');
     }
+    html += sec('📦', '過去入庫', past, '<span style="color:var(--text3)">（1か月より前の返車済み）</span>');
     box.innerHTML = html;
     box.classList.add('open');
   };
