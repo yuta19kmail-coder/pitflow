@@ -360,7 +360,7 @@ function cardHtml(c, opts){
     // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当。名前/車種はホバーでフル表示
     let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
     h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
-    h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
+    h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (c.resNo ? '<span title="予約番号" style="font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--text3);font-family:ui-monospace,Menlo,Consolas,monospace;margin-left:6px;">' + c.resNo + '</span>' : '') + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
     h += '</div>';
     return h;
   }

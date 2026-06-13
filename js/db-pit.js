@@ -67,6 +67,8 @@
       } catch (e) {
         console.warn('[PitDB] 読み込み失敗。サンプルで継続します', e);
       }
+      // 🔢 予約番号（resNo）が無いカードに採番（旧データ救済・1回で全部に付く）
+      try { if (window.pitBackfillResNo && pitBackfillResNo()) this.save(true); } catch (e) {}
       this.ready = true;
       this._bindAutosave();
     },

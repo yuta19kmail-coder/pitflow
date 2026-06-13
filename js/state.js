@@ -258,5 +258,37 @@ function pitUnitPrice(team){
 }
 window.pitUnitPrice = pitUnitPrice;
 
+/* 🔢 予約番号（ローマ字1＋5桁数字・例 K48201）＝人が見て口に出す通し番号（v0.64.0）。
+   ・中の id（背番号・絶対ダブらない鍵）とは別物。resNo は「現場で呼ぶ・控えに載せる・検索する」用。
+   ・乱数で作るが、保存前に必ず重複チェック＝ダブらない。文字22×数字10万＝約220万通り。
+   ・並び順（時系列）は id（作成時刻）で持つので、見た目がランダムでも順番は失われない。 */
+function _pitResNoExists(no){
+  return (state.cards || []).some(function(c){ return c.resNo === no; });
+}
+function pitGenResNo(){
+  const L = 'ABCDEFGHJKLMNPRSTUVWXYZ';   // 紛らわしい I/O/Q は除外（読み間違い防止）
+  for (let i = 0; i < 9999; i++){
+    const no = L[Math.floor(Math.random() * L.length)] + String(Math.floor(Math.random() * 100000)).padStart(5, '0');
+    if (!_pitResNoExists(no)) return no;
+  }
+  return 'Z' + Date.now().toString().slice(-6);   // 万一埋まり切った時の保険
+}
+window.pitGenResNo = pitGenResNo;
+
+/* 起動時：予約番号が無い既存カードに後から採番（入庫日→id順で安定）。1回で全カードに付く。 */
+function pitBackfillResNo(){
+  const cards = state.cards || [];
+  const need = cards.filter(function(c){ return !c.resNo; });
+  if (!need.length) return false;
+  need.sort(function(a, b){
+    const ka = (a.reserveDate || '') + '|' + (a.id || '');
+    const kb = (b.reserveDate || '') + '|' + (b.id || '');
+    return ka < kb ? -1 : (ka > kb ? 1 : 0);
+  });
+  need.forEach(function(c){ c.resNo = pitGenResNo(); });
+  return true;
+}
+window.pitBackfillResNo = pitBackfillResNo;
+
 /* 設定の初期値スナップショット（設定画面の「初期値に戻す」用） */
 window.PIT_DEFAULT_SETTINGS = JSON.parse(JSON.stringify(state.settings));

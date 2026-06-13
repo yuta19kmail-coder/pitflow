@@ -11,7 +11,8 @@ let _cardBodyId = 'md-body'; // フォームの描画先（card-tabs.js も参�
 let _cardCheckOn = false;    // 入力チェックON中＝未入力を赤枠表示（再描画/入力ごとに再評価）
 
 function _cardTitleHtml(card){
-  return '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span><br>' +
+  const no = card.resNo ? '<span title="予約番号" style="font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:1px 8px;margin-left:8px;font-family:ui-monospace,Menlo,Consolas,monospace;">' + card.resNo + '</span>' : '';
+  return '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span>' + no + '<br>' +
     (card.customer || '（未入力）') + ' 様 / ' + (card.car || '（車種未入力）');
 }
 
