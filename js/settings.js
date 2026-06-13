@@ -162,11 +162,14 @@
 
     // 🧰 作業内容テンプレート（症状ホイール）の編集（work-content.js・v0.70.0）
     h += (window.WorkContent ? WorkContent.settingsCardHtml() : '');
+    // 🅿️ 駐車場（理論値・バッファ）の編集（parking.js・v0.71.0）
+    h += (window.ParkingView ? ParkingView.settingsCardHtml() : '');
 
     body.innerHTML = h;
 
     // 編集UIを描画（内容が動的なので innerHTML 後に）
     if (window.WorkContent && WorkContent.mountSettings) WorkContent.mountSettings();
+    if (window.ParkingView && ParkingView.mountSettings) ParkingView.mountSettings();
   };
 
   /* 画面の入力をすべて読み取って state.settings に反映 → 保存 */

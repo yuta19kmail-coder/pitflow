@@ -38,6 +38,7 @@ function showView(viewId){
   if (viewId === 'samplepat' && window.renderSamplePatterns) renderSamplePatterns();
   if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
   if (viewId === 'maintdash' && window.renderMaintDash) renderMaintDash();
+  if (viewId === 'parking' && window.renderParking) renderParking();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();
   if (viewId === 'settings' && window.renderSettings) renderSettings();
   if (viewId === 'rules' && window.renderRules) renderRules();

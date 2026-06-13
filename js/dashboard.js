@@ -180,6 +180,9 @@ function renderDashboard(){
   h += dashKpi('🅿️', '預かり中', heldNow, '台');
   h += '</div>';
 
+  // 🅿️ 駐車場サマリー（1ブロック・クリックで駐車場ビュー・v0.71.0）。詳細は parking.js
+  h += (window.ParkingView ? ParkingView.summaryHtml() : '');
+
   // ⏱ 最短入庫日（チーム別×代車なし/代車あり/当日作業・v0.24.0）
   const holdN = (state.settings && state.settings.holdDaysDefault) || 3;
   function elCell(team, kind){
@@ -211,33 +214,7 @@ function renderDashboard(){
   });
   h += '</div></div>';
 
-  // 🅿️ 今日の駐車場空き（±をズバッと・v0.24.0）
-  const lc = (state.settings && state.settings.lotCap) || null;
-  const lcStr = lc ? '（内訳：ピット' + (lc.pit||0) + '・敷地' + (lc.yard||0) + '・駐車場' + (lc.parking||0) + '・緊急+α' + (lc.extra||0) + '）' : '';
-  h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>🅿️ 今日の駐車場空き</span></div>';
-  h += '<div class="dash-park"><span class="dash-park-num" style="color:' + parkCol + '">' + (freeSigned > 0 ? '+' : '') + freeSigned + '</span><span class="dash-park-u">台</span>'
-     + '<span class="dash-park-sub">' + heldNow + '台預かり中 / 置ける' + cap + '台' + lcStr + (freeSigned < 0 ? '<br><b style="color:' + parkCol + '">⚠ ' + (-freeSigned) + '台オーバー（緊急コインパ行き）</b>' : '') + '</span></div>';
-  h += '</div>';
-
-  // 📅 直近2週間の駐車場予想（数字＝空き台数±）
-  h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>📅 直近2週間の駐車場予想</span><span class="dash-note">数字＝空き台数（マイナス＝オーバー）／点線＝満杯／薄いバー＝概算日数による予想</span></div>';
-  h += '<div class="dash-bars">';
-  days.forEach(function(x){
-    const hpx = Math.round((x.occ / maxOcc) * 84);
-    const isToday = ymd(x.d) === tStr;
-    const fs = cap - x.occ;
-    const fc = dashParkCol(fs);
-    h += '<div class="dash-bar' + (isToday ? ' today' : '') + (ymd(x.d) > tStr ? ' is-forecast' : '') + '">';
-    h += '<div class="dash-bar-n" style="color:' + fc + '">' + (fs > 0 ? '+' : '') + fs + '</div>';
-    h += '<div class="dash-bar-track"><div class="dash-bar-fill" style="height:' + Math.max(3, hpx) + 'px;background:' + fc + '"></div><div class="dash-bar-cap" style="bottom:' + Math.round((cap / maxOcc) * 84) + 'px"></div></div>';
-    h += '<div class="dash-bar-d">' + (x.d.getMonth()+1) + '/' + x.d.getDate() + '</div>';
-    h += '<div class="dash-bar-w">' + '日月火水木金土'[x.d.getDay()] + '</div>';
-    h += '</div>';
-  });
-  h += '</div>';
-  h += '</div>';
+  // （🅿️ 今日の駐車場空き／📅 直近2週間の駐車場予想 は v0.71.0 で駐車場ビューへ移設・上部サマリーに集約）
 
   // 🗓 予約の埋まり（横軸の無限カレンダー・v0.25.0 ゆうた指示のシンプル表示）
   //    可（緑）＝空きあり／終了（赤）＝満枠／超過（黒）＝人の判断で枠を超えて受けた分／休＝定休・連休

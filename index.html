@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.70.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.71.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="css/search.css?v=5">
 <link rel="stylesheet" href="css/customer-detail.css?v=6">
 <link rel="stylesheet" href="css/work-content.css?v=1">
+<link rel="stylesheet" href="css/parking.css?v=1">
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -65,7 +66,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.70.0</div>
+    <div class="pl-ver">PitFlow v0.71.0</div>
   </div>
 </div>
 
@@ -77,7 +78,7 @@
     <div class="logo">
       <span>🔧</span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.70.0</span>
+      <span class="ver">v0.71.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -102,7 +103,7 @@
 
     <div class="si-section-title">車両</div>
     <div class="si-item" data-view="loaner" onclick="showView('loaner')"><span class="icon">🚙</span><span>代車カレンダー</span></div>
-    <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon">🅿️</span><span>駐車場</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon">🅿️</span><span>駐車場</span></div>
     <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon">🚐</span><span>代車・自社車両管理</span></div>
 
     <div class="si-section-title">整備</div>
@@ -334,7 +335,7 @@
     <!-- ===== 準備中ビュー（器のみ・中身は順次実装 v0.33.0） ===== -->
     <section id="view-parking" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">🅿️</span>駐車場</div></div>
-      <div class="soon-card"><div class="soon-emoji">🅿️</div><h3>駐車場ビュー（準備中）</h3><p>「明日の朝までに何台空けておくべきか」を中心に、預かりスペースの空き状況をここに作ります。<br>いまはダッシュボードの駐車場サマリーをご利用ください。</p></div>
+      <div id="view-parking-body"></div>
     </section>
 
     <section id="view-maintdash" class="view">
@@ -587,7 +588,7 @@
 <script src="js/sample-fleet.js?v=8"></script>
 <script src="js/firebase-init.js?v=8"></script>
 <script src="js/db-pit.js?v=29"></script>
-<script src="js/views.js?v=30"></script>
+<script src="js/views.js?v=31"></script>
 <script src="js/work-content.js?v=1"></script>
 <script src="js/card-detail.js?v=55"></script>
 <script src="js/avail.js?v=2"></script>
@@ -595,12 +596,13 @@
 <script src="js/customers.js?v=20"></script>
 <script src="js/sample-customers.js?v=6"></script>
 <script src="js/sample-patterns.js?v=2"></script>
-<script src="js/dashboard.js?v=12"></script>
+<script src="js/dashboard.js?v=13"></script>
+<script src="js/parking.js?v=1"></script>
 <script src="js/board-notes.js?v=1"></script>
 <script src="js/search.js?v=8"></script>
 <script src="js/maintdash.js?v=1"></script>
 <script src="js/pit-floor.js?v=27"></script>
-<script src="js/settings.js?v=11"></script>
+<script src="js/settings.js?v=12"></script>
 <script src="js/rules.js?v=9"></script>
 <script src="js/today.js?v=14"></script>
 <script src="js/undetermined.js?v=2"></script>
