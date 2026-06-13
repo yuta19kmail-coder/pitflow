@@ -31,7 +31,7 @@
 .pk-top.ok{ color:#37d39a; } .pk-top.akai{ color:var(--akai); } .pk-top.coin{ color:var(--coin); } .pk-top.over{ color:#ff7a7a; }
 .pk-stack{ display:flex; flex-direction:column; justify-content:flex-end; width:48px; }
 .pk-seg{ width:48px; } .pk-seg.home{ background:var(--home); } .pk-seg.akai{ background:var(--akai); } .pk-seg.coin{ background:var(--coin); } .pk-seg.over{ background:var(--pkover); } .pk-seg.topseg{ border-radius:6px 6px 0 0; }
-.pk-xrow{ display:grid; grid-auto-flow:column; grid-auto-columns:80px; gap:12px; margin-top:22px; padding-left:50px; }
+.pk-xrow{ display:grid; grid-auto-flow:column; grid-auto-columns:80px; gap:12px; margin-top:8px; padding-left:50px; }
 .pk-px{ background:var(--bg1); border:2px solid var(--border); border-radius:10px; padding:8px 4px; text-align:center; cursor:pointer; }
 .pk-px.today{ border-color:var(--brand); } .pk-px.sel{ background:var(--bg3); border-color:var(--brand); box-shadow:0 0 0 1px var(--brand) inset; } .pk-px.off{ opacity:.55; }
 .pk-d{ font-size:18px; font-weight:900; line-height:1; } .pk-w{ font-size:13px; font-weight:800; margin-top:3px; } .pk-w.sat{ color:#378ADD; } .pk-w.sun{ color:var(--pkover); } .pk-memodot{ font-size:11px; }
