@@ -26,6 +26,21 @@
   function workType(c){ return (state.workTypes||[]).find(w=>w.id===c.workType) || null; }
   function dropType(c){ return (state.dropTypes||[]).find(d=>d.id===c.dropType) || null; }
   function teamColor(c){ return c.boardId==='import' ? '#ec4899' : '#1db97a'; }
+  // 代車リミットの色レベル（残り日数→緑/黄/赤/黒）。閾値は設定（loanerColors）で変更可
+  window.loanerLevel = function(rem){
+    if(rem==null) return {key:'none'};
+    var s=(state.settings&&state.settings.loanerColors)||{};
+    var g=(s.greenMin!=null)?s.greenMin:4, a=(s.amberMin!=null)?s.amberMin:2;
+    if(rem<0) return {key:'dead'};
+    if(rem>=g) return {key:'green'};
+    if(rem>=a) return {key:'amber'};
+    return {key:'red'};
+  };
+  window.loanerRem = function(c){
+    var due = c.loanerTo || c.returnDateFinal || c.returnDate || '';
+    if(!due) return null;
+    return daysBetween(isoToday(), due);
+  };
   function payMethods(){ return state.paymentMethods || state.paymentTypes || [
     {id:'cash',label:'現金'},{id:'card',label:'カード'},{id:'transfer',label:'振込'},
     {id:'collect',label:'集金'},{id:'finance',label:'ローン'},{id:'later',label:'後払い'}]; }
@@ -63,7 +78,8 @@
     const dt = dropType(c);
     let h = '';
 
-    // 1行目：名前＋予約を編集
+    // 予約番号タブ＋1行目：名前＋予約を編集
+    h += (c.resNo?'<div class="cv-resnotab">'+esc(c.resNo)+'</div>':'');
     h += '<div class="cv-id1"><span class="cv-nm">'+esc(c.customer||'（未入力）')+' <small>様</small></span>'
        + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')">✏️ 予約を編集</span></div>';
     // 2行目：車種＋ナンバー
@@ -111,13 +127,13 @@
     const dueISO = c.loanerTo || c.returnDateFinal || c.returnDate || '';
     const rem = dueISO ? daysBetween(isoToday(), dueISO) : null;
     const remTxt = (rem==null) ? '—' : (rem<0 ? '超過'+(-rem)+'日' : 'あと'+rem+'日');
-    const urgent = (rem!=null && rem<=2);
+    const lvKey = (window.loanerLevel ? loanerLevel(rem) : {key:'amber'}).key;
     const pct = (rem==null) ? 50 : Math.max(8, Math.min(95, 100 - rem*8));
     let extras = '';
     if (c.loanerFixed) extras += '<span class="cv-loxchip cv-fix">車種固定</span>';
     const lmemo = (c.loanerMemo||'');
     if (lmemo) extras += '<span class="cv-loxmemo">'+esc(lmemo)+'</span>';
-    return '<div class="cv-lo'+(urgent?' cv-urgent':'')+'">'
+    return '<div class="cv-lo cv-lev-'+lvKey+'">'
       + '<div class="cv-lomain"><div class="cv-loleft"><div class="cv-lorem">代車 返却まで</div><div class="cv-lodays">'+remTxt+'</div></div>'
       + '<div class="cv-loright"><div class="cv-lodue">'+(dueISO?('〜 '+fmtMD(dueISO)):'期限未設定')+'</div><div class="cv-lowhich">'+esc(which)+'</div>'
       + '<div class="cv-lometer"><i style="width:'+pct+'%"></i></div></div></div>'
@@ -242,7 +258,6 @@
     const sc = (window.statusColor ? statusColor(c.status) : '#f59e0b');
     const sl = (window.statusLabel ? statusLabel(c.status) : (c.status||''));
     let h = '<div class="cv-top">'
-      + (c.resNo?'<span class="cv-resno">'+esc(c.resNo)+'</span>':'')
       + '<span class="cv-status" style="color:'+sc+';border-color:'+sc+'66;background:'+sc+'1f">'+esc(sl)+'</span>'
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'

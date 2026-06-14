@@ -56,6 +56,7 @@
 @media(max-width:860px){ .cv-twocol{ flex-direction:column; overflow:auto; } .cv-left{ flex:none; border-right:none; border-bottom:1px solid var(--border); overflow:visible; } .cv-right{ overflow:visible; } }
 
 /* 左：識別情報 */
+.cv-resnotab{ display:inline-block; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px; font-weight:800; letter-spacing:.5px; color:var(--text2); background:var(--bg3); border:1px solid var(--border); border-bottom:none; border-radius:7px 7px 0 0; padding:2px 11px 3px; margin-bottom:-1px; }
 .cv-id1{ display:flex; align-items:baseline; gap:10px; }
 .cv-nm{ font-size:21px; font-weight:800; color:var(--text); } .cv-nm small{ font-size:13px; font-weight:600; color:var(--text2); margin-left:4px; }
 .cv-editmini{ font-size:11px; font-weight:700; color:var(--brand); background:var(--brand-soft); border:1px solid rgba(38,162,105,.35); border-radius:7px; padding:4px 10px; cursor:pointer; }
@@ -88,18 +89,26 @@
 .cv-bdg.cv-none{ background:rgba(29,185,122,.14); color:#5fcfa0; border-color:rgba(29,185,122,.45); }
 
 /* 代車メーター */
-.cv-lo{ margin-top:11px; display:flex; flex-direction:column; background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.4); border-radius:13px; padding:12px 14px; }
-.cv-lo.cv-urgent{ background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.5); }
+.cv-lo{ margin-top:11px; display:flex; flex-direction:column; background:var(--bg1); border:1px solid var(--border); border-radius:13px; padding:12px 14px; }
 .cv-lomain{ display:flex; align-items:center; gap:14px; }
 .cv-loleft{ text-align:center; flex:0 0 auto; }
 .cv-lorem{ font-size:11px; font-weight:800; color:var(--text3); }
-.cv-lodays{ font-size:28px; font-weight:900; color:var(--orange); line-height:1; margin-top:2px; }
-.cv-lo.cv-urgent .cv-lodays{ color:#ff6b6b; }
+.cv-lodays{ font-size:28px; font-weight:900; color:var(--text1); line-height:1; margin-top:2px; }
 .cv-loright{ flex:1; min-width:0; }
 .cv-lodue{ font-size:14px; font-weight:800; color:var(--text1); } .cv-lowhich{ font-size:11.5px; font-weight:700; color:var(--text2); margin-top:2px; }
 .cv-lometer{ height:6px; background:var(--bg3); border-radius:999px; margin-top:8px; overflow:hidden; }
-.cv-lometer i{ display:block; height:100%; background:linear-gradient(90deg,var(--green),var(--orange)); }
-.cv-lo.cv-urgent .cv-lometer i{ background:linear-gradient(90deg,var(--orange),var(--red)); }
+.cv-lometer i{ display:block; height:100%; background:var(--text3); }
+/* 代車リミットのレベル色（緑/黄/赤/黒＝超過） */
+.cv-lo.cv-lev-green{ background:rgba(29,185,122,.09); border-color:rgba(29,185,122,.4); }
+.cv-lo.cv-lev-green .cv-lodays{ color:#1db97a; } .cv-lo.cv-lev-green .cv-lometer i{ background:#1db97a; }
+.cv-lo.cv-lev-amber{ background:rgba(245,158,11,.09); border-color:rgba(245,158,11,.4); }
+.cv-lo.cv-lev-amber .cv-lodays{ color:var(--orange); } .cv-lo.cv-lev-amber .cv-lometer i{ background:var(--orange); }
+.cv-lo.cv-lev-red{ background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.5); }
+.cv-lo.cv-lev-red .cv-lodays{ color:#ff6b6b; } .cv-lo.cv-lev-red .cv-lometer i{ background:var(--red); }
+.cv-lo.cv-lev-dead{ background:#07090d; border-color:#3a0c12; }
+.cv-lo.cv-lev-dead .cv-lorem,.cv-lo.cv-lev-dead .cv-lodue,.cv-lo.cv-lev-dead .cv-lowhich{ color:#5b6270; }
+.cv-lo.cv-lev-dead .cv-lodays{ color:#ff6b6b; text-decoration:line-through; }
+.cv-lo.cv-lev-dead .cv-lometer i{ background:#7a2230; }
 .cv-loextras{ display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:10px; padding-top:9px; border-top:1px solid rgba(245,158,11,.28); align-items:center; }
 .cv-loxchip{ font-size:11px; font-weight:800; padding:2px 9px; border-radius:6px; background:var(--bg3); border:1px solid var(--border2); color:var(--text2); }
 .cv-loxchip.cv-fix{ background:rgba(245,158,11,.16); color:var(--orange); border-color:rgba(245,158,11,.45); }

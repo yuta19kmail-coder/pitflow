@@ -346,7 +346,14 @@ function cardHtml(c, opts){
     // 右上＝左から：代車（ある時）→ 当/待（ある時・預かりは出さない）→ 作業内容（一番右固定）
     const at = (window.escAttr ? escAttr : function(s){ return String(s==null?'':s); });
     let top = '';
-    if (c.needLoaner) top += '<span class="pcm-loaner" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">代車</span>';
+    if (c.needLoaner){
+      var _lrem = (window.loanerRem ? loanerRem(c) : null);
+      var _lk = (window.loanerLevel ? loanerLevel(_lrem) : {key:'amber'}).key;
+      var _LC = { green:'#1db97a', amber:'#f59e0b', red:'#ef4444', dead:'#000000', none:'#9fa8c7' };
+      var _lc = _LC[_lk] || '#f59e0b';
+      var _ls = (_lk==='dead') ? 'background:#000;color:#ff6b6b;border-color:#7a2230;text-decoration:line-through;' : ('background:'+_lc+'22;color:'+_lc+';border-color:'+_lc+'66;');
+      top += '<span class="pcm-loaner" style="' + _ls + '" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">代車</span>';
+    }
     if (dt && (dt.id === 'wait' || dt.id === 'sameDay')){
       const dc = DROP_COLOR[dt.id] || 'var(--text2)';
       top += '<span class="pcm-drop" title="' + at(dt.desc || '入庫区分') + '" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + dt.label + '</span>';
@@ -358,7 +365,7 @@ function cardHtml(c, opts){
     const staff = c.frontStaff || c.staff || '';
     const placed = !!(opts.kanban && c.bayId && window.PitPip && PitPip.isOpen());   // PITボード(PiP)が開いている時だけグレーアウト（閉じてる時は普通表示）
     // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当。名前/車種はホバーでフル表示
-    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+    let h = '<div class="pit-card pcm' + (c.urgent ? ' is-urgent' : '') + (c.codeRed ? ' pcm-claim' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
     h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
     h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (c.resNo ? '<span title="予約番号" style="font-size:10px;font-weight:700;letter-spacing:.3px;color:var(--text3);font-family:ui-monospace,Menlo,Consolas,monospace;margin-left:6px;">' + c.resNo + '</span>' : '') + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
     h += '</div>';

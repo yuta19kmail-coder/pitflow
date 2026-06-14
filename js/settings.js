@@ -80,6 +80,18 @@
     h += '<div class="ps-hint">※ 空き0台まではずっと<b style="color:#1db97a">緑</b>。ちょい超過は緊急＋α・コインパで吸収できる「普通」なので、赤を安売りして受付が萎縮しないように（間の台数は濃いオレンジ）。</div>';
     h += '</div>';
 
+    /* ===== 🚙 代車リミットの色（閾値） ===== */
+    const lcl = s.loanerColors || { greenMin: 4, amberMin: 2 };
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">🚙 代車リミットの色（残り日数）</div>';
+    h += '<div class="ps-desc">代車の返却まで残り日数で色が変わります。<b style="color:#1db97a">緑</b>＝余裕／<b style="color:#f59e0b">黄</b>＝注意／<b style="color:#ef4444">赤</b>＝間近／<b style="color:#9fa8c7">黒</b>＝超過（返却日を過ぎた）。</div>';
+    h += '<div class="ps-grid">';
+    h += '<label class="ps-lb">🟢 緑：残り ' + numIn('ps-loan-green', lcl.greenMin != null ? lcl.greenMin : 4, 1, 60) + '<span class="ps-unit">日 以上</span></label>';
+    h += '<label class="ps-lb">🟡 黄：残り ' + numIn('ps-loan-amber', lcl.amberMin != null ? lcl.amberMin : 2, 1, 59) + '<span class="ps-unit">日 以上</span></label>';
+    h += '</div>';
+    h += '<div class="ps-hint">※ 黄の日数〜緑の手前＝黄、それ未満（当日0日含む）＝赤、返却日を過ぎる＝黒（超過）。</div>';
+    h += '</div>';
+
     /* ===== 🏭 PIT配置図（専用エディタを別画面で開く・v0.47.0） ===== */
     var pitN = (window.PitFloorEditor && PitFloorEditor.countPits) ? PitFloorEditor.countPits() : (Array.isArray(state.bays) ? state.bays.length : 0);
     h += '<div class="ps-card">';
@@ -208,6 +220,11 @@
       if (el) el.value = ovDanger;
     }
     s.lotOver = { warn: ovWarn, danger: ovDanger };
+
+    let lg = readNum('ps-loan-green', 4, 1, 60);
+    let la = readNum('ps-loan-amber', 2, 1, 59);
+    if (la >= lg) { la = Math.max(1, lg - 1); const ella = document.getElementById('ps-loan-amber'); if (ella) ella.value = la; }
+    s.loanerColors = { greenMin: lg, amberMin: la };
 
     const est = {};
     (state.workTypes || []).forEach(function (w) {
