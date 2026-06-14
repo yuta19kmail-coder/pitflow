@@ -94,12 +94,15 @@
 /* 予約番号の耳＝左辺カラーの延長（枠の一部・上端で丸角に折れ右は滑り台カット） */
 .pit-card.pcm{ position:relative; }
 .pit-card.pcm.pcm-tab{ border-top-left-radius:0; margin-top:9px; }
-.pcm-ear{ position:absolute; top:-14px; left:-4px; height:17px; display:flex; align-items:center;
+.pcm-ear{ position:absolute; top:-14px; left:-4px; width:60px; height:17px; display:flex; align-items:center; overflow:hidden;
   font:800 9.5px/1 ui-monospace; letter-spacing:.6px; color:var(--text2);
   background:var(--bg2); border:1px solid var(--border2); border-bottom:none; border-left:4px solid var(--green);
-  border-radius:8px 0 0 0; padding:0 15px 2px 9px;
-  clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%);
-  filter:drop-shadow(0.9px -0.6px 0 var(--border2)); }
+  border-radius:8px 0 0 0; padding:0 14px 2px 9px;
+  clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%); }
+/* 滑り台の斜め縁にグレー線（clip-pathでは線が出ないので別要素で重ねる） */
+.pcm-ear-slide{ position:absolute; top:-14px; left:45px; width:1px; height:20.3px; background:var(--border2);
+  transform:rotate(32.9deg); transform-origin:top left; pointer-events:none; }
+.pit-card.pcm.pcm-claim .pcm-ear-slide{ background:#ef4444; }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{
