@@ -101,7 +101,7 @@
   clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%); }
 /* 滑り台の斜め縁にグレー線（clip-pathでは線が出ないので別要素で重ねる） */
 .pcm-ear-slide{ position:absolute; top:-14px; left:45px; width:1px; height:20.3px; background:var(--border2);
-  transform:rotate(32.9deg); transform-origin:top left; pointer-events:none; }
+  transform:rotate(-32.9deg); transform-origin:top left; pointer-events:none; }
 .pit-card.pcm.pcm-claim .pcm-ear-slide{ background:#ef4444; }
 
 /* ===== 作業ビュー（PIT枠） ===== */
