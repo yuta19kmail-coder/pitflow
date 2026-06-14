@@ -369,8 +369,8 @@ function cardHtml(c, opts){
     const staff = c.frontStaff || c.staff || '';
     const placed = !!(opts.kanban && c.bayId && window.PitPip && PitPip.isOpen());   // PITボード(PiP)が開いている時だけグレーアウト（閉じてる時は普通表示）
     // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当。名前/車種はホバーでフル表示
-    let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
-    h += (c.resNo ? '<div class="pcm-resnotab">' + at(c.resNo) + '</div>' : '');
+    let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (c.resNo ? ' pcm-tab' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+    if (c.resNo){ var _ec = c.codeRed ? '#ef4444' : teamColor; h += '<div class="pcm-ear" style="border-left-color:' + _ec + ';border-top-color:' + _ec + '">' + at(c.resNo) + '</div>'; }
     h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
     h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
     h += '</div>';
