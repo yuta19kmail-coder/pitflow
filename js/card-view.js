@@ -168,8 +168,8 @@
       + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
       + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div></div>';
 
-    // 車検スケジュール
-    h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
+    // 車検スケジュール（車検タイプのみ表示）
+    if (c.workType==='shaken') h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
       + '<div class="cv-csched"><div class="cv-cspick"><label>いつ行く？</label>'
       + '<select id="cv-csmode" onchange="cvCsMode(this.value)">'
       + opt('manual','日程を指定（手動）',c) + opt('asap','理由があって最短で行きたい',c)
@@ -280,7 +280,7 @@
     host.innerHTML =
       '<div class="cv-root'+(card.codeRed?' cv-claim':'')+'" style="border-left-color:'+(card.codeRed?'#ef4444':teamColor(card))+'">'
       + topHtml(card)
-      + (card.codeRed?'<div class="cv-claimbanner">🚨 クレーム対応案件（マルエフ）— 最優先・関係者に共有し慎重に対応</div>':'')
+      + (card.codeRed?'<div class="cv-claimbanner">🚨 Ⓕ案件・各部署慎重に対応 🚨</div>':'')
       + '<div class="cv-twocol"><div class="cv-left">'+leftHtml(card)+'</div><div class="cv-right">'+rightHtml(card)+'</div></div>'
       + popsHtml(card)
       + '</div>';
@@ -389,7 +389,10 @@
     if(window.closeDetail) closeDetail(); else save();
   };
 
-  document.addEventListener('click', closeAllPop);
+  document.addEventListener('click', function(e){
+    if(e.target && e.target.closest && e.target.closest('.cv-fusenpop,.cv-delpop,.cv-optmenu,.cv-optwrap')) return;
+    closeAllPop();
+  });
 
   // ===== 車検スケジュール =====
   function shopClosed(d){ const arr = (state.settings && state.settings.closedDow) || [3]; return arr.indexOf(d.getDay())>=0; }

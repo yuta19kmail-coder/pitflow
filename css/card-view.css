@@ -1,7 +1,7 @@
 /* card-view.css - 予約確定後カード詳細（読み取り主体・2カラム）。全クラス cv- 接頭辞で衝突回避 */
 
 /* モーダル枠の上書き（カードビュー時） */
-.modal-box.card-modal.cardview{ width:96vw !important; max-width:1180px !important; height:88dvh !important; max-height:880px !important; }
+.modal-box.card-modal.cardview{ width:97vw !important; max-width:1320px !important; height:92dvh !important; max-height:960px !important; }
 .modal-box.card-modal.cardview > .modal-head{ display:none; }
 .modal-box.card-modal.cardview > .modal-body{ padding:0 !important; overflow:hidden !important; flex:1 1 auto; min-height:0; }
 
@@ -15,7 +15,7 @@
 .cv-root *::-webkit-scrollbar-thumb:hover{ background:var(--border2); background-clip:padding-box; }
 
 /* トップ */
-.cv-top{ display:flex; align-items:center; gap:10px; padding:12px 18px; background:linear-gradient(135deg,var(--bg2),var(--bg3)); border-bottom:1px solid var(--border); }
+.cv-top{ display:flex; align-items:center; gap:10px; padding:12px 18px; background:linear-gradient(135deg,var(--bg2),var(--bg3)); border-bottom:1px solid var(--border); flex:0 0 auto; position:relative; z-index:20; }
 .cv-resno{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; font-weight:700; color:var(--text2); background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:2px 9px; }
 .cv-status{ font-size:12px; font-weight:800; padding:3px 11px; border-radius:999px; border:1px solid; }
 .cv-intake{ font-size:11.5px; font-weight:700; color:var(--text3); }
@@ -23,7 +23,7 @@
 .cv-iconbtn{ font-size:15px; width:34px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
 .cv-iconbtn:hover{ background:var(--bg4); }
 .cv-optwrap{ position:relative; }
-.cv-optmenu{ display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:208px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.5); padding:6px; z-index:40; }
+.cv-optmenu{ display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:208px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.5); padding:6px; z-index:80; }
 .cv-optmenu.show{ display:block; }
 .cv-opth{ font-size:10px; font-weight:800; color:var(--text3); padding:5px 8px 4px; }
 .cv-opti{ display:block; width:100%; text-align:left; font-size:12.5px; font-weight:700; color:var(--text); background:transparent; border:none; border-radius:7px; padding:8px 9px; cursor:pointer; }
@@ -31,10 +31,10 @@
 .cv-opti.cv-danger{ color:#ff8c8c; }
 .cv-optdiv{ height:1px; background:var(--border); margin:5px 4px; }
 
-.cv-claimbanner{ background:rgba(239,68,68,.16); border-bottom:1px solid rgba(239,68,68,.5); color:#ff8c8c; font-size:12.5px; font-weight:800; padding:9px 18px; }
+.cv-claimbanner{ background:rgba(239,68,68,.16); border-bottom:1px solid rgba(239,68,68,.5); color:#ff8c8c; font-size:13px; font-weight:800; padding:9px 18px; flex:0 0 auto; position:relative; z-index:19; text-align:center; letter-spacing:.5px; }
 
 /* 付箋・削除ポップ */
-.cv-fusenpop,.cv-delpop{ display:none; position:absolute; right:14px; top:50px; width:300px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.55); padding:13px; z-index:50; }
+.cv-fusenpop,.cv-delpop{ display:none; position:absolute; right:14px; top:50px; width:300px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.55); padding:13px; z-index:80; }
 .cv-fusenpop.show,.cv-delpop.show{ display:block; }
 .cv-fph{ font-size:12.5px; font-weight:800; color:var(--text1); margin-bottom:8px; }
 .cv-fplink{ font-size:11.5px; font-weight:800; color:#9cc4f0; background:rgba(55,138,221,.12); border:1px solid rgba(55,138,221,.4); border-radius:7px; padding:5px 9px; margin-bottom:9px; }
@@ -116,7 +116,7 @@
 .cv-wl.cv-muted{ color:var(--text3); font-weight:500; }
 
 /* 右：進捗バー */
-.cv-pbar{ display:flex; align-items:center; background:var(--bg2); border-bottom:1px solid var(--border); padding:9px 14px; overflow-x:auto; }
+.cv-pbar{ display:flex; align-items:center; background:var(--bg2); border-bottom:1px solid var(--border); padding:9px 14px; overflow-x:auto; flex:0 0 auto; }
 .cv-pstep{ display:flex; align-items:center; flex:0 0 auto; }
 .cv-dot{ width:15px; height:15px; border-radius:50%; background:var(--bg4); border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:8px; color:var(--text3); }
 .cv-pstep.done .cv-dot{ background:var(--brand); border-color:var(--brand); color:#fff; }
@@ -126,7 +126,7 @@
 .cv-seg{ width:16px; height:2px; background:var(--border); margin:0 6px; } .cv-pstep.done .cv-seg{ background:var(--brand); }
 
 /* タブ */
-.cv-tabs{ display:flex; gap:2px; padding:8px 12px 0; background:var(--bg2); border-bottom:1px solid var(--border); overflow-x:auto; }
+.cv-tabs{ display:flex; gap:2px; padding:8px 12px 0; background:var(--bg2); border-bottom:1px solid var(--border); overflow-x:auto; flex:0 0 auto; }
 .cv-tab{ font-size:12.5px; font-weight:700; color:var(--text2); background:transparent; border:none; border-bottom:2px solid transparent; padding:9px 12px; cursor:pointer; white-space:nowrap; }
 .cv-tab.on{ color:var(--text1); border-bottom-color:var(--brand); }
 .cv-body{ flex:1; padding:16px 18px; overflow:auto; }
