@@ -28,7 +28,8 @@ function openCard(cardId, mode){
   if (_cardMode === 'modal'){
     _cardBodyId = 'md-body-modal';
     document.getElementById('card-title-modal').innerHTML = _cardTitleHtml(card);
-    renderCardForm(card);
+    if (window.renderCardView) renderCardView(card, 'md-body-modal');
+    else renderCardForm(card);
     document.getElementById('modal-detail').classList.add('show');
   } else {
     _cardBodyId = 'md-body';
