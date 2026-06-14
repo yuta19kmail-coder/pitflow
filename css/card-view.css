@@ -1,12 +1,11 @@
 /* card-view.css - 予約確定後カード詳細（読み取り主体・2カラム）。全クラス cv- 接頭辞で衝突回避 */
 
 /* モーダル枠の上書き（カードビュー時） */
-.modal-box.card-modal.cardview{ width:97vw !important; max-width:1320px !important; height:92dvh !important; max-height:960px !important; }
+.modal-box.card-modal.cardview{ width:97vw !important; max-width:1320px !important; height:92dvh !important; max-height:960px !important; overflow:hidden !important; }
 .modal-box.card-modal.cardview > .modal-head{ display:none; }
 .modal-box.card-modal.cardview > .modal-body{ padding:0 !important; overflow:hidden !important; flex:1 1 auto; min-height:0; }
 
-.cv-root{ position:relative; display:flex; flex-direction:column; height:100%; min-height:0; border-left:4px solid var(--green); overflow:hidden; }
-.cv-root.cv-claim{ box-shadow:0 0 0 2px rgba(239,68,68,.55) inset; border-left-color:var(--red); }
+.cv-root{ position:relative; display:flex; flex-direction:column; height:100%; min-height:0; overflow:hidden; border-radius:inherit; }
 
 /* スクロールバー */
 .cv-root *::-webkit-scrollbar{ width:9px; height:9px; }

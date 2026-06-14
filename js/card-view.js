@@ -276,9 +276,17 @@
   window.renderCardView = function(card, hostId){
     const host = document.getElementById(hostId || 'md-body-modal'); if(!host) return;
     _c = ensure(card);
-    const box = host.closest('.modal-box'); if(box) box.classList.add('cardview');
+    const box = host.closest('.modal-box');
+    if(box){
+      box.classList.add('cardview');
+      const _tc = card.codeRed ? '#ef4444' : teamColor(card);
+      box.style.boxShadow = card.codeRed
+        ? ('inset 4px 0 0 0 '+_tc+', 0 0 0 2px rgba(239,68,68,.55), 0 18px 50px rgba(0,0,0,.55)')
+        : ('inset 4px 0 0 0 '+_tc+', 0 18px 50px rgba(0,0,0,.55)');
+      box.style.borderColor = card.codeRed ? '#ef4444' : '';
+    }
     host.innerHTML =
-      '<div class="cv-root'+(card.codeRed?' cv-claim':'')+'" style="border-left-color:'+(card.codeRed?'#ef4444':teamColor(card))+'">'
+      '<div class="cv-root">'
       + topHtml(card)
       + (card.codeRed?'<div class="cv-claimbanner">🚨 Ⓕ案件・各部署慎重に対応 🚨</div>':'')
       + '<div class="cv-twocol"><div class="cv-left">'+leftHtml(card)+'</div><div class="cv-right">'+rightHtml(card)+'</div></div>'
@@ -290,7 +298,7 @@
   // 編集（既存フォームへ）
   window.openCardEditForm = function(cardId){
     const card = state.cards.find(c=>c.id===cardId) || _c; if(!card) return;
-    const box = document.querySelector('#modal-detail .modal-box'); if(box) box.classList.remove('cardview');
+    const box = document.querySelector('#modal-detail .modal-box'); if(box){ box.classList.remove('cardview'); box.style.boxShadow=''; box.style.borderColor=''; }
     const title = document.getElementById('card-title-modal'); if(title && window._cardTitleHtml) title.innerHTML = _cardTitleHtml(card);
     window._cardMode = 'modal';
     if (window.renderCardForm) renderCardForm(card);
