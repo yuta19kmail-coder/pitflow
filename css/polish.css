@@ -91,6 +91,8 @@
 .pit-card.pcm.pcm-claim{ border-color:#ef4444 !important; box-shadow:0 0 0 1.5px rgba(239,68,68,.55), var(--shadow-card); }
 .pcm-loaner.pcm-dead{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important; box-shadow:0 0 8px rgba(239,68,68,.7); animation:pcmDeadPulse 1.2s ease-in-out infinite; }
 @keyframes pcmDeadPulse{ 0%,100%{ box-shadow:0 0 6px rgba(239,68,68,.6); } 50%{ box-shadow:0 0 13px rgba(239,68,68,.95); } }
+/* 予約番号タブ（一覧/ボードのコンパクトカード・客名の上に小さく） */
+.pcm-resnotab{ display:inline-block; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:9.5px; font-weight:800; letter-spacing:.3px; color:var(--text3); background:var(--bg1); border:1px solid var(--border); border-radius:5px; padding:0 6px 1px; margin-bottom:3px; line-height:1.6; }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{

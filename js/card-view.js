@@ -78,8 +78,7 @@
     const dt = dropType(c);
     let h = '';
 
-    // 予約番号タブ＋1行目：名前＋予約を編集
-    h += (c.resNo?'<div class="cv-resnotab">'+esc(c.resNo)+'</div>':'');
+    // 1行目：名前＋予約を編集
     h += '<div class="cv-id1"><span class="cv-nm">'+esc(c.customer||'（未入力）')+' <small>様</small></span>'
        + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')">✏️ 予約を編集</span></div>';
     // 2行目：車種＋ナンバー
@@ -258,6 +257,7 @@
     const sc = (window.statusColor ? statusColor(c.status) : '#f59e0b');
     const sl = (window.statusLabel ? statusLabel(c.status) : (c.status||''));
     let h = '<div class="cv-top">'
+      + (c.resNo?'<span class="cv-resno">'+esc(c.resNo)+'</span>':'')
       + '<span class="cv-status" style="color:'+sc+';border-color:'+sc+'66;background:'+sc+'1f">'+esc(sl)+'</span>'
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
