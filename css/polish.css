@@ -88,19 +88,19 @@
 .pcm-drop{ border:1px solid; }
 .pcm-loaner{ background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.55); }
 .pcm-front{ background:var(--bg3); color:var(--text); border:1px solid var(--border2); }
-.pit-card.pcm.pcm-claim{ border-color:#ef4444 !important; box-shadow:inset 0 0 0 1.5px rgba(239,68,68,.5), var(--shadow-card); }
+.pit-card.pcm.pcm-claim{ border-color:#ef4444 !important; box-shadow:var(--shadow-card); }
 .pcm-loaner.pcm-dead{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important; box-shadow:0 0 8px rgba(239,68,68,.7); animation:pcmDeadPulse 1.2s ease-in-out infinite; }
 @keyframes pcmDeadPulse{ 0%,100%{ box-shadow:0 0 6px rgba(239,68,68,.6); } 50%{ box-shadow:0 0 13px rgba(239,68,68,.95); } }
 /* 予約番号の耳＝左辺カラーの延長（枠の一部・上端で丸角に折れ右は滑り台カット） */
 .pit-card.pcm{ position:relative; }
 .pit-card.pcm.pcm-tab{ border-top-left-radius:0; margin-top:9px; }
-.pcm-ear{ position:absolute; top:-14px; left:-4px; width:60px; height:17px; display:flex; align-items:center; overflow:hidden;
+.pcm-ear{ position:absolute; top:-14px; left:-4px; width:66px; height:17px; display:flex; align-items:center; overflow:hidden;
   font:800 9.5px/1 ui-monospace; letter-spacing:.6px; color:var(--text2);
   background:var(--bg2); border:1px solid var(--border2); border-bottom:none; border-left:4px solid var(--green);
-  border-radius:8px 0 0 0; padding:0 14px 2px 9px;
+  border-radius:8px 0 0 0; padding:0 16px 2px 9px;
   clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%); }
 /* 滑り台の斜め縁にグレー線（clip-pathでは線が出ないので別要素で重ねる） */
-.pcm-ear-slide{ position:absolute; top:-14px; left:45px; width:1px; height:20.3px; background:var(--border2);
+.pcm-ear-slide{ position:absolute; top:-13px; left:51px; width:1px; height:15.5px; background:var(--border2);
   transform:rotate(-32.9deg); transform-origin:top left; pointer-events:none; }
 .pit-card.pcm.pcm-claim .pcm-ear-slide{ background:#ef4444; }
 
