@@ -89,6 +89,8 @@
 .pcm-loaner{ background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.55); }
 .pcm-front{ background:var(--bg3); color:var(--text); border:1px solid var(--border2); }
 .pit-card.pcm.pcm-claim{ border-color:#ef4444 !important; box-shadow:0 0 0 1.5px rgba(239,68,68,.55), var(--shadow-card); }
+.pcm-loaner.pcm-dead{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important; box-shadow:0 0 8px rgba(239,68,68,.7); animation:pcmDeadPulse 1.2s ease-in-out infinite; }
+@keyframes pcmDeadPulse{ 0%,100%{ box-shadow:0 0 6px rgba(239,68,68,.6); } 50%{ box-shadow:0 0 13px rgba(239,68,68,.95); } }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{

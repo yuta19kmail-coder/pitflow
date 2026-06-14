@@ -105,10 +105,11 @@
 .cv-lo.cv-lev-amber .cv-lodays{ color:var(--orange); } .cv-lo.cv-lev-amber .cv-lometer i{ background:var(--orange); }
 .cv-lo.cv-lev-red{ background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.5); }
 .cv-lo.cv-lev-red .cv-lodays{ color:#ff6b6b; } .cv-lo.cv-lev-red .cv-lometer i{ background:var(--red); }
-.cv-lo.cv-lev-dead{ background:#07090d; border-color:#3a0c12; }
-.cv-lo.cv-lev-dead .cv-lorem,.cv-lo.cv-lev-dead .cv-lodue,.cv-lo.cv-lev-dead .cv-lowhich{ color:#5b6270; }
-.cv-lo.cv-lev-dead .cv-lodays{ color:#ff6b6b; text-decoration:line-through; }
-.cv-lo.cv-lev-dead .cv-lometer i{ background:#7a2230; }
+.cv-lo.cv-lev-dead{ background:rgba(239,68,68,.2); border-color:var(--red); box-shadow:0 0 0 1px var(--red) inset, 0 0 18px rgba(239,68,68,.4); animation:cvDeadPulse 1.2s ease-in-out infinite; }
+.cv-lo.cv-lev-dead .cv-lorem{ color:#ff8c8c; }
+.cv-lo.cv-lev-dead .cv-lodays{ color:#ff3b3b; }
+.cv-lo.cv-lev-dead .cv-lometer i{ background:var(--red); }
+@keyframes cvDeadPulse{ 0%,100%{ box-shadow:0 0 0 1px var(--red) inset, 0 0 12px rgba(239,68,68,.3); } 50%{ box-shadow:0 0 0 1px var(--red) inset, 0 0 22px rgba(239,68,68,.6); } }
 .cv-loextras{ display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:10px; padding-top:9px; border-top:1px solid rgba(245,158,11,.28); align-items:center; }
 .cv-loxchip{ font-size:11px; font-weight:800; padding:2px 9px; border-radius:6px; background:var(--bg3); border:1px solid var(--border2); color:var(--text2); }
 .cv-loxchip.cv-fix{ background:rgba(245,158,11,.16); color:var(--orange); border-color:rgba(245,158,11,.45); }
