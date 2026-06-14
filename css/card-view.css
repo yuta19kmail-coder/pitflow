@@ -1,11 +1,11 @@
 /* card-view.css - 予約確定後カード詳細（読み取り主体・2カラム）。全クラス cv- 接頭辞で衝突回避 */
 
 /* モーダル枠の上書き（カードビュー時） */
-.modal-box.card-modal.cardview{ max-width:1180px; width:96vw; }
+.modal-box.card-modal.cardview{ width:96vw !important; max-width:1180px !important; height:88dvh !important; max-height:880px !important; }
 .modal-box.card-modal.cardview > .modal-head{ display:none; }
-.modal-box.card-modal.cardview > .modal-body{ padding:0; max-height:none; overflow:visible; }
+.modal-box.card-modal.cardview > .modal-body{ padding:0 !important; overflow:hidden !important; flex:1 1 auto; min-height:0; }
 
-.cv-root{ position:relative; border-left:4px solid var(--green); border-radius:14px; overflow:hidden; }
+.cv-root{ position:relative; display:flex; flex-direction:column; height:100%; min-height:0; border-left:4px solid var(--green); overflow:hidden; }
 .cv-root.cv-claim{ box-shadow:0 0 0 2px rgba(239,68,68,.55) inset; border-left-color:var(--red); }
 
 /* スクロールバー */
@@ -51,10 +51,10 @@
 .cv-dpdel{ font-size:12px; font-weight:800; border:1px solid #5b2230; border-radius:7px; padding:7px 14px; cursor:pointer; background:rgba(239,68,68,.15); color:#ff8c8c; }
 
 /* 2カラム */
-.cv-twocol{ display:flex; align-items:stretch; }
-.cv-left{ flex:0 0 440px; padding:18px 20px; border-right:1px solid var(--border); overflow:auto; max-height:74vh; }
-.cv-right{ flex:1; min-width:0; display:flex; flex-direction:column; max-height:74vh; }
-@media(max-width:860px){ .cv-twocol{ flex-direction:column; } .cv-left{ flex:auto; border-right:none; border-bottom:1px solid var(--border); max-height:none; } .cv-right{ max-height:none; } }
+.cv-twocol{ display:flex; align-items:stretch; flex:1 1 auto; min-height:0; }
+.cv-left{ flex:0 0 440px; padding:18px 20px; border-right:1px solid var(--border); overflow:auto; min-height:0; }
+.cv-right{ flex:1; min-width:0; display:flex; flex-direction:column; min-height:0; }
+@media(max-width:860px){ .cv-twocol{ flex-direction:column; overflow:auto; } .cv-left{ flex:none; border-right:none; border-bottom:1px solid var(--border); overflow:visible; } .cv-right{ overflow:visible; } }
 
 /* 左：識別情報 */
 .cv-id1{ display:flex; align-items:baseline; gap:10px; }
