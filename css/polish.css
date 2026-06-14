@@ -98,7 +98,8 @@
   font:800 9.5px/1 ui-monospace; letter-spacing:.6px; color:var(--text2);
   background:var(--bg2); border:1px solid var(--border2); border-bottom:none; border-left:4px solid var(--green);
   border-radius:8px 0 0 0; padding:0 15px 2px 9px;
-  clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%); }
+  clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%);
+  filter:drop-shadow(0.9px -0.6px 0 var(--border2)); }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{
