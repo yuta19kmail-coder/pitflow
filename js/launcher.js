@@ -9,7 +9,7 @@
   const COREFLOW_URL = 'https://coreflow.kobayashi-motors.com';
 
   const APPS = [
-    { key:'mhs',        url:'https://yuta19kmail-coder.github.io/mhs/',       icon:'📅', name:'MHS',        color:'#dc2626', dx:0,   dy:-150 },
+    { key:'mhs',        url:'https://mhs.kobayashi-motors.com',       icon:'📅', name:'MHS',        color:'#dc2626', dx:0,   dy:-150 },
     { key:'pitflow',    url:'https://yuta19kmail-coder.github.io/pitflow/',   icon:'🔧', name:'PitFlow',    color:'#1db97a', dx:68,  dy:-134 },
     { key:'carflow',    url:'https://carflow.kobayashi-motors.com',           icon:'🚙', name:'CarFlow',    color:'#378ADD', dx:121, dy:-88  },
     { key:'stockflow',  url:'https://stockflow.kobayashi-motors.com',         icon:'📦', name:'StockFlow',  color:'#7c3aed', dx:148, dy:-23  },
