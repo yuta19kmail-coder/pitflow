@@ -16,7 +16,7 @@
     { key:'coreboard',  url:'https://yuta19kmail-coder.github.io/CoreBoard/', icon:'📋', name:'CoreBoard',  color:'#06b6d4', dx:8,   dy:-235 },
     { key:'corenote',   url:'https://yuta19kmail-coder.github.io/CoreNote/',  icon:'📝', name:'CoreNote',   color:'#ec4899', dx:88,  dy:-218 },
     { key:'coretools',  url:'https://yuta19kmail-coder.github.io/CoreTools/', icon:'🧰', name:'CoreTools',  color:'#64748b', dx:157, dy:-175 },
-    { key:'coremembers',url:'',                                               icon:'👥', name:'CoreMembers',color:'#ea580c', dx:207, dy:-110 },
+    { key:'coremembers',url:'https://coremembers.kobayashi-motors.com',                                               icon:'👥', name:'CoreMembers',color:'#ea580c', dx:207, dy:-110 },
     { key:'moneyflow',  url:'',                                               icon:'💴', name:'MoneyFlow',  color:'#e0a92b', dx:234, dy:-25  },
   ];
 
