@@ -42,9 +42,14 @@
       customerId: o.customerId || null,
       customer: o.customer || '',
       kana: o.kana || '',
+      sei: o.sei || '',          // 姓（customer=姓+半角空白+名 に合成。既存データは開く時に分割）
+      mei: o.mei || '',          // 名
+      seiKana: o.seiKana || '',  // 姓カナ
+      meiKana: o.meiKana || '',  // 名カナ
       car: o.car || '',
       maker: o.maker || '',
       plate: o.plate || '',
+      drive: Array.isArray(o.drive) ? o.drive : [],   // 特殊運転属性 'leftHand'/'mt'/'lowCar'（左+mtで「左MT」自動成立）
       tel: tel,
       contacts: tel ? [{ tel: tel, label: o.telLabel || '個人携帯', primary: true }] : [],
       office: o.office || '',

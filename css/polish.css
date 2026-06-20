@@ -520,6 +520,23 @@
 .cf-tel-2{ width:3.4em; }
 .cf-tel-3{ width:3.4em; }
 .cf-tel-sep{ color:var(--text3); font-weight:700; }
+/* お客様名／カナ＝見た目1BOX・中で姓/名の2セグメント（ナンバー入力と同じ思想・高さは他のcf-inputと一致） */
+.cf-namebox{ display:flex; align-items:stretch; background:var(--bg2); border:1px solid var(--border); border-radius:6px; width:100%; overflow:hidden; }
+.cf-namebox:focus-within{ border-color:var(--brand); background:var(--bg); }
+.cf-namebox .cf-nb-seg{ flex:1; min-width:0; background:transparent; border:0; color:var(--text); font-size:13px; padding:6px 8px; font-family:inherit; }
+.cf-namebox .cf-nb-seg:focus{ outline:none; }
+.cf-namebox .cf-nb-sep{ width:1px; align-self:stretch; background:var(--border); margin:5px 0; flex:0 0 auto; }
+.cf-namebox.cf-miss{ border-color:#ef4444; }
+/* 特殊運転チップ（ON＝アンバー＝注意色） */
+.cf-chip-drv.active{ background:#f59e0b; border-color:#f59e0b; color:#1c1300; }
+/* 入庫時刻＝メインBOX直接入力＋フォーカスで下にショートカット（ポップアップ＝行は増えない） */
+.cf-time{ position:relative; }
+.cf-time-main{ width:100%; }
+.cf-time-guide{ position:absolute; top:calc(100% + 4px); left:0; z-index:30; display:none; background:var(--bg2); border:1px solid var(--border2); border-radius:8px; padding:8px 10px; box-shadow:0 8px 24px rgba(0,0,0,.35); }
+.cf-time.open .cf-time-guide{ display:block; }
+.cf-time-l{ font-size:10px; color:var(--text3); margin-bottom:5px; }
+.cf-time-quick{ display:flex; gap:5px; flex-wrap:wrap; }
+.cf-chip-tm.active{ background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600; }
 /* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
 /* 内容セクション：テンプレを開いてクリックで挿入 */

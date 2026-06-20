@@ -112,27 +112,30 @@ function renderCardForm(c){
   h += '<div class="cf-section"><div class="cf-section-head">👤 <span>基本情報</span>'
      + (c.customerId ? '<button type="button" class="cf-addveh-btn" onclick="cfAddVehicle()">＋ この顧客で新規車両を追加</button>' : '')
      + '</div><div class="cf-section-body">';
-  /* 1行目：お客様名｜カナ（スクショ配置・v0.37.4） */
+  _ensureNameParts(c);
+  /* 1行目：初回／リピーター → お客様名(姓/名・1BOX) → カナ(姓/名・1BOX)。名前は半角空白で合成（v0.74） */
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:3"><div class="cf-label">お客様名</div>' + textIn(c, 'customer', 'autocomplete="off"') + '</div>';
-  h += '<div class="cf-field" style="flex:2"><div class="cf-label">カナ</div>' + textIn(c, 'kana', 'placeholder="自動（名前を入力）" autocomplete="off"') + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">初回／リピーター</div>' + chips(c, 'repeat', state.repeatTypes) + '</div>';
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">お客様名（姓／名）</div>' + nameBoxInput(c) + '</div>';
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">カナ（姓／名）</div>' + kanaBoxInput(c) + '</div>';
   h += '</div>';
-  /* 2行目：ナンバー｜TEL｜その他連絡先（v0.37.8） */
+  /* 2行目：ナンバー｜TEL（残りを均等割り）｜その他連絡先（右端） */
   h += '<div class="cf-row">';
   h += field('ナンバー', plateInput(c));
   h += field('TEL',      telInput(c));
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">連絡先</div>' + contactsBtn(c) + '</div>';
   h += '</div>';
-  /* 3行目：初回・リピーター/国産輸入は自然サイズで左詰め、メーカーは小さく、空きは車種を広く（v0.37.9） */
+  /* 3行目：国産輸入 → メーカー → 車種を左詰め、右端に特殊運転（左/M/T/車高） */
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">初回／リピーター</div>' + chips(c, 'repeat', state.repeatTypes) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">国産車／輸入車</div>' + chips(c, 'boardId', TEAM_ITEMS) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 7em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
   h += '<div class="cf-field" style="flex:1"><div class="cf-label">車種（グレード）</div>' + textIn(c, 'car', 'placeholder="例 アクアGz"') + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">特殊運転</div>' + driveChips(c) + '</div>';
   h += '</div>';
+  /* 4行目：入庫日｜入庫時刻(1BOX＋ショートカット)｜予約受付日 */
   h += '<div class="cf-row">';
   h += field('入庫日', dateIn(c, 'reserveDate'));
-  h += field('入庫時刻', textIn(c, 'reserveTime', 'placeholder="例 09:30 / 09:00-10:00"'));
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">入庫時刻</div>' + timeField(c) + '</div>';
   h += field('予約受付日', dateIn(c, 'bookedAt'));
   h += '</div>';
   h += secEnd();
@@ -250,6 +253,77 @@ const TEAM_ITEMS = [
   { id: 'default', label: '国産車', color: '#1db97a' },
   { id: 'import',  label: '輸入車', color: '#ec4899' },
 ];
+/* 特殊運転（車両属性）。左+M/Tが両方ONなら「左MT」自動成立として配車マッチングに使う */
+const DRIVE_ITEMS = [
+  { id: 'leftHand', label: '左'   },
+  { id: 'mt',       label: 'M/T'  },
+  { id: 'lowCar',   label: '車高' },
+];
+/* 入庫時刻のショートカット（メインBOXに直接入力も可） */
+const TIME_QUICK = ['AM', 'PM', '決まり次第', '未定'];
+
+/* 既存データ（customer/kana のみ）を開く時、姓名・カナへ分割（先頭の半角/全角空白で区切る） */
+function _ensureNameParts(c){
+  if (!(c.sei || c.mei) && (c.customer || '').trim()){
+    const t = (c.customer || '').trim().split(/[ 　]+/);
+    c.sei = t[0] || ''; c.mei = t.slice(1).join(' ') || '';
+  }
+  if (!(c.seiKana || c.meiKana) && (c.kana || '').trim()){
+    const t = (c.kana || '').trim().split(/[ 　]+/);
+    c.seiKana = t[0] || ''; c.meiKana = t.slice(1).join(' ') || '';
+  }
+}
+/* お客様名＝見た目1BOX・中で姓/名（ナンバー入力と同じ思想）。data-key=customer は必須チェックの赤枠用 */
+function nameBoxInput(c){
+  return '<div class="cf-namebox" data-key="customer">'
+    + '<input type="text" class="cf-nb-seg" data-name="sei" value="' + _pe(c.sei || '') + '" placeholder="姓" autocomplete="off">'
+    + '<span class="cf-nb-sep"></span>'
+    + '<input type="text" class="cf-nb-seg" data-name="mei" value="' + _pe(c.mei || '') + '" placeholder="名" autocomplete="off">'
+    + '</div>';
+}
+function kanaBoxInput(c){
+  return '<div class="cf-namebox">'
+    + '<input type="text" class="cf-nb-seg" data-name="seiKana" value="' + _pe(c.seiKana || '') + '" placeholder="セイ" autocomplete="off">'
+    + '<span class="cf-nb-sep"></span>'
+    + '<input type="text" class="cf-nb-seg" data-name="meiKana" value="' + _pe(c.meiKana || '') + '" placeholder="メイ" autocomplete="off">'
+    + '</div>';
+}
+/* 特殊運転チップ（複数選択＝既存の data-multi ハンドラで c.drive 配列をトグル） */
+function driveChips(c){
+  const arr = Array.isArray(c.drive) ? c.drive : [];
+  let h = '<div class="cf-chips cf-drive" data-key="drive" data-multi="1">';
+  DRIVE_ITEMS.forEach(it => {
+    const on = arr.indexOf(it.id) >= 0;
+    h += '<button type="button" class="cf-chip cf-chip-drv' + (on ? ' active' : '') + '" data-val="' + it.id + '">' + it.label + '</button>';
+  });
+  h += '</div>';
+  return h;
+}
+/* 入庫時刻＝メインBOXに直接入力（全角→半角）。フォーカスで下にショートカット（AM/PM/決まり次第/未定） */
+function timeField(c){
+  let h = '<div class="cf-time">';
+  h += '<input type="text" class="cf-input cf-time-main" value="' + _pe(c.reserveTime || '') + '" placeholder="09:30 / 9:00-10:00 など" autocomplete="off">';
+  h += '<div class="cf-time-guide"><div class="cf-time-l">ショートカット</div><div class="cf-time-quick">';
+  TIME_QUICK.forEach(t => { h += '<button type="button" class="cf-chip cf-chip-tm' + (c.reserveTime === t ? ' active' : '') + '" data-val="' + t + '">' + t + '</button>'; });
+  h += '</div></div></div>';
+  return h;
+}
+/* 全角→半角（数字・コロン・ハイフン）。９：００→9:00 */
+function _timeHalf(s){
+  return String(s == null ? '' : s)
+    .replace(/[０-９]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); })
+    .replace(/[：]/g, ':').replace(/[－ー―〜～]/g, '-');
+}
+/* 姓→姓カナ／名→名カナ の自動フリガナ（_bindAutoKana を1セグメント用に。確定後 onCommit で合成保存） */
+function _bindAutoKanaSeg(nameEl, kanaEl, onCommit){
+  if (!nameEl || !kanaEl) return;
+  const hasKanji = function(s){ return /[㐀-䶿一-鿿豈-﫿々々]/.test(s || ''); };
+  let base = kanaEl.value || '', comp = '';
+  nameEl.addEventListener('compositionstart', function(){ base = kanaEl.value || ''; comp = ''; });
+  nameEl.addEventListener('compositionupdate', function(e){ const d = e.data || ''; if (hasKanji(d)) return; comp = d; kanaEl.value = base + _toKatakana(comp); if (onCommit) onCommit(); });
+  nameEl.addEventListener('compositionend', function(){ base = base + _toKatakana(comp); comp = ''; kanaEl.value = base; if (onCommit) onCommit(); });
+  nameEl.addEventListener('input', function(){ if (!nameEl.value){ base = ''; comp = ''; kanaEl.value = ''; if (onCommit) onCommit(); } });
+}
 
 function cfSideHtml(c){
   const today = new Date(); today.setHours(0,0,0,0);
@@ -934,8 +1008,41 @@ function bindCardFormEvents(root){
     });
   });
 
-  // お客様名→カナ 自動フリガナ
-  _bindAutoKana(root.querySelector('[data-key="customer"]'), root.querySelector('[data-key="kana"]'), c);
+  // 姓名／カナ（1BOX 2セグメント）→ customer/kana を半角空白で合成＋自動フリガナ（姓→姓カナ・名→名カナ）
+  (function(){
+    const segs = {};
+    root.querySelectorAll('.cf-nb-seg').forEach(function(el){ segs[el.dataset.name] = el; });
+    const recompose = function(){
+      c.sei = ((segs.sei && segs.sei.value) || '').trim();
+      c.mei = ((segs.mei && segs.mei.value) || '').trim();
+      c.seiKana = ((segs.seiKana && segs.seiKana.value) || '').trim();
+      c.meiKana = ((segs.meiKana && segs.meiKana.value) || '').trim();
+      c.customer = [c.sei, c.mei].filter(Boolean).join(' ');
+      c.kana = [c.seiKana, c.meiKana].filter(Boolean).join(' ');
+      if (_cardCheckOn) _cardMarkMisses(c, root);
+      if (window.PitDB) PitDB.save();
+    };
+    ['sei', 'mei', 'seiKana', 'meiKana'].forEach(function(k){ if (segs[k]) segs[k].addEventListener('input', recompose); });
+    _bindAutoKanaSeg(segs.sei, segs.seiKana, recompose);   // 姓→姓カナ
+    _bindAutoKanaSeg(segs.mei, segs.meiKana, recompose);   // 名→名カナ
+  })();
+
+  // 入庫時刻：メインBOX直接入力（全角→半角）＋フォーカスで下にショートカット（AM/PM/決まり次第/未定）
+  (function(){
+    const timeWrap = root.querySelector('.cf-time');
+    if (!timeWrap) return;
+    const mainEl = timeWrap.querySelector('.cf-time-main');
+    const syncChips = function(v){ timeWrap.querySelectorAll('.cf-time-quick .cf-chip').forEach(function(b){ b.classList.toggle('active', b.dataset.val === v); }); };
+    if (mainEl){
+      mainEl.addEventListener('focus', function(){ timeWrap.classList.add('open'); });
+      mainEl.addEventListener('input', function(){ const v = _timeHalf(mainEl.value); if (mainEl.value !== v) mainEl.value = v; c.reserveTime = v; syncChips(v); });
+    }
+    timeWrap.querySelectorAll('.cf-time-quick .cf-chip').forEach(function(btn){
+      btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
+      btn.addEventListener('click', function(){ c.reserveTime = btn.dataset.val; if (mainEl) mainEl.value = c.reserveTime; syncChips(c.reserveTime); if (window.PitDB) PitDB.save(); if (mainEl) mainEl.focus(); });
+    });
+    timeWrap.addEventListener('focusout', function(e){ if (!timeWrap.contains(e.relatedTarget)) timeWrap.classList.remove('open'); });
+  })();
 
   // TEL：見た目1BOX。クリックで3枠ガイドを開く。半角数字のみ→ c.tel に "市外-市内-番号" でハイフン自動挿入。枠が埋まると次へ
   const telWrap = root.querySelector('.cf-tel');
