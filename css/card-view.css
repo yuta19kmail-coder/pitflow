@@ -159,9 +159,16 @@
 input.cv-fixinput[type=date]{ color-scheme:dark; }
 .cv-fixconfirm{ display:none; align-items:center; gap:8px; margin-top:9px; font-size:12.5px; font-weight:700; color:var(--orange); }
 .cv-fixconfirm.show{ display:flex; }
-/* 金額ロック（フェーズを超えると編集不可） */
-.cv-amtrow .cv-lk{ font-size:10.5px; font-weight:800; color:var(--text3); background:var(--bg3); border:1px solid var(--border2); border-radius:5px; padding:1px 6px; margin-left:4px; }
-.cv-amtlk{ font-size:16px; font-weight:900; color:var(--text2); }
+/* 金額チェーン（概算→見積→受注→確定 を1行で・現フェーズの1枠だけ入力可） */
+.cv-amchain{ display:flex; flex-wrap:wrap; align-items:center; gap:5px 7px; margin-bottom:9px; }
+.cv-aseg{ display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:900; color:var(--text2); }
+.cv-aseg .cv-alb{ font-size:10px; font-weight:800; color:var(--text3); }
+.cv-aseg.cur{ color:var(--text1); }
+.cv-aseg.cur .cv-alb{ color:var(--brand); }
+.cv-amarr{ color:var(--text3); font-weight:700; }
+.cv-ayen{ font-size:14px; font-weight:900; color:var(--green); }
+.cv-ain{ width:88px; font-size:14px; font-weight:900; color:var(--green); text-align:right; background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:3px 7px; }
+.cv-ain:focus{ outline:none; border-color:var(--brand); box-shadow:0 0 0 2px var(--brand-soft); }
 /* フローの金額バッジ */
 .cv-famt{ font-size:12px; font-weight:800; color:var(--green); }
 

@@ -184,26 +184,26 @@
   }
 
   function coverTab(c){
-    // 💰 金額（概算→見積もり→受注）。フェーズを超えるとその金額はロック（編集不可）。
-    const FO = { check:0, estim:1, contact:2, parts:3, work:4, workDone:5 };
-    const cidx = (FO[c.status]!=null) ? FO[c.status] : -1;
-    function amtRow(kind, label, val, maxIdx){
-      const locked = cidx > maxIdx;
-      const disp = (val!=null&&val!=='') ? '¥'+Number(val).toLocaleString() : '—';
-      if (locked){
-        return '<div class="cv-fixrow cv-amtrow"><div class="cv-frt">'+label+' <span class="cv-lk">🔒 確定</span></div>'
-          + '<div class="cv-frb"><span class="cv-amtlk">'+disp+'</span></div></div>';
+    // 💰 金額＝概算→見積もり→受注→確定 を1行チェーン表示。編集できるのは「今のフェーズの1枠」だけ。
+    const KINDS = [['est','概算','estAmount'],['quote','見積','amountQuote'],['order','受注','amountOrder'],['final','確定','amountFinal']];
+    const curKind = ({ check:'quote', estim:'quote', contact:'order', parts:'final', work:'final', workDone:'final' })[c.status] || null;
+    const moneyStr = function(v){ return (v!=null&&v!=='') ? '¥'+Number(v).toLocaleString() : '—'; };
+    let chain = KINDS.map(function(k, i){
+      const val = c[k[2]];
+      const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
+      // 概算は自動なので常に表示のみ。current の枠だけ入力に（概算は除外）
+      if (k[0] === curKind && k[0] !== 'est'){
+        const ed = (val!=null&&val!=='') ? Number(val).toLocaleString() : '';
+        return arrow + '<span class="cv-aseg cur"><span class="cv-alb">'+k[1]+'</span><span class="cv-ayen">¥</span>'
+          + '<input class="cv-ain" id="cv-amt-'+k[0]+'" type="text" inputmode="numeric" value="'+esc(ed)+'" data-prev="'+esc(ed)+'" oninput="cvAmtChange(\''+k[0]+'\')"></span>';
       }
-      const vstr = (val!=null&&val!=='') ? Number(val).toLocaleString() : '';
-      return '<div class="cv-fixrow cv-amtrow"><div class="cv-frt">'+label+'</div><div class="cv-frb">'
-        + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+kind+'" type="text" inputmode="numeric" value="'+esc(vstr)+'" data-prev="'+esc(vstr)+'" oninput="cvAmtChange(\''+kind+'\')"></div>'
-        + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+kind+'">金額を <b id="cv-amtnew-'+kind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+kind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+kind+'\')">取消</button></div></div>';
+      return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span>'+moneyStr(val)+'</span>';
+    }).join('');
+    let h = '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>';
+    if (curKind && curKind !== 'est'){
+      h += '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div>';
     }
     const finRet = c.returnDateFinal || '';
-    let h = '<div class="cv-sec"><div class="cv-sect">💰 金額（概算 → 見積もり → 受注）</div>';
-    h += amtRow('est',   '概算',   c.estAmount,   1);   // 見積り中を超える(連絡中〜)とロック
-    h += amtRow('quote', '見積もり', c.amountQuote, 2);   // 連絡中を超える(パーツ待ち〜)とロック
-    h += amtRow('order', '受注',   c.amountOrder, 3);   // パーツ待ちを超える(作業〜)とロック
     h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
       + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
       + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div></div>';
@@ -365,7 +365,7 @@
   };
 
   // ===== 金額（概算/見積もり/受注・kind = est|quote|order） =====
-  var AMT_FIELD = { est:'estAmount', quote:'amountQuote', order:'amountOrder' };
+  var AMT_FIELD = { est:'estAmount', quote:'amountQuote', order:'amountOrder', final:'amountFinal' };
   window.cvAmtInput = function(){};
   window.cvAmtChange = function(kind){
     const el=document.getElementById('cv-amt-'+kind); if(!el) return;

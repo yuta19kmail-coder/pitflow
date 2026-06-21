@@ -73,9 +73,9 @@
       loanerFixed: !!o.loanerFixed,
       estAmount: (o.estAmount != null) ? o.estAmount : estAmt(o.workType || 'general'),
       estHoldDays: (o.estHoldDays != null) ? o.estHoldDays : estHold(o.workType || 'general', o.dropType || 'drop'),
-      amountFinal: (o.amountFinal != null) ? o.amountFinal : null,
       amountQuote: (o.amountQuote != null) ? o.amountQuote : null,   // 見積もり（見積り中→連絡中で入力）
-      amountOrder: (o.amountOrder != null) ? o.amountOrder : (o.amountFinal != null ? o.amountFinal : null),   // 受注（連絡中→パーツ待ちで入力・旧amountFinalを継承）
+      amountOrder: (o.amountOrder != null) ? o.amountOrder : null,   // 受注（連絡中→パーツ待ちで入力）
+      amountFinal: (o.amountFinal != null) ? o.amountFinal : null,   // 確定（作業完了→請求の確定額）
       urgent: !!o.urgent,
       consult: !!o.consult,
       codeRed: !!o.codeRed,
