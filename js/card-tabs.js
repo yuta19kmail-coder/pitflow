@@ -217,13 +217,17 @@ window.logPhaseMove = function(card, fromStatus, toStatus){
   if (!Array.isArray(card.log)) card.log = [];
   var d = new Date();
   var pad = function(n){ return (n < 10 ? '0' : '') + n; };
-  card.log.push({
+  var entry = {
     type: 'phase',
     from: fromStatus || '',
     to:   toStatus || '',
     by:   (window.bnMe || ''),
     at:   d.getTime(),
     atTxt:(d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
-  });
+  };
+  // 入力金額をフローにも記載（ポップアップで先にカードへ保存済み）。連絡中＝見積／パーツ待ち＝受注
+  if (toStatus === 'contact' && card.amountQuote != null && card.amountQuote !== ''){ entry.amount = card.amountQuote; entry.amountKind = '見積'; }
+  if (toStatus === 'parts'   && card.amountOrder != null && card.amountOrder !== ''){ entry.amount = card.amountOrder; entry.amountKind = '受注'; }
+  card.log.push(entry);
   card.phaseAt = d.getTime();
 };

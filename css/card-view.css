@@ -159,6 +159,11 @@
 input.cv-fixinput[type=date]{ color-scheme:dark; }
 .cv-fixconfirm{ display:none; align-items:center; gap:8px; margin-top:9px; font-size:12.5px; font-weight:700; color:var(--orange); }
 .cv-fixconfirm.show{ display:flex; }
+/* 金額ロック（フェーズを超えると編集不可） */
+.cv-amtrow .cv-lk{ font-size:10.5px; font-weight:800; color:var(--text3); background:var(--bg3); border:1px solid var(--border2); border-radius:5px; padding:1px 6px; margin-left:4px; }
+.cv-amtlk{ font-size:16px; font-weight:900; color:var(--text2); }
+/* フローの金額バッジ */
+.cv-famt{ font-size:12px; font-weight:800; color:var(--green); }
 
 /* 車検スケジュール */
 .cv-csched{ background:var(--bg1); border:1px solid var(--border); border-radius:12px; padding:13px 13px 14px; }

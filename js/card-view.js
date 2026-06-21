@@ -184,14 +184,26 @@
   }
 
   function coverTab(c){
-    // 確定金額・返車
-    const finAmt = (c.amountFinal!=null) ? Number(c.amountFinal).toLocaleString() : '';
+    // 💰 金額（概算→見積もり→受注）。フェーズを超えるとその金額はロック（編集不可）。
+    const FO = { check:0, estim:1, contact:2, parts:3, work:4, workDone:5 };
+    const cidx = (FO[c.status]!=null) ? FO[c.status] : -1;
+    function amtRow(kind, label, val, maxIdx){
+      const locked = cidx > maxIdx;
+      const disp = (val!=null&&val!=='') ? '¥'+Number(val).toLocaleString() : '—';
+      if (locked){
+        return '<div class="cv-fixrow cv-amtrow"><div class="cv-frt">'+label+' <span class="cv-lk">🔒 確定</span></div>'
+          + '<div class="cv-frb"><span class="cv-amtlk">'+disp+'</span></div></div>';
+      }
+      const vstr = (val!=null&&val!=='') ? Number(val).toLocaleString() : '';
+      return '<div class="cv-fixrow cv-amtrow"><div class="cv-frt">'+label+'</div><div class="cv-frb">'
+        + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+kind+'" type="text" inputmode="numeric" value="'+esc(vstr)+'" data-prev="'+esc(vstr)+'" oninput="cvAmtChange(\''+kind+'\')"></div>'
+        + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+kind+'">金額を <b id="cv-amtnew-'+kind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+kind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+kind+'\')">取消</button></div></div>';
+    }
     const finRet = c.returnDateFinal || '';
-    let h = '<div class="cv-sec"><div class="cv-sect">💰 確定金額・返車</div>';
-    h += '<div class="cv-fixrow"><div class="cv-frt">ほぼ確定金額（見積後）／直接入力</div><div class="cv-frb">'
-      + '<span class="cv-plan">概算 '+yen(c.estAmount)+'</span><span class="cv-arr">→</span>'
-      + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt" type="text" inputmode="numeric" value="'+esc(finAmt)+'" data-prev="'+esc(finAmt)+'" oninput="cvAmtInput()" onchange="cvAmtChange()"></div>'
-      + '<div class="cv-fixconfirm" id="cv-amtconfirm">金額を <b id="cv-amtnew"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK()">OK</button><button class="cv-ng" onclick="cvAmtNG()">取消</button></div></div>';
+    let h = '<div class="cv-sec"><div class="cv-sect">💰 金額（概算 → 見積もり → 受注）</div>';
+    h += amtRow('est',   '概算',   c.estAmount,   1);   // 見積り中を超える(連絡中〜)とロック
+    h += amtRow('quote', '見積もり', c.amountQuote, 2);   // 連絡中を超える(パーツ待ち〜)とロック
+    h += amtRow('order', '受注',   c.amountOrder, 3);   // パーツ待ちを超える(作業〜)とロック
     h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
       + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
       + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div></div>';
@@ -238,15 +250,16 @@
       // 時刻：数値タイムスタンプは M/D HH:MM に整形（旧ログ対策）
       var when = e.atTxt || e.at || '';
       if (typeof when === 'number'){ var dd=new Date(when); when=(dd.getMonth()+1)+'/'+dd.getDate()+' '+pad(dd.getHours())+':'+pad(dd.getMinutes()); }
-      var title;
+      var title, amtTxt='';
       if (e.type === 'phase'){
         var fl = window.statusLabel ? statusLabel(e.from) : e.from;
         var tl = window.statusLabel ? statusLabel(e.to)   : e.to;
         title = e.from ? (esc(fl)+' <span class="cv-farrow">→</span> '+esc(tl)) : (esc(tl)+' へ');
+        if (e.amount != null && e.amount !== '') amtTxt = '　'+(e.amountKind||'')+' ¥'+Number(e.amount).toLocaleString();
       } else {
         title = esc(e.text||e.label||'');
       }
-      h += '<div class="cv-frow done"><span class="cv-fdot"></span><div><div class="cv-ft">'+title+'</div><div class="cv-fd">'+esc(String(when)+(e.by?' ・ '+e.by:''))+'</div></div></div>';
+      h += '<div class="cv-frow done"><span class="cv-fdot"></span><div><div class="cv-ft">'+title+(amtTxt?'<span class="cv-famt">'+esc(amtTxt)+'</span>':'')+'</div><div class="cv-fd">'+esc(String(when)+(e.by?' ・ '+e.by:''))+'</div></div></div>';
     });
     return h + '</div></div>';
   }
@@ -351,23 +364,26 @@
     const el = document.getElementById('cv-p-'+btn.dataset.p); if(el) el.classList.add('on');
   };
 
-  // ===== 確定金額 =====
+  // ===== 金額（概算/見積もり/受注・kind = est|quote|order） =====
+  var AMT_FIELD = { est:'estAmount', quote:'amountQuote', order:'amountOrder' };
   window.cvAmtInput = function(){};
-  window.cvAmtChange = function(){
-    const el=document.getElementById('cv-amt'); const v=el.value.replace(/[^0-9]/g,'');
+  window.cvAmtChange = function(kind){
+    const el=document.getElementById('cv-amt-'+kind); if(!el) return;
+    const v=el.value.replace(/[^0-9]/g,'').slice(0,9);
     el.value = v ? (+v).toLocaleString() : '';
-    if(el.value===el.dataset.prev){ document.getElementById('cv-amtconfirm').classList.remove('show'); return; }
-    document.getElementById('cv-amtnew').textContent = '¥'+(el.value||'0');
-    document.getElementById('cv-amtconfirm').classList.add('show');
+    const cf=document.getElementById('cv-amtconfirm-'+kind);
+    if(el.value===el.dataset.prev){ cf.classList.remove('show'); return; }
+    document.getElementById('cv-amtnew-'+kind).textContent = '¥'+(el.value||'0');
+    cf.classList.add('show');
   };
-  window.cvAmtOK = function(){
-    const el=document.getElementById('cv-amt'); const v=el.value.replace(/[^0-9]/g,'');
-    _c.amountFinal = v ? +v : null; el.dataset.prev=el.value;
-    document.getElementById('cv-amtconfirm').classList.remove('show'); save();
+  window.cvAmtOK = function(kind){
+    const el=document.getElementById('cv-amt-'+kind); const v=el.value.replace(/[^0-9]/g,'').slice(0,9);
+    _c[AMT_FIELD[kind]] = v ? +v : null; el.dataset.prev=el.value;
+    document.getElementById('cv-amtconfirm-'+kind).classList.remove('show'); save();
   };
-  window.cvAmtNG = function(){
-    const el=document.getElementById('cv-amt'); el.value=el.dataset.prev;
-    document.getElementById('cv-amtconfirm').classList.remove('show');
+  window.cvAmtNG = function(kind){
+    const el=document.getElementById('cv-amt-'+kind); el.value=el.dataset.prev;
+    document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
   window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; save(); };
 

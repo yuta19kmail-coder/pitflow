@@ -60,10 +60,12 @@
     el('pp-move').innerHTML = '<span class="pp-from">'+esc(fromL)+'</span><span class="pp-arrow">→</span><span class="pp-to">'+esc(toL)+'</span>'
       + '<span class="pp-who">'+esc((card.customer||'（未入力）')+' 様')+(card.car?' ／ '+esc(card.car):'')+'</span>';
 
-    // 金額（共通）。プレフィル＝amountFinal→estAmount
-    var amtPrefill = (card.amountFinal!=null && card.amountFinal!=='') ? card.amountFinal : (card.estAmount!=null ? card.estAmount : '');
+    // 金額プレフィル＝見積時は amountQuote→estAmount／受注時は amountOrder→amountQuote→estAmount
+    var amtPrefill = (mode==='estimate')
+      ? ((card.amountQuote!=null&&card.amountQuote!=='') ? card.amountQuote : (card.estAmount!=null?card.estAmount:''))
+      : ((card.amountOrder!=null&&card.amountOrder!=='') ? card.amountOrder : ((card.amountQuote!=null&&card.amountQuote!=='') ? card.amountQuote : (card.estAmount!=null?card.estAmount:'')));
     el('pp-amt').value = (amtPrefill!=='' && amtPrefill!=null) ? Number(amtPrefill).toLocaleString() : '';
-    el('pp-amt-ref').innerHTML = '概算 '+yen(card.estAmount);
+    el('pp-amt-ref').innerHTML = (mode==='estimate' ? '概算 '+yen(card.estAmount) : '概算 '+yen(card.estAmount)+'　見積 '+yen(card.amountQuote));
 
     if (mode === 'estimate'){
       el('pp-title').textContent = '💬 見積金額の入力';
@@ -106,9 +108,12 @@
       if (!p) return;
       if (!ok){ if (window.showToast) showToast('移動をキャンセルしました'); return; }
       var card = p.card;
-      // 金額（空なら据え置き）
+      // 金額（空なら据え置き）。見積 → amountQuote／受注 → amountOrder
       var amt = digits(el('pp-amt') ? el('pp-amt').value : '');
-      if (amt !== '') card.amountFinal = Number(amt);
+      if (amt !== ''){
+        if (p.mode === 'estimate') card.amountQuote = Number(amt);
+        else card.amountOrder = Number(amt);
+      }
       // 返車予定日（order時のみ）
       if (p.mode === 'order'){
         var r = el('pp-ret') ? el('pp-ret').value : '';
