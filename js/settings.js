@@ -54,6 +54,15 @@
     h += '<button class="vh-btn primary" onclick="showView(\'rules\')">🧩 ルールページを開く</button>';
     h += '</div>';
 
+    /* ===== 顧客データ取込（テスト・ファイルから） ===== */
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">📇 顧客データ取込（テスト）</div>';
+    h += '<div class="ps-desc">bizcloud から書き出した顧客JSON（<code>顧客車両_bizcloud_*.json</code>）を読み込み、<b>この端末のブラウザ内（localStorage）だけ</b>に反映します。本番DBには送りません。現在の顧客控えは<b>全置き換え</b>されます。</div>';
+    h += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px">';
+    h += '<button class="vh-btn primary" onclick="pitImportCustomersFromFile()">📥 顧客JSONを選んで取込</button>';
+    h += '<span class="ps-status" id="ps-import-status" style="font-size:12px;color:var(--text2)">現在 ' + ((state.customers||[]).length) + ' 件</span>';
+    h += '</div></div>';
+
     /* ===== 置き場 ===== */
     const lc = s.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
     const lcSum = (lc.pit||0) + (lc.yard||0) + (lc.parking||0) + (lc.extra||0);
