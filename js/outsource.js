@@ -9,24 +9,22 @@
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
-  function daysLabel(c){
-    if (!c.phaseAt) return '';
-    var d = Math.max(0, Math.round((Date.now() - c.phaseAt) / 86400000));
-    return d === 0 ? '本日' : d + '日';
-  }
+  function mdShort(iso){ if(!iso) return ''; var p=String(iso).split('-'); return (p.length>=3)?((+p[1])+'/'+(+p[2])):iso; }
+  function dayNo(c){ return c.phaseAt ? (Math.floor((Date.now()-c.phaseAt)/86400000)+1) : null; }
 
-  function osCard(c){
-    var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
-    var days = daysLabel(c);
-    return '<div class="os-card" style="border-left-color:'+team+'" onclick="openDetail(\''+c.id+'\')">'
-      + '<div class="os-c1">'+esc(c.customer||'（未入力）')+' 様</div>'
-      + '<div class="os-c2"><span class="os-carn">'+esc(c.car||'')+'</span>'+(days?'<span class="os-days">'+days+'</span>':'')+'</div>'
-      + '</div>';
+  // タスクボードと同じコンパクトカード＋右側に「完了予定・何日目」
+  function osItem(c){
+    var card = (typeof cardHtml === 'function') ? cardHtml(c, { compact:true }) : ('<div class="os-card">'+esc(c.customer||'')+'</div>');
+    var dueTxt = c.outsourceDue ? mdShort(c.outsourceDue) : '未定';
+    var d = dayNo(c);
+    var side = '<div class="os-side"><div class="os-side-due">完了予定<br><b>'+esc(dueTxt)+'</b></div>'
+      + (d!=null ? '<div class="os-side-day">'+d+'日目</div>' : '') + '</div>';
+    return '<div class="os-item">'+card+side+'</div>';
   }
 
   function osRow(title, list){
     return '<div class="os-row"><div class="os-rowh">'+esc(title)+'<span class="os-n">'+list.length+'</span></div>'
-      + '<div class="os-cards">'+(list.length ? list.map(osCard).join('') : '<div class="os-none">なし</div>')+'</div></div>';
+      + '<div class="os-cards">'+(list.length ? list.map(osItem).join('') : '<div class="os-none">なし</div>')+'</div></div>';
   }
 
   window.renderOutsource = function(){

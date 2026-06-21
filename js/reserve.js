@@ -380,11 +380,12 @@ function cardHtml(c, opts){
     /* 名前・車種・担当の title は撤去（ホバー情報カード card-hover.js で全文表示するため二重ツールチップを防ぐ） */
     h += '<div class="pcm-r"><span class="pcm-name">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
     h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front">' + staff + '</span>' : '') + '</div>';
-    // 外注フェーズ＝外注先名＋そのフェーズに入ってからの日数ラベル
+    // 外注フェーズ＝外注先名(＋メモ)＋そのフェーズに入ってからの日数ラベル
     if (c.status === 'outsource'){
-      var _od = c.phaseAt ? Math.max(0, Math.round((Date.now() - c.phaseAt) / 86400000)) : null;
-      var _odTxt = (_od != null) ? (_od === 0 ? '本日' : _od + '日') : '';
-      h += '<div class="pcm-out">🏭 <span class="pcm-outn">' + at(c.outsourceTo || '外注先未定') + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';
+      var _odN = c.phaseAt ? (Math.floor((Date.now() - c.phaseAt) / 86400000) + 1) : null;
+      var _odTxt = (_odN != null) ? (_odN + '日目') : '';
+      var _oName = (c.outsourceTo || '外注先未定') + (c.outsourceNote ? ' ' + c.outsourceNote : '');
+      h += '<div class="pcm-out">🏭 <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';
     }
     h += '</div>';
     return h;

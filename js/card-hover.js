@@ -67,14 +67,21 @@
        + '<div class="ph-stat-num">'+(holdN!=null?holdN:'—')+'<span class="u">日目</span></div>'
        + '<div class="ph-stat-sub">'+(c.reserveDate&&window.fmtMD?(fmtMD(c.reserveDate)+'〜'):'未定')+'</div></div>';
 
-    // ② このフェーズ
+    // ② このフェーズ（外注の時は「完了予定 〇/〇 ・ 〇日目」）
     var pms = phaseStartMs(c);
     var phaseN = (function(){ var n=daysSinceMs(pms); return (n==null)?null:(n+1); })();
-    var phaseLb = window.statusLabel ? statusLabel(c.status) : (c.status||'');
-    var phaseSub = pms!=null ? (function(){ var d=new Date(pms); return (d.getMonth()+1)+'/'+d.getDate()+'〜'; })() : '—';
-    h += '<div class="ph-stat s-phase"><div class="ph-stat-lb">このフェーズ<br>（'+esc(phaseLb)+'）</div>'
-       + '<div class="ph-stat-num">'+(phaseN!=null?phaseN:'—')+'<span class="u">日目</span></div>'
-       + '<div class="ph-stat-sub">'+phaseSub+'</div></div>';
+    if (c.status === 'outsource'){
+      var dueTxt = c.outsourceDue ? (function(){ var p=String(c.outsourceDue).split('-'); return (+p[1])+'/'+(+p[2]); })() : '未定';
+      h += '<div class="ph-stat s-phase"><div class="ph-stat-lb">外注<br>完了予定</div>'
+         + '<div class="ph-stat-num">'+(phaseN!=null?phaseN:'—')+'<span class="u">日目</span></div>'
+         + '<div class="ph-stat-sub">〜'+esc(dueTxt)+'</div></div>';
+    } else {
+      var phaseLb = window.statusLabel ? statusLabel(c.status) : (c.status||'');
+      var phaseSub = pms!=null ? (function(){ var d=new Date(pms); return (d.getMonth()+1)+'/'+d.getDate()+'〜'; })() : '—';
+      h += '<div class="ph-stat s-phase"><div class="ph-stat-lb">このフェーズ<br>（'+esc(phaseLb)+'）</div>'
+         + '<div class="ph-stat-num">'+(phaseN!=null?phaseN:'—')+'<span class="u">日目</span></div>'
+         + '<div class="ph-stat-sub">'+phaseSub+'</div></div>';
+    }
 
     // ③ 代車リミット
     if (!c.needLoaner){
@@ -95,7 +102,10 @@
     }
     h += '</div>'; // .ph-stats
 
-    // ===== 注意（車両注意など） =====
+    // ===== 注意（外注先・車両注意など） =====
+    if (c.status === 'outsource'){
+      h += '<div class="ph-note">🏭 外注先：'+esc(c.outsourceTo||'未定')+(c.outsourceNote?'（'+esc(c.outsourceNote)+'）':'')+'</div>';
+    }
     var dr = Array.isArray(c.drive) ? c.drive : [];
     if (dr.length){
       h += '<div class="ph-note">⚠️ 車両注意：'+dr.map(function(k){return DRIVE_LABELS[k]||k;}).join('・')+'</div>';

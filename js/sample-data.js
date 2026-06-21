@@ -78,6 +78,8 @@
       amountFinal: (o.amountFinal != null) ? o.amountFinal : null,   // 確定（作業完了→請求の確定額）
       testDrive: !!o.testDrive,        // 試運転が必要/してほしい（同フェーズ内の下段＝試運転エリア）
       outsourceTo: o.outsourceTo || '', // 外注先名（status==='outsource' の時）
+      outsourceNote: o.outsourceNote || '', // 外注先メモ（各ディーラー/その他で店名等を1行）
+      outsourceDue: o.outsourceDue || '',   // 外注先との予定完了日（ISO・自社完了とは別）
       urgent: !!o.urgent,
       consult: !!o.consult,
       codeRed: !!o.codeRed,

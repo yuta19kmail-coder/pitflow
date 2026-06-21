@@ -44,7 +44,15 @@
       + '  </div>'
       + '  <div class="pp-field" id="pp-partner-field" style="display:none">'
       + '    <label class="pp-lb">外注先</label>'
-      + '    <select class="pp-date" id="pp-partner"></select>'
+      + '    <select class="pp-date" id="pp-partner" onchange="PitPhasePopup.onPartner()"></select>'
+      + '  </div>'
+      + '  <div class="pp-field" id="pp-outnote-field" style="display:none">'
+      + '    <label class="pp-lb">メモ（例：トヨタ〇〇店）</label>'
+      + '    <input class="pp-date" id="pp-outnote" type="text" placeholder="店名など">'
+      + '  </div>'
+      + '  <div class="pp-field" id="pp-outdue-field" style="display:none">'
+      + '    <label class="pp-lb">完了予定日（外注先との予定）</label>'
+      + '    <input class="pp-date" id="pp-outdue" type="date">'
       + '  </div>'
       + '  <div class="pp-note" id="pp-note"></div>'
       + '  <div class="pp-actions">'
@@ -68,6 +76,7 @@
     var isOut = (mode === 'outsource');
     el('pp-amt-field').style.display = isOut ? 'none' : '';
     el('pp-partner-field').style.display = isOut ? '' : 'none';
+    if (!isOut){ el('pp-outnote-field').style.display = 'none'; el('pp-outdue-field').style.display = 'none'; }
 
     if (isOut){
       // 外注先の選択
@@ -76,9 +85,13 @@
       sel.innerHTML = (partners.length ? partners : ['（設定で外注先を追加してください）'])
         .map(function(p){ return '<option value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('');
       if (card.outsourceTo) sel.value = card.outsourceTo;
+      el('pp-outnote').value = card.outsourceNote || '';
+      el('pp-outdue').value = card.outsourceDue || addDaysISO(todayISO(), 5);
       el('pp-ret-field').style.display = 'none';
+      el('pp-outdue-field').style.display = '';
+      PitPhasePopup.onPartner();   // メモ欄の出し分け
       el('pp-title').textContent = '🏭 外注へ';
-      el('pp-note').textContent = '外注先を選んでください。外注先は設定で増減できます。';
+      el('pp-note').textContent = '外注先と、外注先との完了予定日を入れてください。外注先は設定で増減できます。';
       el('pp-ok').textContent = '外注へ移動';
       el('pp-backdrop').classList.add('show');
       return;
@@ -136,6 +149,11 @@
       var c = comma(input.value);
       input.value = c;
     },
+    onPartner: function(){
+      var sel = el('pp-partner'); if (!sel) return;
+      var need = (sel.value === '各ディーラー' || sel.value === 'その他');
+      var f = el('pp-outnote-field'); if (f) f.style.display = need ? '' : 'none';
+    },
     close: function(ok){
       var bd = el('pp-backdrop');
       if (bd) bd.classList.remove('show');
@@ -146,6 +164,10 @@
       if (p.mode === 'outsource'){
         var sel = el('pp-partner');
         if (sel && sel.value && sel.value.indexOf('（') !== 0) card.outsourceTo = sel.value;
+        var need = (card.outsourceTo === '各ディーラー' || card.outsourceTo === 'その他');
+        card.outsourceNote = need ? ((el('pp-outnote') && el('pp-outnote').value.trim()) || '') : '';
+        var due = el('pp-outdue') ? el('pp-outdue').value : '';
+        if (due) card.outsourceDue = due;
       } else {
         // 金額（空なら据え置き）。見積 → amountQuote／受注 → amountOrder／確定 → amountFinal
         var amt = digits(el('pp-amt') ? el('pp-amt').value : '');
