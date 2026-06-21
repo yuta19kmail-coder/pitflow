@@ -15,11 +15,14 @@
   function norm(s){ return (s||'').replace(/\s+/g,'').replace(/[ァ-ヶ]/g,ch=>String.fromCharCode(ch.charCodeAt(0)-0x60)).toLowerCase(); }
   function list(){ if(!Array.isArray(state.customers)) state.customers=[]; return state.customers; }
   function courseLabel(div){ const d=(state.divisions||[]).find(x=>x.id===div); return d?d.label:''; }
+  function courseColorOf(div){ const d=(state.divisions||[]).find(x=>x.id===div); return (d&&d.color)?d.color:'#64748b'; }
+  /* 区分(国産/輸入)＝boardIdの色、課(1課/2課)＝divisionの色。両者は独立（国産車を2課が担当 等もある） */
   function teamInfo(v){
     const course=courseLabel(v && v.division);
-    if(v && v.boardId==='import')  return { label:'輸入車', course:course||'2課', color:'#ec4899' };
-    if(v && v.boardId==='default') return { label:'国産車', course:course||'1課', color:'#1db97a' };
-    return { label:'', course:course||'', color:'#64748b' };
+    const courseColor=courseColorOf(v && v.division);
+    if(v && v.boardId==='import')  return { label:'輸入車', course:course, color:'#ec4899', courseColor:courseColor };
+    if(v && v.boardId==='default') return { label:'国産車', course:course, color:'#1db97a', courseColor:courseColor };
+    return { label:'', course:course, color:'#64748b', courseColor:courseColor };
   }
   function frontStaffList(){ return (state.staff||[]).filter(s=>s.front).map(s=>s.name); }
   function primaryTel(cust){ const cs=(cust&&cust.contacts)||[]; const p=cs.find(x=>x.primary)||cs[0]; return p?(p.tel||''):''; }
@@ -192,7 +195,7 @@
       vs.forEach(function(v,vi){
         const first=vi===0, last=vi===vs.length-1;
         const t=teamInfo(v||{});
-        const pill=s=>s?'<span class="ct-pill" style="background:'+t.color+'22;color:'+t.color+';border-color:'+t.color+'66">'+esc(s)+'</span>':'—';
+        const pillC=(s,col)=>s?'<span class="ct-pill" style="background:'+col+'22;color:'+col+';border-color:'+col+'66">'+esc(s)+'</span>':'—';
         h+='<tr class="'+(last?'ct-rb':'ct-norb')+(first?'':' ct-cont')+' ct-clickrow" onclick="custOpen(\''+cust.id+'\')" title="顧客詳細を開く">'+
            '<td class="ct-name">'+(first?esc(cust.name||'(無名)'):'')+'</td>'+
            '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
@@ -200,8 +203,8 @@
            '<td>'+(v?esc(v.car||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?esc(v.plate||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(first?esc(primaryTel(cust)||'—'):'')+'</td>'+
-           '<td>'+pill(t.label)+'</td>'+
-           '<td>'+pill(t.course)+'</td>'+
+           '<td>'+pillC(t.label,t.color)+'</td>'+
+           '<td>'+pillC(t.course,t.courseColor)+'</td>'+
            '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
            '<td class="ct-act">'+
