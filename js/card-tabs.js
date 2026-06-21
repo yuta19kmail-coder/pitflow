@@ -208,3 +208,22 @@ window.logFlow = function(card, label){
   if (!Array.isArray(card.log)) card.log = [];
   card.log.push({ label: label, at: Date.now() });
 };
+
+/* ===== フェーズ移動ログ（誰が・いつ・どこから→どこへ）＋ phaseAt 更新 =====
+   dnd.js（ドラッグ）／task.js（◀▶）から status を変える時に呼ぶ。
+   card.phaseAt ＝ 今のフェーズに入った時刻（「このフェーズ何日目」のカウント起点）。 */
+window.logPhaseMove = function(card, fromStatus, toStatus){
+  if (!card) return;
+  if (!Array.isArray(card.log)) card.log = [];
+  var d = new Date();
+  var pad = function(n){ return (n < 10 ? '0' : '') + n; };
+  card.log.push({
+    type: 'phase',
+    from: fromStatus || '',
+    to:   toStatus || '',
+    by:   (window.bnMe || ''),
+    at:   d.getTime(),
+    atTxt:(d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
+  });
+  card.phaseAt = d.getTime();
+};

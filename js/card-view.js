@@ -234,7 +234,19 @@
     let h = '<div class="cv-sec"><div class="cv-sect">🕒 フロー（進捗ログ）</div><div class="cv-flow">';
     if (!log.length){ h += '<div class="cv-wl cv-muted">記録はまだありません。</div>'; }
     else log.slice().reverse().forEach(function(e){
-      h += '<div class="cv-frow done"><span class="cv-fdot"></span><div><div class="cv-ft">'+esc(e.text||e.label||'')+'</div><div class="cv-fd">'+esc((e.at||'')+(e.by?' ・ '+e.by:''))+'</div></div></div>';
+      var pad=function(n){return(n<10?'0':'')+n;};
+      // 時刻：数値タイムスタンプは M/D HH:MM に整形（旧ログ対策）
+      var when = e.atTxt || e.at || '';
+      if (typeof when === 'number'){ var dd=new Date(when); when=(dd.getMonth()+1)+'/'+dd.getDate()+' '+pad(dd.getHours())+':'+pad(dd.getMinutes()); }
+      var title;
+      if (e.type === 'phase'){
+        var fl = window.statusLabel ? statusLabel(e.from) : e.from;
+        var tl = window.statusLabel ? statusLabel(e.to)   : e.to;
+        title = e.from ? (esc(fl)+' <span class="cv-farrow">→</span> '+esc(tl)) : (esc(tl)+' へ');
+      } else {
+        title = esc(e.text||e.label||'');
+      }
+      h += '<div class="cv-frow done"><span class="cv-fdot"></span><div><div class="cv-ft">'+title+'</div><div class="cv-fd">'+esc(String(when)+(e.by?' ・ '+e.by:''))+'</div></div></div>';
     });
     return h + '</div></div>';
   }

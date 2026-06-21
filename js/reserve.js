@@ -377,8 +377,9 @@ function cardHtml(c, opts){
     else { if (_dr.indexOf('leftHand') >= 0) _ct.push('左'); if (_dr.indexOf('mt') >= 0) _ct.push('M/T'); }
     if (_dr.indexOf('lowCar') >= 0) _ct.push('車高');
     if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 2).map(function(x){ return '<span class="pcm-caut">' + x + '</span>'; }).join('') + '</div>';
-    h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
-    h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
+    /* 名前・車種・担当の title は撤去（ホバー情報カード card-hover.js で全文表示するため二重ツールチップを防ぐ） */
+    h += '<div class="pcm-r"><span class="pcm-name">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
+    h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front">' + staff + '</span>' : '') + '</div>';
     h += '</div>';
     return h;
   }

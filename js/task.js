@@ -77,13 +77,18 @@ function advanceCard(cardId, dir){
   const flow = board.cols.filter(col => !col.side).map(col => col.id);
   let i = flow.indexOf(c.status);
   if (i < 0){
-    if (dir > 0){ c.status = flow[0]; if (window.logFlow) logFlow(c, statusLabel(flow[0]) + 'へ'); if (window.PitDB) PitDB.save(); _rerenderActiveBoard(); }
+    if (dir > 0){ const _from = c.status; c.status = flow[0];
+      if (window.logPhaseMove) logPhaseMove(c, _from, flow[0]);
+      else if (window.logFlow) logFlow(c, statusLabel(flow[0]) + 'へ');
+      if (window.PitDB) PitDB.save(); _rerenderActiveBoard(); }
     return;
   }
   const ni = i + dir;
   if (ni < 0 || ni >= flow.length) return;
+  const _from = c.status;
   c.status = flow[ni];
-  if (window.logFlow) logFlow(c, statusLabel(flow[ni]) + 'へ');
+  if (window.logPhaseMove) logPhaseMove(c, _from, flow[ni]);
+  else if (window.logFlow) logFlow(c, statusLabel(flow[ni]) + 'へ');
   if (window.PitDB) PitDB.save();
   _rerenderActiveBoard();
 }
