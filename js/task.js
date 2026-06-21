@@ -26,30 +26,42 @@ function renderCourse(boardId, colsElId){
 /* 看板の列＋カードを描画（renderTask／renderCourse 共通） */
 function _renderKanban(board, cols){
   if (!board || !cols) return;
-  cols.innerHTML = board.cols.map(col => {
-    const inCol = state.cards.filter(c =>
-      c.status === col.id && c.boardId === board.id
-    );
+
+  function renderCol(col){
+    const inCol = state.cards.filter(c => c.status === col.id && c.boardId === board.id);
+    const hasTD = !col.terminal && !col.side;   // 試運転エリアを付ける＝完了以外のフロー列
     let colClass = 'kanban-col';
     if (col.terminal) colClass += ' terminal';
     if (col.side)     colClass += ' side';
     const stage = stageColor(col.id);
-    let html = '';
-    html += '<div class="' + colClass + '" style="--stage:' + stage + ';">';
-    html += '<div class="kanban-col-head">';
-    html += '<span>' + col.icon + '</span>';
-    html += '<span>' + col.name + '</span>';
-    html += '<span class="count">' + inCol.length + '</span>';
-    html += '</div>';
-    html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
-    if (inCol.length === 0){
-      html += '<div class="kanban-empty">なし</div>';
+    let html = '<div class="' + colClass + '" style="--stage:' + stage + ';">';
+    html += '<div class="kanban-col-head"><span>' + col.icon + '</span><span>' + col.name + '</span><span class="count">' + inCol.length + '</span></div>';
+    if (hasTD){
+      const main = inCol.filter(c => !c.testDrive);
+      const td   = inCol.filter(c => c.testDrive);
+      html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
+      html += main.length ? main.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-empty">なし</div>';
+      html += '</div>';
+      // 試運転サブゾーン（同フェーズの下段＝この車は「点検待ち かつ 試運転」等を表す）
+      html += '<div class="kanban-td' + (td.length ? ' has' : '') + '" data-drop="testdrive" data-drop-val="' + col.id + '">';
+      html += '<div class="kanban-td-h">🚗 試運転</div>';
+      html += '<div class="kanban-td-body">';
+      html += td.length ? td.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-td-empty">ここにドラッグ</div>';
+      html += '</div></div>';
     } else {
-      html += inCol.map(c => cardHtml(c, { kanban: !col.side, compact: true })).join('');
+      html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
+      html += inCol.length ? inCol.map(c => cardHtml(c, { kanban: !col.side, compact:true })).join('') : '<div class="kanban-empty">なし</div>';
+      html += '</div>';
     }
-    html += '</div></div>';
+    html += '</div>';
     return html;
-  }).join('');
+  }
+
+  const mainCols = board.cols.filter(c => !c.side);
+  const sideCols = board.cols.filter(c => c.side);
+  let out = mainCols.map(renderCol).join('');
+  if (sideCols.length) out += '<div class="kanban-side-stack">' + sideCols.map(renderCol).join('') + '</div>';
+  cols.innerHTML = out;
 }
 
 /* ◀▶やボード操作後の再描画先＝今見ているビューに合わせる（課ビューでも正しく更新） */
@@ -62,7 +74,7 @@ function _rerenderActiveBoard(){
 function stageColor(id){
   const map = {
     check:'#3b82f6', estim:'#f59e0b', contact:'#a855f7', parts:'#06b6d4',
-    work:'#26a269', workDone:'#1db97a', scrap:'#6b7280',
+    work:'#26a269', workDone:'#1db97a', scrap:'#6b7280', outsource:'#f59e0b',
   };
   return map[id] || 'var(--brand)';
 }

@@ -17,22 +17,39 @@
     if (!c) return;
 
     if (kind === 'status') {
-      if (c.status === val) return;
       var _fromStatus = c.status;
+      var _changed = (c.status !== val);
       // 移動の本処理（ポップアップ確定後 or ポップアップ不要時に実行）
       var _commitStatus = function(){
         c.status = val;
+        c.testDrive = false;   // メイン領域に置く＝試運転フラグOFF（試運転ゾーンから戻した時も解除）
         // 作業完了（workDone）にしたら、返車日が未定なら「返車・未定」へ自動で乗せる（完TEL待ち）
         if (val === 'workDone' && !c.returnDate) c.returnTbd = true;
-        if (window.logPhaseMove) logPhaseMove(c, _fromStatus, val);
-        else if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');
+        if (_changed){
+          if (window.logPhaseMove) logPhaseMove(c, _fromStatus, val);
+          else if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');
+        }
         if (window.PitDB) PitDB.save();
         if (state.currentView) showView(state.currentView);
         if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
       };
-      // 見積中→連絡中／連絡中→パーツ待ち は入力ポップアップを挟む（確定で _commitStatus 実行）
-      if (window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _fromStatus, val, _commitStatus)) return;
+      // 見積中→連絡中／連絡中→パーツ待ち／→作業完了／→外注 は入力ポップアップを挟む
+      if (_changed && window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _fromStatus, val, _commitStatus)) return;
       _commitStatus();
+      return;
+    } else if (kind === 'testdrive') {
+      // 試運転サブゾーンへ＝同フェーズ内なら status 据え置きで testDrive=ON。別列から入れた時は status も変更。
+      var _fromTd = c.status;
+      var _changedTd = (c.status !== val);
+      var _commitTd = function(){
+        c.status = val; c.testDrive = true;
+        if (_changedTd && window.logPhaseMove) logPhaseMove(c, _fromTd, val);
+        if (window.PitDB) PitDB.save();
+        if (state.currentView) showView(state.currentView);
+        if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
+      };
+      if (_changedTd && window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _fromTd, val, _commitTd)) return;
+      _commitTd();
       return;
     } else if (kind === 'bay') {
       const nv = val || null;

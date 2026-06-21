@@ -76,6 +76,8 @@
       amountQuote: (o.amountQuote != null) ? o.amountQuote : null,   // 見積もり（見積り中→連絡中で入力）
       amountOrder: (o.amountOrder != null) ? o.amountOrder : null,   // 受注（連絡中→パーツ待ちで入力）
       amountFinal: (o.amountFinal != null) ? o.amountFinal : null,   // 確定（作業完了→請求の確定額）
+      testDrive: !!o.testDrive,        // 試運転が必要/してほしい（同フェーズ内の下段＝試運転エリア）
+      outsourceTo: o.outsourceTo || '', // 外注先名（status==='outsource' の時）
       urgent: !!o.urgent,
       consult: !!o.consult,
       codeRed: !!o.codeRed,

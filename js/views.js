@@ -32,6 +32,7 @@ function showView(viewId){
   if (viewId === 'course1' && window.renderCourse) renderCourse('default', 'kanban-cols-1');
   if (viewId === 'course2' && window.renderCourse) renderCourse('import',  'kanban-cols-2');
   if (viewId === 'work')    renderWork();
+  if (viewId === 'outsource' && window.renderOutsource) renderOutsource();
   if (viewId === 'result')  renderResult();
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
@@ -168,6 +169,7 @@ function statusLabel(s){
     workDone: '作業完了',
     returned: '返車完了',
     scrap:    '廃車・乗替',
+    outsource:'外注',
   };
   return map[s] || s;
 }
@@ -183,6 +185,7 @@ function statusColor(s){
     workDone: '#1db97a',
     returned: '#10b981',
     scrap:    '#6b7280',
+    outsource:'#f59e0b',
   };
   return map[s] || '#64748b';
 }

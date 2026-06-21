@@ -32,7 +32,7 @@
       + '<button class="modal-close" onclick="PitPhasePopup.close(false)">✕</button></div>'
       + '<div class="modal-body">'
       + '  <div class="pp-move" id="pp-move"></div>'
-      + '  <div class="pp-field">'
+      + '  <div class="pp-field" id="pp-amt-field">'
       + '    <label class="pp-lb" id="pp-amt-lb">見積金額</label>'
       + '    <div class="pp-ref" id="pp-amt-ref"></div>'
       + '    <div class="pp-moneywrap"><span class="pp-yen">¥</span>'
@@ -41,6 +41,10 @@
       + '  <div class="pp-field" id="pp-ret-field" style="display:none">'
       + '    <label class="pp-lb">返車予定日</label>'
       + '    <input class="pp-date" id="pp-ret" type="date">'
+      + '  </div>'
+      + '  <div class="pp-field" id="pp-partner-field" style="display:none">'
+      + '    <label class="pp-lb">外注先</label>'
+      + '    <select class="pp-date" id="pp-partner"></select>'
       + '  </div>'
       + '  <div class="pp-note" id="pp-note"></div>'
       + '  <div class="pp-actions">'
@@ -59,6 +63,26 @@
     var fromL = statusName(pending.from), toL = statusName(pending.to);
     el('pp-move').innerHTML = '<span class="pp-from">'+esc(fromL)+'</span><span class="pp-arrow">→</span><span class="pp-to">'+esc(toL)+'</span>'
       + '<span class="pp-who">'+esc((card.customer||'（未入力）')+' 様')+(card.car?' ／ '+esc(card.car):'')+'</span>';
+
+    // フィールドの出し分け
+    var isOut = (mode === 'outsource');
+    el('pp-amt-field').style.display = isOut ? 'none' : '';
+    el('pp-partner-field').style.display = isOut ? '' : 'none';
+
+    if (isOut){
+      // 外注先の選択
+      var partners = (state.settings && state.settings.outsourcePartners) || [];
+      var sel = el('pp-partner');
+      sel.innerHTML = (partners.length ? partners : ['（設定で外注先を追加してください）'])
+        .map(function(p){ return '<option value="'+esc(p)+'">'+esc(p)+'</option>'; }).join('');
+      if (card.outsourceTo) sel.value = card.outsourceTo;
+      el('pp-ret-field').style.display = 'none';
+      el('pp-title').textContent = '🏭 外注へ';
+      el('pp-note').textContent = '外注先を選んでください。外注先は設定で増減できます。';
+      el('pp-ok').textContent = '外注へ移動';
+      el('pp-backdrop').classList.add('show');
+      return;
+    }
 
     // 金額プレフィル＝直前段の金額を引き継ぐ（見積=quote→est／受注=order→quote→est／確定=final→order→quote→est）
     var firstOf = function(){ for (var i=0;i<arguments.length;i++){ var v=arguments[i]; if (v!=null && v!=='') return v; } return ''; };
@@ -102,6 +126,7 @@
       if (from === 'estim'   && to === 'contact') mode = 'estimate';
       else if (from === 'contact' && to === 'parts') mode = 'order';
       else if (to === 'workDone') mode = 'final';
+      else if (to === 'outsource') mode = 'outsource';
       if (!mode) return false;
       pending = { card: card, from: from, to: to, commit: commit, mode: mode };
       openModal(card, mode);
@@ -118,17 +143,22 @@
       if (!p) return;
       if (!ok){ if (window.showToast) showToast('移動をキャンセルしました'); return; }
       var card = p.card;
-      // 金額（空なら据え置き）。見積 → amountQuote／受注 → amountOrder
-      var amt = digits(el('pp-amt') ? el('pp-amt').value : '');
-      if (amt !== ''){
-        if (p.mode === 'estimate') card.amountQuote = Number(amt);
-        else if (p.mode === 'order') card.amountOrder = Number(amt);
-        else card.amountFinal = Number(amt);
-      }
-      // 返車予定日（order時のみ）
-      if (p.mode === 'order'){
-        var r = el('pp-ret') ? el('pp-ret').value : '';
-        if (r){ card.returnDateFinal = r; if (!card.returnDate) card.returnDate = r; }
+      if (p.mode === 'outsource'){
+        var sel = el('pp-partner');
+        if (sel && sel.value && sel.value.indexOf('（') !== 0) card.outsourceTo = sel.value;
+      } else {
+        // 金額（空なら据え置き）。見積 → amountQuote／受注 → amountOrder／確定 → amountFinal
+        var amt = digits(el('pp-amt') ? el('pp-amt').value : '');
+        if (amt !== ''){
+          if (p.mode === 'estimate') card.amountQuote = Number(amt);
+          else if (p.mode === 'order') card.amountOrder = Number(amt);
+          else card.amountFinal = Number(amt);
+        }
+        // 返車予定日（order時のみ）
+        if (p.mode === 'order'){
+          var r = el('pp-ret') ? el('pp-ret').value : '';
+          if (r){ card.returnDateFinal = r; if (!card.returnDate) card.returnDate = r; }
+        }
       }
       try { p.commit(); } catch(e){ if (window.console) console.error(e); }
     }

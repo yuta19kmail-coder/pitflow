@@ -164,6 +164,19 @@
     h += '<div class="ps-hint">※ 初期値は売上表の実績（車検12.9万・12点5.6万・一般9.4万）＋仮置き。実態に合わせて調整してください。</div>';
     h += '</div>';
 
+    /* ===== 🏭 外注先（増減できる・v0.79.0） ===== */
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🏭 外注先（提携先）<button class="vh-btn" style="margin-left:auto" onclick="pitOsAdd()">＋ 外注先を追加</button></div>';
+    h += '<div class="ps-desc">カードを「外注」フェーズに移すとき選ぶ提携先リスト。外注ビューの行にもなります（削除しても過去カードのデータは消えません）。</div>';
+    (s.outsourcePartners || []).forEach(function (p, i) {
+      h += '<div class="ps-wt-row">'
+         + '<input type="text" class="ps-in" style="width:220px" value="' + esc(p) + '" onchange="pitOsEdit(' + i + ',this.value)">'
+         + '<button class="rl-del" title="削除" onclick="pitOsDel(' + i + ')">🗑</button>'
+         + '</div>';
+    });
+    if (!(s.outsourcePartners || []).length) h += '<div class="ps-hint">まだ外注先がありません。「＋ 外注先を追加」で登録してください。</div>';
+    h += '</div>';
+
     /* ===== 営業時間・定休 ===== */
     h += '<div class="ps-card">';
     h += '<div class="ps-h">🕐 営業時間・定休</div>';
@@ -291,6 +304,33 @@
     if (!confirm('作業タイプ「' + w.label + '」を削除しますか？\n（過去のカードのデータは消えません。選択肢から消えるだけです）')) return;
     state.workTypes.splice(i, 1);
     _wtSave();
+  };
+
+  /* ===== 🏭 外注先の増減（v0.79.0）＝state.settings.outsourcePartners を編集 ===== */
+  function _osSave() {
+    if (window.PitDB) PitDB.save(true);
+    renderSettings();
+    pitSettingsFlash('✓ 保存しました');
+  }
+  window.pitOsAdd = function () {
+    if (!Array.isArray(state.settings.outsourcePartners)) state.settings.outsourcePartners = [];
+    state.settings.outsourcePartners.push('新しい外注先');
+    _osSave();
+  };
+  window.pitOsEdit = function (i, val) {
+    const arr = state.settings.outsourcePartners || [];
+    if (!arr[i] && arr[i] !== '') return;
+    if (!String(val).trim()) return;
+    arr[i] = String(val).trim();
+    if (window.PitDB) PitDB.save(true);
+    pitSettingsFlash('✓ 保存しました');
+  };
+  window.pitOsDel = function (i) {
+    const arr = state.settings.outsourcePartners || [];
+    if (i < 0 || i >= arr.length) return;
+    if (!confirm('外注先「' + arr[i] + '」を削除しますか？\n（過去のカードのデータは消えません）')) return;
+    arr.splice(i, 1);
+    _osSave();
   };
 
   /* 初期値に戻す（このページの項目だけ。🧩ルールページの内容＝ルール・辞書・予約枠・目標・単価は保持） */
