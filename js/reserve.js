@@ -376,7 +376,7 @@ function cardHtml(c, opts){
     if (_dr.indexOf('leftHand') >= 0 && _dr.indexOf('mt') >= 0) _ct.push('左M/T');
     else { if (_dr.indexOf('leftHand') >= 0) _ct.push('左'); if (_dr.indexOf('mt') >= 0) _ct.push('M/T'); }
     if (_dr.indexOf('lowCar') >= 0) _ct.push('車高');
-    if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 2).map(function(x){ return '<span class="ct">' + x + '</span>'; }).join('') + '</div>';
+    if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 2).map(function(x){ return '<span class="pcm-caut">' + x + '</span>'; }).join('') + '</div>';
     h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
     h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
     h += '</div>';

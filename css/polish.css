@@ -105,7 +105,7 @@
 .pit-card.pcm.pcm-claim .pcm-ear-slide{ background:#ef4444; }
 /* 車両注意タブ（左/M/T/車高）＝耳と同じ上辺ライン・右側・最大2・アンバー。折り返し禁止でブレ防止 */
 .pcm-cau{ position:absolute; top:-13px; right:6px; display:flex; gap:3px; z-index:3; white-space:nowrap; pointer-events:none; }
-.pcm-cau .ct{ flex:0 0 auto; height:16px; display:flex; align-items:center; white-space:nowrap; word-break:keep-all; padding:0 6px 1px; font:800 9px/1 -apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif; letter-spacing:0; color:#1c1300; background:#f59e0b; border:1px solid #f59e0b; border-bottom:none; border-radius:6px 6px 0 0; }
+.pcm-cau .pcm-caut{ flex:0 0 auto; width:auto; max-width:none; height:16px; display:flex; align-items:center; white-space:nowrap; word-break:keep-all; padding:0 6px 1px; font:800 9px/1 -apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif; letter-spacing:0; color:#1c1300; background:#f59e0b; border:1px solid #f59e0b; border-bottom:none; border-radius:6px 6px 0 0; }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{
