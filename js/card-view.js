@@ -184,24 +184,24 @@
   }
 
   function coverTab(c){
-    // 💰 金額＝概算→見積もり→受注→確定 を1行チェーン表示。編集できるのは「今のフェーズの1枠」だけ。
+    // 💰 金額＝概算→見積もり→受注→確定 を1行チェーン表示（全部 表示のみ）。
     const KINDS = [['est','概算','estAmount'],['quote','見積','amountQuote'],['order','受注','amountOrder'],['final','確定','amountFinal']];
     const curKind = ({ check:'quote', estim:'quote', contact:'order', parts:'final', work:'final', workDone:'final' })[c.status] || null;
+    const KIND_FIELD = { quote:'amountQuote', order:'amountOrder', final:'amountFinal' };
+    const KIND_LABEL = { quote:'見積もり金額', order:'受注金額', final:'確定金額（請求額）' };
     const moneyStr = function(v){ return (v!=null&&v!=='') ? '¥'+Number(v).toLocaleString() : '—'; };
     let chain = KINDS.map(function(k, i){
-      const val = c[k[2]];
       const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
-      // 概算は自動なので常に表示のみ。current の枠だけ入力に（概算は除外）
-      if (k[0] === curKind && k[0] !== 'est'){
-        const ed = (val!=null&&val!=='') ? Number(val).toLocaleString() : '';
-        return arrow + '<span class="cv-aseg cur"><span class="cv-alb">'+k[1]+'</span><span class="cv-ayen">¥</span>'
-          + '<input class="cv-ain" id="cv-amt-'+k[0]+'" type="text" inputmode="numeric" value="'+esc(ed)+'" data-prev="'+esc(ed)+'" oninput="cvAmtChange(\''+k[0]+'\')"></span>';
-      }
-      return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span>'+moneyStr(val)+'</span>';
+      return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span>'+moneyStr(c[k[2]])+'</span>';
     }).join('');
     let h = '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>';
+    // 今のフェーズの金額だけ、返車予定と同じサイズの入力欄を出す（概算は自動なので入力なし）
     if (curKind && curKind !== 'est'){
-      h += '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div>';
+      const cv = c[KIND_FIELD[curKind]];
+      const cvstr = (cv!=null&&cv!=='') ? Number(cv).toLocaleString() : '';
+      h += '<div class="cv-fixrow"><div class="cv-frt">'+KIND_LABEL[curKind]+'／直接入力</div><div class="cv-frb">'
+        + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+curKind+'" type="text" inputmode="numeric" value="'+esc(cvstr)+'" data-prev="'+esc(cvstr)+'" oninput="cvAmtChange(\''+curKind+'\')"></div>'
+        + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div></div>';
     }
     const finRet = c.returnDateFinal || '';
     h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
