@@ -19,11 +19,21 @@
     if (kind === 'status') {
       if (c.status === val) return;
       var _fromStatus = c.status;
-      c.status = val;
-      // 作業完了（workDone）にしたら、返車日が未定なら「返車・未定」へ自動で乗せる（完TEL待ち）
-      if (val === 'workDone' && !c.returnDate) c.returnTbd = true;
-      if (window.logPhaseMove) logPhaseMove(c, _fromStatus, val);
-      else if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');
+      // 移動の本処理（ポップアップ確定後 or ポップアップ不要時に実行）
+      var _commitStatus = function(){
+        c.status = val;
+        // 作業完了（workDone）にしたら、返車日が未定なら「返車・未定」へ自動で乗せる（完TEL待ち）
+        if (val === 'workDone' && !c.returnDate) c.returnTbd = true;
+        if (window.logPhaseMove) logPhaseMove(c, _fromStatus, val);
+        else if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');
+        if (window.PitDB) PitDB.save();
+        if (state.currentView) showView(state.currentView);
+        if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
+      };
+      // 見積中→連絡中／連絡中→パーツ待ち は入力ポップアップを挟む（確定で _commitStatus 実行）
+      if (window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _fromStatus, val, _commitStatus)) return;
+      _commitStatus();
+      return;
     } else if (kind === 'bay') {
       const nv = val || null;
       if (c.bayId === nv) return;

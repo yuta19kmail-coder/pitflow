@@ -86,11 +86,17 @@ function advanceCard(cardId, dir){
   const ni = i + dir;
   if (ni < 0 || ni >= flow.length) return;
   const _from = c.status;
-  c.status = flow[ni];
-  if (window.logPhaseMove) logPhaseMove(c, _from, flow[ni]);
-  else if (window.logFlow) logFlow(c, statusLabel(flow[ni]) + 'へ');
-  if (window.PitDB) PitDB.save();
-  _rerenderActiveBoard();
+  const _to = flow[ni];
+  const _commit = function(){
+    c.status = _to;
+    if (window.logPhaseMove) logPhaseMove(c, _from, _to);
+    else if (window.logFlow) logFlow(c, statusLabel(_to) + 'へ');
+    if (window.PitDB) PitDB.save();
+    _rerenderActiveBoard();
+  };
+  // 見積中→連絡中／連絡中→パーツ待ち は入力ポップアップを挟む
+  if (window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _from, _to, _commit)) return;
+  _commit();
 }
 
 function switchBoard(boardId){
