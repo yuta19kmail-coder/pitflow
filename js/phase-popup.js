@@ -39,7 +39,7 @@
       + '      <input class="pp-money" id="pp-amt" type="text" inputmode="numeric" placeholder="0" oninput="PitPhasePopup.onAmt(this)"></div>'
       + '  </div>'
       + '  <div class="pp-field" id="pp-ret-field" style="display:none">'
-      + '    <label class="pp-lb">客に伝えた返車予定日</label>'
+      + '    <label class="pp-lb">返車予定日</label>'
       + '    <input class="pp-date" id="pp-ret" type="date">'
       + '  </div>'
       + '  <div class="pp-note" id="pp-note"></div>'
@@ -66,19 +66,19 @@
     el('pp-amt-ref').innerHTML = '概算 '+yen(card.estAmount);
 
     if (mode === 'estimate'){
-      el('pp-title').textContent = '📞 連絡中へ — 見積金額を入力';
+      el('pp-title').textContent = '💬 見積金額の入力';
       el('pp-amt-lb').textContent = '見積金額';
       el('pp-ret-field').style.display = 'none';
-      el('pp-note').textContent = 'お客様にお伝えする見積金額を入れてください。あとから「確定金額」タブでも変更できます。空のままでもOKです。';
-      el('pp-ok').textContent = '連絡中へ移動';
+      el('pp-note').textContent = 'お客様に伝える見積金額です。空のままでも進めます（あとから変更可）。';
+      el('pp-ok').textContent = '連絡中へ';
     } else { // order
-      el('pp-title').textContent = '📦 パーツ待ちへ（受注完了）';
-      el('pp-amt-lb').textContent = '確定見積金額（ほぼ確定）';
+      el('pp-title').textContent = '📦 受注完了';
+      el('pp-amt-lb').textContent = '確定見積金額';
       el('pp-ret-field').style.display = '';
       var retPrefill = card.returnDateFinal || card.returnDate || addDaysISO(todayISO(), 7);
       el('pp-ret').value = retPrefill;
-      el('pp-note').textContent = '受注完了です。確定に近い見積金額と、お客様に伝えた返車予定日を入れてください。';
-      el('pp-ok').textContent = '受注完了で移動';
+      el('pp-note').textContent = '確定見積と、お客様に伝えた返車予定日を入れてください。';
+      el('pp-ok').textContent = 'パーツ待ちへ';
     }
     el('pp-backdrop').classList.add('show');
     setTimeout(function(){ try{ el('pp-amt').focus(); }catch(e){} }, 30);

@@ -52,7 +52,8 @@
 .ph-note{ font-size:11px; color:var(--text3); margin-top:10px; line-height:1.5; border-top:1px dashed var(--border); padding-top:8px; }
 
 /* ===== フェーズ移動ポップアップ（phase-popup.js） ===== */
-.pp-box{ width:min(440px,92vw); }
+.pp-box{ width:min(340px,90vw); }
+.pp-box .modal-body{ padding:14px; gap:11px; }
 .pp-move{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:800; font-size:15px; color:var(--text); }
 .pp-move .pp-arrow{ color:var(--text3); }
 .pp-move .pp-from{ color:var(--text2); }
