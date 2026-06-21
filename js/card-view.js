@@ -192,7 +192,7 @@
     const moneyStr = function(v){ return (v!=null&&v!=='') ? '¥'+Number(v).toLocaleString() : '—'; };
     let chain = KINDS.map(function(k, i){
       const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
-      return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span>'+moneyStr(c[k[2]])+'</span>';
+      return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span><span class="cv-aval" id="cv-chv-'+k[0]+'">'+moneyStr(c[k[2]])+'</span></span>';
     }).join('');
     let h = '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>';
     // 今のフェーズの金額だけ、返車予定と同じサイズの入力欄を出す（概算は自動なので入力なし）
@@ -379,7 +379,10 @@
   window.cvAmtOK = function(kind){
     const el=document.getElementById('cv-amt-'+kind); const v=el.value.replace(/[^0-9]/g,'').slice(0,9);
     _c[AMT_FIELD[kind]] = v ? +v : null; el.dataset.prev=el.value;
-    document.getElementById('cv-amtconfirm-'+kind).classList.remove('show'); save();
+    document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
+    const chv=document.getElementById('cv-chv-'+kind);   // 上のチェーンに即反映
+    if(chv) chv.textContent = v ? '¥'+(+v).toLocaleString() : '—';
+    save();
   };
   window.cvAmtNG = function(kind){
     const el=document.getElementById('cv-amt-'+kind); el.value=el.dataset.prev;
