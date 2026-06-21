@@ -371,6 +371,12 @@ function cardHtml(c, opts){
     // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当。名前/車種はホバーでフル表示
     let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (c.resNo ? ' pcm-tab' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
     h += (c.resNo ? '<div class="pcm-ear" style="border-left-color:' + (c.codeRed ? '#ef4444' : teamColor) + (c.codeRed ? ';border-top-color:#ef4444' : '') + '">' + at(c.resNo) + '</div><i class="pcm-ear-slide"></i>' : '');
+    // 車両注意タブ（左/M/T/車高・左M/T合体・最大2・該当時のみ・耳の右の上辺）
+    var _dr = Array.isArray(c.drive) ? c.drive : [], _ct = [];
+    if (_dr.indexOf('leftHand') >= 0 && _dr.indexOf('mt') >= 0) _ct.push('左M/T');
+    else { if (_dr.indexOf('leftHand') >= 0) _ct.push('左'); if (_dr.indexOf('mt') >= 0) _ct.push('M/T'); }
+    if (_dr.indexOf('lowCar') >= 0) _ct.push('車高');
+    if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 2).map(function(x){ return '<span class="ct">' + x + '</span>'; }).join('') + '</div>';
     h += '<div class="pcm-r"><span class="pcm-name" title="' + at((c.customer || '') + ' 様') + '">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
     h += '<div class="pcm-r"><span class="pcm-car" title="' + at(c.car || '') + '">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front" title="担当 ' + at(staff) + '">' + staff + '</span>' : '') + '</div>';
     h += '</div>';

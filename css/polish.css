@@ -103,6 +103,9 @@
 .pcm-ear-slide{ position:absolute; top:-13px; left:51px; width:1px; height:15.5px; background:var(--border2);
   transform:rotate(-32.9deg); transform-origin:top left; pointer-events:none; }
 .pit-card.pcm.pcm-claim .pcm-ear-slide{ background:#ef4444; }
+/* 車両注意タブ（左/M/T/車高）＝耳と同じ上辺ライン・右側・最大2・アンバー */
+.pcm-cau{ position:absolute; top:-14px; right:6px; display:flex; gap:3px; z-index:3; }
+.pcm-cau .ct{ height:17px; display:flex; align-items:center; padding:0 7px 1px; font:800 10px/1 -apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif; color:#1c1300; background:#f59e0b; border:1px solid #f59e0b; border-bottom:none; border-radius:7px 7px 0 0; }
 
 /* ===== 作業ビュー（PIT枠） ===== */
 #view-work .pit-bay{
