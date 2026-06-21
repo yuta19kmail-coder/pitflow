@@ -68,6 +68,11 @@
 .cv-pill.cv-kokusan,.cv-pill.cv-div1{ background:rgba(29,185,122,.16); color:#37d39a; border-color:rgba(29,185,122,.45); }
 .cv-pill.cv-yunyu,.cv-pill.cv-div2{ background:rgba(236,72,153,.16); color:#f08fc4; border-color:rgba(236,72,153,.45); }
 .cv-pill.cv-staff{ background:var(--bg3); color:var(--text); border-color:var(--border2); font-weight:800; }
+/* 車両注意（特殊運転：左ハンドル/M/T/車高低い）＝メモの下・該当時のみ */
+.cv-drvbox{ border:1px solid rgba(245,158,11,.4); border-radius:10px; background:rgba(245,158,11,.06); padding:10px 12px; }
+.cv-drvh{ font-size:11px; color:#ffd27d; font-weight:800; margin-bottom:7px; display:flex; align-items:center; gap:6px; }
+.cv-drvrow{ display:flex; gap:6px; flex-wrap:wrap; }
+.cv-drv{ font-size:13px; font-weight:800; padding:4px 13px; border-radius:999px; background:rgba(245,158,11,.18); color:#ffd27d; border:1px solid rgba(245,158,11,.55); }
 
 /* 電話ホバー */
 .cv-telwrap{ position:relative; margin-left:auto; }

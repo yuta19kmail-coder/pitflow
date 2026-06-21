@@ -106,7 +106,20 @@
 
     // メモ（予約担当＋予約時内容＋引継ぎ）
     h += memoHtml(c);
+    // 車両注意（特殊運転）＝該当がある時だけメモの下に表示
+    h += driveNoteHtml(c);
     return h;
+  }
+
+  // 車両注意：左ハンドル/M/T/車高低い（card.drive 配列）。1つも無ければ枠ごと非表示
+  const DRIVE_LABELS = { leftHand:'左ハンドル', mt:'M/T', lowCar:'車高低い' };
+  function driveNoteHtml(c){
+    const arr = Array.isArray(c.drive) ? c.drive : [];
+    const tags = ['leftHand','mt','lowCar'].filter(function(k){ return arr.indexOf(k)>=0; });
+    if (!tags.length) return '';
+    return '<div class="cv-drvbox"><div class="cv-drvh">⚠️ 車両注意</div><div class="cv-drvrow">'
+      + tags.map(function(k){ return '<span class="cv-drv">'+DRIVE_LABELS[k]+'</span>'; }).join('')
+      + '</div></div>';
   }
 
   function telHtml(c){
