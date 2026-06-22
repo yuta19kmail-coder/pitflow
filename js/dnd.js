@@ -51,6 +51,27 @@
       if (_changedTd && window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _fromTd, val, _commitTd)) return;
       _commitTd();
       return;
+    } else if (kind === 'reorder') {
+      // 看板内：カードの上にドロップ＝その手前へ差し込む（同フェーズ内の並び替え）。
+      // 別フェーズのカードに落とした時はそのフェーズへ移動＋位置差し込み（必要ならポップアップ）。
+      var t = state.cards.find(function (x) { return x.id === val; });
+      if (!t || t === c) return;
+      var _fromR = c.status;
+      var _changedR = (c.status !== t.status);
+      var _doReorder = function () {
+        c.status = t.status;
+        c.testDrive = !!t.testDrive;
+        var ci = state.cards.indexOf(c); if (ci >= 0) state.cards.splice(ci, 1);
+        var ti = state.cards.indexOf(t); if (ti < 0) ti = state.cards.length;
+        state.cards.splice(ti, 0, c);
+        if (_changedR && window.logPhaseMove) logPhaseMove(c, _fromR, c.status);
+        if (window.PitDB) PitDB.save();
+        if (state.currentView) showView(state.currentView);
+        if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
+      };
+      if (_changedR && window.PitPhasePopup && PitPhasePopup.maybeIntercept(c, _fromR, t.status, _doReorder)) return;
+      _doReorder();
+      return;
     } else if (kind === 'bay') {
       const nv = val || null;
       if (c.bayId === nv) return;
