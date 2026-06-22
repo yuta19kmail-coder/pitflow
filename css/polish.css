@@ -97,6 +97,9 @@
 @keyframes pcmDeadPulse{ 0%,100%{ box-shadow:0 0 6px rgba(239,68,68,.6); } 50%{ box-shadow:0 0 13px rgba(239,68,68,.95); } }
 /* 予約番号の耳＝左辺カラーの延長（枠の一部・上端で丸角に折れ右は滑り台カット） */
 .pit-card.pcm{ position:relative; }
+/* タスクボード／試運転サブゾーンのカードは列幅(規定)に固定＝内容で広がらない。長い名前・車種は…で省略（.pcm-name/.pcm-car既定）。 */
+.kanban-col-body > .pit-card.pcm,
+.kanban-td2 > .pit-card.pcm{ width:100%; max-width:100%; box-sizing:border-box; }
 .pit-card.pcm.pcm-tab{ border-top-left-radius:0; margin-top:9px; }
 .pcm-ear{ position:absolute; top:-14px; left:-4px; width:66px; height:17px; display:flex; align-items:center; overflow:hidden;
   font:800 9.5px/1 ui-monospace; letter-spacing:.6px; color:var(--text2);

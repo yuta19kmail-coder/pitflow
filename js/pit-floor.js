@@ -557,8 +557,10 @@
     var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" title="' + at(dt.desc || '') + '" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
     var staff = c.frontStaff || c.staff || '';
     var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">代車</span>' : '';   // ホバー＝代車期限 〜7/4（あと〇日）
-    var staffBadge = staff ? '<span class="pfv-staff" title="担当 ' + at(staff) + '">' + esc(staff) + '</span>' : '';
-    return '<span class="pfv-r"><b class="pfv-cn" title="' + at((c.customer || '') + ' 様') + '">' + esc(c.customer || '（未入力）') + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
+    var staffNm = (window.pitSurname ? pitSurname(staff) : staff);
+    var custNm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+    var staffBadge = staff ? '<span class="pfv-staff" title="担当 ' + at(staff) + '">' + esc(staffNm) + '</span>' : '';
+    return '<span class="pfv-r"><b class="pfv-cn" title="' + at((c.customer || '') + ' 様') + '">' + esc(custNm) + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
       + '<span class="pfv-r"><b class="pfv-cc" title="' + at(c.car || '') + '">' + esc(c.car || '') + '</b>' + staffBadge + '</span>';
   }
   function slotCard(c, m, dropVal) {

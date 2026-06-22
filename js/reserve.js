@@ -101,9 +101,11 @@ function weekMiniCard(c){
     if (w) badges += '<span class="rwk-wb" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + at(w.label) + '</span>';
   });
   const staff = c.frontStaff || c.staff || '';
+  const _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+  const _stf = (window.pitSurname ? pitSurname(staff) : staff);
   let h = '<div class="rwk-card' + (c.codeRed ? ' rwk-claim' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
-  h += '<div class="rwk-r"><span class="rwk-name">' + (c.customer || '（未入力）') + ' 様</span><span class="rwk-badges">' + badges + '</span></div>';
-  h += '<div class="rwk-r"><span class="rwk-car">' + (c.car || '') + '</span>' + (staff ? '<span class="rwk-front">' + at(staff) + '</span>' : '') + '</div>';
+  h += '<div class="rwk-r"><span class="rwk-name">' + _nm + ' 様</span><span class="rwk-badges">' + badges + '</span></div>';
+  h += '<div class="rwk-r"><span class="rwk-car">' + (c.car || '') + '</span>' + (_stf ? '<span class="rwk-front">' + at(_stf) + '</span>' : '') + '</div>';
   h += '</div>';
   return h;
 }
@@ -396,8 +398,10 @@ function cardHtml(c, opts){
     if (_dr.indexOf('lowCar') >= 0) _ct.push('車高');
     if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 2).map(function(x){ return '<span class="pcm-caut">' + x + '</span>'; }).join('') + '</div>';
     /* 名前・車種・担当の title は撤去（ホバー情報カード card-hover.js で全文表示するため二重ツールチップを防ぐ） */
-    h += '<div class="pcm-r"><span class="pcm-name">' + (c.customer || '（未入力）') + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
-    h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + (staff ? '<span class="pcm-front">' + staff + '</span>' : '') + '</div>';
+    var _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+    var _stf = (window.pitSurname ? pitSurname(staff) : staff);
+    h += '<div class="pcm-r"><span class="pcm-name">' + _nm + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
+    h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + (_stf ? '<span class="pcm-front">' + _stf + '</span>' : '') + '</div>';
     // 外注フェーズ＝外注先名(＋メモ)＋そのフェーズに入ってからの日数ラベル
     if (c.status === 'outsource'){
       var _odN = c.phaseAt ? (Math.floor((Date.now() - c.phaseAt) / 86400000) + 1) : null;

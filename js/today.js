@@ -324,7 +324,7 @@ function todayRow(c, isReturn, inBreak){
   const time = isReturn ? (c.returnTime || c.reserveTime || '') : (c.reserveTime || '');
   // フロント担当（縦書きバッジ・1課=緑/2課=ピンク）
   const isImp = c.boardId === 'import';
-  const frontName = (c.frontStaff || '').trim();
+  const frontName = (window.pitSurname ? pitSurname((c.frontStaff || '').trim()) : (c.frontStaff || '').trim());
 
   let h = '';
   h += '<div class="today-row' + (c.urgent ? ' is-urgent' : '') + (inBreak ? ' in-break' : '') + '" onclick="pitTodayTap(\'' + c.id + '\',' + (isReturn ? 'true' : 'false') + ')" style="--team:' + teamColor + '">';
@@ -336,7 +336,7 @@ function todayRow(c, isReturn, inBreak){
     h += '<div class="tr-front empty"></div>';
   }
   h += '<div class="tr-main">';
-  h += '<div class="tr-headline"><span class="tr-customer">' + (c.customer || '（未入力）') + ' 様</span>'
+  h += '<div class="tr-headline"><span class="tr-customer">' + ((window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）') + ' 様</span>'
      + (c.car ? '<span class="tr-carname">' + c.car + '</span>' : '') + '</div>';
   if (c.plate) h += '<div class="tr-plate">' + c.plate + '</div>';
   h += '</div>';   // メモは行高さを崩すので当日ビューでは出さない（詳細はカードで）

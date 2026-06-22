@@ -281,6 +281,13 @@ function pitGenResNo(){
 }
 window.pitGenResNo = pitGenResNo;
 
+/* 苗字だけ取り出す（カード等の省スペース表示用。フルネーム「姓 名」の先頭トークン＝姓）。
+   ※予約詳細・ホバー情報カードなどフル情報の場所は c.customer（フル）をそのまま使う。 */
+function pitSurname(name){
+  return String(name == null ? '' : name).trim().split(/\s+/)[0] || '';
+}
+window.pitSurname = pitSurname;
+
 /* 起動時：予約番号が無い既存カードに後から採番（入庫日→id順で安定）。1回で全カードに付く。 */
 function pitBackfillResNo(){
   const cards = state.cards || [];

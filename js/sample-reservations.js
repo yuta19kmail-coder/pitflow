@@ -222,6 +222,8 @@
 
     // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
     state.cards = cards;
+    // 予約番号（resNo）を採番＝カードの「耳」が出るように（通常は起動時backfillだが、ボタン生成分はここで採番）。
+    if (window.pitBackfillResNo) pitBackfillResNo();
     const ok = (window.PitDB) ? PitDB.save(true) : false;
     const nReserved = cards.filter(c => c.status === 'reserved').length;
     const nReturned = cards.filter(c => c.status === 'returned').length;
