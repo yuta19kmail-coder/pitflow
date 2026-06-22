@@ -88,7 +88,7 @@
       this._bindAutosave();
     },
 
-    /* 保存（既定はデバウンス。immediate=true で即時） */
+    /* 保存（既定はデバウンス。immediate=true で即時）。戻り値＝成功(true)/失敗(false)。 */
     save: function (immediate) {
       const self = this;
       const doSave = function () {
@@ -110,13 +110,22 @@
             savedAt: Date.now(),
           }));
           if (self.mode === 'cloud' && self._cloudSave) self._cloudSave();
+          return true;
         } catch (e) {
+          // ★保存失敗（多くは localStorage 容量オーバー）は今まで黙って握り潰していた＝データが古い状態に戻る原因になり得る。
+          //   1セッション1回だけ画面に出して気づけるようにする（連続スパムは抑止）。
           console.warn('[PitDB] 保存失敗', e);
+          if (!self._saveErrAlerted){
+            self._saveErrAlerted = true;
+            try { alert('⚠ データの保存に失敗しました（ブラウザの保存容量オーバーの可能性）。\nこのままだとリロードで最後に保存できた状態に戻ります。\nサンプルの台数を減らす／不要データを整理してください。'); } catch (_) {}
+          }
+          return false;
         }
       };
-      if (immediate) { clearTimeout(this._t); doSave(); return; }
+      if (immediate) { clearTimeout(this._t); return doSave(); }
       clearTimeout(this._t);
       this._t = setTimeout(doSave, 400);
+      return undefined;
     },
 
     /* サンプルに戻す */

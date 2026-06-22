@@ -99,9 +99,12 @@
   (function () {
     const cs = Array.isArray(state.customers) ? state.customers : [];
     if (cs.length === 0) { window.seedSampleCustomers(400, false); return; }
-    const allSample = cs.every(r => typeof r.id === 'string' && r.id.indexOf('cu_s') === 0);
+    // ★実データ保護：取り込み(cu_bl_)など「サンプル(cu_s)以外」の顧客が1件でもあれば、絶対に自動入替しない。
+    //   （これまでは allSample 判定だけだったが、保険として明示ガードを追加＝予約生成後のリロード等で実顧客が消えるのを防ぐ）
+    const hasNonSample = cs.some(r => !(typeof r.id === 'string' && r.id.indexOf('cu_s') === 0));
+    if (hasNonSample) return;
     const noVehicles = !cs.some(r => Array.isArray(r.vehicles));                          // 旧型（1台1レコード）
     const noVehDate  = !cs.some(r => (r.vehicles || []).some(v => v.updatedAt));          // 車両に入庫日が無い
-    if (allSample && (noVehicles || noVehDate)) { window.seedSampleCustomers(400, true); }
+    if (noVehicles || noVehDate) { window.seedSampleCustomers(400, true); }
   })();
 })();

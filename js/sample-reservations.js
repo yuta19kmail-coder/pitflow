@@ -219,12 +219,18 @@
       .filter(c => c.loanerId && c.loanerFrom)
       .map(c => ({ loanerId: c.loanerId, cardId: c.id, fromDate: c.loanerFrom, toDate: c.loanerTo || plus7 }));
 
+    // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
     state.cards = cards;
-    if (window.PitDB) PitDB.save(true);
+    const ok = (window.PitDB) ? PitDB.save(true) : false;
     const nReserved = cards.filter(c => c.status === 'reserved').length;
     const nReturned = cards.filter(c => c.status === 'returned').length;
     console.log('[sample-reservations] 作り直し完了：カード ' + cards.length + ' 枚（予約 ' + nReserved + ' / 実績 ' + nReturned + '）');
-    alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。画面を更新します。');
-    location.reload();
+    // ★リロードしない＝読込時の自動処理（顧客の自動入替など）を再実行させない。現在ビューを再描画するだけ。
+    if (window.showView) showView(state.currentView || 'dashboard');
+    if (ok === false){
+      alert('カードは作りましたが保存に失敗しました（容量オーバーの可能性）。\nこのままでは次回リロードで戻ります。台数を減らして再実行してください。');
+    } else {
+      alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。\n顧客控えはそのまま保持しています。');
+    }
   };
 })();
