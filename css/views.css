@@ -125,6 +125,8 @@
   gap:8px;
   flex-wrap:wrap;
 }
+/* 予約・返車「当日」のカードはタスクボードと同じ204px固定（名前の長短で縮まない・耳/注意タブの被り防止） */
+.reserve-slot-cards .pit-card.pcm{ flex:0 0 204px; width:204px; max-width:204px; }
 .reserve-slot.closed .reserve-slot-time::after{
   content:" 定休";
   color:var(--red);
