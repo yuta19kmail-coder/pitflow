@@ -137,14 +137,7 @@ function renderReturnWeek(){
         c.status !== 'returned'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
-      inCell.forEach(c => {
-        const tt = (c.returnTime || c.reserveTime || '');
-        html += '<div class="reserve-week-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
-        html += ' onclick="openDetail(\'' + c.id + '\')"';
-        html += ' title="' + tt + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
-        html += (tt ? tt + ' ' : '') + c.customer + (c.car ? ' ' + c.car : '');
-        html += '</div>';
-      });
+      inCell.forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c) : ''); });
       html += '</div>';
     });
   }

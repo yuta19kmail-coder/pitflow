@@ -88,6 +88,27 @@ function renderReserveDay(){
   list.innerHTML = html;
 }
 
+/* 週ビュー用ミニカード（C案）＝当日タブのタスクカードを週グリッド向けに縮めた版。
+   左ライン＝国産緑/輸入ピンク／1段目=客名様＋代車・作業バッジ（設定色）／2段目=車種＋担当。時刻はスロット行で分かるので出さない。 */
+function weekMiniCard(c){
+  const at = (window.escAttr ? escAttr : function(s){ return String(s==null?'':s); });
+  const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
+  const wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
+  let badges = '';
+  if (c.needLoaner) badges += '<span class="rwk-lo" title="代車">代</span>';
+  wts.slice(0, 3).forEach(function(id){
+    const w = state.workTypes.find(x => x.id === id);
+    if (w) badges += '<span class="rwk-wb" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + at(w.label) + '</span>';
+  });
+  const staff = c.frontStaff || c.staff || '';
+  let h = '<div class="rwk-card' + (c.codeRed ? ' rwk-claim' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+  h += '<div class="rwk-r"><span class="rwk-name">' + (c.customer || '（未入力）') + ' 様</span><span class="rwk-badges">' + badges + '</span></div>';
+  h += '<div class="rwk-r"><span class="rwk-car">' + (c.car || '') + '</span>' + (staff ? '<span class="rwk-front">' + at(staff) + '</span>' : '') + '</div>';
+  h += '</div>';
+  return h;
+}
+window.weekMiniCard = weekMiniCard;
+
 function renderReserveWeek(){
   document.getElementById('reserve-day-list').style.display = 'none';
   document.getElementById('reserve-month').style.display = 'none';
@@ -126,13 +147,7 @@ function renderReserveWeek(){
         c.status === 'reserved'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="reserveDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
-      inCell.forEach(c => {
-        html += '<div class="reserve-week-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
-        html += ' onclick="openDetail(\'' + c.id + '\')"';
-        html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
-        html += c.reserveTime + ' ' + c.customer + (c.car ? ' ' + c.car : '');
-        html += '</div>';
-      });
+      inCell.forEach(c => { html += weekMiniCard(c); });
       html += '</div>';
     });
   }
