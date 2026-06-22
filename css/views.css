@@ -720,6 +720,8 @@
 /* タスクボードと同じコンパクトカード＋右側に完了予定・何日目 */
 .os-item{ display:flex; align-items:stretch; }
 .os-item .pit-card.pcm{ width:200px; border-top-right-radius:0; border-bottom-right-radius:0; }
+/* 外注ビューは右側BOXに外注先・日数を出すので、カード下の外注ラベルは隠す（重複回避） */
+.os-item .pcm-out{ display:none; }
 /* 横BOXは「耳（予約番号タブ）」の分だけ下げてカード本体と高さを揃える（耳ありカードは margin-top:9px） */
 .os-item .pit-card.pcm.pcm-tab + .os-side{ margin-top:9px; }
 .os-side{ display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-width:66px; padding:6px 8px; background:var(--bg4); border:1px solid var(--border2); border-left:none; border-radius:0 8px 8px 0; }

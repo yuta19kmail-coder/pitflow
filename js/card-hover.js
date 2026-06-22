@@ -72,7 +72,7 @@
     var phaseN = (function(){ var n=daysSinceMs(pms); return (n==null)?null:(n+1); })();
     if (c.status === 'outsource'){
       var dueTxt = c.outsourceDue ? (function(){ var p=String(c.outsourceDue).split('-'); return (+p[1])+'/'+(+p[2]); })() : '未定';
-      h += '<div class="ph-stat s-phase"><div class="ph-stat-lb">外注<br>完了予定</div>'
+      h += '<div class="ph-stat s-phase"><div class="ph-stat-lb">外注作業</div>'
          + '<div class="ph-stat-num">'+(phaseN!=null?phaseN:'—')+'<span class="u">日目</span></div>'
          + '<div class="ph-stat-sub">〜'+esc(dueTxt)+'</div></div>';
     } else {
