@@ -148,17 +148,20 @@
   }
   function hide(){ curId=null; if (el) el.classList.remove('show'); }
 
+  // タスクボードのコンパクトカード（.pit-card.pcm）＋ PITリスト/PiPの枠内カード（.pfv-card）で出す
+  var HOVER_SEL = '.pit-card.pcm, .pfv-card';
   document.addEventListener('mouseover', function(e){
-    var card = e.target.closest && e.target.closest('.pit-card.pcm');
+    var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card){ return; }
+    if (!card.dataset || !card.dataset.cardId) return;   // 拡大カード等 id無しは無視
     if (card.dataset.cardId === curId) return;   // 同じカード上の移動は無視
     show(card);
   });
   document.addEventListener('mouseout', function(e){
-    var card = e.target.closest && e.target.closest('.pit-card.pcm');
+    var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card) return;
     var to = e.relatedTarget;
-    if (!to || !(to.closest && to.closest('.pit-card.pcm'))) hide();
+    if (!to || !(to.closest && to.closest(HOVER_SEL))) hide();
   });
   // スクロール／ドラッグ中は隠す（位置ズレ防止）
   document.addEventListener('scroll', hide, true);
