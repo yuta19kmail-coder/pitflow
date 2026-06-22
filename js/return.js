@@ -79,7 +79,7 @@ function renderReturnDay(){
       if (inSlot.length === 0){
         html += '<span style="color:var(--text3);font-size:11px;align-self:center;">空き</span>';
       } else {
-        html += inSlot.map(c => returnCardHtml(c)).join('');
+        html += inSlot.map(c => cardHtml(c, { compact: true })).join('');
       }
       html += '</div></div>';
     });
@@ -87,7 +87,7 @@ function renderReturnDay(){
     const noTime = todays.filter(c => !tkey(c).match(/^\d/));
     if (noTime.length > 0){
       html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
-      html += noTime.map(c => returnCardHtml(c)).join('');
+      html += noTime.map(c => cardHtml(c, { compact: true })).join('');
       html += '</div></div>';
     }
   }

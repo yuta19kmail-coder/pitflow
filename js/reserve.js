@@ -80,7 +80,7 @@ function renderReserveDay(){
     if (inSlot.length === 0){
       html += '<span style="color:var(--text3);font-size:11px;align-self:center;">空き</span>';
     } else {
-      html += inSlot.map(c => cardHtml(c)).join('');
+      html += inSlot.map(c => cardHtml(c, { compact: true })).join('');
     }
     html += '</div></div>';
   });
