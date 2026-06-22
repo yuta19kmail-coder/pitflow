@@ -90,7 +90,7 @@
       el('pp-ret-field').style.display = 'none';
       el('pp-outdue-field').style.display = '';
       PitPhasePopup.onPartner();   // メモ欄の出し分け
-      el('pp-title').textContent = '🏭 外注へ';
+      el('pp-title').textContent = '🤝 外注へ';
       el('pp-note').textContent = '外注先と、外注先との完了予定日を入れてください。外注先は設定で増減できます。';
       el('pp-ok').textContent = '外注へ移動';
       el('pp-backdrop').classList.add('show');

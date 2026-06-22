@@ -385,7 +385,7 @@ function cardHtml(c, opts){
       var _odN = c.phaseAt ? (Math.floor((Date.now() - c.phaseAt) / 86400000) + 1) : null;
       var _odTxt = (_odN != null) ? (_odN + '日目') : '';
       var _oName = (c.outsourceTo || '外注先未定') + (c.outsourceNote ? ' ' + c.outsourceNote : '');
-      h += '<div class="pcm-out">🏭 <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';
+      h += '<div class="pcm-out">🤝 <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';
     }
     h += '</div>';
     return h;

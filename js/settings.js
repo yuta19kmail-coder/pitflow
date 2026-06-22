@@ -166,7 +166,7 @@
 
     /* ===== 🏭 外注先（増減できる・v0.79.0） ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🏭 外注先（提携先）<button class="vh-btn" style="margin-left:auto" onclick="pitOsAdd()">＋ 外注先を追加</button></div>';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🤝 外注先（提携先）<button class="vh-btn" style="margin-left:auto" onclick="pitOsAdd()">＋ 外注先を追加</button></div>';
     h += '<div class="ps-desc">カードを「外注」フェーズに移すとき選ぶ提携先リスト。外注ビューの行にもなります（削除しても過去カードのデータは消えません）。</div>';
     (s.outsourcePartners || []).forEach(function (p, i) {
       h += '<div class="ps-wt-row">'

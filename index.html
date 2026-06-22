@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.79.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.79.2"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#1f7a4d">
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
-<link rel="stylesheet" href="css/views.css?v=23">
+<link rel="stylesheet" href="css/views.css?v=24">
 <link rel="stylesheet" href="css/polish.css?v=89">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
@@ -72,7 +72,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.79.1</div>
+    <div class="pl-ver">PitFlow v0.79.2</div>
   </div>
 </div>
 
@@ -84,7 +84,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.79.1</span>
+      <span class="ver">v0.79.2</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -117,7 +117,7 @@
     <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span></div>
     <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span></div>
     <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🏭</span><span>Pitリスト</span></div>
-    <div class="si-item" data-view="outsource" onclick="showView('outsource')"><span class="icon">🏭</span><span>外注</span></div>
+    <div class="si-item" data-view="outsource" onclick="showView('outsource')"><span class="icon">🤝</span><span>外注</span></div>
     <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon">✅</span><span>実績</span></div>
 
     <div class="si-section-title">データ</div>
@@ -260,7 +260,7 @@
     <!-- ===== 外注ビュー（外注先ごとの俯瞰・読み取り専用） ===== -->
     <section id="view-outsource" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🏭</span>外注 <span style="font-size:11px;color:var(--text3);font-weight:400">外注先ごとに俯瞰（クリックで詳細）</span></div>
+        <div class="view-title"><span class="icon">🤝</span>外注 <span style="font-size:11px;color:var(--text3);font-weight:400">外注先ごとに俯瞰（クリックで詳細）</span></div>
         <div class="view-actions"><button class="vh-btn" onclick="renderOutsource()">🔄 更新</button></div>
       </div>
       <div id="view-outsource-body"></div>
@@ -599,15 +599,15 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=37"></script>
+<script src="js/state.js?v=38"></script>
 <script src="js/sample-data.js?v=17"></script>
 <script src="js/sample-fleet.js?v=8"></script>
 <script src="js/firebase-init.js?v=8"></script>
-<script src="js/db-pit.js?v=29"></script>
+<script src="js/db-pit.js?v=30"></script>
 <script src="js/views.js?v=32"></script>
 <script src="js/work-content.js?v=1"></script>
 <script src="js/card-detail.js?v=57"></script>
-<script src="js/card-view.js?v=11"></script>
+<script src="js/card-view.js?v=12"></script>
 <script src="js/avail.js?v=2"></script>
 <script src="js/card-tabs.js?v=8"></script>
 <script src="js/customers.js?v=21"></script>
@@ -619,12 +619,12 @@
 <script src="js/search.js?v=8"></script>
 <script src="js/maintdash.js?v=1"></script>
 <script src="js/pit-floor.js?v=27"></script>
-<script src="js/settings.js?v=15"></script>
+<script src="js/settings.js?v=16"></script>
 <script src="js/import-bizcloud.js?v=1"></script>
 <script src="js/rules.js?v=9"></script>
 <script src="js/today.js?v=14"></script>
 <script src="js/undetermined.js?v=2"></script>
-<script src="js/reserve.js?v=38"></script>
+<script src="js/reserve.js?v=39"></script>
 <script src="js/return.js?v=12"></script>
 <script src="js/task.js?v=16"></script>
 <script src="js/work.js?v=13"></script>
@@ -637,8 +637,8 @@
 <script src="js/holidays.js?v=1"></script>
 <script src="js/dnd.js?v=11"></script>
 <script src="js/pit-pip.js?v=8"></script>
-<script src="js/card-hover.js?v=2"></script>
-<script src="js/phase-popup.js?v=7"></script>
+<script src="js/card-hover.js?v=3"></script>
+<script src="js/phase-popup.js?v=8"></script>
 <script src="js/main.js?v=11"></script>
 <script src="js/auto-update.js?v=1"></script>
 

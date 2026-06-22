@@ -104,7 +104,7 @@
 
     // ===== 注意（外注先・車両注意など） =====
     if (c.status === 'outsource'){
-      h += '<div class="ph-note">🏭 外注先：'+esc(c.outsourceTo||'未定')+(c.outsourceNote?'（'+esc(c.outsourceNote)+'）':'')+'</div>';
+      h += '<div class="ph-note">🤝 外注先：'+esc(c.outsourceTo||'未定')+(c.outsourceNote?'（'+esc(c.outsourceNote)+'）':'')+'</div>';
     }
     var dr = Array.isArray(c.drive) ? c.drive : [];
     if (dr.length){

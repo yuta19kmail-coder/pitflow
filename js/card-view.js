@@ -194,7 +194,30 @@
       const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
       return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span><span class="cv-aval" id="cv-chv-'+k[0]+'">'+moneyStr(c[k[2]])+'</span></span>';
     }).join('');
-    let h = '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>';
+    // 🤝 外注欄（status==='outsource' のとき自動追加：どこに出しているか／メモ／完了予定日＝戻りの日数）
+    let osSec = '';
+    if (c.status === 'outsource'){
+      const partners = (state.settings && state.settings.outsourcePartners) || [];
+      const needNote = (c.outsourceTo === '各ディーラー' || c.outsourceTo === 'その他');
+      const opts = partners.map(function(p){ return '<option value="'+esc(p)+'"'+(p===c.outsourceTo?' selected':'')+'>'+esc(p)+'</option>'; }).join('');
+      const inN = c.phaseAt ? (Math.floor((Date.now()-c.phaseAt)/86400000)+1) : null;
+      let dueInfo = '—';
+      if (c.outsourceDue){
+        const n = window.daysFromToday ? daysFromToday(c.outsourceDue) : null;
+        dueInfo = '完了予定 '+fmtMD(c.outsourceDue)+(n!=null ? '（'+(n>0?'あと'+n+'日':(n===0?'本日':Math.abs(n)+'日超過'))+'）' : '');
+      }
+      osSec = '<div class="cv-sec"><div class="cv-sect">🤝 外注</div>';
+      osSec += '<div class="cv-fixrow"><div class="cv-frt">外注先（どこに出しているか）</div><div class="cv-frb">'
+        + '<select class="cv-fixinput" onchange="cvOutPartner(this.value)">'+opts+'</select>'
+        + (inN!=null ? '<span class="cv-plan">外注 '+inN+'日目</span>' : '') + '</div></div>';
+      osSec += '<div class="cv-fixrow" id="cv-outnote-row" style="'+(needNote?'':'display:none')+'"><div class="cv-frt">メモ（例：トヨタ〇〇店）</div><div class="cv-frb">'
+        + '<input class="cv-fixinput" type="text" value="'+esc(c.outsourceNote||'')+'" placeholder="店名など" onchange="cvOutNote(this.value)" style="width:220px"></div></div>';
+      osSec += '<div class="cv-fixrow"><div class="cv-frt">完了予定日（戻りの日数）／カレンダーで選択</div><div class="cv-frb">'
+        + '<span class="cv-plan" id="cv-outdue-info">'+dueInfo+'</span><span class="cv-arr">→</span>'
+        + '<input class="cv-fixinput" type="date" value="'+esc(c.outsourceDue||'')+'" onchange="cvOutDue(this.value)"></div></div>';
+      osSec += '</div>';
+    }
+    let h = osSec + '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>';
     // 今のフェーズの金額だけ、返車予定と同じサイズの入力欄を出す（概算は自動なので入力なし）
     if (curKind && curKind !== 'est'){
       const cv = c[KIND_FIELD[curKind]];
@@ -389,6 +412,27 @@
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
   window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; save(); };
+
+  // ===== 外注（外注先・メモ・完了予定日＝戻りの日数を詳細モーダルで編集） =====
+  window.cvOutPartner = function(v){
+    _c.outsourceTo = v || '';
+    var need = (v === '各ディーラー' || v === 'その他');
+    var row = document.getElementById('cv-outnote-row');
+    if (row) row.style.display = need ? '' : 'none';
+    if (!need) _c.outsourceNote = '';
+    save();
+  };
+  window.cvOutNote = function(v){ _c.outsourceNote = (v || '').trim(); save(); };
+  window.cvOutDue = function(v){
+    _c.outsourceDue = v || '';
+    var info = document.getElementById('cv-outdue-info');
+    if (info){
+      if (v){ var n = window.daysFromToday ? daysFromToday(v) : null;
+        info.textContent = '完了予定 ' + fmtMD(v) + (n!=null ? '（'+(n>0?'あと'+n+'日':(n===0?'本日':Math.abs(n)+'日超過'))+'）' : ''); }
+      else info.textContent = '—';
+    }
+    save();
+  };
 
   // ===== 表紙チェック =====
   window.cvPick = function(group, val, el){

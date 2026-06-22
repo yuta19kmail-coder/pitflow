@@ -56,6 +56,14 @@
             if (Array.isArray(state.settings.workTypes) && state.settings.workTypes.length) {
               state.workTypes = state.settings.workTypes;
             }
+            // 外注先：未設定 or 旧プレースホルダなら実名リストへ自動移行（v0.79.1）
+            var OS_DEF = ['畑中板金','藤島板金','カーメイク','ブレス','タイヤマン','カーフラッシュ','野村自動車','各ディーラー','その他'];
+            var OS_OLD = ['提携工場A','提携工場B','ガラス専門店'];
+            var osCur = state.settings.outsourcePartners;
+            if (!Array.isArray(osCur) || osCur.length === 0 || JSON.stringify(osCur) === JSON.stringify(OS_OLD)) {
+              state.settings.outsourcePartners = OS_DEF.slice();
+              migrated = true;
+            }
             console.log('[PitDB] 保存データを読み込みました（' + d.cards.length + '件）'
               + (migrated ? '／PIT配置図を自社レイアウト既定へ移行しました' : ''));
             if (migrated) this.save(true);   // 移行結果を保存（次回以降は移行不要）

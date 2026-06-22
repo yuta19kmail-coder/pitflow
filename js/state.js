@@ -31,7 +31,7 @@ window.state = {
         { id: 'work',     name: '作業待ち',   icon: '🔧' },
         { id: 'workDone', name: '作業完了済', icon: '✅', terminal: true },
         { id: 'scrap',    name: '廃車・乗替', icon: '🚫', terminal: true, side: true },
-        { id: 'outsource',name: '外注',       icon: '🏭', terminal: true, side: true },
+        { id: 'outsource',name: '外注',       icon: '🤝', terminal: true, side: true },
       ],
     },
     {
@@ -45,7 +45,7 @@ window.state = {
         { id: 'work',     name: '作業待ち',   icon: '🔧' },
         { id: 'workDone', name: '作業完了済', icon: '✅', terminal: true },
         { id: 'scrap',    name: '廃車・乗替', icon: '🚫', terminal: true, side: true },
-        { id: 'outsource',name: '外注',       icon: '🏭', terminal: true, side: true },
+        { id: 'outsource',name: '外注',       icon: '🤝', terminal: true, side: true },
       ],
     },
   ],
