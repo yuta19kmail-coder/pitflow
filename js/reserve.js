@@ -218,11 +218,12 @@ function _rmlRows(from, to){
       cardsOfDay.forEach(c => {
         const wt = state.workTypes.find(w => w.id === c.workType);
         const ac = wt ? wt.color : 'var(--brand)';
+        const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 左ライン＝国産緑/輸入ピンク（他ビューと統一）
         html += '<div class="rml-ev' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"'
-             + ' style="border-left-color:' + ac + '"'
+             + ' style="border-left-color:' + teamColor + '"'
              + ' onclick="openDetail(\'' + c.id + '\')"'
-             + ' title="' + (c.reserveTime || '') + ' ' + (c.customer || '') + '様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
-             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + (c.customer || '（未入力）') + (c.car ? ' ' + c.car : '')
+             + ' title="' + (c.reserveTime || '') + ' ' + (c.customer || '') + ' 様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
+             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + (c.customer || '（未入力）') + ' 様' + (c.car ? ' ' + c.car : '')
              + (wt ? '<span class="rml-wt" style="color:' + ac + '">' + wt.label + '</span>' : '')
              + (c.needLoaner ? '<span class="rml-wt">代車</span>' : '')
              + '</div>';
