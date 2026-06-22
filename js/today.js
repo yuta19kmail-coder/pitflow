@@ -347,7 +347,13 @@ function todayRow(c, isReturn, inBreak){
   if (c.needLoaner)           side += '<span class="tag-side loaner">代車</span>';
   if (isReturn && c.needWash) side += '<span class="tag-side wash">洗車</span>';   // 入庫に洗車は出さない
   const dropTag = dt ? '<span class="tag-drop tag-drop-' + dt.id + '" title="' + dt.desc + '">' + dt.label + '</span>' : '';
-  const workTag = wt ? '<span class="tag-work' + (wt.label.length >= 4 ? ' long' : '') + '" style="background:' + wt.color + '20;color:' + wt.color + ';border-color:' + wt.color + ';">' + wt.label + '</span>' : '';
+  // 作業バッジ＝基本＋併用を並べて表示（設定の色のまま）。c.workTypes（_syncWorkTypesで同期）優先・無ければc.workType。
+  const _wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
+  let workTag = '';
+  _wts.slice(0, 3).forEach(id => {
+    const w = state.workTypes.find(x => x.id === id);
+    if (w) workTag += '<span class="tag-work' + (w.label.length >= 4 ? ' long' : '') + '" style="background:' + w.color + '20;color:' + w.color + ';border-color:' + w.color + ';">' + w.label + '</span>';
+  });
   h += '<div class="tr-tags">'
      + '<div class="tr-tag-slot">' + side + '</div>'
      + '<div class="tr-tag-slot">' + dropTag + '</div>'
