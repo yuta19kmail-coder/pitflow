@@ -9,6 +9,13 @@
 (function () {
   function rid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function toMs(v) { if (v == null || v === '') return 0; var t = +new Date(v); return isNaN(t) ? 0 : t; }
+  // メーカー/車種の表記ゆれ対策：全角英数→半角、全角スペース→半角、前後空白を除去（ＭＩＮＩ→MINI 等）。
+  function normText(s) {
+    if (s == null) return s;
+    var t = String(s);
+    if (t.normalize) t = t.normalize('NFKC');   // 全角英数字・記号→半角
+    return t.replace(/　/g, ' ').replace(/\s+/g, ' ').trim();
+  }
 
   window.pitImportCustomersFromFile = function () {
     var inp = document.createElement('input');
@@ -31,6 +38,8 @@
             var veh = Object.assign({}, v);
             veh.id = 'v_bl_' + (v.mgtNo != null ? v.mgtNo : rid(''));
             veh.updatedAt = toMs(v.updatedAt) || Date.now();   // ISO文字列→ms（最終入庫の並べ替え用）
+            if (veh.maker != null) veh.maker = normText(veh.maker);   // ＭＩＮＩ→MINI 等の表記ゆれ統一
+            if (veh.car   != null) veh.car   = normText(veh.car);
             return veh;
           });
           var lastVisit = cust.vehicles.reduce(function (m, v) { return Math.max(m, v.updatedAt || 0); }, 0);

@@ -25,9 +25,9 @@
    ◎あくまで開発・動作確認用。名前/番号は顧客控えのものを使う。
    ======================================== */
 (function () {
-  // 日次の入庫ボリューム感（ゆうた提供の実数：平日3〜8・土日8〜13くらい）を、前後約2ヶ月の営業日に敷き詰める。
-  const PAST_DAYS = 56;     // 過去（実績）約2ヶ月
-  const FUTURE_DAYS = 56;   // 未来（予約）約2ヶ月
+  // 日次の入庫ボリューム感を前後約1ヶ月の営業日に敷き詰める（容量オーバー対策で2ヶ月→1ヶ月・台数も控えめに）。
+  const PAST_DAYS = 30;     // 過去（実績）約1ヶ月
+  const FUTURE_DAYS = 30;   // 未来（予約）約1ヶ月
 
   const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   const rnd = (a) => a[Math.floor(Math.random() * a.length)];
@@ -91,6 +91,7 @@
       inspSchedule:{ mode:'manual', slots:{}, cutBefore:'' }, coverCall:{ done:false, at:'', staff:'' },
       payment:'', handover:'store', handoffMemo:'',
       phaseAt: Date.now(), workTypes: [wt],
+      _sample: true,   // ★サンプル生成カード印＝カード開閉時に顧客控えへ書き戻さない（重複追加防止）
     };
     // 併用：車検/12点/一般 の一部にコーティング（3M/1Y）を追加＝バッジ2個
     if (['shaken','12pt','general'].indexOf(wt) >= 0 && Math.random() < 0.2){
@@ -118,11 +119,11 @@
     let pi = 0;
     const nextPair = () => { const p = pairs[pi % pairs.length]; pi++; return p; };
 
-    // 1日の入庫台数＝平日3〜8・土日8〜13（定休は0＝そもそも作らない）
+    // 1日の入庫台数＝平日2〜5・土日5〜9（容量対策で控えめ）。定休は0。
     function intakeCount(d){
       const dow = d.getDay();
-      if (dow === 0 || dow === 6) return 8 + Math.floor(Math.random() * 6);   // 土日 8〜13
-      return 3 + Math.floor(Math.random() * 6);                                // 平日 3〜8
+      if (dow === 0 || dow === 6) return 5 + Math.floor(Math.random() * 5);   // 土日 5〜9
+      return 2 + Math.floor(Math.random() * 4);                                // 平日 2〜5
     }
     // 預かり日数（営業日ベースではなく暦日・返車が定休に当たったら翌営業日へ）
     function holdDays(wt, dt){

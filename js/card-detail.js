@@ -50,9 +50,10 @@ function closeDetail(){
   const modal = document.getElementById('modal-detail');
   const modalOpen = modal && modal.classList.contains('show');
   if (!modalOpen && state.currentView !== 'card') return;   // 何も開いていなければ無視（ESC誤爆防止）
-  // 閉じる前に、このカードから顧客控えを更新（入力補助用）
+  // 閉じる前に、このカードから顧客控えを更新（入力補助用）。
+  // ★サンプル生成カード（_sample）は書き戻さない＝顧客控えが二重化するのを防ぐ。
   const _c = state.cards.find(x => x.id === _editingCardId);
-  if (_c && window.upsertCustomerFromCard) upsertCustomerFromCard(_c);
+  if (_c && !_c._sample && window.upsertCustomerFromCard) upsertCustomerFromCard(_c);
   _editingCardId = null;
   if (window.PitDB) PitDB.save();
   if (modalOpen){
