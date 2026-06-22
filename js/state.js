@@ -281,12 +281,25 @@ function pitGenResNo(){
 }
 window.pitGenResNo = pitGenResNo;
 
-/* 苗字だけ取り出す（カード等の省スペース表示用。フルネーム「姓 名」の先頭トークン＝姓）。
-   ※予約詳細・ホバー情報カードなどフル情報の場所は c.customer（フル）をそのまま使う。 */
+/* カード用の短い表示名（省スペース用）。
+   ・個人 … フルネーム「姓 名」の先頭トークン＝姓だけ。
+   ・法人 … 苗字分割せず会社名をそのまま。ただし長い会社表記をカード用に略記
+            （株式会社→㈱／有限会社→㈲／合同会社→(同)。各表記ゆれも寄せる）。例：小林モータース株式会社→小林モータース㈱
+   ※略記は「表示の時だけ」＝保存・検索は正式名(c.customer)のまま。予約詳細・ホバー情報はフル表示。 */
 function pitSurname(name){
-  return String(name == null ? '' : name).trim().split(/\s+/)[0] || '';
+  var s = String(name == null ? '' : name).trim();
+  if (!s) return '';
+  var t = s
+    .replace(/株式会社|（株）|\(株\)/g, '㈱')
+    .replace(/有限会社|（有）|\(有\)/g, '㈲')
+    .replace(/合同会社|（同）|\(同\)/g, '(同)');
+  // 法人マーカー（略記後の㈱/㈲/(同) や 会社/組合/法人）があれば、会社名フル（略記済み）を返す
+  if (/[㈱㈲]|\(同\)|会社|組合|法人/.test(t)) return t.replace(/\s+/g, ' ').trim();
+  // 個人＝苗字だけ
+  return t.split(/\s+/)[0] || t;
 }
 window.pitSurname = pitSurname;
+window.pitCardName = pitSurname;   // 別名（カード表示名の意味で使う用）
 
 /* 起動時：予約番号が無い既存カードに後から採番（入庫日→id順で安定）。1回で全カードに付く。 */
 function pitBackfillResNo(){
