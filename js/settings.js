@@ -115,11 +115,12 @@
     /* ===== 作業タイプ（増減できる・v0.27.0） ===== */
     h += '<div class="ps-card">';
     h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🔧 作業タイプ（メニュー）<button class="vh-btn" style="margin-left:auto" onclick="pitWtAdd()">＋ タイプを追加</button></div>';
-    h += '<div class="ps-desc">入庫カードの「作業タイプ」に出る選択肢。名前・色を変更でき、追加・削除も可能（削除しても過去カードのデータは消えません）。</div>';
+    h += '<div class="ps-desc">入庫カードの「作業タイプ」に出る選択肢。名前・色を変更でき、追加・削除も可能（削除しても過去カードのデータは消えません）。<br><b>「併用可」</b>にチェックすると、その作業は<b>他の作業を選んでいても“追加で”選べます</b>（例：車検＋3M）。コーティング等のセット作業向け。</div>';
     (state.workTypes || []).forEach(function (w, i) {
       h += '<div class="ps-wt-row">'
          + '<input type="color" class="ps-wt-color" value="' + esc(w.color || '#64748b') + '" onchange="pitWtEdit(' + i + ',\'color\',this.value)">'
          + '<input type="text" class="ps-in" style="width:170px" value="' + esc(w.label) + '" onchange="pitWtEdit(' + i + ',\'label\',this.value)">'
+         + '<label class="ps-wt-combo" title="ONにすると他の作業を選んでいても追加で選べます（例：車検＋3M）"><input type="checkbox" ' + (w.combinable ? 'checked' : '') + ' onchange="pitWtToggleCombo(' + i + ')"> 併用可</label>'
          + '<button class="rl-del" title="削除" onclick="pitWtDel(' + i + ')">🗑</button>'
          + '</div>';
     });
@@ -303,6 +304,13 @@
     if (!w) return;
     if (!confirm('作業タイプ「' + w.label + '」を削除しますか？\n（過去のカードのデータは消えません。選択肢から消えるだけです）')) return;
     state.workTypes.splice(i, 1);
+    _wtSave();
+  };
+  /* 併用可（重複チェックOK）＝他の作業を選んでいても追加で選べる作業（例：3M/1Y コーティング） */
+  window.pitWtToggleCombo = function (i) {
+    const w = state.workTypes[i];
+    if (!w) return;
+    w.combinable = !w.combinable;
     _wtSave();
   };
 

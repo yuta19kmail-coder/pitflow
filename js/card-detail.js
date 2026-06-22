@@ -144,7 +144,7 @@ function renderCardForm(c){
   h += sec('予約内容', '🗒️');
   /* 1行目：作業タイプ（広め）＋ 課 */
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:3"><div class="cf-label">作業タイプ</div>' + chips(c, 'workType', state.workTypes, true) + '</div>';
+  h += '<div class="cf-field" style="flex:3"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
   h += field('課', chips(c, 'division', state.divisions, true));
   h += '</div>';
   /* 2行目：受付タイプ（待/当/預）の右隣に「相談」を□っぽい別ボタンで配置（区切り線で違いを演出）＋担当を1行に詰める */
@@ -667,6 +667,37 @@ function chips(c, key, items, allowNone){
   return h;
 }
 
+/* 作業タイプのチップ＝基本（単一選択＝c.workType）＋ 併用可タイプ（追加トグル＝c.workAddons[]）。
+   設定で「併用可」にした作業（例：3M/1Y）は、基本の作業を選んでいても重ねて選べる。 */
+function _wtChipBtn(it, active){
+  let style = '';
+  if (active && it.color) style = 'style="background:' + it.color + ';color:#fff;border-color:' + it.color + ';"';
+  else if (it.color)      style = 'style="border-color:' + it.color + ';color:' + it.color + ';"';
+  return '<button type="button" class="cf-chip' + (active ? ' active' : '') + '" data-val="' + it.id + '" ' + style + '>' + it.label + '</button>';
+}
+function workTypeChips(c){
+  const all = state.workTypes || [];
+  const base  = all.filter(w => !w.combinable);
+  const combo = all.filter(w => w.combinable);
+  const adds = Array.isArray(c.workAddons) ? c.workAddons : [];
+  let h = '<div class="cf-chips" data-key="workType">';
+  base.forEach(it => { h += _wtChipBtn(it, c.workType === it.id); });
+  h += '</div>';
+  if (combo.length){
+    h += '<div class="cf-chips cf-wt-combo" data-key="workAddons" data-combo="1"><span class="cf-combo-lab">＋併用</span>';
+    combo.forEach(it => { h += _wtChipBtn(it, adds.indexOf(it.id) >= 0); });
+    h += '</div>';
+  }
+  return h;
+}
+/* 表示用 c.workTypes（基本＋併用の順）を同期。週/当日/PITカードの作業バッジはこれを見る。 */
+function _syncWorkTypes(c){
+  const ids = [];
+  if (c.workType) ids.push(c.workType);
+  (Array.isArray(c.workAddons) ? c.workAddons : []).forEach(a => { if (a && ids.indexOf(a) < 0) ids.push(a); });
+  c.workTypes = ids;
+}
+
 function toggle(c, key, onLabel, offLabel){
   const on = !!c[key];
   return '<div class="cf-toggle" data-key="' + key + '">' +
@@ -1100,7 +1131,7 @@ function bindCardFormEvents(root){
   }
 
   // チップ（単一選択）
-  root.querySelectorAll('.cf-chips:not([data-multi])').forEach(group => {
+  root.querySelectorAll('.cf-chips:not([data-multi]):not([data-combo])').forEach(group => {
     const key = group.dataset.key;
     group.querySelectorAll('.cf-chip').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1122,7 +1153,24 @@ function bindCardFormEvents(root){
           // 作業タイプ未選択のうちは概算 預かり日数は空欄（選んだら自動で入る）
           if (window.pitEstHold)   c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType) : '';
           if (window.pitEstAmount && key === 'workType' && c.workType) c.estAmount = pitEstAmount(c.workType);
+          if (key === 'workType') _syncWorkTypes(c);   // 表示用バッジ列を同期（基本＋併用）
         }
+        renderCardForm(c);
+      });
+    });
+  });
+
+  // 作業タイプの「併用可」チップ（追加トグル＝c.workAddons[]）
+  root.querySelectorAll('.cf-chips[data-combo]').forEach(group => {
+    const key = group.dataset.key;   // workAddons
+    if (!Array.isArray(c[key])) c[key] = [];
+    group.querySelectorAll('.cf-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.val;
+        const idx = c[key].indexOf(v);
+        if (idx >= 0) c[key].splice(idx, 1);
+        else c[key].push(v);
+        _syncWorkTypes(c);
         renderCardForm(c);
       });
     });

@@ -879,6 +879,13 @@ th.cfs-lg-d{ z-index:3; }
 .ps-wt-row{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed var(--border); }
 .ps-wt-row:last-child{ border-bottom:0; }
 .ps-wt-color{ width:34px; height:26px; border:1px solid var(--border); border-radius:6px; background:var(--bg3); cursor:pointer; padding:1px; }
+/* 作業タイプ設定の「併用可」チェック */
+.ps-wt-combo{ margin-left:auto; display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text2); white-space:nowrap; cursor:pointer; }
+.ps-wt-combo input{ width:15px; height:15px; cursor:pointer; }
+.ps-wt-row .rl-del{ margin-left:0; }
+/* 入庫カード：作業タイプの「＋併用」チップ群（基本チップの下に少し離して） */
+.cf-wt-combo{ margin-top:6px; align-items:center; }
+.cf-combo-lab{ font-size:11px; font-weight:700; color:var(--text3); margin-right:2px; align-self:center; }
 
 /* ===== 📅 予約・月ビュー＝日付リスト型（v0.26.0） ===== */
 .reserve-month.rml-host{ display:block; background:transparent; border:0; border-radius:0; overflow:visible; }

@@ -55,6 +55,13 @@
             // 作業タイプは設定で増減できる＝保存があれば実行リストを上書き
             if (Array.isArray(state.settings.workTypes) && state.settings.workTypes.length) {
               state.workTypes = state.settings.workTypes;
+              // 併用可フラグの初回補完：1Y/3M（コーティング）で未設定なら true（ユーザーが切り替えた値は尊重）
+              state.workTypes.forEach(function (w) {
+                if (w && (w.id === 'coat1y' || w.id === 'coat3m') && w.combinable === undefined) {
+                  w.combinable = true; migrated = true;
+                }
+              });
+              if (migrated) state.settings.workTypes = state.workTypes;
             }
             // 外注先：未設定 or 旧プレースホルダなら実名リストへ自動移行（v0.79.1）
             var OS_DEF = ['畑中板金','藤島板金','カーメイク','ブレス','タイヤマン','カーフラッシュ','野村自動車','各ディーラー','その他'];
