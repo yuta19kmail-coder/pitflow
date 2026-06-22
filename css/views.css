@@ -629,8 +629,10 @@
 .tr-plate{ font-size:12px; color:var(--text2); margin-top:1px; }
 
 /* 右タグ：固定3スロットで全幅揃え（添え物｜受付タイプ｜作業タイプ）。中身は各スロット幅いっぱい */
-.tr-tags{ display:grid; grid-template-columns:64px 30px minmax(78px,auto); gap:6px; align-items:center; justify-content:end; }
-.tr-tags .tr-tag-slot:last-child{ flex-wrap:wrap; row-gap:3px; }
+.tr-tags{ display:grid; grid-template-columns:64px 30px 78px; gap:6px; align-items:center; justify-content:end; }
+/* 作業バッジ2個（併用）＝1個ぶん幅(78px)の中に横並び。余白・文字を詰めて2段積みにしない。 */
+.tr-tag-work.multi{ flex-wrap:nowrap; gap:2px; overflow:hidden; }
+.tr-tag-work.multi .tag-work{ font-size:10px; padding:1px 4px; flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tr-tag-slot{ display:flex; gap:3px; align-items:center; justify-content:flex-end; min-width:0; }
 .tag-drop{
   width:100%; height:26px; border-radius:5px;
