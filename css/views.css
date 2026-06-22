@@ -698,14 +698,14 @@
   padding:10px 0;
 }
 
-/* ===== 試運転サブゾーン（各フェーズ列の下段・点線区切り） ===== */
-.kanban-td{ flex:0 0 auto; margin:2px 8px 8px; border:1.5px dashed var(--border2); border-radius:8px; background:rgba(255,255,255,.015); padding:5px 6px 6px; }
-.kanban-td.has{ border-color:var(--orange); background:rgba(245,158,11,.06); }
-.kanban-td-h{ font-size:10.5px; font-weight:800; color:var(--text3); letter-spacing:.03em; margin-bottom:5px; }
-.kanban-td.has .kanban-td-h{ color:var(--orange); }
-.kanban-td-body{ display:flex; flex-direction:column; gap:8px; min-height:28px; }
-.kanban-td-empty{ font-size:10.5px; color:var(--text3); text-align:center; padding:5px 0; opacity:.6; }
-.kanban-td.dnd-over{ border-color:var(--green); border-style:solid; background:rgba(29,185,122,.12); }
+/* ===== 試運転を「選ぶ」2枠（各フェーズ列の下段・通常/試運転） ===== */
+.kanban-td2{ flex:0 0 auto; margin:2px 8px 8px; display:flex; flex-direction:column; gap:6px; }
+.kanban-td2-box{ border:1.5px dashed var(--border2); border-radius:8px; padding:5px 6px; min-height:40px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
+.kanban-td2-ph{ font-size:10.5px; color:var(--text3); text-align:center; opacity:.6; font-weight:700; letter-spacing:.02em; }
+.kanban-td2-lb{ font-size:10.5px; font-weight:800; color:var(--text3); letter-spacing:.03em; }
+.kanban-td2-test.has{ border-color:var(--orange); background:rgba(245,158,11,.09); }
+.kanban-td2-test.has .kanban-td2-lb{ color:var(--orange); }
+.kanban-td2-box.dnd-over{ border-style:solid; border-color:var(--green); background:rgba(29,185,122,.12); }
 
 /* ===== side列（廃車・外注）の縦積み ===== */
 .kanban-side-stack{ display:flex; flex-direction:column; gap:8px; flex:0 0 200px; margin-left:8px; align-self:stretch; }

@@ -42,12 +42,14 @@ function _renderKanban(board, cols){
       html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
       html += main.length ? main.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-empty">なし</div>';
       html += '</div>';
-      // 試運転サブゾーン（同フェーズの下段＝この車は「点検待ち かつ 試運転」等を表す）
-      html += '<div class="kanban-td' + (td.length ? ' has' : '') + '" data-drop="testdrive" data-drop-val="' + col.id + '">';
-      html += '<div class="kanban-td-h">🚗 試運転</div>';
-      html += '<div class="kanban-td-body">';
-      html += td.length ? td.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-td-empty">ここにドラッグ</div>';
-      html += '</div></div>';
+      // 試運転を「選ぶ」2枠（上＝通常/無タイトル・下＝🚗試運転）。どちらに落とすかで試運転の要否が直感的に分かる
+      html += '<div class="kanban-td2">';
+      html += '<div class="kanban-td2-box kanban-td2-normal" data-drop="status" data-drop-val="' + col.id + '"><div class="kanban-td2-ph">ここにドラッグ</div></div>';
+      html += '<div class="kanban-td2-box kanban-td2-test' + (td.length ? ' has' : '') + '" data-drop="testdrive" data-drop-val="' + col.id + '">';
+      html += '<div class="kanban-td2-lb">🚗 試運転</div>';
+      html += td.length ? td.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-td2-ph">ここにドラッグ</div>';
+      html += '</div>';
+      html += '</div>';
     } else {
       html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
       html += inCol.length ? inCol.map(c => cardHtml(c, { kanban: !col.side, compact:true })).join('') : '<div class="kanban-empty">なし</div>';
