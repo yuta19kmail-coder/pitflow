@@ -126,6 +126,13 @@
     });
     h += '</div>';
 
+    /* ===== 🧪 開発用サンプル（予約の作り直し） ===== */
+    h += '<div class="ps-card">';
+    h += '<div class="ps-h">🧪 開発用サンプル</div>';
+    h += '<div class="ps-desc">今のサンプル予約（カード）を全部消して、<b>今の顧客データから</b>直近の入庫実績っぽいサンプルを作り直します。残った車は預かり中ボードに散らします。<br>※開発・動作確認用。実データ運用前の見栄え確認に。</div>';
+    h += '<button class="vh-btn" onclick="if(window.seedSampleReservations)seedSampleReservations()">🔄 予約サンプルを作り直す（顧客データから）</button>';
+    h += '</div>';
+
     /* ===== 概算預かり日数の初期値 ===== */
     h += '<div class="ps-card">';
     h += '<div class="ps-h">⏳ 概算預かり日数の初期値（作業タイプ別）</div>';
