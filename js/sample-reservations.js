@@ -25,7 +25,9 @@
    ◎あくまで開発・動作確認用。名前/番号は顧客控えのものを使う。
    ======================================== */
 (function () {
-  const DAILY = [[6,1],[14,10],[8,12],[7,3],[2,5],[9,2],[5,2],[11,11],[12,10],[6,4],[3,2]]; // 古→新（最後＝今日）
+  // 日次の入庫ボリューム感（ゆうた提供の実数：平日3〜8・土日8〜13くらい）を、前後約2ヶ月の営業日に敷き詰める。
+  const PAST_DAYS = 56;     // 過去（実績）約2ヶ月
+  const FUTURE_DAYS = 56;   // 未来（予約）約2ヶ月
 
   const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   const rnd = (a) => a[Math.floor(Math.random() * a.length)];
@@ -105,103 +107,107 @@
       alert('先に顧客データが必要です（顧客ビューでサンプル投入 or 実データを入れてから実行してください）。');
       return;
     }
-    if (!opts.silent && !confirm('今のサンプル予約（カード）を全部消して、顧客データから新しいサンプルを作り直します。\nよろしいですか？')) return;
+    if (!opts.silent && !confirm('今のサンプル予約（カード）を全部消して、顧客データから\n前後約2ヶ月ぶんのサンプル（過去＝実績／未来＝予約／今＝預かり中）を敷き詰めます。\nよろしいですか？')) return;
 
-    // 営業日（定休を飛ばす）で今日から遡ってN日分。dates[0]=最古 / 末尾=今日
     const closed = Array.isArray(state.settings.closedDow) ? state.settings.closedDow : [];
-    const N = DAILY.length;
-    const dates = [];
-    let cur = new Date(); cur.setHours(0,0,0,0);
-    let guard = 0;
-    while (dates.length < N && guard++ < 400){
-      if (closed.indexOf(cur.getDay()) < 0) dates.unshift(ymd(new Date(cur)));
-      cur.setDate(cur.getDate() - 1);
-    }
+    const isClosed = (d) => closed.indexOf(d.getDay()) >= 0;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayMs = today.getTime();
 
     const pairs = buildPairs();
     let pi = 0;
     const nextPair = () => { const p = pairs[pi % pairs.length]; pi++; return p; };
 
+    // 1日の入庫台数＝平日3〜8・土日8〜13（定休は0＝そもそも作らない）
+    function intakeCount(d){
+      const dow = d.getDay();
+      if (dow === 0 || dow === 6) return 8 + Math.floor(Math.random() * 6);   // 土日 8〜13
+      return 3 + Math.floor(Math.random() * 6);                                // 平日 3〜8
+    }
+    // 預かり日数（営業日ベースではなく暦日・返車が定休に当たったら翌営業日へ）
+    function holdDays(wt, dt){
+      if (dt === 'wait') return 0;
+      if (dt === 'sameDay') return (Math.random() < 0.5) ? 0 : 1;
+      const base = { oil:1, '12pt':1, general:2, shaken:3, bp:6, coat3m:2, coat1y:2 }[wt] || 2;
+      return base + Math.floor(Math.random() * 3);   // +0〜2
+    }
+    function addDaysSkipClosed(d, n){
+      const x = new Date(d); x.setDate(x.getDate() + n);
+      let g = 0; while (isClosed(x) && g++ < 14) x.setDate(x.getDate() + 1);
+      return x;
+    }
+
+    const bays = (state.bays || []).map(b => b.id);
     const cards = [];
-    const pool = [];   // 入庫済み・未返車（＝預かり中の候補）
 
-    for (let i = 0; i < N; i++){
-      const date = dates[i];
-      const nin = DAILY[i][0], nout = DAILY[i][1];
-      const isToday = (i === N - 1);
-
-      // ── 入庫 ──
-      for (let j = 0; j < nin; j++){
+    for (let off = -PAST_DAYS; off <= FUTURE_DAYS; off++){
+      const day = new Date(todayMs + off * 86400000);
+      if (isClosed(day)) continue;
+      const dStr = ymd(day);
+      const n = intakeCount(day);
+      for (let j = 0; j < n; j++){
         const wt = rnd(WORK_WEIGHT);
-        if (isToday){
-          // 今日これから入庫＝予約（当日ビュー/予約当日に出る）
-          const dt = rnd(['wait','wait','sameDay','drop']);
-          const c = makeCard(nextPair(), date, wt, dt, 'reserved');
-          c.returnTbd = true;
-          if (Math.random() < 0.25) c.consult = true;
-          cards.push(c);
-        } else {
-          const dt = rnd(['drop','drop','drop','sameDay','wait']);
-          const c = makeCard(nextPair(), date, wt, dt, 'check');   // 仮フェーズ。残ればあとで散らす
-          c.phaseAt = new Date(date + 'T09:00:00').getTime();
-          cards.push(c); pool.push(c);
-        }
-      }
+        const dt = rnd(['drop','drop','drop','sameDay','wait']);
+        const c = makeCard(nextPair(), dStr, wt, dt, 'reserved');
+        const retObj = addDaysSkipClosed(day, holdDays(wt, dt));
+        const retStr = ymd(retObj);
+        const retMs = retObj.getTime();
+        const dayMs = day.getTime();
 
-      // ── 返車 ── プールの古い順から
-      for (let k = 0; k < nout; k++){
-        if (!pool.length) break;
-        const c = pool.shift();
-        c.returnDate = date;
-        c.returnTime = rndTime();
-        if (isToday){
-          // 本日返車予定＝まだ返してない（作業完了・洗車待ち）
-          c.status = 'workDone';
-          if (Math.random() < 0.5) c.needWash = true;
+        if (dayMs > todayMs){
+          // ── 未来＝これからの予約（予約 週/月ビューを埋める）──
+          c.status = 'reserved'; c.returnDate = retStr; c.returnTbd = false;
+        } else if (retMs < todayMs){
+          // ── 過去に返車済み＝実績（確定売上）──
+          c.status = 'returned'; c.returnDate = retStr; c.returnTime = rndTime();
+          c.completedAt = retStr; c.returnDateFinal = retStr;
+          c.amountQuote = c.amountOrder = c.amountFinal = c.estAmount;
+        } else if (dayMs === todayMs){
+          // ── 今日の入庫＝これから（当日ビュー/予約当日）──
+          c.status = 'reserved';
+          if (retStr === dStr){ c.returnDate = ''; c.returnTbd = true; }
+          else { c.returnDate = retStr; }
+          if (Math.random() < 0.25) c.consult = true;
         } else {
-          // 過去＝実績（確定売上を固める）
-          c.status = 'returned';
-          c.completedAt = date;
-          c.amountQuote = c.estAmount;
-          c.amountOrder = c.estAmount;
-          c.amountFinal = c.estAmount;
-          c.returnDateFinal = date;
+          // ── 入庫済み・まだ預かり中（reserveDate < 今日 <= returnDate）──
+          c.returnDate = retStr;
+          if (retMs === todayMs){
+            c.status = 'workDone'; if (Math.random() < 0.5) c.needWash = true;   // 本日返車予定
+          } else {
+            const span = Math.max(1, Math.round((retMs - dayMs) / 86400000));
+            const prog = (todayMs - dayMs) / (span * 86400000);
+            const ph = prog < 0.2 ? 'check' : prog < 0.4 ? 'estim' : prog < 0.6 ? 'contact' : prog < 0.8 ? 'parts' : 'work';
+            c.status = ph;
+            c.phaseAt = todayMs - Math.floor(Math.random() * 2) * 86400000;
+            if (ph === 'contact') c.amountQuote = c.estAmount;
+            if (ph === 'parts'){ c.amountQuote = c.estAmount; c.amountOrder = c.estAmount; }
+            if (bays.length && (ph === 'work' || ph === 'parts' || Math.random() < 0.4)) c.bayId = bays[cards.length % bays.length];
+            if (Math.random() < 0.12) c.testDrive = true;
+          }
         }
+
+        // 代車（drop＋車検/板金は多め）。返車済みは返却日まで
+        if (dt === 'drop' && (wt === 'shaken' || wt === 'bp' || Math.random() < 0.4)){
+          c.needLoaner = true;
+          c.loanerId = 'L' + String((cards.length % 14) + 1).padStart(2, '0');
+          c.loanerFrom = c.reserveDate;
+          c.loanerTo = (c.status === 'returned') ? c.returnDate : '';
+        }
+        // ちょい足し
+        if (Math.random() < 0.10) c.consult = true;
+        if (Math.random() < 0.05) c.codeRed = true;
+        if (Math.random() < 0.05 && c.status !== 'returned' && c.status !== 'reserved') c.urgent = true;
+
+        cards.push(c);
       }
     }
 
-    // ── 残り（まだ返ってない）＝預かり中ボードへ散らす ──
-    const bays = (state.bays || []).map(b => b.id);
+    // 外注を数台（今の預かり中フェーズから）
     const partners = Array.isArray(state.settings.outsourcePartners) ? state.settings.outsourcePartners : [];
-    pool.forEach((c, idx) => {
-      const ph = PHASES[idx % PHASES.length];
-      c.status = ph;
-      c.returnTbd = true; c.returnDate = '';
-      // 経過日数（このフェーズ何日目）がそれっぽく出るよう散らす
-      c.phaseAt = Date.now() - (1 + (idx % 6)) * 86400000;
-      // 作業系はPIT枠を割当
-      if (bays.length && (ph === 'work' || ph === 'parts' || idx % 3 === 0)){
-        c.bayId = bays[idx % bays.length];
-      }
-      // 半分くらい代車
-      if (Math.random() < 0.5){
-        c.needLoaner = true;
-        c.loanerId = 'L' + String((idx % 14) + 1).padStart(2, '0');
-        c.loanerFrom = c.reserveDate; c.loanerTo = '';
-      }
-      // ちょい足し：相談 / マルエフ / 緊急 / 試運転
-      if (Math.random() < 0.15) c.consult = true;
-      if (Math.random() < 0.08) c.codeRed = true;
-      if (Math.random() < 0.10) c.urgent = true;
-      if (Math.random() < 0.12) c.testDrive = true;
-      // 金額チェーンの途中（連絡中＝見積もり済 / パーツ待ち＝受注済）
-      if (ph === 'contact') c.amountQuote = c.estAmount;
-      if (ph === 'parts'){ c.amountQuote = c.estAmount; c.amountOrder = c.estAmount; }
-    });
-    // 外注を1〜2台（プール末尾から）
     if (partners.length){
-      pool.slice(-2).forEach((c, i) => {
-        c.status = 'outsource'; c.bayId = null; c.needLoaner = c.needLoaner;
+      const inshop = shuffle(cards.filter(c => PHASES.indexOf(c.status) >= 0));
+      inshop.slice(0, 3).forEach((c, i) => {
+        c.status = 'outsource'; c.bayId = null;
         c.outsourceTo = rnd(partners);
         c.phaseAt = Date.now() - (i + 1) * 86400000;
       });
@@ -215,9 +221,10 @@
 
     state.cards = cards;
     if (window.PitDB) PitDB.save(true);
-    console.log('[sample-reservations] 作り直し完了：カード ' + cards.length + ' 枚（入庫合計 '
-      + DAILY.reduce((s,d)=>s+d[0],0) + ' / 返車合計 ' + DAILY.reduce((s,d)=>s+d[1],0) + '）');
-    alert('サンプル予約を作り直しました（カード ' + cards.length + ' 枚）。画面を更新します。');
+    const nReserved = cards.filter(c => c.status === 'reserved').length;
+    const nReturned = cards.filter(c => c.status === 'returned').length;
+    console.log('[sample-reservations] 作り直し完了：カード ' + cards.length + ' 枚（予約 ' + nReserved + ' / 実績 ' + nReturned + '）');
+    alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。画面を更新します。');
     location.reload();
   };
 })();
