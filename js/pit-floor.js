@@ -547,38 +547,32 @@
   // opts = { cardsByBay:{bayId:[card,...]}, stage:HTMLElement(幅計測用), cell:固定セル, minCell }
   // フルカードの中身（2行・各バッジ＋ホバー詳細）。通常スロット(フル)と拡大カードで共用。
   function cardBody(c) {
-    var at = (window.escAttr ? escAttr : esc);
+    // ※古い title（代車期限・預かり日数・担当 等のネイティブtooltip）は撤去。情報はホバー情報カード(card-hover.js)で出す。
     var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
     var wt = (wts.length && window.state && Array.isArray(state.workTypes)) ? state.workTypes.find(function (w) { return w.id === wts[0]; }) : null;
-    var wtTitle = window.holdDaysLabel ? holdDaysLabel(c, wt ? wt.label : '') : '';   // ホバー＝預かり 6/10〜（〇日目）
-    var wtBadge = wt ? '<span class="pfv-wt" title="' + at(wtTitle) + '" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
+    var wtBadge = wt ? '<span class="pfv-wt" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
     var DROPC = { wait: '#f59e0b', sameDay: '#3b82f6' };
     var dt = (window.state && Array.isArray(state.dropTypes)) ? state.dropTypes.find(function (d) { return d.id === c.dropType; }) : null;
-    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" title="' + at(dt.desc || '') + '" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
+    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
     var staff = c.frontStaff || c.staff || '';
-    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner" title="' + at(window.loanerDueLabel ? loanerDueLabel(c) : '代車') + '">代車</span>' : '';   // ホバー＝代車期限 〜7/4（あと〇日）
+    var loanerBadge = c.needLoaner ? '<span class="pfv-loaner">代車</span>' : '';
     var staffNm = (window.pitSurname ? pitSurname(staff) : staff);
     var custNm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
-    var staffBadge = staff ? '<span class="pfv-staff" title="担当 ' + at(staff) + '">' + esc(staffNm) + '</span>' : '';
-    return '<span class="pfv-r"><b class="pfv-cn" title="' + at((c.customer || '') + ' 様') + '">' + esc(custNm) + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
-      + '<span class="pfv-r"><b class="pfv-cc" title="' + at(c.car || '') + '">' + esc(c.car || '') + '</b>' + staffBadge + '</span>';
+    var staffBadge = staff ? '<span class="pfv-staff">' + esc(staffNm) + '</span>' : '';
+    return '<span class="pfv-r"><b class="pfv-cn">' + esc(custNm) + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
+      + '<span class="pfv-r"><b class="pfv-cc">' + esc(c.car || '') + '</b>' + staffBadge + '</span>';
   }
   function slotCard(c, m, dropVal) {
     var team = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
-    var at = (window.escAttr ? escAttr : esc);
     var fs = Math.max(7, Math.min(slotMaxFont, Math.floor((m.cardH - 4) / 2.4)));
     // 基準より小さい(=PiPで縮小)／2行が入らない → 車種だけの簡易表示（フォントは確保）
     var reduced = (slotZoom && fs < slotMaxFont) || ((m.cardH - 4) < fs * 2.4);
-    var clickJs = slotZoom ? ('if(window.PitCardZoom)PitCardZoom.open(\'' + c.id + '\',this)') : ('if(window.openDetail)openDetail(\'' + c.id + '\')');
+    // クリックは常に予約詳細を開く（1クリック拡大→もう1クリックで詳細、の旧挙動は廃止。情報はホバー情報カードで）
+    var clickJs = 'if(window.openDetail)openDetail(\'' + c.id + '\')';
     var common = 'draggable="true" data-card-id="' + c.id + '" data-drop="baycell" data-drop-val="' + dropVal + '" onclick="' + clickJs + '"';
     if (reduced) {
       var carFont = Math.min(slotMaxFont, Math.max(8, Math.floor((m.cardH - 2) / 1.35)));   // 1行なので文字を確保
-      var staff = c.frontStaff || c.staff || '';
-      var wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
-      var wt = (wts.length && window.state && Array.isArray(state.workTypes)) ? state.workTypes.find(function (w) { return w.id === wts[0]; }) : null;
-      var ft = (c.customer || '') + ' 様' + (c.car ? '　／　' + c.car : '') + (wt ? '　／　' + wt.label : '')
-        + (c.needLoaner && window.loanerDueLabel ? '　／　' + loanerDueLabel(c) : '') + (staff ? '　／　担当 ' + staff : '');
-      return '<span class="pfv-card pfv-1line" ' + common + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + ';font-size:' + carFont + 'px" title="' + at(ft) + '">'
+      return '<span class="pfv-card pfv-1line" ' + common + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + ';font-size:' + carFont + 'px">'
         + '<b class="pfv-cc">' + esc(c.car || '（車種未入力）') + '</b></span>';
     }
     return '<span class="pfv-card" ' + common + ' style="width:' + m.cardW + 'px;height:' + m.cardH + 'px;border-left-color:' + team + ';font-size:' + fs + 'px">'

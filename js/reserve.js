@@ -368,21 +368,21 @@ function cardHtml(c, opts){
       var _lrem = (window.loanerRem ? loanerRem(c) : null);
       var _lk = (window.loanerLevel ? loanerLevel(_lrem) : {key:'amber'}).key;
       var _LC = { green:'#1db97a', amber:'#f59e0b', red:'#ef4444', none:'#9fa8c7' };
-      var _ttl = at(window.loanerDueLabel ? loanerDueLabel(c) : '代車');
+      // ※古い title（代車期限・入庫区分・預かり日数）は撤去＝情報はホバー情報カード(card-hover.js)に集約
       if (_lk==='dead'){
-        top += '<span class="pcm-loaner pcm-dead" title="' + _ttl + '">代車</span>';
+        top += '<span class="pcm-loaner pcm-dead">代車</span>';
       } else {
         var _lc = _LC[_lk] || '#f59e0b';
-        top += '<span class="pcm-loaner" style="background:'+_lc+'22;color:'+_lc+';border-color:'+_lc+'66;" title="' + _ttl + '">代車</span>';
+        top += '<span class="pcm-loaner" style="background:'+_lc+'22;color:'+_lc+';border-color:'+_lc+'66;">代車</span>';
       }
     }
     if (dt && (dt.id === 'wait' || dt.id === 'sameDay')){
       const dc = DROP_COLOR[dt.id] || 'var(--text2)';
-      top += '<span class="pcm-drop" title="' + at(dt.desc || '入庫区分') + '" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + dt.label + '</span>';
+      top += '<span class="pcm-drop" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + dt.label + '</span>';
     }
     wts.slice(0, 2).forEach(function(id){
       const w = state.workTypes.find(x => x.id === id);
-      if (w) top += '<span class="pcm-wt" title="' + at(window.holdDaysLabel ? holdDaysLabel(c, w.label) : w.label) + '" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
+      if (w) top += '<span class="pcm-wt" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
     });
     const staff = c.frontStaff || c.staff || '';
     const placed = !!(opts.kanban && c.bayId && window.PitPip && PitPip.isOpen());   // PITボード(PiP)が開いている時だけグレーアウト（閉じてる時は普通表示）
