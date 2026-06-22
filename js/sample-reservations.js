@@ -25,9 +25,9 @@
    ◎あくまで開発・動作確認用。名前/番号は顧客控えのものを使う。
    ======================================== */
 (function () {
-  // 日次の入庫ボリューム感を前後約1ヶ月の営業日に敷き詰める（容量オーバー対策で2ヶ月→1ヶ月・台数も控えめに）。
-  const PAST_DAYS = 30;     // 過去（実績）約1ヶ月
-  const FUTURE_DAYS = 30;   // 未来（予約）約1ヶ月
+  // 日次の入庫ボリューム感を前後約2ヶ月の営業日に敷き詰める（サンプルは保存しないので容量を気にせず多めでOK）。
+  const PAST_DAYS = 60;     // 過去（実績）約2ヶ月
+  const FUTURE_DAYS = 60;   // 未来（予約）約2ヶ月
 
   const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   const rnd = (a) => a[Math.floor(Math.random() * a.length)];
@@ -119,11 +119,11 @@
     let pi = 0;
     const nextPair = () => { const p = pairs[pi % pairs.length]; pi++; return p; };
 
-    // 1日の入庫台数＝平日2〜5・土日5〜9（容量対策で控えめ）。定休は0。
+    // 1日の入庫台数＝平日3〜8・土日9〜14（ゆうたの実数感：土日が多い）。定休は0。
     function intakeCount(d){
       const dow = d.getDay();
-      if (dow === 0 || dow === 6) return 5 + Math.floor(Math.random() * 5);   // 土日 5〜9
-      return 2 + Math.floor(Math.random() * 4);                                // 平日 2〜5
+      if (dow === 0 || dow === 6) return 9 + Math.floor(Math.random() * 6);   // 土日 9〜14
+      return 3 + Math.floor(Math.random() * 6);                                // 平日 3〜8
     }
     // 預かり日数（営業日ベースではなく暦日・返車が定休に当たったら翌営業日へ）
     function holdDays(wt, dt){
@@ -231,7 +231,7 @@
     if (ok === false){
       alert('カードは作りましたが保存に失敗しました（容量オーバーの可能性）。\n台数を減らして再実行してください。');
     } else {
-      alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約1ヶ月）。\n※サンプルは容量節約のため保存しません＝リロードすると消えます。見たい時にまたこのボタンを押してください。\n顧客控えはそのまま保持しています。');
+      alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。\n※サンプルは容量節約のため保存しません＝リロードすると消えます。見たい時にまたこのボタンを押してください。\n顧客控えはそのまま保持しています。');
     }
   };
 })();
