@@ -95,8 +95,12 @@
         try {
           localStorage.setItem(LS_KEY, JSON.stringify({
             v: 1,
-            cards: state.cards,
-            loanerAssigns: state.loanerAssigns,
+            // ★サンプル生成カード（_sample）は保存しない＝容量(localStorage)を食わない。セッション中のみ表示。
+            cards: (state.cards || []).filter(function (c) { return !c._sample; }),
+            loanerAssigns: (state.loanerAssigns || []).filter(function (a) {
+              var c = (state.cards || []).find(function (x) { return x.id === a.cardId; });
+              return !(c && c._sample);   // サンプルカードの代車割当も保存しない
+            }),
             loaners: state.loaners,
             customers: state.customers,
             companyCars: state.companyCars,

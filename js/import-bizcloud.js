@@ -30,21 +30,33 @@
         if (!Array.isArray(arr)) { alert('JSONの形式が配列ではありません。'); return; }
         if (!confirm('顧客 ' + arr.length + ' 件を取り込みます。\n今の顧客控え（' + ((state.customers || []).length) + '件）は全置き換えされます。\n\n※この端末のブラウザ内（localStorage）だけに反映・本番には送りません。\nよろしいですか？')) return;
 
+        // ★容量対策：JSONの全フィールドを丸ごと持たず、PitFlowが使う項目だけに絞って取り込む（localStorage節約）。
         var out = arr.map(function (c) {
-          var cust = Object.assign({}, c);
-          cust.id = 'cu_bl_' + (c.code != null ? c.code : rid(''));
-          cust.contacts = Array.isArray(c.contacts) ? c.contacts : [];
-          cust.vehicles = (Array.isArray(c.vehicles) ? c.vehicles : []).map(function (v) {
-            var veh = Object.assign({}, v);
-            veh.id = 'v_bl_' + (v.mgtNo != null ? v.mgtNo : rid(''));
-            veh.updatedAt = toMs(v.updatedAt) || Date.now();   // ISO文字列→ms（最終入庫の並べ替え用）
-            if (veh.maker != null) veh.maker = normText(veh.maker);   // ＭＩＮＩ→MINI 等の表記ゆれ統一
-            if (veh.car   != null) veh.car   = normText(veh.car);
-            return veh;
+          var contacts = (Array.isArray(c.contacts) ? c.contacts : []).map(function (ct) {
+            return { tel: (ct.tel || '').trim(), label: (ct.label || '').trim(), primary: !!ct.primary };
+          }).filter(function (ct) { return ct.tel || ct.label; });
+          if (contacts.length && !contacts.some(function (x) { return x.primary; })) contacts[0].primary = true;
+          var vehicles = (Array.isArray(c.vehicles) ? c.vehicles : []).map(function (v) {
+            return {
+              id: 'v_bl_' + (v.mgtNo != null ? v.mgtNo : rid('')),
+              plate: (v.plate || '').trim(),
+              maker: normText(v.maker || ''),         // ＭＩＮＩ→MINI 等の表記ゆれ統一
+              car: normText(v.car || ''),
+              boardId: v.boardId || '',
+              division: v.division || '',
+              frontStaff: (v.frontStaff || '').trim(),
+              updatedAt: toMs(v.updatedAt) || Date.now(),
+            };
           });
-          var lastVisit = cust.vehicles.reduce(function (m, v) { return Math.max(m, v.updatedAt || 0); }, 0);
-          cust.updatedAt = toMs(c.updatedAt) || lastVisit || Date.now();
-          return cust;
+          var lastVisit = vehicles.reduce(function (m, v) { return Math.max(m, v.updatedAt || 0); }, 0);
+          return {
+            id: 'cu_bl_' + (c.code != null ? c.code : rid('')),
+            name: (c.name || '').trim(),
+            kana: (c.kana || '').trim(),
+            contacts: contacts,
+            vehicles: vehicles,
+            updatedAt: toMs(c.updatedAt) || lastVisit || Date.now(),
+          };
         });
 
         state.customers = out;
