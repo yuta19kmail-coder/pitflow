@@ -218,16 +218,18 @@ function _rmlRows(from, to){
       html += '<span class="rml-empty">' + (isClosed ? '休' : '—') + '</span>';
     } else {
       cardsOfDay.forEach(c => {
-        const wt = state.workTypes.find(w => w.id === c.workType);
-        const ac = wt ? wt.color : 'var(--brand)';
-        const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 左ライン＝国産緑/輸入ピンク（他ビューと統一）
+        const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
+        const wt = state.workTypes.find(w => w.id === _wid);
+        const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 左ライン＝国産緑/輸入ピンク
+        const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+        let side = '';
+        if (c.needLoaner) side += '<span class="rme-loaner">代</span>';   // 2ヶ月と同じ並び＝代→作業
+        if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
         html += '<div class="rml-ev' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"'
              + ' style="border-left-color:' + teamColor + '"'
-             + ' onclick="openDetail(\'' + c.id + '\')"'
-             + ' title="' + (c.reserveTime || '') + ' ' + (c.customer || '') + ' 様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
-             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + (c.customer || '（未入力）') + ' 様' + (c.car ? ' ' + c.car : '')
-             + (wt ? '<span class="rml-wt" style="color:' + ac + '">' + wt.label + '</span>' : '')
-             + (c.needLoaner ? '<span class="rml-wt">代車</span>' : '')
+             + ' onclick="openDetail(\'' + c.id + '\')">'
+             + '<b>' + (c.reserveTime || '--:--') + '</b> ' + nm + ' 様' + (c.car ? ' ' + c.car : '')
+             + (side ? '<span class="rml-side">' + side + '</span>' : '')
              + '</div>';
       });
     }
@@ -306,13 +308,13 @@ function monthGridCells(refDate){
       const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
       const wt = state.workTypes.find(w => w.id === _wid);
       let side = '';
+      if (c.needLoaner) side += '<span class="rme-loaner">代</span>';   // 並び＝代→作業
       if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
-      if (c.needLoaner) side += '<span class="rme-loaner">代</span>';
       html += '<div class="reserve-month-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       if (!c.urgent) html += ' style="border-left-color:' + teamColor + '"';
       html += ' onclick="event.stopPropagation();openDetail(\'' + c.id + '\')">';
       html += '<span class="rme-txt">' + nm + ' 様' + (c.car ? ' ' + c.car : '') + '</span>';   // 時間なし・苗字＋様・…省略
-      if (side) html += '<span class="rme-side">' + side + '</span>';   // 右側＝作業(色付き)＋代車
+      if (side) html += '<span class="rme-side">' + side + '</span>';   // 右側＝代車＋作業(色付き)
       html += '</div>';
     });
     if (remaining > 0){

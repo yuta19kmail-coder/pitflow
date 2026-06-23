@@ -269,8 +269,11 @@
 .reserve-month-event:hover{ background:var(--bg4); border-color:var(--border2); }   /* 枠は残す */
 .reserve-month-event .rme-txt{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .reserve-month-event .rme-side{ flex:0 0 auto; display:flex; align-items:center; gap:3px; }
-.reserve-month-event .rme-wt{ font-weight:700; white-space:nowrap; }
-.reserve-month-event .rme-loaner{ font-weight:800; color:var(--orange); background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.5); border-radius:3px; padding:0 3px; line-height:1.4; }
+/* 作業(色付き)＋代 のバッジ＝月リスト(.rml-ev)と2ヶ月チップ(.reserve-month-event)で共通 */
+.rme-wt{ font-weight:700; white-space:nowrap; }
+.rme-loaner{ font-weight:800; color:var(--orange); background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.5); border-radius:3px; padding:0 3px; line-height:1.4; }
+/* 月リストのチップ右側（代→作業）。rml-evはnowrapのインラインチップなのでinline-flexで寄せる */
+.rml-side{ display:inline-flex; align-items:center; gap:4px; margin-left:6px; vertical-align:middle; }
 .reserve-month-event.urgent{
   background:rgba(239,68,68,.15);
   border-left-color:var(--red);

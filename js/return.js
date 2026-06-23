@@ -206,11 +206,18 @@ function _rmlRowsReturn(from, to){
     } else {
       cardsOfDay.forEach(c => {
         const tt = (c.returnTime || c.reserveTime || '--:--');
+        const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
+        const wt = state.workTypes.find(w => w.id === _wid);
+        const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
+        const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+        let side = '';
+        if (c.needLoaner) side += '<span class="rme-loaner">代</span>';
+        if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
         html += '<div class="rml-ev return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"'
-             + ' onclick="openDetail(\'' + c.id + '\')"'
-             + ' title="' + tt + ' ' + (c.customer || '') + '様 / ' + (c.car || '') + (c.menu ? ' / ' + c.menu : '') + '">'
-             + '<b>' + tt + '</b> ' + (c.customer || '（未入力）') + (c.car ? ' ' + c.car : '')
-             + (c.needLoaner ? '<span class="rml-wt">代車返却</span>' : '')
+             + ' style="border-left-color:' + teamColor + '"'
+             + ' onclick="openDetail(\'' + c.id + '\')">'
+             + '<b>' + tt + '</b> ' + nm + ' 様' + (c.car ? ' ' + c.car : '')
+             + (side ? '<span class="rml-side">' + side + '</span>' : '')
              + '</div>';
       });
     }
@@ -289,8 +296,8 @@ function monthGridCellsReturn(refDate){
       const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
       const wt = state.workTypes.find(w => w.id === _wid);
       let side = '';
+      if (c.needLoaner) side += '<span class="rme-loaner">代</span>';   // 並び＝代→作業
       if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
-      if (c.needLoaner) side += '<span class="rme-loaner">代</span>';
       html += '<div class="reserve-month-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       if (!c.urgent) html += ' style="border-left-color:' + teamColor + '"';
       html += ' onclick="event.stopPropagation();openDetail(\'' + c.id + '\')">';
