@@ -153,11 +153,18 @@ function loVehHover(headEl){
   const opt = function(on, label){ return '<span class="lvh-opt ' + (on ? 'on' : 'off') + '">' + (on ? '✓' : '✕') + ' ' + label + '</span>'; };
   const dim = function(label, v){ return '<span class="lvh-dim">' + label + '<b>' + (v != null ? _loEsc(v) : '—') + '</b></span>'; };
   const catLb = LO_CAT[l.category] || '';
+  const num = (l.number != null ? l.number : (parseInt(String(l.name||'').replace(/[^0-9]/g,''),10) || ''));
   el.innerHTML =
-      '<div class="lvh-head"><span class="lvh-name">' + _loEsc(l.name || '') + '</span>'
+      '<div class="lvh-head">'
+        + (num !== '' ? '<span class="lvh-no">代車' + _loEsc(num) + '</span>' : '')
+        + '<span class="lvh-name">' + _loEsc(l.model || '（車種未登録）') + '</span>'   // 車種名＝メイン
+        + (l.color ? '<span class="lvh-color">' + _loEsc(l.color) + '</span>' : '')        // 色＝添え（落とす）
+      + '</div>'
+    + '<div class="lvh-badges">'
+        + (l.plate ? '<span class="lvh-plate-badge">' + _loEsc(l.plate) + '</span>' : '')   // ナンバー＝バッジ
         + (catLb ? '<span class="lvh-cat ' + _loEsc(l.category) + '">' + catLb + '</span>' : '')
-        + (l.plate ? '<span class="lvh-plate">' + _loEsc(l.plate) + '</span>' : '') + '</div>'
-    + '<div class="lvh-model">' + _loEsc(l.model || '（車種未登録）') + (l.seats != null ? '　<span class="lvh-seats">定員' + _loEsc(l.seats) + '人</span>' : '') + '</div>'
+        + (l.seats != null ? '<span class="lvh-seats">定員' + _loEsc(l.seats) + '人</span>' : '')
+      + '</div>'
     + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + '</div>'
     + '<div class="lvh-dims">' + dim('高さ ', l.height != null ? l.height + 'cm' : null) + dim('幅 ', l.width != null ? l.width + 'cm' : null) + dim('長さ ', l.length != null ? l.length + 'cm' : null) + '</div>'
     + (l.shakenDate ? '<div class="lvh-sub">車検 ' + _loEsc(l.shakenDate) + (l.tenkenDate ? '　12点 ' + _loEsc(l.tenkenDate) : '') + '</div>' : '');

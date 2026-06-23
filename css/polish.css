@@ -436,10 +436,12 @@
 /* 代車ヘッダのホバー詳細カード */
 #lo-veh-hover{ position:fixed; z-index:300; width:210px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 12px 36px rgba(0,0,0,.5); padding:11px 12px; font-size:12px; opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity .1s, transform .1s; }
 #lo-veh-hover.show{ opacity:1; transform:translateY(0); }
-#lo-veh-hover .lvh-head{ display:flex; align-items:center; gap:7px; }
-#lo-veh-hover .lvh-name{ font-size:15px; font-weight:800; color:var(--text); }
-#lo-veh-hover .lvh-plate{ margin-left:auto; font-size:10.5px; color:var(--text3); }
-#lo-veh-hover .lvh-model{ font-size:13px; font-weight:700; color:var(--brand); margin-top:2px; }
+#lo-veh-hover .lvh-head{ display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; }
+#lo-veh-hover .lvh-no{ font-size:10.5px; font-weight:700; color:var(--text3); background:var(--bg3); border:1px solid var(--border2); border-radius:5px; padding:0 6px; }
+#lo-veh-hover .lvh-name{ font-size:17px; font-weight:800; color:var(--text); }   /* 車種名＝メイン */
+#lo-veh-hover .lvh-color{ font-size:11px; color:var(--text3); }                   /* 色＝添え */
+#lo-veh-hover .lvh-badges{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:7px; }
+#lo-veh-hover .lvh-plate-badge{ font-size:11px; font-weight:700; color:var(--text); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:2px 8px; letter-spacing:.02em; }
 #lo-veh-hover .lvh-opts{ display:flex; gap:5px; margin-top:8px; }
 #lo-veh-hover .lvh-opt{ font-size:11px; font-weight:800; padding:2px 7px; border-radius:6px; }
 #lo-veh-hover .lvh-opt.on{ background:rgba(29,185,122,.16); color:var(--green); border:1px solid rgba(29,185,122,.5); }
@@ -464,9 +466,12 @@
 .fl-opt{ display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer; }
 .fl-opt input{ width:16px; height:16px; cursor:pointer; }
 .fl-opttag{ display:inline-block; font-size:10px; font-weight:800; color:var(--green); background:rgba(29,185,122,.14); border:1px solid rgba(29,185,122,.45); border-radius:5px; padding:0 5px; margin:2px 4px 0 0; }
-/* 代車モーダル：ナンバー4枠・入替予定・自動メモ */
-.fl-plate4{ display:flex; gap:6px; margin-top:5px; }
-.fl-plate4 #fl-pl-region{ flex:0 0 64px; } .fl-plate4 #fl-pl-cls{ flex:0 0 52px; } .fl-plate4 #fl-pl-kana{ flex:0 0 44px; } .fl-plate4 #fl-pl-num{ flex:1 1 auto; }
+/* 代車モーダル：ナンバー＝1BOX＋クリックでガイド（新規予約と同型）・入替予定・自動メモ */
+.fl-plate{ position:relative; margin-top:5px; }
+.fl-plate-main{ width:100%; cursor:pointer; }
+.fl-plate-guide{ margin-top:6px; display:grid; grid-template-columns:1fr 70px 56px 1fr; gap:6px; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:8px; }
+.fl-plate-guide .fl-plate-l{ font-size:9.5px; color:var(--text3); margin-bottom:2px; }
+.fl-plate-guide .fl-in{ width:100%; }
 .fl-auto{ font-size:10px; color:var(--brand); font-weight:700; margin-left:4px; }
 .fl-rep{ background:rgba(245,158,11,.10); border:1px solid #f59e0b66; border-radius:8px; padding:8px 10px; font-size:11.5px; color:var(--text2); line-height:1.6; }
 .fl-rep .fl-rep-note{ color:var(--orange); font-weight:700; }

@@ -74,10 +74,12 @@
       if (c.needLoaner){
         // 代車あり＝2分割：何の代車(名)を何日〜か（リミット＝残日数は入庫後の話なので出さない）
         var _lo = (window.state && Array.isArray(state.loaners)) ? state.loaners.find(function(x){ return x.id === c.loanerId; }) : null;
-        var _loName = _lo ? (_lo.name || _lo.model || c.loanerId) : (c.loanerId || '代車');
-        var _loSub = (_lo && _lo.model ? _lo.model + ' ' : '') + (c.loanerFrom && window.fmtMD ? (fmtMD(c.loanerFrom) + '〜') : '期間未定');
+        // 車種名をメイン・代車番号は小さく添える（連番）＋期間
+        var _loMain = (_lo && _lo.model) ? _lo.model : (_lo ? _lo.name : (c.loanerId || '代車'));
+        var _loNo = _lo ? (_lo.name || '') : '';
+        var _loSub = (_loNo ? _loNo + '　' : '') + (c.loanerFrom && window.fmtMD ? (fmtMD(c.loanerFrom) + '〜') : '期間未定');
         h += '<div class="ph-stat s-resv-loaner"><div class="ph-stat-lb">代車</div>'
-           + '<div class="ph-stat-num" style="font-size:15px">'+esc(_loName)+'</div>'
+           + '<div class="ph-stat-num" style="font-size:14px">'+esc(_loMain)+'</div>'
            + '<div class="ph-stat-sub">'+esc(_loSub)+'</div></div>';
       }
     } else {
