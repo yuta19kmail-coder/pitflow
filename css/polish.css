@@ -466,12 +466,8 @@
 .fl-opt{ display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer; }
 .fl-opt input{ width:16px; height:16px; cursor:pointer; }
 .fl-opttag{ display:inline-block; font-size:10px; font-weight:800; color:var(--green); background:rgba(29,185,122,.14); border:1px solid rgba(29,185,122,.45); border-radius:5px; padding:0 5px; margin:2px 4px 0 0; }
-/* 代車モーダル：ナンバー＝1BOX＋クリックでガイド（新規予約と同型）・入替予定・自動メモ */
-.fl-plate{ position:relative; margin-top:5px; }
-.fl-plate-main{ width:100%; cursor:pointer; }
-.fl-plate-guide{ margin-top:6px; display:grid; grid-template-columns:1fr 70px 56px 1fr; gap:6px; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:8px; }
-.fl-plate-guide .fl-plate-l{ font-size:9.5px; color:var(--text3); margin-bottom:2px; }
-.fl-plate-guide .fl-in{ width:100%; }
+/* 代車モーダル：ナンバーは新規予約と同じ cf-plate 構造を流用（CSSは cf-plate-* をそのまま使用）。入替予定・自動メモ */
+.fl-plate{ margin-top:5px; }   /* ※ナンバーは .cf-plate を使用 */
 .fl-auto{ font-size:10px; color:var(--brand); font-weight:700; margin-left:4px; }
 .fl-rep{ background:rgba(245,158,11,.10); border:1px solid #f59e0b66; border-radius:8px; padding:8px 10px; font-size:11.5px; color:var(--text2); line-height:1.6; }
 .fl-rep .fl-rep-note{ color:var(--orange); font-weight:700; }

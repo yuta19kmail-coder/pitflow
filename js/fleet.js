@@ -235,13 +235,21 @@ function _flNextNum(){ let mx=0; (state.loaners||[]).forEach(function(l){ mx=Mat
 function _flPlateParts(p){ const a=String(p||'').trim().split(/\s+/); return { region:a[0]||'', cls:a[1]||'', kana:a[2]||'', num:a[3]||'' }; }
 function _flPlateJoin(){ const v=function(id){return (document.getElementById(id).value||'').trim();}; return [v('fl-pl-region'),v('fl-pl-cls'),v('fl-pl-kana'),v('fl-pl-num')].filter(Boolean).join(' '); }
 function _flZ2H(s){ return String(s==null?'':s).replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}); }
-/* ナンバー＝1BOX＋クリックでガイド（新規予約と同型・入力ブレ防止：全角→半角・分類は数字3桁・一連は数字とハイフン） */
-window.flPlateToggle = function(){ const g=document.getElementById('fl-pl-guide'); if(g) g.style.display = (g.style.display==='none'?'block':'none'); };
+/* ナンバー＝1BOX＋クリックでガイド（新規予約と同じcf-plate構造）。入力ブレ防止：全角→半角・分類3桁・一連4桁 */
+window.flPlateToggle = function(){
+  const box=document.getElementById('fl-plate'); if(!box) return;
+  box.classList.toggle('open');
+  if(box.classList.contains('open')){ const r=document.getElementById('fl-pl-region'); if(r) setTimeout(function(){ r.focus(); },0); }
+};
 window.flPlateSync = function(){
   const cls=document.getElementById('fl-pl-cls'); if(cls) cls.value=_flZ2H(cls.value).replace(/[^0-9]/g,'').slice(0,3);
-  const num=document.getElementById('fl-pl-num'); if(num) num.value=_flZ2H(num.value).replace(/[^0-9-]/g,'');
+  const num=document.getElementById('fl-pl-num'); if(num) num.value=_flZ2H(num.value).replace(/[^0-9]/g,'').slice(0,4);
   const main=document.getElementById('fl-pl-main'); if(main) main.value=_flPlateJoin();
 };
+document.addEventListener('mousedown', function(e){
+  const box=document.getElementById('fl-plate');
+  if(box && box.classList.contains('open') && !box.contains(e.target)) box.classList.remove('open');
+});
 /* 車検満了/12点 → カレンダーに自動でイベント（車両×種別で1件・上書き更新）。代車カレンダーにも出る。 */
 function _flSyncVehEvent(vehicleId, type, date){
   const eid = 'auto_' + vehicleId + '_' + type;

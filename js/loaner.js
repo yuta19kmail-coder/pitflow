@@ -11,6 +11,7 @@ let _loFilters = { etc:false, navi:false, iso:false };
 let _loCats = { kei:false, normal:false, import:false };   // 区分の絞り込み（OR）
 let _loSortKey = null;   // 並べ替え（低い順）：'height'|'width'|'length'|'seats'|null
 let _loVehBound = false;
+let _loPrepending = false;
 
 const LO_CAT = { kei:'軽', normal:'普通車', import:'輸入車' };
 
@@ -122,6 +123,7 @@ function renderLoaner(){
     _loBound = true;
     wrap.addEventListener('scroll', function(){
       if (wrap.scrollTop + wrap.clientHeight > wrap.scrollHeight - 400) loAppendDays(30);
+      if (wrap.scrollTop < 150) loPrependDays(30);   // 上端付近で過去を継ぎ足し（アーカイブとして遡れる）
     });
   }
   if (!_loDnd){ _loDnd = true; loBindDnd(grid); }
@@ -156,7 +158,7 @@ function loVehHover(headEl){
   const num = (l.number != null ? l.number : (parseInt(String(l.name||'').replace(/[^0-9]/g,''),10) || ''));
   el.innerHTML =
       '<div class="lvh-head">'
-        + (num !== '' ? '<span class="lvh-no">代車' + _loEsc(num) + '</span>' : '')
+        + (num !== '' ? '<span class="lvh-no">' + _loEsc(num) + '</span>' : '')
         + '<span class="lvh-name">' + _loEsc(l.model || '（車種未登録）') + '</span>'   // 車種名＝メイン
         + (l.color ? '<span class="lvh-color">' + _loEsc(l.color) + '</span>' : '')        // 色＝添え（落とす）
       + '</div>'
@@ -200,16 +202,15 @@ function loScrollToday(){
   if (wrap && t) wrap.scrollTop = Math.max(0, t.offsetTop - 60);
 }
 
-function loAppendDays(n){
-  const grid = document.getElementById('loaner-grid');
-  if (!grid || !_loStart) return;
+/* 指定開始日から n 日ぶんの行HTMLを作る（append/prepend 共通） */
+function _loRenderDays(start, n){
   const ls = _loFiltered();
   const todayStr = ymd(new Date());
   const confSet = _loDraftOrig ? _loConflictSet() : null;        // 下書き中だけ重複判定
   const changedList = _loChangedList();                          // 元位置ゴースト用
   let h = '';
   for (let i = 0; i < n; i++){
-    const d = addDays(_loStart, _loCount + i);
+    const d = addDays(start, i);
     const dStr = ymd(d);
     const dow = d.getDay();
     const hol = (window.Holidays && Holidays.name(dStr)) || null;
@@ -218,7 +219,7 @@ function loAppendDays(n){
     const dayMods = (isClosed ? ' lo-closed' : '') + (hol ? ' lo-holiday' : '');
 
     h += '<div class="lo-cell lo-date' + (isToday ? ' lo-today' : '') + (dow === 0 ? ' sun' : (dow === 6 ? ' sat' : '')) + (isClosed ? ' closed' : '') + '">'
-       + (d.getDate() === 1 || (_loCount + i) === 0 ? '<div class="lo-month">' + (d.getMonth()+1) + '月</div>' : '')
+       + (d.getDate() === 1 ? '<div class="lo-month">' + (d.getMonth()+1) + '月</div>' : '')
        + (d.getMonth()+1) + '/' + d.getDate() + ' <span>' + '日月火水木金土'[dow] + '</span>'
        + (hol ? '<div class="lo-hol">' + hol + '</div>' : '')
        + (isClosed ? '<div class="lo-closed-tag">定休</div>' : '')
@@ -269,8 +270,29 @@ function loAppendDays(n){
       }
     });
   }
+  return h;
+}
+/* 未来側（下）に継ぎ足し */
+function loAppendDays(n){
+  const grid = document.getElementById('loaner-grid');
+  if (!grid || !_loStart) return;
+  grid.insertAdjacentHTML('beforeend', _loRenderDays(addDays(_loStart, _loCount), n));
   _loCount += n;
-  grid.insertAdjacentHTML('beforeend', h);
+}
+/* 過去側（上）に継ぎ足し＝アーカイブとして遡れる。スクロール位置は維持。 */
+function loPrependDays(n){
+  const grid = document.getElementById('loaner-grid');
+  const wrap = document.getElementById('loaner-scroll');
+  if (!grid || !wrap || _loPrepending) return;
+  _loPrepending = true;
+  const oldH = wrap.scrollHeight;
+  const newStart = addDays(_loStart, -n);
+  const h = _loRenderDays(newStart, n);
+  const firstDate = grid.querySelector('.lo-date');
+  if (firstDate) firstDate.insertAdjacentHTML('beforebegin', h); else grid.insertAdjacentHTML('beforeend', h);
+  _loStart = newStart; _loCount += n;
+  wrap.scrollTop += (wrap.scrollHeight - oldH);   // 見た目の位置を保つ
+  _loPrepending = false;
 }
 
 /* ===== 代車間ドラッグ移動 ===== */
