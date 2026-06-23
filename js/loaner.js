@@ -61,18 +61,16 @@ function _loEnsureOpts(){
     if (l.color === undefined) l.color = '';
   });
 }
-/* 入替予定の確定：入替日を過ぎたら 旧車を撤去し、新車を正式番号(「(仮)」を外す)に。 */
+/* 入替予定の確定：入替日を過ぎたら 旧車を「引退」にして新車を正式番号(「(仮)」を外す)に。
+   ※旧車の予約・履歴は消さない（retiredでカレンダー表示から外すだけ）＝新車へ未来の予約を入れていける運用。 */
 function _loProcessReplacements(){
   const today = ymd(new Date());
   let changed = false;
-  (state.loaners || []).slice().forEach(function(nv){
+  (state.loaners || []).forEach(function(nv){
     if (nv.replaceOf && nv.replaceDate && nv.replaceDate <= today){
-      // 旧車とその割当を撤去
-      const oldId = nv.replaceOf;
-      state.loaners = (state.loaners||[]).filter(function(l){ return l.id !== oldId; });
-      state.loanerAssigns = (state.loanerAssigns||[]).filter(function(a){ return a.loanerId !== oldId; });
-      state.fleetEvents = (state.fleetEvents||[]).filter(function(e){ return e.id !== ('rep_'+nv.id) && e.vehicleId !== oldId; });
-      // 新車を正式化
+      const old = (state.loaners||[]).find(function(l){ return l.id === nv.replaceOf; });
+      if (old){ old.retired = true; old.retiredAt = today; }   // 撤去せず引退（予約/履歴は保持）
+      state.fleetEvents = (state.fleetEvents||[]).filter(function(e){ return e.id !== ('rep_'+nv.id); });
       nv.name = '代車' + nv.number; delete nv.replaceOf; delete nv.replaceDate;
       changed = true;
     }
@@ -81,7 +79,7 @@ function _loProcessReplacements(){
 }
 /* 絞り込み（装備＋区分）＆並べ替え（低い順） */
 function _loFiltered(){
-  let ls = (state.loaners || []).slice();   // sortで実データの並びを壊さないようコピー
+  let ls = (state.loaners || []).slice().filter(function(l){ return !l.retired; });   // 引退した代車は出さない（予約/履歴は残る）
   if (_loFilters.etc)  ls = ls.filter(function(l){ return l.etc; });
   if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
   if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });

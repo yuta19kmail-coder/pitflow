@@ -64,7 +64,7 @@ function renderFleet(){
     h += '<div class="fl-rows">';
     g.arr.forEach(function(v){
       h += '<div class="fl-row">'
-         + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(v.name) + '</div>'
+         + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(v.name) + (v.retired ? '<span class="fl-retired">引退</span>' : '') + (v.replaceDate ? '<span class="fl-retired plan">入替予定 ' + _fleetEsc(v.replaceDate) + '</span>' : '') + '</div>'
          + '<div class="fl-sub">' + _fleetEsc(v.model || '—') + (v.color ? '（' + _fleetEsc(v.color) + '）' : '') + (v.plate ? ' ・ ' + _fleetEsc(v.plate) : '')
          + (gi === 0 ? '<br>'
              + (v.category ? '<span class="fl-opttag cat">' + ({kei:'軽',normal:'普通車',import:'輸入車'}[v.category] || '') + '</span>' : '')
