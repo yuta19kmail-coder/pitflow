@@ -295,14 +295,18 @@ function monthGridCells(refDate){
     const remaining = cardsOfDay.length - visible.length;
 
     const hol = (window.Holidays && Holidays.name(dateStr)) || null;
-    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="reserveDate" data-drop-val="' + dateStr + '">';
+    // セルの「予約チップ以外」をクリック＝その日の全件表示（当日タブへドリル）
+    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="reserveDate" data-drop-val="' + dateStr + '"'
+         + ' onclick="if(!event.target.closest(\'.reserve-month-event\'))pitReserveOpenDay(\'' + dateStr + '\')">';
     html += '<div class="day-num">' + dd + '</div>';
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
+      const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
+      const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
       html += '<div class="reserve-month-event' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
-      html += ' onclick="openDetail(\'' + c.id + '\')"';
-      html += ' title="' + c.reserveTime + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
-      html += c.reserveTime + ' ' + c.customer + (c.car ? ' ' + c.car : '');
+      if (!c.urgent) html += ' style="border-left-color:' + teamColor + '"';
+      html += ' onclick="event.stopPropagation();openDetail(\'' + c.id + '\')">';
+      html += nm + ' 様' + (c.car ? ' ' + c.car : '');   // 時間は出さない・苗字＋様・長い場合は…（CSS）
       html += '</div>';
     });
     if (remaining > 0){
@@ -320,6 +324,15 @@ function monthGridCells(refDate){
 
   return html;
 }
+
+/* 月／2ヶ月ビューで日付セルをクリック＝その日の予約を全件表示（当日タブへ切替） */
+window.pitReserveOpenDay = function(dateStr){
+  state.reserveDate = new Date(dateStr + 'T00:00:00');
+  state.reserveRange = 'day';
+  const tabs = document.querySelector('.range-tabs[data-mode="reserve"]');
+  if (tabs){ tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.range === 'day'); }); }
+  renderReserve();
+};
 
 function startOfWeek(d){
   const x = new Date(d);

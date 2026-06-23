@@ -220,11 +220,14 @@
 .reserve-month-cell{
   background:var(--bg2);
   min-height:90px;
+  min-width:0;            /* ★長い客名/車種でセル（1fr列）が広がらない＝はみ出しは…で省略 */
   padding:6px;
   display:flex;
   flex-direction:column;
   gap:2px;
 }
+/* 日付セル（その月の日）は予約以外をクリックで全件表示＝ポインタ */
+.reserve-month-cell[data-drop]{ cursor:pointer; }
 .reserve-month-cell.dow{
   background:var(--bg3);
   min-height:0;
