@@ -100,7 +100,7 @@ function loRebuild(days){
   _loEnsureOpts();
   const ls = _loFiltered();
   grid.innerHTML = '';
-  grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(48px, 1fr))';   // 列を詰めて横スクロール軽減（詳細はホバーで）
+  grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(76px, 92px))';   // 「小池 様 ハイエース」が収まる幅に固定（1frで広がらない・それ以上は…）
   let h = '<div class="lo-cell lo-head lo-corner">日付</div>';
   ls.forEach(function(l){
     const num = String(l.name || '').replace('代車', '') || l.name;
