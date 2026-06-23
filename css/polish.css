@@ -398,6 +398,34 @@
 .lo-badge{ position:relative; z-index:1; display:inline-block; max-width:100%; font-size:9px; font-weight:700; background:var(--lo-team, var(--brand)); color:#fff; border-radius:999px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; vertical-align:top; cursor:grab; box-shadow:0 1px 4px rgba(0,0,0,.3); }
 .lo-badge:active{ cursor:grabbing; }
 .lo-free{ background:transparent; }
+/* 整備予定（車検/点検/修理）＝日付枠で目立たせる：セル全体を色づけ＋濃いラベル */
+.lo-evbg{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+.lo-evt-tag{ position:absolute; left:50%; transform:translateX(-50%); top:2px; z-index:2; font-size:9px; font-weight:800; color:#fff; border-radius:5px; padding:1px 6px; white-space:nowrap; max-width:96%; overflow:hidden; text-overflow:ellipsis; box-shadow:0 1px 4px rgba(0,0,0,.4); }
+.lo-evday{ position:relative; }
+/* 下書き：元位置ゴースト（列の左端に点線で並べる） */
+.lo-gh-line{ position:absolute; left:5px; top:-1px; bottom:-1px; width:3px; border-radius:2px; background:repeating-linear-gradient(0deg,var(--text3),var(--text3) 3px,transparent 3px,transparent 7px); opacity:.85; z-index:1; }
+.lo-gh-line.st{ top:14px; } .lo-gh-line.en{ bottom:8px; }
+.lo-gh-tag{ position:absolute; left:2px; top:1px; z-index:1; font-size:7.5px; color:var(--text3); background:var(--bg2); border:1px dashed var(--border2); border-radius:4px; padding:0 3px; white-space:nowrap; }
+/* 下書き：動かした割当を強調／重複は赤 */
+.lo-bk.lo-chg .lo-badge{ box-shadow:0 0 0 2px #fff,0 1px 4px rgba(0,0,0,.4); }
+.lo-bk.lo-bad::before{ background:var(--red)!important; }
+.lo-bk.lo-bad .lo-badge{ box-shadow:0 0 0 2px var(--red); }
+.lo-bk.lo-bad .lo-end{ color:var(--red); }
+/* 下書きバー */
+#lo-draft-bar{ background:rgba(245,158,11,.10); border:1px solid #f59e0b66; border-radius:10px; margin-bottom:8px; padding:7px 10px; }
+#lo-draft-bar .lod-inner{ display:flex; align-items:center; gap:10px; }
+#lo-draft-bar .lod-lbl{ font-size:12.5px; font-weight:800; color:var(--orange); white-space:nowrap; }
+#lo-draft-bar .lod-warn{ color:var(--red); font-weight:800; }
+#lo-draft-bar .lod-chips{ display:flex; gap:6px; overflow-x:auto; flex:1; padding:2px 0; }
+#lo-draft-bar .lod-chip{ flex:0 0 auto; font-size:10.5px; background:var(--bg3); border:1px solid var(--border2); border-left:3px solid var(--orange); border-radius:7px; padding:3px 8px; white-space:nowrap; color:var(--text2); }
+#lo-draft-bar .lod-chip.bad{ border-left-color:var(--red); }
+#lo-draft-bar .lod-chip b{ color:var(--text); }
+#lo-draft-bar .lod-chip i{ font-style:normal; margin-left:6px; cursor:pointer; color:var(--text3); font-weight:800; }
+#lo-draft-bar .lod-chip i:hover{ color:var(--red); }
+#lo-draft-bar .lod-btn{ flex:0 0 auto; font-size:12px; font-weight:700; padding:5px 12px; border-radius:8px; border:1px solid var(--border2); background:var(--bg3); color:var(--text); cursor:pointer; }
+#lo-draft-bar .lod-btn.primary{ background:var(--brand); border-color:var(--brand); color:#fff; }
+#lo-draft-bar .lod-btn.primary:disabled{ opacity:.45; cursor:not-allowed; }
+#lo-draft-bar .lod-btn.warn{ color:#ff9d9d; border-color:#7a3b3b; }
 /* 代車カレンダー：オプション絞り込みスイッチ */
 .lo-filters{ display:inline-flex; align-items:center; gap:5px; margin-right:8px; flex-wrap:wrap; }
 .lo-filters-lb{ font-size:11px; color:var(--text3); font-weight:700; }

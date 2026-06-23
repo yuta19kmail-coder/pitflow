@@ -14,6 +14,35 @@ let _loVehBound = false;
 
 const LO_CAT = { kei:'軽', normal:'普通車', import:'輸入車' };
 
+/* ===== 下書きモード（動かした瞬間に突入＝保存はしない。一括実行で確定／破棄／やり直し） ===== */
+let _loDraftOrig = null;   // 下書き開始時のスナップショット {aid:{loanerId,fromDate,toDate}}
+let _loApplySnap = null;   // 直前の一括実行のやり直し用スナップショット
+function _loStartDraft(){
+  if (_loDraftOrig) return;
+  _loDraftOrig = {};
+  (state.loanerAssigns || []).forEach(function(a){ _loDraftOrig[a.id] = { loanerId:a.loanerId, fromDate:a.fromDate, toDate:a.toDate }; });
+}
+function _loAssignChanged(a){ const o = _loDraftOrig && _loDraftOrig[a.id]; return !!o && (o.loanerId!==a.loanerId || o.fromDate!==a.fromDate || o.toDate!==a.toDate); }
+function _loChangedList(){ return _loDraftOrig ? (state.loanerAssigns||[]).filter(_loAssignChanged) : []; }
+/* 重複（同じ代車で期間が重なる）割当idの集合 */
+function _loConflictSet(){
+  const bad = new Set(), byLo = {};
+  (state.loanerAssigns || []).forEach(function(a){ (byLo[a.loanerId] = byLo[a.loanerId] || []).push(a); });
+  Object.keys(byLo).forEach(function(lo){
+    const arr = byLo[lo].slice().sort(function(x,y){ return x.fromDate < y.fromDate ? -1 : 1; });
+    for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){
+      if (!(arr[j].fromDate > arr[i].toDate || arr[j].toDate < arr[i].fromDate)){ bad.add(arr[i].id); bad.add(arr[j].id); }
+    }
+  });
+  return bad;
+}
+function _loAssignLabel(a){
+  const card = a.cardId ? (state.cards||[]).find(function(c){return c.id===a.cardId;}) : null;
+  return card ? ((window.pitSurname?pitSurname(card.customer):(card.customer||''))||'予約') : (a.customer || '予約');
+}
+function _loName(id){ const l=(state.loaners||[]).find(function(x){return x.id===id;}); return l?l.name:id; }
+function _loMD(s){ const p=String(s).split('-'); return (+p[1])+'/'+(+p[2]); }
+
 function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
 function _loEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
 
@@ -149,6 +178,8 @@ function loAppendDays(n){
   if (!grid || !_loStart) return;
   const ls = _loFiltered();
   const todayStr = ymd(new Date());
+  const confSet = _loDraftOrig ? _loConflictSet() : null;        // 下書き中だけ重複判定
+  const changedList = _loChangedList();                          // 元位置ゴースト用
   let h = '';
   for (let i = 0; i < n; i++){
     const d = addDays(_loStart, _loCount + i);
@@ -168,35 +199,46 @@ function loAppendDays(n){
 
     ls.forEach(function(l){
       const attrs = ' data-lo="' + l.id + '" data-ld="' + dStr + '"';
-      // 車両イベント（車検入庫・リースアップ等）のオーバーレイ
-      let ov = '';
+      // 車両イベント（車検・点検・修理等）の予定オーバーレイ＝日付枠で目立たせる（セル全体を色づけ＋ラベル）
+      let ov = '', evCls = '';
       const evs = (state.fleetEvents || []).filter(function(e){ return e.vehicleId === l.id && e.fromDate <= dStr && e.toDate >= dStr; });
       if (evs.length){
-        const t = (typeof FL_EVT_TYPES !== 'undefined' ? FL_EVT_TYPES[evs[0].type] : null) || { color:'#3b82f6', label:'予定' };
-        ov += '<span class="lo-evs" style="background:' + t.color + '" title="' + evs[0].fromDate + '〜' + evs[0].toDate + '：' + (evs[0].label || t.label) + '"></span>';
-        if (evs[0].fromDate === dStr) ov += '<span class="lo-evt-tag" style="background:' + t.color + '">' + ((evs[0].label || t.label).slice(0, 5)) + '</span>';
+        const e0 = evs[0];
+        const t = (typeof FL_EVT_TYPES !== 'undefined' ? FL_EVT_TYPES[e0.type] : null) || { color:'#3b82f6', label:'予定' };
+        evCls = ' lo-evday';
+        ov += '<span class="lo-evbg" style="background:' + t.color + '22;box-shadow:inset 4px 0 0 ' + t.color + ',inset -4px 0 0 ' + t.color + '"></span>';
+        if (e0.fromDate === dStr) ov += '<span class="lo-evt-tag" style="background:' + t.color + '">🔧 ' + _loEsc(e0.label || t.label) + '</span>';
+      }
+      // 元位置ゴースト（下書きで動かした割当の、元の代車・日付）＝列の左端に点線で並べる
+      let gh = '';
+      if (changedList.length){
+        const g = changedList.find(function(x){ const o=_loDraftOrig[x.id]; return o.loanerId===l.id && o.fromDate<=dStr && o.toDate>=dStr; });
+        if (g){ const o=_loDraftOrig[g.id];
+          gh = '<span class="lo-gh-line' + (o.fromDate===dStr?' st':'') + (o.toDate===dStr?' en':'') + '"></span>'
+             + (o.fromDate===dStr ? '<span class="lo-gh-tag">元 ' + _loEsc(_loAssignLabel(g)) + '</span>' : '');
+        }
       }
       const a = (state.loanerAssigns || []).find(function(x){ return x.loanerId === l.id && x.fromDate <= dStr && x.toDate >= dStr; });
       if (a){
         const isStart = (a.fromDate === dStr);
         const isEnd = (a.toDate === dStr);
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
-        // 国産緑/輸入ピンク（車ごと）。バー線・▼・バッジに反映（CSS変数 --lo-team）。
         const teamColor = card ? (card.boardId === 'import' ? '#ec4899' : '#1db97a') : 'var(--brand)';
-        // メイン表示＝苗字＋様＋車種（長い場合は…）。情報はホバー情報カードへ（古いtitleは廃止）。
         const _nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '予約');
         const label = _nm + (card ? ' 様' : '') + (card && card.car ? ' ' + card.car : (a.car ? ' ' + a.car : ''));
-        h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (isStart && isEnd ? ' bk-single' : '') + (isToday ? ' lo-today' : '') + dayMods + '"' + attrs
-           + ' style="--lo-team:' + teamColor + '">';
+        const isBad = confSet && confSet.has(a.id);
+        const isChg = _loAssignChanged(a);
+        h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (isStart && isEnd ? ' bk-single' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
+           + ' style="--lo-team:' + teamColor + '">' + gh;
         if (isStart){
-          h += '<span class="lo-badge" draggable="true" data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '" onclick="openDetail(\'' + card.id + '\')"' : '') + '>' + label + '</span>';
+          h += '<span class="lo-badge' + (isChg?' chg':'') + '" draggable="true" data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '" onclick="openDetail(\'' + card.id + '\')"' : '') + '>' + label + '</span>';
         }
         if (isEnd){
           h += '<span class="lo-end" draggable="true" data-aid="' + (a.id || '') + '">▼</span>';
         }
         h += ov + '</div>';
       } else {
-        h += '<div class="lo-cell lo-free' + (isToday ? ' lo-today' : '') + dayMods + '"' + attrs + '>' + ov + '</div>';
+        h += '<div class="lo-cell lo-free' + (isToday ? ' lo-today' : '') + evCls + dayMods + '"' + attrs + '>' + gh + ov + '</div>';
       }
     });
   }
@@ -292,9 +334,10 @@ function _loRefresh(){
   const st = wrap ? wrap.scrollTop : 0, sl = wrap ? wrap.scrollLeft : 0;
   loRebuild(Math.max(42, _loCount));
   if (wrap){ wrap.scrollTop = st; wrap.scrollLeft = sl; }
+  _loRenderDraftBar();
 }
 
-/* バッジのドラッグ＝期間まるごと移動（横＝別の代車／縦＝日付ずらし・両方OK） */
+/* バッジのドラッグ＝期間まるごと移動。動かした瞬間に下書きへ（保存しない・重複は赤で警告） */
 function loMoveAssignTo(aid, destLo, destDate){
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
   if (!a || !destLo || !destDate) return;
@@ -302,35 +345,85 @@ function loMoveAssignTo(aid, destLo, destDate){
   const newFrom = destDate;
   const newTo = ymd(addDays(_loPd(destDate), dur));
   if (a.loanerId === destLo && a.fromDate === newFrom) return;
-  const dest = (state.loaners || []).find(function(l){ return l.id === destLo; });
-  const conf = loConflictDays(destLo, newFrom, newTo, aid);
-  if (conf > 0){
-    if (!confirm('⚠ 移動先（' + (dest ? dest.name : destLo) + '：' + newFrom + '〜' + newTo + '）は ' + conf + ' 日が別の予約とぶつかります（枠が足りません）。\nそれでも移動しますか？')) return;
-  }
-  a.loanerId = destLo; a.fromDate = newFrom; a.toDate = newTo;
-  // ★紐づくカードの代車情報も同期（カード内の代車期日/リミットが合うように）
-  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  if (card){ card.loanerId = a.loanerId; card.loanerFrom = a.fromDate; card.loanerTo = a.toDate; }
-  if (window.PitDB) PitDB.save();
+  _loStartDraft();
+  a.loanerId = destLo; a.fromDate = newFrom; a.toDate = newTo;   // 下書きに反映のみ（確定は一括実行）
   _loRefresh();
 }
 
-/* ▼のドラッグ＝返却日の伸縮 */
+/* ▼のドラッグ＝返却日の伸縮。これも下書きへ。 */
 function loResizeAssign(aid, destDate){
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
   if (!a || !destDate) return;
   let newTo = destDate;
   if (newTo < a.fromDate) newTo = a.fromDate;
   if (newTo === a.toDate) return;
-  let conf = 0;
-  if (newTo > a.toDate) conf = loConflictDays(a.loanerId, ymd(addDays(_loPd(a.toDate), 1)), newTo, aid);
-  if (conf > 0){
-    if (!confirm('⚠ 延長した期間のうち ' + conf + ' 日が別の予約とぶつかります。\nそれでも変更しますか？')) return;
-  }
+  _loStartDraft();
   a.toDate = newTo;
-  // ★紐づくカードの返却日も同期（カード内の代車リミットに反映）
-  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  if (card){ card.loanerTo = newTo; }
-  if (window.PitDB) PitDB.save();
   _loRefresh();
 }
+
+/* ===== 下書きバー（変更件数＋変更チップ＋破棄/やり直し/一括実行） ===== */
+function _loRenderDraftBar(){
+  const host = document.getElementById('lo-draft-bar');
+  if (!host) return;
+  const changed = _loChangedList();
+  if (!_loDraftOrig || !changed.length){
+    // 下書きなし＝バー非表示（やり直しボタンだけ applySnap があれば残す）
+    host.innerHTML = _loApplySnap ? '<div class="lod-inner"><span class="lod-lbl">直前の一括実行：</span><button class="lod-btn warn" onclick="loDraftUndoApply()">↩ やり直す</button></div>' : '';
+    host.style.display = (_loApplySnap) ? 'block' : 'none';
+    return;
+  }
+  const bad = _loConflictSet();
+  const chips = changed.map(function(a){
+    const o = _loDraftOrig[a.id], ib = bad.has(a.id);
+    return '<span class="lod-chip' + (ib?' bad':'') + '"><b>' + _loEsc(_loAssignLabel(a)) + '</b> '
+      + _loName(o.loanerId) + ' ' + _loMD(o.fromDate) + '→' + _loName(a.loanerId) + ' ' + _loMD(a.fromDate) + '〜' + _loMD(a.toDate)
+      + '<i onclick="loDraftUndoOne(\'' + a.id + '\')">✕</i></span>';
+  }).join('');
+  const hasBad = bad.size > 0;
+  host.style.display = 'block';
+  host.innerHTML = '<div class="lod-inner">'
+    + '<span class="lod-lbl">📝 下書き <b>' + changed.length + '件</b>' + (hasBad ? '<span class="lod-warn"> ⚠ 重複あり</span>' : '') + '</span>'
+    + '<div class="lod-chips">' + chips + '</div>'
+    + '<button class="lod-btn" onclick="loDraftDiscard()">破棄</button>'
+    + '<button class="lod-btn primary" ' + (hasBad ? 'disabled' : '') + ' onclick="loDraftApply()">' + (hasBad ? '⚠ 重複を直して' : '✓ 一括実行（' + changed.length + '）') + '</button>'
+    + '</div>';
+}
+window.loDraftUndoOne = function(id){
+  if (!_loDraftOrig) return;
+  const o = _loDraftOrig[id], a = (state.loanerAssigns||[]).find(function(x){return x.id===id;});
+  if (o && a){ a.loanerId=o.loanerId; a.fromDate=o.fromDate; a.toDate=o.toDate; }
+  if (!_loChangedList().length) _loDraftOrig = null;   // 全部戻ったら下書き解除
+  _loRefresh();
+};
+window.loDraftDiscard = function(){
+  if (!_loDraftOrig || !_loChangedList().length) return;
+  if (!confirm('下書き中の代車変更を全部破棄します。よろしいですか？')) return;
+  (state.loanerAssigns||[]).forEach(function(a){ const o=_loDraftOrig[a.id]; if(o){ a.loanerId=o.loanerId; a.fromDate=o.fromDate; a.toDate=o.toDate; } });
+  _loDraftOrig = null;
+  _loRefresh();
+};
+window.loDraftApply = function(){
+  if (!_loDraftOrig) return;
+  const changed = _loChangedList(); if (!changed.length) return;
+  if (_loConflictSet().size) { alert('重複している予約があります。重ならないように直してから一括実行してください。'); return; }
+  if (!confirm(changed.length + ' 件の代車変更をまとめて反映します。よろしいですか？')) return;
+  _loApplySnap = _loDraftOrig;   // 実行前の状態＝やり直し用
+  // 紐づくカードの代車情報を同期
+  changed.forEach(function(a){
+    const card = a.cardId ? (state.cards||[]).find(function(c){return c.id===a.cardId;}) : null;
+    if (card){ card.loanerId=a.loanerId; card.loanerFrom=a.fromDate; card.loanerTo=a.toDate; }
+  });
+  _loDraftOrig = null;
+  if (window.PitDB) PitDB.save();
+  _loRefresh();
+  alert('反映しました（' + changed.length + '件）。直後なら「↩ やり直す」で実行前に戻せます。');
+};
+window.loDraftUndoApply = function(){
+  if (!_loApplySnap) return;
+  if (!confirm('直前の一括実行を取り消して、実行前の状態に戻します。よろしいですか？')) return;
+  (state.loanerAssigns||[]).forEach(function(a){ const o=_loApplySnap[a.id]; if(o){ a.loanerId=o.loanerId; a.fromDate=o.fromDate; a.toDate=o.toDate; const card=a.cardId?(state.cards||[]).find(function(c){return c.id===a.cardId;}):null; if(card){card.loanerId=a.loanerId;card.loanerFrom=a.fromDate;card.loanerTo=a.toDate;} } });
+  _loApplySnap = null;
+  if (window.PitDB) PitDB.save();
+  _loRefresh();
+};
