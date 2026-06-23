@@ -35,6 +35,7 @@ function renderFleet(){
   const wrap = document.getElementById('view-fleet-body');
   if (!wrap) return;
   if (!Array.isArray(state.companyCars)) state.companyCars = [];
+  if (typeof _loEnsureOpts === 'function') _loEnsureOpts();   // 代車の装備オプション初期化（未設定分）
   _flEvents();
 
   let h = '';
@@ -65,6 +66,7 @@ function renderFleet(){
       h += '<div class="fl-row">'
          + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(v.name) + '</div>'
          + '<div class="fl-sub">' + _fleetEsc(v.model || '—') + (v.plate ? ' ・ ' + _fleetEsc(v.plate) : '')
+         + (gi === 0 ? '<br>' + (v.etc ? '<span class="fl-opttag">ETC</span>' : '') + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '') + (v.iso ? '<span class="fl-opttag">ISO</span>' : '') + (v.height != null ? '<span class="fl-opttag h">高さ ' + _fleetEsc(v.height) + 'cm</span>' : '') : '')
          + (v.shakenDate ? '<br>車検 ' + _fleetEsc(v.shakenDate) : '') + (v.tenkenDate ? ' ・ 12点 ' + _fleetEsc(v.tenkenDate) : '') + '</div></div>'
          + '<button class="fl-btn" onclick="fleetOpenModal(\'' + v.id + '\')">✏️</button>'
          + '<button class="fl-btn del" onclick="fleetDelete(\'' + v.id + '\')">🗑</button>'
@@ -232,6 +234,10 @@ function fleetOpenModal(id){
   document.getElementById('fl-plate').value = v.plate || '';
   document.getElementById('fl-shaken').value = v.shakenDate || '';
   document.getElementById('fl-tenken').value = v.tenkenDate || '';
+  document.getElementById('fl-height').value = (v.height != null ? v.height : '');
+  document.getElementById('fl-etc').checked  = !!v.etc;
+  document.getElementById('fl-navi').checked = !!v.navi;
+  document.getElementById('fl-iso').checked  = !!v.iso;
   document.getElementById('fleet-modal').classList.add('show');
   const n = document.getElementById('fl-name'); if (n) n.focus();
 }
@@ -246,6 +252,11 @@ function fleetSubmit(){
   const plate  = (document.getElementById('fl-plate').value || '').trim();
   const shaken = document.getElementById('fl-shaken').value || '';
   const tenken = document.getElementById('fl-tenken').value || '';
+  const heightRaw = document.getElementById('fl-height').value;
+  const height = (heightRaw === '' || heightRaw == null) ? null : Number(heightRaw);
+  const etc  = !!document.getElementById('fl-etc').checked;
+  const navi = !!document.getElementById('fl-navi').checked;
+  const iso  = !!document.getElementById('fl-iso').checked;
   if (!name){ alert('名前を入れてください（例：代車21／積載車）'); return; }
   if (!Array.isArray(state.companyCars)) state.companyCars = [];
   if (_fleetEditId){
@@ -259,11 +270,12 @@ function fleetSubmit(){
       }
       f.v.name = name; f.v.model = model; f.v.plate = plate;
       f.v.shakenDate = shaken; f.v.tenkenDate = tenken;
+      f.v.height = height; f.v.etc = etc; f.v.navi = navi; f.v.iso = iso;
     }
   } else {
     const id = (kind === 'loaner' ? 'L' : 'C') + Date.now().toString(36);
     (kind === 'loaner' ? state.loaners : state.companyCars).push(
-      { id: id, name: name, model: model, plate: plate, shakenDate: shaken, tenkenDate: tenken }
+      { id: id, name: name, model: model, plate: plate, shakenDate: shaken, tenkenDate: tenken, height: height, etc: etc, navi: navi, iso: iso }
     );
   }
   if (window.PitDB) PitDB.save();

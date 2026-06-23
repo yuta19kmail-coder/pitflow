@@ -7,8 +7,34 @@
      移動先の期間が別予約とぶつかる場合は「◯日ぶつかる」警告を出して確認。
    ======================================== */
 let _loStart = null, _loCount = 0, _loBound = false, _loDnd = false, _loDragAid = null, _loDragMode = 'move';
+let _loFilters = { etc:false, navi:false, iso:false };
+let _loVehBound = false;
 
 function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+function _loEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
+
+/* 代車の装備オプション（ETC/ナビ/ISO/高さ）が未設定なら、デモ用に変化を付けて初期化（実車は編集で上書き） */
+function _loEnsureOpts(){
+  (state.loaners || []).forEach(function(l, i){
+    if (l.etc === undefined)  l.etc  = (i % 2 === 0);
+    if (l.navi === undefined) l.navi = (i % 3 !== 0);
+    if (l.iso === undefined)  l.iso  = (i % 4 === 0);
+    if (l.height === undefined || l.height === null) l.height = 150 + (i % 6) * 3;   // 150〜165cm
+  });
+}
+/* 絞り込みスイッチで該当オプションを持つ代車だけに */
+function _loFiltered(){
+  let ls = (state.loaners || []);
+  if (_loFilters.etc)  ls = ls.filter(function(l){ return l.etc; });
+  if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
+  if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });
+  return ls;
+}
+window.loToggleFilter = function(k){
+  _loFilters[k] = !_loFilters[k];
+  const b = document.querySelector('.lo-filter[data-k="' + k + '"]'); if (b) b.classList.toggle('on', _loFilters[k]);
+  _loRefresh();
+};
 
 function renderLoaner(){
   const grid = document.getElementById('loaner-grid');
@@ -29,19 +55,56 @@ function renderLoaner(){
     });
   }
   if (!_loDnd){ _loDnd = true; loBindDnd(grid); }
+  if (!_loVehBound){
+    _loVehBound = true;
+    document.addEventListener('mouseover', function(e){
+      const hd = e.target.closest && e.target.closest('.lo-head[data-loid]');
+      if (hd) loVehHover(hd);
+    });
+    document.addEventListener('mouseout', function(e){
+      const hd = e.target.closest && e.target.closest('.lo-head[data-loid]');
+      if (hd){ const to = e.relatedTarget; if (!to || !(to.closest && to.closest('.lo-head[data-loid]'))) loVehHide(); }
+    });
+    document.addEventListener('scroll', loVehHide, true);
+  }
   setTimeout(loScrollToday, 0);
 }
+
+/* 代車ヘッダのホバー＝代車の詳細カード（車種・ETC/ナビ/ISO/高さ） */
+function loVehHover(headEl){
+  const id = headEl.dataset.loid;
+  const l = (state.loaners || []).find(function(x){ return x.id === id; });
+  if (!l) return;
+  let el = document.getElementById('lo-veh-hover');
+  if (!el){ el = document.createElement('div'); el.id = 'lo-veh-hover'; document.body.appendChild(el); }
+  const opt = function(on, label){ return '<span class="lvh-opt ' + (on ? 'on' : 'off') + '">' + (on ? '✓' : '✕') + ' ' + label + '</span>'; };
+  el.innerHTML =
+      '<div class="lvh-head"><span class="lvh-name">' + _loEsc(l.name || '') + '</span>'
+        + (l.plate ? '<span class="lvh-plate">' + _loEsc(l.plate) + '</span>' : '') + '</div>'
+    + '<div class="lvh-model">' + _loEsc(l.model || '（車種未登録）') + '</div>'
+    + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + '</div>'
+    + '<div class="lvh-h">高さ <b>' + (l.height != null ? _loEsc(l.height) + ' cm' : '—') + '</b></div>'
+    + (l.shakenDate ? '<div class="lvh-sub">車検 ' + _loEsc(l.shakenDate) + (l.tenkenDate ? '　12点 ' + _loEsc(l.tenkenDate) : '') + '</div>' : '');
+  el.classList.add('show');
+  const r = headEl.getBoundingClientRect();
+  const w = 220, vw = document.documentElement.clientWidth;
+  let left = r.left; if (left + w > vw - 8) left = vw - w - 8;
+  el.style.left = Math.max(8, left) + 'px';
+  el.style.top = (r.bottom + 6) + 'px';
+}
+function loVehHide(){ const el = document.getElementById('lo-veh-hover'); if (el) el.classList.remove('show'); }
 
 function loRebuild(days){
   const grid = document.getElementById('loaner-grid');
   if (!grid) return;
-  const ls = state.loaners || [];
+  _loEnsureOpts();
+  const ls = _loFiltered();
   grid.innerHTML = '';
   grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(48px, 1fr))';   // 列を詰めて横スクロール軽減（詳細はホバーで）
   let h = '<div class="lo-cell lo-head lo-corner">日付</div>';
   ls.forEach(function(l){
     const num = String(l.name || '').replace('代車', '') || l.name;
-    h += '<div class="lo-cell lo-head"><div class="lo-car">' + num + '</div><div class="lo-model">' + (l.model || '') + '</div></div>';
+    h += '<div class="lo-cell lo-head" data-loid="' + l.id + '"><div class="lo-car">' + num + '</div><div class="lo-model">' + _loEsc(l.model || '') + '</div></div>';
   });
   grid.insertAdjacentHTML('beforeend', h);
   _loCount = 0;
@@ -57,7 +120,7 @@ function loScrollToday(){
 function loAppendDays(n){
   const grid = document.getElementById('loaner-grid');
   if (!grid || !_loStart) return;
-  const ls = state.loaners || [];
+  const ls = _loFiltered();
   const todayStr = ymd(new Date());
   let h = '';
   for (let i = 0; i < n; i++){
@@ -218,6 +281,9 @@ function loMoveAssignTo(aid, destLo, destDate){
     if (!confirm('⚠ 移動先（' + (dest ? dest.name : destLo) + '：' + newFrom + '〜' + newTo + '）は ' + conf + ' 日が別の予約とぶつかります（枠が足りません）。\nそれでも移動しますか？')) return;
   }
   a.loanerId = destLo; a.fromDate = newFrom; a.toDate = newTo;
+  // ★紐づくカードの代車情報も同期（カード内の代車期日/リミットが合うように）
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  if (card){ card.loanerId = a.loanerId; card.loanerFrom = a.fromDate; card.loanerTo = a.toDate; }
   if (window.PitDB) PitDB.save();
   _loRefresh();
 }
@@ -235,6 +301,9 @@ function loResizeAssign(aid, destDate){
     if (!confirm('⚠ 延長した期間のうち ' + conf + ' 日が別の予約とぶつかります。\nそれでも変更しますか？')) return;
   }
   a.toDate = newTo;
+  // ★紐づくカードの返却日も同期（カード内の代車リミットに反映）
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  if (card){ card.loanerTo = newTo; }
   if (window.PitDB) PitDB.save();
   _loRefresh();
 }

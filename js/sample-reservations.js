@@ -232,6 +232,8 @@
         }
         if (!lid){ c.needLoaner = false; c.loanerId = ''; c.loanerFrom = ''; c.loanerTo = ''; return; }   // 空き無し＝代車なしに（重複を作らない）
         c.loanerId = lid;
+        c.loanerFrom = from;
+        c.loanerTo = to;   // ★カードの代車期日＝割当(カレンダー)と一致させる（リミット計算が合うように）
         state.loanerAssigns.push({ id: 'la' + Date.now().toString(36) + (_laSeq++).toString(36), loanerId: lid, cardId: c.id, fromDate: from, toDate: to });
       });
 

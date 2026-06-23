@@ -398,6 +398,32 @@
 .lo-badge{ position:relative; z-index:1; display:inline-block; max-width:100%; font-size:9px; font-weight:700; background:var(--lo-team, var(--brand)); color:#fff; border-radius:999px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; vertical-align:top; cursor:grab; box-shadow:0 1px 4px rgba(0,0,0,.3); }
 .lo-badge:active{ cursor:grabbing; }
 .lo-free{ background:transparent; }
+/* 代車カレンダー：オプション絞り込みスイッチ */
+.lo-filters{ display:inline-flex; align-items:center; gap:5px; margin-right:8px; }
+.lo-filters-lb{ font-size:11px; color:var(--text3); font-weight:700; }
+.lo-filter{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--bg3); color:var(--text2); border:1px solid var(--border2); cursor:pointer; }
+.lo-filter:hover{ background:var(--bg4); }
+.lo-filter.on{ background:var(--brand); color:#fff; border-color:var(--brand); }
+/* 代車ヘッダのホバー詳細カード */
+#lo-veh-hover{ position:fixed; z-index:300; width:210px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 12px 36px rgba(0,0,0,.5); padding:11px 12px; font-size:12px; opacity:0; transform:translateY(-4px); pointer-events:none; transition:opacity .1s, transform .1s; }
+#lo-veh-hover.show{ opacity:1; transform:translateY(0); }
+#lo-veh-hover .lvh-head{ display:flex; align-items:center; gap:7px; }
+#lo-veh-hover .lvh-name{ font-size:15px; font-weight:800; color:var(--text); }
+#lo-veh-hover .lvh-plate{ margin-left:auto; font-size:10.5px; color:var(--text3); }
+#lo-veh-hover .lvh-model{ font-size:13px; font-weight:700; color:var(--brand); margin-top:2px; }
+#lo-veh-hover .lvh-opts{ display:flex; gap:5px; margin-top:8px; }
+#lo-veh-hover .lvh-opt{ font-size:11px; font-weight:800; padding:2px 7px; border-radius:6px; }
+#lo-veh-hover .lvh-opt.on{ background:rgba(29,185,122,.16); color:var(--green); border:1px solid rgba(29,185,122,.5); }
+#lo-veh-hover .lvh-opt.off{ background:var(--bg3); color:var(--text3); border:1px solid var(--border); }
+#lo-veh-hover .lvh-h{ margin-top:7px; font-size:12px; color:var(--text2); }
+#lo-veh-hover .lvh-h b{ color:var(--text); font-size:14px; }
+#lo-veh-hover .lvh-sub{ margin-top:6px; font-size:10.5px; color:var(--text3); border-top:1px solid var(--border); padding-top:5px; }
+/* 車両モーダルの装備オプション */
+.fl-opts{ display:flex; gap:14px; margin-top:5px; }
+.fl-opt{ display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer; }
+.fl-opt input{ width:16px; height:16px; cursor:pointer; }
+.fl-opttag{ display:inline-block; font-size:10px; font-weight:800; color:var(--green); background:rgba(29,185,122,.14); border:1px solid rgba(29,185,122,.45); border-radius:5px; padding:0 5px; margin:2px 4px 0 0; }
+.fl-opttag.h{ color:var(--text2); background:var(--bg3); border-color:var(--border2); }
 /* 定休日・祝日（代車ビュー） */
 .lo-cell.lo-closed{ background:repeating-linear-gradient(45deg, rgba(120,120,120,.12), rgba(120,120,120,.12) 6px, transparent 6px, transparent 12px); }
 .lo-cell.lo-holiday{ background:rgba(220,38,38,.06); }
