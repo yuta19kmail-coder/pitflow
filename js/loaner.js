@@ -10,7 +10,6 @@ let _loStart = null, _loCount = 0, _loBound = false, _loDnd = false, _loDragAid 
 let _loFilters = { etc:false, navi:false, iso:false };
 let _loCats = { kei:false, normal:false, import:false };   // 区分の絞り込み（OR）
 let _loSortKey = null;   // 並べ替え（低い順）：'height'|'width'|'length'|'seats'|null
-let _loSortEnabled = true;   // マスター：ON＝条件(絞込/並べ替え)を適用／OFF＝全件そのまま
 let _loVehBound = false;
 
 const LO_CAT = { kei:'軽', normal:'普通車', import:'輸入車' };
@@ -31,19 +30,9 @@ function _loEnsureOpts(){
     if (l.seats === undefined || l.seats === null) l.seats = [4,4,5,5,5,7,8][i % 7];
   });
 }
-/* 条件が1つでも入っているか（絞込/区分/並べ替え） */
-function _loHasCond(){
-  return _loFilters.etc || _loFilters.navi || _loFilters.iso || _loCats.kei || _loCats.normal || _loCats.import || !!_loSortKey;
-}
-function _loUpdateSortBtn(){
-  const b = document.getElementById('lo-sort-btn'); if (!b) return;
-  b.textContent = _loSortEnabled ? '✓ ソート有' : 'ソート無';
-  b.classList.toggle('on', _loSortEnabled);
-}
-/* 絞り込み（装備＋区分）＆並べ替え（低い順）。マスターOFF時は全件そのまま。 */
+/* 絞り込み（装備＋区分）＆並べ替え（低い順） */
 function _loFiltered(){
   let ls = (state.loaners || []).slice();   // sortで実データの並びを壊さないようコピー
-  if (!_loSortEnabled) return ls;   // ソート無＝条件を無視して全件
   if (_loFilters.etc)  ls = ls.filter(function(l){ return l.etc; });
   if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
   if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });
@@ -52,30 +41,19 @@ function _loFiltered(){
   if (_loSortKey) ls.sort(function(a, b){ return (a[_loSortKey] != null ? a[_loSortKey] : 99999) - (b[_loSortKey] != null ? b[_loSortKey] : 99999); });
   return ls;
 }
-/* 条件を入れたら「ソート有」を自動ON（デフォルト挙動） */
-function _loCondEntered(){ if (_loHasCond()) _loSortEnabled = true; _loUpdateSortBtn(); }
 window.loToggleFilter = function(k){
   _loFilters[k] = !_loFilters[k];
   const b = document.querySelector('.lo-filter[data-k="' + k + '"]'); if (b) b.classList.toggle('on', _loFilters[k]);
-  _loCondEntered();
   _loRefresh();
 };
 window.loToggleCat = function(cat){
   _loCats[cat] = !_loCats[cat];
   const b = document.querySelector('.lo-filter[data-cat="' + cat + '"]'); if (b) b.classList.toggle('on', _loCats[cat]);
-  _loCondEntered();
   _loRefresh();
 };
 window.loToggleSort = function(key){
   _loSortKey = (_loSortKey === key) ? null : key;   // 並べ替えは1つだけ（再押下で解除）
   document.querySelectorAll('.lo-filter[data-sort]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sort') === _loSortKey); });
-  _loCondEntered();
-  _loRefresh();
-};
-/* マスター「ソート有/無」＝条件の適用ON/OFF（今日ボタン横） */
-window.loToggleSortEnabled = function(){
-  _loSortEnabled = !_loSortEnabled;
-  _loUpdateSortBtn();
   _loRefresh();
 };
 
@@ -89,7 +67,6 @@ function renderLoaner(){
   const today = new Date(); today.setHours(0,0,0,0);
   _loStart = addDays(today, -7);
   loRebuild(42);
-  _loUpdateSortBtn();
 
   const wrap = document.getElementById('loaner-scroll');
   if (wrap && !_loBound){

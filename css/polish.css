@@ -820,6 +820,10 @@
 .cfs-nav{ margin-left:auto; display:inline-flex; align-items:center; gap:8px; font-size:13px; }
 .cfs-nav button{ background:var(--bg3); border:1px solid var(--border); border-radius:7px; color:var(--text); padding:3px 10px; cursor:pointer; font-size:12px; }
 .cfs-nav button:hover{ border-color:#1db97a; }
+.cfs-nav .cfs-sortbtn.on{ background:#1db97a; border-color:#1db97a; color:#fff; }
+/* 代車ガント：条件マッチの列ヘッダを強調 */
+.cfs-lg th.cfs-lg-match{ background:rgba(29,185,122,.22); box-shadow:inset 0 -2px 0 0 #1db97a; }
+.cfs-lg th.cfs-lg-match i{ color:#1db97a; }
 .cfs-cal{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
 .cfs-dow{ font-size:11px; text-align:center; color:var(--text3); padding:3px 0; font-weight:600; }
 .cfs-dow.red{ color:#ef4444; } .cfs-dow.sat{ color:#3b82f6; }

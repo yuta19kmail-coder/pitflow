@@ -425,7 +425,7 @@ function _cfsCalHtml(c, team, tStr, ro){
 
 /* 🚙 代車の空き（代車ビュー式＝縦に日付・横に各代車。車種名はヘッダに常時表示・下へ無限スクロール）v0.27.5 */
 function _cfsLgRows(from, to, today, tStr, c, ro){
-  const loaners = state.loaners || [];
+  const loaners = _cfsLgLoaners(c);
   const assigns = state.loanerAssigns || [];
   let h = '';
   for (let i = from; i < to; i++){
@@ -453,17 +453,54 @@ function _cfsLgRows(from, to, today, tStr, c, ro){
   return h;
 }
 
+/* 予約の代車条件(c.loanerConditions の etc/navi/iso)に合う代車を先頭へ並べ替え（ソート有の時）。 */
+function _cfsLgLoaners(c){
+  const ls = (state.loaners || []).slice();
+  if (window._cfsLgSort === false) return ls;   // ソート無＝元の並び
+  const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions : [];
+  const bools = conds.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; });
+  if (!bools.length) return ls;
+  const match = [], rest = [];
+  ls.forEach(function(l){ (bools.every(function(k){ return l[k]; }) ? match : rest).push(l); });
+  return match.concat(rest);
+}
+/* 代車条件があり「ソート有」の時、条件に合う代車かどうか（緑チェック用） */
+function _cfsLgMatches(l, c){
+  const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; }) : [];
+  if (!conds.length) return false;
+  return conds.every(function(k){ return l[k]; });
+}
+window.cfsLgToggleSort = function(){
+  window._cfsLgSort = (window._cfsLgSort === false) ? true : false;
+  if (window.cfsLgRerender) cfsLgRerender();
+};
+window.cfsLgRerender = function(){
+  const old = document.getElementById('cfs-lg-card'); if (!old) return;
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const ro = (state.currentView === 'availcal');
+  const c = ro ? { reserveDate:'', boardId:null, needLoaner:true } : (state.cards.find(function(x){ return x.id === _editingCardId; }) || null);
+  old.outerHTML = _cfsLoanerGanttHtml(t, ymd(t), c, ro);
+  if (window.cfsLgFill) cfsLgFill();
+};
+
 function _cfsLoanerGanttHtml(today, tStr, c, ro){
-  const loaners = state.loaners || [];
+  const loaners = _cfsLgLoaners(c);
   if (!window._cfsLgN) window._cfsLgN = 28;
-  let h = '<div class="cfs-card">';
+  // 代車条件（ETC/ナビ/ISO）が入っていれば「ソート有/無」トグルを出す（デフォルト＝条件ありでソート有）
+  const condBools = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; }) : [];
+  const sortOn = (window._cfsLgSort !== false);
+  const sortBtn = (!ro && condBools.length)
+    ? '<button type="button" class="cfs-sortbtn' + (sortOn ? ' on' : '') + '" onclick="cfsLgToggleSort()" title="代車条件に合う代車を上に並べる">' + (sortOn ? '✓ 条件で並べ替え' : '並べ替えなし') + '</button>'
+    : '';
+  let h = '<div class="cfs-card" id="cfs-lg-card">';
   h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車カレンダー</span>'
-     + '<span class="cfs-nav"><button type="button" onclick="cfsLgToday()" title="一番上（今日）に戻る">📍 今日へ</button></span></div>';
+     + '<span class="cfs-nav">' + sortBtn + '<button type="button" onclick="cfsLgToday()" title="一番上（今日）に戻る">📍 今日へ</button></span></div>';
   h += '<div class="cfs-lg-scroll" id="cfs-lg-scroll" onscroll="cfsLgScroll(this)"><table class="cfs-lg">';
   h += '<thead><tr><th class="cfs-lg-d"></th>';
   loaners.forEach(function (l) {
-    /* 古いtitleは撤去。data-loid でヘッダにマウスオーバー＝代車の詳細ホバーカード（loaner.js）を表示 */
-    h += '<th data-loid="' + l.id + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
+    /* 古いtitleは撤去。data-loid でヘッダにマウスオーバー＝代車の詳細ホバーカード（loaner.js）。条件マッチは強調。 */
+    const mcls = (sortOn && _cfsLgMatches(l, c)) ? ' cfs-lg-match' : '';
+    h += '<th class="cfs-lg-th' + mcls + '" data-loid="' + l.id + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
   });
   h += '</tr></thead>';
   h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c, ro) + '</tbody>';
@@ -1190,6 +1227,8 @@ function bindCardFormEvents(root){
         if (idx >= 0) c[key].splice(idx, 1);
         else c[key].push(v);
         btn.classList.toggle('active');
+        // 代車条件を変えたら代車ガントを並べ替え直す（条件マッチを上へ）
+        if (key === 'loanerConditions' && window.cfsLgRerender) cfsLgRerender();
       });
     });
   });
