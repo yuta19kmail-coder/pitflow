@@ -37,7 +37,7 @@ function loRebuild(days){
   if (!grid) return;
   const ls = state.loaners || [];
   grid.innerHTML = '';
-  grid.style.gridTemplateColumns = '76px repeat(' + Math.max(1, ls.length) + ', minmax(58px, 1fr))';
+  grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(48px, 1fr))';   // 列を詰めて横スクロール軽減（詳細はホバーで）
   let h = '<div class="lo-cell lo-head lo-corner">日付</div>';
   ls.forEach(function(l){
     const num = String(l.name || '').replace('代車', '') || l.name;
@@ -91,14 +91,18 @@ function loAppendDays(n){
         const isStart = (a.fromDate === dStr);
         const isEnd = (a.toDate === dStr);
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
-        const label = a.customer ? (a.customer + (a.car ? '・' + a.car : '')) : (card ? ((card.customer || '') + ' 様' + (card.car ? '・' + card.car : '')) : '予約');
+        // 国産緑/輸入ピンク（車ごと）。バー線・▼・バッジに反映（CSS変数 --lo-team）。
+        const teamColor = card ? (card.boardId === 'import' ? '#ec4899' : '#1db97a') : 'var(--brand)';
+        // メイン表示＝苗字＋様＋車種（長い場合は…）。情報はホバー情報カードへ（古いtitleは廃止）。
+        const _nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '予約');
+        const label = _nm + (card ? ' 様' : '') + (card && card.car ? ' ' + card.car : (a.car ? ' ' + a.car : ''));
         h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (isStart && isEnd ? ' bk-single' : '') + (isToday ? ' lo-today' : '') + dayMods + '"' + attrs
-           + ' title="' + a.fromDate + ' 〜 ' + a.toDate + '：' + label + '（バッジ＝丸ごと移動／▼＝返却日の伸縮）">';
+           + ' style="--lo-team:' + teamColor + '">';
         if (isStart){
-          h += '<span class="lo-badge" draggable="true" data-aid="' + (a.id || '') + '"' + (card ? ' onclick="openDetail(\'' + card.id + '\')"' : '') + '>' + label + '</span>';
+          h += '<span class="lo-badge" draggable="true" data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '" onclick="openDetail(\'' + card.id + '\')"' : '') + '>' + label + '</span>';
         }
         if (isEnd){
-          h += '<span class="lo-end" draggable="true" data-aid="' + (a.id || '') + '" title="ドラッグで返却日を変更">▼</span>';
+          h += '<span class="lo-end" draggable="true" data-aid="' + (a.id || '') + '">▼</span>';
         }
         h += ov + '</div>';
       } else {
