@@ -437,14 +437,15 @@ function _cfsLgRows(from, to, today, tStr, c, ro){
     loaners.forEach(function (l) {
       const a = assigns.find(function (x) { return x.loanerId === l.id && x.fromDate <= ds && x.toDate >= ds; });
       if (a){
-        h += '<td class="cfs-lg-busy" title="' + (l.name || '') + ' ' + (l.model || '') + '：' + (a.customer || '貸出中') + (a.car ? '（' + a.car + '）' : '') + ' 〜' + a.toDate.slice(5).replace('-', '/') + '"></td>';
+        /* 古いtitle（誰に・いつまで）は撤去＝情報はヘッダのホバー詳細カードへ */
+        h += '<td class="cfs-lg-busy"></td>';
       } else if (ro){
         /* 空きカレンダービュー＝読み取り専用（クリック選択なし） */
-        h += '<td class="cfs-lg-free cfs-lg-ro" title="' + (l.name || '') + ' ' + (l.model || '') + '：空き"></td>';
+        h += '<td class="cfs-lg-free cfs-lg-ro"></td>';
       } else {
         /* このカードの貸出予定（使用代車＋から/まで）と一致するマスは緑＝双方向（ドラッグでもテキスト入力でも光る） */
         const pick = c && c.loanerId === l.id && c.loanerFrom && c.loanerTo && ds >= c.loanerFrom && ds <= c.loanerTo;
-        h += '<td class="cfs-lg-free' + (pick ? ' cfs-lg-pick' : '') + '" data-lgl="' + l.id + '" data-lgd="' + ds + '" title="' + (l.name || '') + ' ' + (l.model || '') + '：空き（クリック→ドラッグで貸出期間に）"></td>';
+        h += '<td class="cfs-lg-free' + (pick ? ' cfs-lg-pick' : '') + '" data-lgl="' + l.id + '" data-lgd="' + ds + '"></td>';
       }
     });
     h += '</tr>';
@@ -461,7 +462,8 @@ function _cfsLoanerGanttHtml(today, tStr, c, ro){
   h += '<div class="cfs-lg-scroll" id="cfs-lg-scroll" onscroll="cfsLgScroll(this)"><table class="cfs-lg">';
   h += '<thead><tr><th class="cfs-lg-d"></th>';
   loaners.forEach(function (l) {
-    h += '<th title="' + (l.name || '') + ' ' + (l.model || '') + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
+    /* 古いtitleは撤去。data-loid でヘッダにマウスオーバー＝代車の詳細ホバーカード（loaner.js）を表示 */
+    h += '<th data-loid="' + l.id + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
   });
   h += '</tr></thead>';
   h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c, ro) + '</tbody>';
