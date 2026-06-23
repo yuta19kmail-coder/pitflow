@@ -187,12 +187,11 @@
           }
         }
 
-        // 代車（drop＋車検/板金は多め）。返車済みは返却日まで
+        // 代車ニーズ（drop＋車検/板金は多め）。実際の代車(loanerId)は後で重複しないよう割当。
         if (dt === 'drop' && (wt === 'shaken' || wt === 'bp' || Math.random() < 0.4)){
           c.needLoaner = true;
-          c.loanerId = 'L' + String((cards.length % 14) + 1).padStart(2, '0');
           c.loanerFrom = c.reserveDate;
-          c.loanerTo = (c.status === 'returned') ? c.returnDate : '';
+          c.loanerTo = (c.status === 'returned') ? c.returnDate : '';   // 預かり中(開 end)は後で+7日扱い
         }
         // ちょい足し
         if (Math.random() < 0.10) c.consult = true;
@@ -214,11 +213,27 @@
       });
     }
 
-    // 代車割当（代車カレンダー用）
+    // 代車割当（代車カレンダー用）＝実際の代車(state.loaners)に重複しないよう割当＋必ず id を振る。
     const plus7 = ymd(new Date(Date.now() + 7 * 86400000));
-    state.loanerAssigns = cards
-      .filter(c => c.loanerId && c.loanerFrom)
-      .map(c => ({ loanerId: c.loanerId, cardId: c.id, fromDate: c.loanerFrom, toDate: c.loanerTo || plus7 }));
+    const loanerIds = (state.loaners || []).map(l => l.id);
+    const busy = {};   // loanerId -> [[from,to], ...]
+    const _ov = function(ranges, from, to){ return ranges.some(function(r){ return !(to < r[0] || from > r[1]); }); };
+    let _laSeq = 0;
+    state.loanerAssigns = [];
+    cards.filter(function(c){ return c.needLoaner && c.loanerFrom; })
+      .sort(function(a, b){ return a.loanerFrom < b.loanerFrom ? -1 : 1; })
+      .forEach(function(c){
+        const from = c.loanerFrom, to = c.loanerTo || plus7;
+        let lid = null;
+        for (let i = 0; i < loanerIds.length; i++){
+          const id = loanerIds[i];
+          if (!busy[id]) busy[id] = [];
+          if (!_ov(busy[id], from, to)){ lid = id; busy[id].push([from, to]); break; }
+        }
+        if (!lid){ c.needLoaner = false; c.loanerId = ''; c.loanerFrom = ''; c.loanerTo = ''; return; }   // 空き無し＝代車なしに（重複を作らない）
+        c.loanerId = lid;
+        state.loanerAssigns.push({ id: 'la' + Date.now().toString(36) + (_laSeq++).toString(36), loanerId: lid, cardId: c.id, fromDate: from, toDate: to });
+      });
 
     // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
     state.cards = cards;

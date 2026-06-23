@@ -13,6 +13,10 @@ function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-
 function renderLoaner(){
   const grid = document.getElementById('loaner-grid');
   if (!grid) return;
+  // 代車割当に id が無いとドラッグ移動(data-aid)が効かない＝旧データ/サンプル救済で必ず採番
+  (state.loanerAssigns || []).forEach(function(a, i){
+    if (a && !a.id) a.id = 'la' + Date.now().toString(36) + i.toString(36);
+  });
   const today = new Date(); today.setHours(0,0,0,0);
   _loStart = addDays(today, -7);
   loRebuild(42);
