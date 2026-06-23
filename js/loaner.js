@@ -8,28 +8,37 @@
    ======================================== */
 let _loStart = null, _loCount = 0, _loBound = false, _loDnd = false, _loDragAid = null, _loDragMode = 'move';
 let _loFilters = { etc:false, navi:false, iso:false };
-let _loSortHeight = false;   // ON＝代車を高さの低い順に並べ替え
+let _loCats = { kei:false, normal:false, import:false };   // 区分の絞り込み（OR）
+let _loSortKey = null;   // 並べ替え（低い順）：'height'|'width'|'length'|'seats'|null
 let _loVehBound = false;
+
+const LO_CAT = { kei:'軽', normal:'普通車', import:'輸入車' };
 
 function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
 function _loEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
 
-/* 代車の装備オプション（ETC/ナビ/ISO/高さ）が未設定なら、デモ用に変化を付けて初期化（実車は編集で上書き） */
+/* 代車の装備/寸法（ETC/ナビ/ISO/高さ/幅/長さ/区分/定員）が未設定なら、デモ用に変化を付けて初期化（実車は編集で上書き） */
 function _loEnsureOpts(){
   (state.loaners || []).forEach(function(l, i){
     if (l.etc === undefined)  l.etc  = (i % 2 === 0);
     if (l.navi === undefined) l.navi = (i % 3 !== 0);
     if (l.iso === undefined)  l.iso  = (i % 4 === 0);
-    if (l.height === undefined || l.height === null) l.height = 150 + (i % 6) * 3;   // 150〜165cm
+    if (l.height === undefined || l.height === null) l.height = 150 + (i % 6) * 3;    // 150〜165cm
+    if (l.width  === undefined || l.width  === null) l.width  = 148 + (i % 5) * 4;    // 148〜164cm
+    if (l.length === undefined || l.length === null) l.length = 340 + (i % 8) * 20;   // 340〜480cm
+    if (l.category === undefined) l.category = ['kei','normal','import'][i % 3];
+    if (l.seats === undefined || l.seats === null) l.seats = [4,4,5,5,5,7,8][i % 7];
   });
 }
-/* 絞り込みスイッチで該当オプションを持つ代車だけに（＋高さ低い順ソート） */
+/* 絞り込み（装備＋区分）＆並べ替え（低い順） */
 function _loFiltered(){
   let ls = (state.loaners || []).slice();   // sortで実データの並びを壊さないようコピー
   if (_loFilters.etc)  ls = ls.filter(function(l){ return l.etc; });
   if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
   if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });
-  if (_loSortHeight)   ls.sort(function(a, b){ return (a.height != null ? a.height : 9999) - (b.height != null ? b.height : 9999); });
+  const anyCat = _loCats.kei || _loCats.normal || _loCats.import;
+  if (anyCat) ls = ls.filter(function(l){ return _loCats[l.category]; });
+  if (_loSortKey) ls.sort(function(a, b){ return (a[_loSortKey] != null ? a[_loSortKey] : 99999) - (b[_loSortKey] != null ? b[_loSortKey] : 99999); });
   return ls;
 }
 window.loToggleFilter = function(k){
@@ -37,9 +46,14 @@ window.loToggleFilter = function(k){
   const b = document.querySelector('.lo-filter[data-k="' + k + '"]'); if (b) b.classList.toggle('on', _loFilters[k]);
   _loRefresh();
 };
-window.loToggleHeightSort = function(){
-  _loSortHeight = !_loSortHeight;
-  const b = document.querySelector('.lo-filter[data-k="height"]'); if (b) b.classList.toggle('on', _loSortHeight);
+window.loToggleCat = function(cat){
+  _loCats[cat] = !_loCats[cat];
+  const b = document.querySelector('.lo-filter[data-cat="' + cat + '"]'); if (b) b.classList.toggle('on', _loCats[cat]);
+  _loRefresh();
+};
+window.loToggleSort = function(key){
+  _loSortKey = (_loSortKey === key) ? null : key;   // 並べ替えは1つだけ（再押下で解除）
+  document.querySelectorAll('.lo-filter[data-sort]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-sort') === _loSortKey); });
   _loRefresh();
 };
 
@@ -85,12 +99,15 @@ function loVehHover(headEl){
   let el = document.getElementById('lo-veh-hover');
   if (!el){ el = document.createElement('div'); el.id = 'lo-veh-hover'; document.body.appendChild(el); }
   const opt = function(on, label){ return '<span class="lvh-opt ' + (on ? 'on' : 'off') + '">' + (on ? '✓' : '✕') + ' ' + label + '</span>'; };
+  const dim = function(label, v){ return '<span class="lvh-dim">' + label + '<b>' + (v != null ? _loEsc(v) : '—') + '</b></span>'; };
+  const catLb = LO_CAT[l.category] || '';
   el.innerHTML =
       '<div class="lvh-head"><span class="lvh-name">' + _loEsc(l.name || '') + '</span>'
+        + (catLb ? '<span class="lvh-cat ' + _loEsc(l.category) + '">' + catLb + '</span>' : '')
         + (l.plate ? '<span class="lvh-plate">' + _loEsc(l.plate) + '</span>' : '') + '</div>'
-    + '<div class="lvh-model">' + _loEsc(l.model || '（車種未登録）') + '</div>'
+    + '<div class="lvh-model">' + _loEsc(l.model || '（車種未登録）') + (l.seats != null ? '　<span class="lvh-seats">定員' + _loEsc(l.seats) + '人</span>' : '') + '</div>'
     + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + '</div>'
-    + '<div class="lvh-h">高さ <b>' + (l.height != null ? _loEsc(l.height) + ' cm' : '—') + '</b></div>'
+    + '<div class="lvh-dims">' + dim('高さ ', l.height != null ? l.height + 'cm' : null) + dim('幅 ', l.width != null ? l.width + 'cm' : null) + dim('長さ ', l.length != null ? l.length + 'cm' : null) + '</div>'
     + (l.shakenDate ? '<div class="lvh-sub">車検 ' + _loEsc(l.shakenDate) + (l.tenkenDate ? '　12点 ' + _loEsc(l.tenkenDate) : '') + '</div>' : '');
   el.classList.add('show');
   const r = headEl.getBoundingClientRect();

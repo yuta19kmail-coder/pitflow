@@ -66,7 +66,14 @@ function renderFleet(){
       h += '<div class="fl-row">'
          + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(v.name) + '</div>'
          + '<div class="fl-sub">' + _fleetEsc(v.model || '—') + (v.plate ? ' ・ ' + _fleetEsc(v.plate) : '')
-         + (gi === 0 ? '<br>' + (v.etc ? '<span class="fl-opttag">ETC</span>' : '') + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '') + (v.iso ? '<span class="fl-opttag">ISO</span>' : '') + (v.height != null ? '<span class="fl-opttag h">高さ ' + _fleetEsc(v.height) + 'cm</span>' : '') : '')
+         + (gi === 0 ? '<br>'
+             + (v.category ? '<span class="fl-opttag cat">' + ({kei:'軽',normal:'普通車',import:'輸入車'}[v.category] || '') + '</span>' : '')
+             + (v.etc ? '<span class="fl-opttag">ETC</span>' : '') + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '') + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
+             + (v.seats != null ? '<span class="fl-opttag h">定員' + _fleetEsc(v.seats) + '人</span>' : '')
+             + (v.height != null ? '<span class="fl-opttag h">高' + _fleetEsc(v.height) + '</span>' : '')
+             + (v.width  != null ? '<span class="fl-opttag h">幅' + _fleetEsc(v.width) + '</span>' : '')
+             + (v.length != null ? '<span class="fl-opttag h">長' + _fleetEsc(v.length) + '</span>' : '')
+           : '')
          + (v.shakenDate ? '<br>車検 ' + _fleetEsc(v.shakenDate) : '') + (v.tenkenDate ? ' ・ 12点 ' + _fleetEsc(v.tenkenDate) : '') + '</div></div>'
          + '<button class="fl-btn" onclick="fleetOpenModal(\'' + v.id + '\')">✏️</button>'
          + '<button class="fl-btn del" onclick="fleetDelete(\'' + v.id + '\')">🗑</button>'
@@ -235,6 +242,10 @@ function fleetOpenModal(id){
   document.getElementById('fl-shaken').value = v.shakenDate || '';
   document.getElementById('fl-tenken').value = v.tenkenDate || '';
   document.getElementById('fl-height').value = (v.height != null ? v.height : '');
+  document.getElementById('fl-width').value  = (v.width  != null ? v.width  : '');
+  document.getElementById('fl-length').value = (v.length != null ? v.length : '');
+  document.getElementById('fl-cat').value    = v.category || 'kei';
+  document.getElementById('fl-seats').value  = (v.seats != null ? v.seats : '');
   document.getElementById('fl-etc').checked  = !!v.etc;
   document.getElementById('fl-navi').checked = !!v.navi;
   document.getElementById('fl-iso').checked  = !!v.iso;
@@ -252,8 +263,12 @@ function fleetSubmit(){
   const plate  = (document.getElementById('fl-plate').value || '').trim();
   const shaken = document.getElementById('fl-shaken').value || '';
   const tenken = document.getElementById('fl-tenken').value || '';
-  const heightRaw = document.getElementById('fl-height').value;
-  const height = (heightRaw === '' || heightRaw == null) ? null : Number(heightRaw);
+  const _num = function(id){ const v = document.getElementById(id).value; return (v === '' || v == null) ? null : Number(v); };
+  const height = _num('fl-height');
+  const width  = _num('fl-width');
+  const length = _num('fl-length');
+  const category = document.getElementById('fl-cat').value || 'kei';
+  const seats  = _num('fl-seats');
   const etc  = !!document.getElementById('fl-etc').checked;
   const navi = !!document.getElementById('fl-navi').checked;
   const iso  = !!document.getElementById('fl-iso').checked;
@@ -270,12 +285,14 @@ function fleetSubmit(){
       }
       f.v.name = name; f.v.model = model; f.v.plate = plate;
       f.v.shakenDate = shaken; f.v.tenkenDate = tenken;
-      f.v.height = height; f.v.etc = etc; f.v.navi = navi; f.v.iso = iso;
+      f.v.height = height; f.v.width = width; f.v.length = length; f.v.category = category; f.v.seats = seats;
+      f.v.etc = etc; f.v.navi = navi; f.v.iso = iso;
     }
   } else {
     const id = (kind === 'loaner' ? 'L' : 'C') + Date.now().toString(36);
     (kind === 'loaner' ? state.loaners : state.companyCars).push(
-      { id: id, name: name, model: model, plate: plate, shakenDate: shaken, tenkenDate: tenken, height: height, etc: etc, navi: navi, iso: iso }
+      { id: id, name: name, model: model, plate: plate, shakenDate: shaken, tenkenDate: tenken,
+        height: height, width: width, length: length, category: category, seats: seats, etc: etc, navi: navi, iso: iso }
     );
   }
   if (window.PitDB) PitDB.save();

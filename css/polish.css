@@ -399,7 +399,7 @@
 .lo-badge:active{ cursor:grabbing; }
 .lo-free{ background:transparent; }
 /* 代車カレンダー：オプション絞り込みスイッチ */
-.lo-filters{ display:inline-flex; align-items:center; gap:5px; margin-right:8px; }
+.lo-filters{ display:inline-flex; align-items:center; gap:5px; margin-right:8px; flex-wrap:wrap; }
 .lo-filters-lb{ font-size:11px; color:var(--text3); font-weight:700; }
 .lo-filter{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:999px; background:var(--bg3); color:var(--text2); border:1px solid var(--border2); cursor:pointer; }
 .lo-filter:hover{ background:var(--bg4); }
@@ -417,7 +417,19 @@
 #lo-veh-hover .lvh-opt.off{ background:var(--bg3); color:var(--text3); border:1px solid var(--border); }
 #lo-veh-hover .lvh-h{ margin-top:7px; font-size:12px; color:var(--text2); }
 #lo-veh-hover .lvh-h b{ color:var(--text); font-size:14px; }
+#lo-veh-hover .lvh-cat{ font-size:10.5px; font-weight:800; padding:1px 7px; border-radius:6px; }
+#lo-veh-hover .lvh-cat.kei{ background:rgba(132,204,22,.16); color:#84cc16; border:1px solid rgba(132,204,22,.5); }
+#lo-veh-hover .lvh-cat.normal{ background:rgba(55,138,221,.16); color:var(--blue); border:1px solid rgba(55,138,221,.5); }
+#lo-veh-hover .lvh-cat.import{ background:rgba(236,72,153,.16); color:#ec4899; border:1px solid rgba(236,72,153,.5); }
+#lo-veh-hover .lvh-seats{ font-size:11px; color:var(--text2); font-weight:700; }
+#lo-veh-hover .lvh-dims{ display:flex; gap:10px; margin-top:8px; }
+#lo-veh-hover .lvh-dim{ font-size:11px; color:var(--text3); }
+#lo-veh-hover .lvh-dim b{ color:var(--text); font-size:13px; margin-left:2px; }
 #lo-veh-hover .lvh-sub{ margin-top:6px; font-size:10.5px; color:var(--text3); border-top:1px solid var(--border); padding-top:5px; }
+/* 車両モーダルの寸法欄 */
+.fl-dims{ display:flex; gap:10px; margin-top:5px; }
+.fl-dims label{ display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text2); }
+.fl-in.fl-dim{ width:62px; }
 /* 車両モーダルの装備オプション */
 .fl-opts{ display:flex; gap:14px; margin-top:5px; }
 .fl-opt{ display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer; }
