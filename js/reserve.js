@@ -297,7 +297,7 @@ function monthGridCells(refDate){
     const hol = (window.Holidays && Holidays.name(dateStr)) || null;
     // セルの「予約チップ以外」をクリック＝その日の全件表示（当日タブへドリル）
     html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="reserveDate" data-drop-val="' + dateStr + '"'
-         + ' onclick="if(!event.target.closest(\'.reserve-month-event\'))pitReserveOpenDay(\'' + dateStr + '\')">';
+         + ' onclick="if(!event.target.closest(\'.reserve-month-event\'))pitReserveDayPopup(\'' + dateStr + '\',\'reserve\')">';
     html += '<div class="day-num">' + dd + '</div>';
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
@@ -325,14 +325,37 @@ function monthGridCells(refDate){
   return html;
 }
 
-/* 月／2ヶ月ビューで日付セルをクリック＝その日の予約を全件表示（当日タブへ切替） */
-window.pitReserveOpenDay = function(dateStr){
-  state.reserveDate = new Date(dateStr + 'T00:00:00');
-  state.reserveRange = 'day';
-  const tabs = document.querySelector('.range-tabs[data-mode="reserve"]');
-  if (tabs){ tabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b.dataset.range === 'day'); }); }
-  renderReserve();
+/* 月／2ヶ月ビューで日付セルをクリック＝その日の予約/返車を全件ポップアップ表示。
+   mode='reserve'（入庫予定）/'return'（返車予定）。カードはタスクボードと同じコンパクトカード。 */
+window.pitReserveDayPopup = function(dateStr, mode){
+  mode = (mode === 'return') ? 'return' : 'reserve';
+  const _min = function(t){ const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1] * 60 + +m[2]) : 9999; };
+  const cards = state.cards.filter(function(c){
+    if (mode === 'return') return c.returnDate === dateStr && c.status !== 'returned' && c.status !== 'scrap';
+    return c.reserveDate === dateStr && c.status === 'reserved';
+  }).sort(function(a, b){
+    return _min(mode === 'return' ? (a.returnTime || a.reserveTime) : a.reserveTime) - _min(mode === 'return' ? (b.returnTime || b.reserveTime) : b.reserveTime);
+  });
+
+  let back = document.getElementById('pit-day-pop');
+  if (!back){
+    back = document.createElement('div');
+    back.id = 'pit-day-pop';
+    back.className = 'modal-backdrop';
+    back.addEventListener('click', function(e){ if (e.target.id === 'pit-day-pop') pitReserveDayPopClose(); });
+    document.body.appendChild(back);
+  }
+  const d = new Date(dateStr + 'T00:00:00');
+  const dow = '日月火水木金土'[d.getDay()];
+  const head = (d.getMonth() + 1) + '月' + d.getDate() + '日（' + dow + '）　' + (mode === 'return' ? '返車予定' : '入庫予定') + '　' + cards.length + '件';
+  const body = cards.length
+    ? cards.map(function(c){ return cardHtml(c, { compact: true }); }).join('')
+    : '<div class="pdp-empty">予定はありません</div>';
+  back.innerHTML = '<div class="pdp-box"><div class="pdp-head"><span>' + head + '</span><button class="pdp-x" onclick="pitReserveDayPopClose()">✕</button></div>'
+    + '<div class="pdp-list" onclick="pitReserveDayPopClose()">' + body + '</div></div>';
+  back.classList.add('show');
 };
+window.pitReserveDayPopClose = function(){ const b = document.getElementById('pit-day-pop'); if (b) b.classList.remove('show'); };
 
 function startOfWeek(d){
   const x = new Date(d);

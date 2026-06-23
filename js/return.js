@@ -278,15 +278,18 @@ function monthGridCellsReturn(refDate){
     const remaining = cardsOfDay.length - visible.length;
 
     const hol = (window.Holidays && Holidays.name(dateStr)) || null;
-    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="returnDate" data-drop-val="' + dateStr + '">';
+    // セルの「予約チップ以外」をクリック＝その日の返車を全件ポップアップ
+    html += '<div class="reserve-month-cell' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + dowClass + '" data-drop="returnDate" data-drop-val="' + dateStr + '"'
+         + ' onclick="if(!event.target.closest(\'.reserve-month-event\'))pitReserveDayPopup(\'' + dateStr + '\',\'return\')">';
     html += '<div class="day-num">' + dd + '</div>';
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
-      const tt = (c.returnTime || c.reserveTime || '');
+      const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
+      const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
       html += '<div class="reserve-month-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
-      html += ' onclick="openDetail(\'' + c.id + '\')"';
-      html += ' title="' + tt + ' ' + c.customer + '様 / ' + (c.car || '') + ' / ' + c.menu + '">';
-      html += (tt ? tt + ' ' : '') + c.customer + (c.car ? ' ' + c.car : '');
+      if (!c.urgent) html += ' style="border-left-color:' + teamColor + '"';
+      html += ' onclick="event.stopPropagation();openDetail(\'' + c.id + '\')">';
+      html += nm + ' 様' + (c.car ? ' ' + c.car : '');   // 時間なし・苗字＋様・長い場合は…
       html += '</div>';
     });
     if (remaining > 0){

@@ -255,17 +255,18 @@
 .reserve-month-cell.sun .day-num{color:var(--red)}
 .reserve-month-cell.sat .day-num{color:var(--blue)}
 .reserve-month-event{
-  background:var(--brand-soft);
-  border-left:2px solid var(--brand);
+  background:var(--bg3);                 /* 緑ベースをやめて中立色に（左ラインで国産緑/輸入ピンクを表現） */
+  border-left:3px solid var(--border2);  /* 色はinlineでチーム色を上書き */
   border-radius:3px;
-  padding:1px 4px;
+  padding:1px 5px;
   font-size:10px;
+  color:var(--text);
   cursor:pointer;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-.reserve-month-event:hover{background:var(--brand)}
+.reserve-month-event:hover{background:var(--bg4)}
 .reserve-month-event.urgent{
   background:rgba(239,68,68,.15);
   border-left-color:var(--red);
@@ -496,6 +497,14 @@
   z-index:100;
 }
 .modal-backdrop.show{display:flex}
+/* 月/2ヶ月ビューの「その日の全件」ポップアップ */
+.pdp-box{ background:var(--bg2); border:1px solid var(--border); border-radius:12px; width:min(92vw,380px); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,.5); }
+.pdp-head{ display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border); font-weight:700; font-size:14px; }
+.pdp-head .pdp-x{ margin-left:auto; background:var(--bg3); border:1px solid var(--border2); color:var(--text2); border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:13px; }
+.pdp-head .pdp-x:hover{ background:var(--bg4); color:var(--text); }
+.pdp-list{ padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.pdp-list .pit-card.pcm{ width:100%; max-width:100%; box-sizing:border-box; }
+.pdp-empty{ color:var(--text3); text-align:center; padding:24px 0; font-size:13px; }
 .modal-box{
   background:var(--bg2);
   border:1px solid var(--border);
