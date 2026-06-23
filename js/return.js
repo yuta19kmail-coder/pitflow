@@ -286,10 +286,16 @@ function monthGridCellsReturn(refDate){
     visible.forEach(c => {
       const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
       const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+      const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
+      const wt = state.workTypes.find(w => w.id === _wid);
+      let side = '';
+      if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
+      if (c.needLoaner) side += '<span class="rme-loaner">代</span>';
       html += '<div class="reserve-month-event return' + (c.urgent ? ' urgent' : '') + '" draggable="true" data-card-id="' + c.id + '"';
       if (!c.urgent) html += ' style="border-left-color:' + teamColor + '"';
       html += ' onclick="event.stopPropagation();openDetail(\'' + c.id + '\')">';
-      html += nm + ' 様' + (c.car ? ' ' + c.car : '');   // 時間なし・苗字＋様・長い場合は…
+      html += '<span class="rme-txt">' + nm + ' 様' + (c.car ? ' ' + c.car : '') + '</span>';
+      if (side) html += '<span class="rme-side">' + side + '</span>';
       html += '</div>';
     });
     if (remaining > 0){

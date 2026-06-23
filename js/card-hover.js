@@ -58,8 +58,29 @@
     h += '<div class="ph-car">'+carTxt+'</div>';
     if (c.plate) h += '<div class="ph-plate-row"><span class="ph-plate">'+esc(c.plate)+'</span></div>';
 
-    // ===== 経過日数3つ =====
-    h += '<div class="ph-stats">';
+    // ===== 経過日数（預かり後）。ただし予約（入庫前）は予約日だけ =====
+    var _resv = (c.status === 'reserved');
+    h += '<div class="ph-stats' + (_resv ? (c.needLoaner ? ' ph-stats-2' : ' ph-stats-1') : '') + '">';
+
+    if (_resv){
+      // 予約専用：まだ入庫前なので 預かり/フェーズ/代車リミット は出さない。予約日と予約まで(から)の日数だけ。
+      var rd = c.reserveDate;
+      var rmd = (rd && window.fmtMD) ? fmtMD(rd) : (rd || '未定');
+      var rn = (rd && window.daysFromToday) ? daysFromToday(rd) : null;
+      var rsub = (rn==null) ? '日付未定' : (rn>0 ? ('あと'+rn+'日') : (rn===0 ? '今日' : (Math.abs(rn)+'日前')));
+      h += '<div class="ph-stat s-resv"><div class="ph-stat-lb">予約</div>'
+         + '<div class="ph-stat-num">'+esc(rmd)+'</div>'
+         + '<div class="ph-stat-sub">'+rsub+'</div></div>';
+      if (c.needLoaner){
+        // 代車あり＝2分割：何の代車(名)を何日〜か（リミット＝残日数は入庫後の話なので出さない）
+        var _lo = (window.state && Array.isArray(state.loaners)) ? state.loaners.find(function(x){ return x.id === c.loanerId; }) : null;
+        var _loName = _lo ? (_lo.name || _lo.model || c.loanerId) : (c.loanerId || '代車');
+        var _loSub = (_lo && _lo.model ? _lo.model + ' ' : '') + (c.loanerFrom && window.fmtMD ? (fmtMD(c.loanerFrom) + '〜') : '期間未定');
+        h += '<div class="ph-stat s-resv-loaner"><div class="ph-stat-lb">代車</div>'
+           + '<div class="ph-stat-num" style="font-size:15px">'+esc(_loName)+'</div>'
+           + '<div class="ph-stat-sub">'+esc(_loSub)+'</div></div>';
+      }
+    } else {
 
     // ① 預かり
     var holdN = (function(){ var n = window.daysFromToday ? daysFromToday(c.reserveDate) : null; return (n==null)?null:(1-n); })();
@@ -99,6 +120,7 @@
       h += '<div class="ph-stat s-loaner lv-'+lv+'"><div class="ph-stat-lb">代車リミット</div>'
          + '<div class="ph-stat-num">'+numHtml+'</div><div class="ph-stat-sub">'+esc(dueTxt)+'</div>'
          + '<div class="ph-meter"><i style="width:'+pct+'%"></i></div></div>';
+    }
     }
     h += '</div>'; // .ph-stats
 
@@ -148,8 +170,10 @@
   }
   function hide(){ curId=null; if (el) el.classList.remove('show'); }
 
-  // タスクボードのコンパクトカード（.pit-card.pcm）＋ PITリスト/PiPの枠内カード（.pfv-card）で出す
-  var HOVER_SEL = '.pit-card.pcm, .pfv-card';
+  // 出す対象：タスクボードのコンパクト（.pit-card.pcm）／PITリスト枠内（.pfv-card）／
+  //   予約・返車の 月リスト(.rml-ev)・2ヶ月チップ(.reserve-month-event)・週ミニ(.rwk-card)。
+  //   予約(status:reserved)は fill() 側で「予約専用（予約日だけ）」表示になる。
+  var HOVER_SEL = '.pit-card.pcm, .pfv-card, .rml-ev, .reserve-month-event, .rwk-card';
   document.addEventListener('mouseover', function(e){
     var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card){ return; }

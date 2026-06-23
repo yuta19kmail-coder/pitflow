@@ -255,18 +255,22 @@
 .reserve-month-cell.sun .day-num{color:var(--red)}
 .reserve-month-cell.sat .day-num{color:var(--blue)}
 .reserve-month-event{
+  display:flex; align-items:center; gap:4px;
   background:var(--bg3);                 /* 緑ベースをやめて中立色に（左ラインで国産緑/輸入ピンクを表現） */
+  border:1px solid var(--border);        /* ★枠を常時表示（hoverで消えないように） */
   border-left:3px solid var(--border2);  /* 色はinlineでチーム色を上書き */
-  border-radius:3px;
-  padding:1px 5px;
+  border-radius:4px;
+  padding:1px 4px 1px 5px;
   font-size:10px;
   color:var(--text);
   cursor:pointer;
   overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
 }
-.reserve-month-event:hover{background:var(--bg4)}
+.reserve-month-event:hover{ background:var(--bg4); border-color:var(--border2); }   /* 枠は残す */
+.reserve-month-event .rme-txt{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reserve-month-event .rme-side{ flex:0 0 auto; display:flex; align-items:center; gap:3px; }
+.reserve-month-event .rme-wt{ font-weight:700; white-space:nowrap; }
+.reserve-month-event .rme-loaner{ font-weight:800; color:var(--orange); background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.5); border-radius:3px; padding:0 3px; line-height:1.4; }
 .reserve-month-event.urgent{
   background:rgba(239,68,68,.15);
   border-left-color:var(--red);
