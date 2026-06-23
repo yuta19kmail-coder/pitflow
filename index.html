@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.81.19"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.81.20"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -72,7 +72,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.81.19</div>
+    <div class="pl-ver">PitFlow v0.81.20</div>
   </div>
 </div>
 
@@ -84,7 +84,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.81.19</span>
+      <span class="ver">v0.81.20</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -289,6 +289,7 @@
             <button class="lo-filter" data-k="etc"  onclick="loToggleFilter('etc')">ETC</button>
             <button class="lo-filter" data-k="navi" onclick="loToggleFilter('navi')">ナビ</button>
             <button class="lo-filter" data-k="iso"  onclick="loToggleFilter('iso')">ISO</button>
+            <button class="lo-filter" data-k="height" onclick="loToggleHeightSort()" title="低い順に並べ替え">高さ↑</button>
           </div>
           <button class="vh-btn" onclick="loScrollToday()">📍 今日へ</button>
           <button class="vh-btn" onclick="showView('fleet')">🚐 車両管理へ</button>
@@ -644,7 +645,7 @@
 <script src="js/work.js?v=13"></script>
 <script src="js/result.js?v=9"></script>
 <script src="js/outsource.js?v=2"></script>
-<script src="js/loaner.js?v=16"></script>
+<script src="js/loaner.js?v=17"></script>
 <script src="js/fleet.js?v=5"></script>
 <script src="js/auth-pit.js?v=8"></script>
 <script src="js/launcher.js?v=7"></script>

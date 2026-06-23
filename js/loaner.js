@@ -8,6 +8,7 @@
    ======================================== */
 let _loStart = null, _loCount = 0, _loBound = false, _loDnd = false, _loDragAid = null, _loDragMode = 'move';
 let _loFilters = { etc:false, navi:false, iso:false };
+let _loSortHeight = false;   // ON＝代車を高さの低い順に並べ替え
 let _loVehBound = false;
 
 function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
@@ -22,17 +23,23 @@ function _loEnsureOpts(){
     if (l.height === undefined || l.height === null) l.height = 150 + (i % 6) * 3;   // 150〜165cm
   });
 }
-/* 絞り込みスイッチで該当オプションを持つ代車だけに */
+/* 絞り込みスイッチで該当オプションを持つ代車だけに（＋高さ低い順ソート） */
 function _loFiltered(){
-  let ls = (state.loaners || []);
+  let ls = (state.loaners || []).slice();   // sortで実データの並びを壊さないようコピー
   if (_loFilters.etc)  ls = ls.filter(function(l){ return l.etc; });
   if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
   if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });
+  if (_loSortHeight)   ls.sort(function(a, b){ return (a.height != null ? a.height : 9999) - (b.height != null ? b.height : 9999); });
   return ls;
 }
 window.loToggleFilter = function(k){
   _loFilters[k] = !_loFilters[k];
   const b = document.querySelector('.lo-filter[data-k="' + k + '"]'); if (b) b.classList.toggle('on', _loFilters[k]);
+  _loRefresh();
+};
+window.loToggleHeightSort = function(){
+  _loSortHeight = !_loSortHeight;
+  const b = document.querySelector('.lo-filter[data-k="height"]'); if (b) b.classList.toggle('on', _loSortHeight);
   _loRefresh();
 };
 
