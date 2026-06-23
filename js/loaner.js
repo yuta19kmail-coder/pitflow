@@ -57,7 +57,27 @@ function _loEnsureOpts(){
     if (l.length === undefined || l.length === null) l.length = 340 + (i % 8) * 20;   // 340〜480cm
     if (l.category === undefined) l.category = ['kei','normal','import'][i % 3];
     if (l.seats === undefined || l.seats === null) l.seats = [4,4,5,5,5,7,8][i % 7];
+    if (l.number === undefined || l.number === null){ const n = parseInt(String(l.name||'').replace(/[^0-9]/g,''),10); l.number = isNaN(n)?(i+1):n; }
+    if (l.color === undefined) l.color = '';
   });
+}
+/* 入替予定の確定：入替日を過ぎたら 旧車を撤去し、新車を正式番号(「(仮)」を外す)に。 */
+function _loProcessReplacements(){
+  const today = ymd(new Date());
+  let changed = false;
+  (state.loaners || []).slice().forEach(function(nv){
+    if (nv.replaceOf && nv.replaceDate && nv.replaceDate <= today){
+      // 旧車とその割当を撤去
+      const oldId = nv.replaceOf;
+      state.loaners = (state.loaners||[]).filter(function(l){ return l.id !== oldId; });
+      state.loanerAssigns = (state.loanerAssigns||[]).filter(function(a){ return a.loanerId !== oldId; });
+      state.fleetEvents = (state.fleetEvents||[]).filter(function(e){ return e.id !== ('rep_'+nv.id) && e.vehicleId !== oldId; });
+      // 新車を正式化
+      nv.name = '代車' + nv.number; delete nv.replaceOf; delete nv.replaceDate;
+      changed = true;
+    }
+  });
+  if (changed && window.PitDB) PitDB.save();
 }
 /* 絞り込み（装備＋区分）＆並べ替え（低い順） */
 function _loFiltered(){
@@ -93,6 +113,8 @@ function renderLoaner(){
   (state.loanerAssigns || []).forEach(function(a, i){
     if (a && !a.id) a.id = 'la' + Date.now().toString(36) + i.toString(36);
   });
+  _loEnsureOpts();
+  _loProcessReplacements();   // 入替日を過ぎた予定を確定
   const today = new Date(); today.setHours(0,0,0,0);
   _loStart = addDays(today, -7);
   loRebuild(42);

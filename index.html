@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.81.24"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.81.25"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=36">
-<link rel="stylesheet" href="css/polish.css?v=97">
+<link rel="stylesheet" href="css/polish.css?v=98">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
 <link rel="stylesheet" href="css/search.css?v=5">
@@ -72,7 +72,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.81.24</div>
+    <div class="pl-ver">PitFlow v0.81.25</div>
   </div>
 </div>
 
@@ -84,7 +84,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.81.24</span>
+      <span class="ver">v0.81.25</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -446,11 +446,23 @@
         <label class="fl-mlb">種別
           <select id="fl-kind" class="fl-in"><option value="loaner">代車</option><option value="company">社用車</option></select>
         </label>
-        <label class="fl-mlb">名前 <input id="fl-name" class="fl-in" placeholder="例：代車21／積載車"></label>
-        <label class="fl-mlb">車種 <input id="fl-model" class="fl-in" placeholder="例：タント"></label>
-        <label class="fl-mlb">ナンバー <input id="fl-plate" class="fl-in" placeholder="例：○○ 0021"></label>
-        <label class="fl-mlb">車検満了日 <input id="fl-shaken" type="date" class="fl-in"></label>
-        <label class="fl-mlb">12ヶ月点検 予定日 <input id="fl-tenken" type="date" class="fl-in"></label>
+        <label class="fl-mlb">番号 <input id="fl-number" type="number" min="1" step="1" class="fl-in" oninput="flNumberCheck()" placeholder="自動採番（末番）"></label>
+        <div class="fl-mlb fl-rep" id="fl-rep-row" style="display:none">
+          <span class="fl-rep-note">⚠ この番号は使用中＝<b>入替予定</b>として登録します。</span>
+          入替日 <input id="fl-repdate" type="date" class="fl-in"> 以降に旧車を置き換え（それまで「(仮)」表示・カレンダーに予定）
+        </div>
+        <label class="fl-mlb">車種名 <input id="fl-model" class="fl-in" placeholder="例：タント"></label>
+        <label class="fl-mlb">色（ボディカラー） <input id="fl-color" class="fl-in" placeholder="例：白"></label>
+        <div class="fl-mlb">ナンバー
+          <div class="fl-plate4">
+            <input id="fl-pl-region" class="fl-in" placeholder="野田" autocomplete="off">
+            <input id="fl-pl-cls" class="fl-in" placeholder="300" inputmode="numeric" maxlength="3">
+            <input id="fl-pl-kana" class="fl-in" placeholder="ひ" maxlength="2">
+            <input id="fl-pl-num" class="fl-in" placeholder="54-12" inputmode="numeric">
+          </div>
+        </div>
+        <label class="fl-mlb">車検満了日 <input id="fl-shaken" type="date" class="fl-in"> <span class="fl-auto">→自動で予定に</span></label>
+        <label class="fl-mlb">12ヶ月点検 予定日 <input id="fl-tenken" type="date" class="fl-in"> <span class="fl-auto">→自動で予定に</span></label>
         <label class="fl-mlb">区分
           <select id="fl-cat" class="fl-in"><option value="kei">軽</option><option value="normal">普通車</option><option value="import">輸入車</option></select>
         </label>
@@ -664,8 +676,8 @@
 <script src="js/work.js?v=13"></script>
 <script src="js/result.js?v=9"></script>
 <script src="js/outsource.js?v=2"></script>
-<script src="js/loaner.js?v=21"></script>
-<script src="js/fleet.js?v=6"></script>
+<script src="js/loaner.js?v=22"></script>
+<script src="js/fleet.js?v=7"></script>
 <script src="js/auth-pit.js?v=8"></script>
 <script src="js/launcher.js?v=7"></script>
 <script src="js/holidays.js?v=1"></script>

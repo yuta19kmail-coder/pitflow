@@ -65,7 +65,7 @@ function renderFleet(){
     g.arr.forEach(function(v){
       h += '<div class="fl-row">'
          + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(v.name) + '</div>'
-         + '<div class="fl-sub">' + _fleetEsc(v.model || '—') + (v.plate ? ' ・ ' + _fleetEsc(v.plate) : '')
+         + '<div class="fl-sub">' + _fleetEsc(v.model || '—') + (v.color ? '（' + _fleetEsc(v.color) + '）' : '') + (v.plate ? ' ・ ' + _fleetEsc(v.plate) : '')
          + (gi === 0 ? '<br>'
              + (v.category ? '<span class="fl-opttag cat">' + ({kei:'軽',normal:'普通車',import:'輸入車'}[v.category] || '') + '</span>' : '')
              + (v.etc ? '<span class="fl-opttag">ETC</span>' : '') + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '') + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
@@ -230,15 +230,34 @@ function flEventDelete(){
 }
 
 /* ===== 車両 登録・編集ポップアップ ===== */
+function _flLoanerNum(l){ if (l.number != null) return l.number; const n = parseInt(String(l.name||'').replace(/[^0-9]/g,''),10); return isNaN(n)?0:n; }
+function _flNextNum(){ let mx=0; (state.loaners||[]).forEach(function(l){ mx=Math.max(mx,_flLoanerNum(l)); }); return mx+1; }
+function _flPlateParts(p){ const a=String(p||'').trim().split(/\s+/); return { region:a[0]||'', cls:a[1]||'', kana:a[2]||'', num:a[3]||'' }; }
+function _flPlateJoin(){ const v=function(id){return (document.getElementById(id).value||'').trim();}; return [v('fl-pl-region'),v('fl-pl-cls'),v('fl-pl-kana'),v('fl-pl-num')].filter(Boolean).join(' '); }
+/* 車検満了/12点 → カレンダーに自動でイベント（車両×種別で1件・上書き更新）。代車カレンダーにも出る。 */
+function _flSyncVehEvent(vehicleId, type, date){
+  const eid = 'auto_' + vehicleId + '_' + type;
+  const evs = _flEvents();
+  const i = evs.findIndex(function(e){ return e.id === eid; });
+  if (!date){ if (i>=0) evs.splice(i,1); return; }
+  const rec = { id:eid, vehicleId:vehicleId, type:type, label:(FL_EVT_TYPES[type]?FL_EVT_TYPES[type].label:''), fromDate:date, toDate:date, auto:true };
+  if (i>=0) evs[i]=rec; else evs.push(rec);
+}
+
 function fleetOpenModal(id){
   _fleetEditId = id || null;
   const f = id ? _fleetFind(id) : null;
   const v = f ? f.v : {};
   document.getElementById('fl-modal-title').textContent = f ? '✏️ 車両を編集' : '＋ 車両を追加';
   document.getElementById('fl-kind').value  = f ? f.kind : 'loaner';
-  document.getElementById('fl-name').value  = v.name || '';
-  document.getElementById('fl-model').value = v.model || '';
-  document.getElementById('fl-plate').value = v.plate || '';
+  document.getElementById('fl-number').value = f ? _flLoanerNum(v) : _flNextNum();   // 自動末番
+  document.getElementById('fl-model').value = v.model || '';                          // 車種名
+  document.getElementById('fl-color').value = v.color || '';                          // 色
+  const pp = _flPlateParts(v.plate);
+  document.getElementById('fl-pl-region').value = pp.region;
+  document.getElementById('fl-pl-cls').value    = pp.cls;
+  document.getElementById('fl-pl-kana').value   = pp.kana;
+  document.getElementById('fl-pl-num').value    = pp.num;
   document.getElementById('fl-shaken').value = v.shakenDate || '';
   document.getElementById('fl-tenken').value = v.tenkenDate || '';
   document.getElementById('fl-height').value = (v.height != null ? v.height : '');
@@ -249,51 +268,67 @@ function fleetOpenModal(id){
   document.getElementById('fl-etc').checked  = !!v.etc;
   document.getElementById('fl-navi').checked = !!v.navi;
   document.getElementById('fl-iso').checked  = !!v.iso;
+  document.getElementById('fl-repdate').value = v.replaceDate || '';
+  flNumberCheck();
   document.getElementById('fleet-modal').classList.add('show');
-  const n = document.getElementById('fl-name'); if (n) n.focus();
+  const n = document.getElementById('fl-model'); if (n) n.focus();
 }
+/* 番号入力時：その番号が他の代車で使用中なら「入替予定」欄を出す */
+function flNumberCheck(){
+  const num = Number(document.getElementById('fl-number').value);
+  const row = document.getElementById('fl-rep-row');
+  if (!row) return;
+  const dup = num && (state.loaners||[]).some(function(l){ return _flLoanerNum(l)===num && l.id!==_fleetEditId; });
+  row.style.display = dup ? 'block' : 'none';
+}
+window.flNumberCheck = flNumberCheck;
 function fleetCloseModal(){
   _fleetEditId = null;
   document.getElementById('fleet-modal').classList.remove('show');
 }
 function fleetSubmit(){
   const kind   = document.getElementById('fl-kind').value || 'loaner';
-  const name   = (document.getElementById('fl-name').value || '').trim();
+  const number = Number(document.getElementById('fl-number').value) || _flNextNum();
   const model  = (document.getElementById('fl-model').value || '').trim();
-  const plate  = (document.getElementById('fl-plate').value || '').trim();
+  const color  = (document.getElementById('fl-color').value || '').trim();
+  const plate  = _flPlateJoin();
   const shaken = document.getElementById('fl-shaken').value || '';
   const tenken = document.getElementById('fl-tenken').value || '';
-  const _num = function(id){ const v = document.getElementById(id).value; return (v === '' || v == null) ? null : Number(v); };
-  const height = _num('fl-height');
-  const width  = _num('fl-width');
-  const length = _num('fl-length');
+  const _num = function(id){ const x = document.getElementById(id).value; return (x === '' || x == null) ? null : Number(x); };
+  const height=_num('fl-height'), width=_num('fl-width'), length=_num('fl-length');
   const category = document.getElementById('fl-cat').value || 'kei';
-  const seats  = _num('fl-seats');
-  const etc  = !!document.getElementById('fl-etc').checked;
-  const navi = !!document.getElementById('fl-navi').checked;
-  const iso  = !!document.getElementById('fl-iso').checked;
-  if (!name){ alert('名前を入れてください（例：代車21／積載車）'); return; }
+  const seats = _num('fl-seats');
+  const etc=!!document.getElementById('fl-etc').checked, navi=!!document.getElementById('fl-navi').checked, iso=!!document.getElementById('fl-iso').checked;
+  if (!model){ alert('車種名を入れてください（例：タント）'); return; }
   if (!Array.isArray(state.companyCars)) state.companyCars = [];
+
+  // 入替判定（新規で、その番号が既存の代車に使われている）
+  const dupLoaner = (kind==='loaner') ? (state.loaners||[]).find(function(l){ return _flLoanerNum(l)===number && l.id!==_fleetEditId; }) : null;
+  const repDate = (dupLoaner && !_fleetEditId) ? (document.getElementById('fl-repdate').value || '') : '';
+
+  const labelName = (kind === 'loaner') ? ('代車' + number + (repDate ? '(仮)' : '')) : (model || '社用車');
   if (_fleetEditId){
     const f = _fleetFind(_fleetEditId);
     if (f){
-      if (f.kind !== kind){
-        const fromArr = f.kind === 'loaner' ? state.loaners : state.companyCars;
-        const toArr   = kind === 'loaner' ? state.loaners : state.companyCars;
-        fromArr.splice(fromArr.indexOf(f.v), 1);
-        toArr.push(f.v);
-      }
-      f.v.name = name; f.v.model = model; f.v.plate = plate;
+      if (f.kind !== kind){ const fromArr=f.kind==='loaner'?state.loaners:state.companyCars, toArr=kind==='loaner'?state.loaners:state.companyCars; fromArr.splice(fromArr.indexOf(f.v),1); toArr.push(f.v); }
+      f.v.name = (kind==='loaner'?'代車'+number:(model||f.v.name)); f.v.number = number; f.v.model = model; f.v.color = color; f.v.plate = plate;
       f.v.shakenDate = shaken; f.v.tenkenDate = tenken;
-      f.v.height = height; f.v.width = width; f.v.length = length; f.v.category = category; f.v.seats = seats;
-      f.v.etc = etc; f.v.navi = navi; f.v.iso = iso;
+      f.v.height=height; f.v.width=width; f.v.length=length; f.v.category=category; f.v.seats=seats; f.v.etc=etc; f.v.navi=navi; f.v.iso=iso;
+      _flSyncVehEvent(f.v.id, 'shakenIn', shaken);
+      _flSyncVehEvent(f.v.id, 'tenken', tenken);
     }
   } else {
     const id = (kind === 'loaner' ? 'L' : 'C') + Date.now().toString(36);
-    (kind === 'loaner' ? state.loaners : state.companyCars).push(
-      { id: id, name: name, model: model, plate: plate, shakenDate: shaken, tenkenDate: tenken,
-        height: height, width: width, length: length, category: category, seats: seats, etc: etc, navi: navi, iso: iso }
-    );
+    const rec = { id:id, name:labelName, number:number, model:model, color:color, plate:plate, shakenDate:shaken, tenkenDate:tenken,
+      height:height, width:width, length:length, category:category, seats:seats, etc:etc, navi:navi, iso:iso };
+    if (dupLoaner && repDate){ rec.replaceOf = dupLoaner.id; rec.replaceDate = repDate; }
+    (kind === 'loaner' ? state.loaners : state.companyCars).push(rec);
+    _flSyncVehEvent(id, 'shakenIn', shaken);
+    _flSyncVehEvent(id, 'tenken', tenken);
+    // 入替予定＝旧車のカレンダーに「代車入替」イベント（〜入替日）＋新車にも開始予定
+    if (dupLoaner && repDate){
+      _flEvents().push({ id:'rep_'+id, vehicleId:dupLoaner.id, type:'lease', label:'代車'+number+'入替→新車へ', fromDate:ymd(new Date()), toDate:repDate });
+    }
   }
   if (window.PitDB) PitDB.save();
   fleetCloseModal();
