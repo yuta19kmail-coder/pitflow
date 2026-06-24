@@ -238,7 +238,9 @@
       });
 
     // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
-    state.cards = cards;
+    // v0.87.1 重大バグ修正：以前は state.cards = cards（全置換）で、実カード（あなたが作った予約＝非_sample）まで
+    //   消えて save で空保存され、リロードで予約が消えていた。→ 実カードは残し、サンプルだけ作り直す。
+    state.cards = (state.cards || []).filter(function(c){ return !c._sample; }).concat(cards);
     // 予約番号（resNo）を採番＝カードの「耳」が出るように（通常は起動時backfillだが、ボタン生成分はここで採番）。
     if (window.pitBackfillResNo) pitBackfillResNo();
     const ok = (window.PitDB) ? PitDB.save(true) : false;

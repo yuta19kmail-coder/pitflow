@@ -245,7 +245,7 @@ function openNewReserve(){
     needLoaner: false, needWash: false, urgent: false, memo: ''
   };
   state.cards.push(card);
-  if (window.PitDB) PitDB.save();
+  if (window.PitDB) PitDB.save(true);   // v0.87.1 作成した瞬間に即保存（デバウンス待ちで取りこぼさない）
   openCard(id, 'page');   // 新規入庫予約＝全画面
 }
 function goToday(){
