@@ -653,7 +653,7 @@
 .tr-plate{ font-size:12px; color:var(--text2); margin-top:1px; }
 
 /* 右タグ：固定3スロットで全幅揃え（添え物｜受付タイプ｜作業タイプ）。中身は各スロット幅いっぱい */
-.tr-tags{ display:grid; grid-template-columns:64px 30px 78px; gap:6px; align-items:center; justify-content:end; }
+.tr-tags{ display:grid; grid-template-columns:64px 44px 78px; gap:6px; align-items:center; justify-content:end; }/* v0.87.2 受付タイプ枠を30→44px＝「待預」2バッジが詰まらず入る */
 /* 作業バッジ2個（併用）＝1個ぶん幅(78px)の中に横並び。余白・文字を詰めて2段積みにしない。 */
 .tr-tag-work.multi{ flex-wrap:nowrap; gap:2px; overflow:hidden; }
 .tr-tag-work.multi .tag-work{ font-size:10px; padding:1px 4px; flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }

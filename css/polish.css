@@ -571,6 +571,10 @@
 .cf-plate-l{ font-size:10px; color:var(--text3); margin-bottom:3px; white-space:nowrap; }
 .cf-plate-guide .cf-input{ padding:6px 6px; box-sizing:border-box; }
 .cf-plate-grid > div{ flex:0 0 auto; }
+/* v0.87.2 受付タイプ2つ選択の「待預」＝小さいバッジ2個を詰めて並べる（固定枠でも崩れない・どの表示エリアでも共通） */
+.dbpair{ display:inline-flex; gap:1px; align-items:center; vertical-align:middle; }
+.dbpair > span{ font-size:9px !important; padding:1px 3px !important; line-height:1.5 !important; border-radius:5px !important; }
+
 /* v0.84.0 新規予約・右パネル：選んだ日の入庫/返車ミニ一覧（時間提案用） */
 .dl{background:var(--bg);border:1px solid var(--border2);border-radius:10px;overflow:hidden;margin-top:8px}
 .dl-cols{display:flex}

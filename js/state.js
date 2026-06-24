@@ -327,8 +327,8 @@ function pitDropBadges(c, makeBadge){
   if (!c) return '';
   var find = function (id){ return (state.dropTypes || []).find(function (d){ return d.id === id; }); };
   var a = find(c.dropType), b = c.dropType2 ? find(c.dropType2) : null;
-  var SEP = '<span style="opacity:.55;font-size:.82em;margin:0 1px">or</span>';
-  if (a && b) return makeBadge(a) + SEP + makeBadge(b);
+  // v0.87.2 2つ選択時は「待預」のように小さいバッジ2個を隙間少なく並べる（.dbpairで詰める＝固定枠でも崩れない・「or」は出さない）
+  if (a && b) return '<span class="dbpair">' + makeBadge(a) + makeBadge(b) + '</span>';
   return a ? makeBadge(a) : (b ? makeBadge(b) : '');
 }
 window.pitDropBadges = pitDropBadges;
