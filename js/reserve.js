@@ -421,8 +421,8 @@ function cardHtml(c, opts){
       }
     }
     if (dt && (c.dropType2 || dt.id === 'wait' || dt.id === 'sameDay')){
-      const dc = DROP_COLOR[dt.id] || 'var(--text2)';
-      top += '<span class="pcm-drop" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + (window.pitDropLabel ? pitDropLabel(c) : dt.label) + '</span>';
+      top += (window.pitDropBadges ? pitDropBadges(c, function(o){ const dc = DROP_COLOR[o.id] || 'var(--text2)'; return '<span class="pcm-drop" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66;">' + o.label + '</span>'; })
+                                   : '<span class="pcm-drop">' + dt.label + '</span>');
     }
     wts.slice(0, 2).forEach(function(id){
       const w = state.workTypes.find(x => x.id === id);
@@ -473,7 +473,7 @@ function cardHtml(c, opts){
   html += '<div class="pc-car">' + (c.car || '') + (c.menu ? ' ／ ' + c.menu : '') + '</div>';
   html += '<div class="pc-tags">';
   if (wt) html += '<span class="tag-work" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + ';">' + wt.label + '</span>';
-  if (dt) html += '<span class="pc-tag drop">' + (window.pitDropLabel ? pitDropLabel(c) : dt.label) + '</span>';
+  if (dt) html += (window.pitDropBadges ? pitDropBadges(c, function(o){ return '<span class="pc-tag drop">' + o.label + '</span>'; }) : '<span class="pc-tag drop">' + dt.label + '</span>');
   if (c.needLoaner) html += '<span class="pc-tag soft loaner">代車</span>';
   if (c.needWash)   html += '<span class="pc-tag soft wash">洗車</span>';
   if (c.staff)      html += '<span class="pc-tag staff">' + c.staff + '</span>';

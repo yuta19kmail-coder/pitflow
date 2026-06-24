@@ -321,6 +321,18 @@ function pitDropEffective(c){
 }
 window.pitDropEffective = pitDropEffective;
 
+/* v0.87.0 受付タイプのバッジ群HTML。2つ選んだ時は「[待]or[当]」のように、各タイプを“その場所の既存バッジ”で2個並べる。
+   makeBadge(dropTypeObj) ＝ 各表示箇所が自分のバッジHTMLを返す関数（色やクラスは呼び出し側の従来どおり）。 */
+function pitDropBadges(c, makeBadge){
+  if (!c) return '';
+  var find = function (id){ return (state.dropTypes || []).find(function (d){ return d.id === id; }); };
+  var a = find(c.dropType), b = c.dropType2 ? find(c.dropType2) : null;
+  var SEP = '<span style="opacity:.55;font-size:.82em;margin:0 1px">or</span>';
+  if (a && b) return makeBadge(a) + SEP + makeBadge(b);
+  return a ? makeBadge(a) : (b ? makeBadge(b) : '');
+}
+window.pitDropBadges = pitDropBadges;
+
 /* 起動時：予約番号が無い既存カードに後から採番（入庫日→id順で安定）。1回で全カードに付く。 */
 function pitBackfillResNo(){
   const cards = state.cards || [];

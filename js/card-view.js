@@ -94,7 +94,7 @@
 
     // 車検枠（作業内容コンテナ）
     let badges = '';
-    if (dt) badges += '<span class="cv-bdg cv-drop">'+esc(c.dropType2 ? (window.pitDropLabel?pitDropLabel(c):dt.label) : (dt.label.length<=1?dt.desc||dt.label:dt.label))+'</span>';
+    if (dt) badges += (window.pitDropBadges ? pitDropBadges(c, function(o){ return '<span class="cv-bdg cv-drop">'+esc(o.label.length<=1?(o.desc||o.label):o.label)+'</span>'; }) : '<span class="cv-bdg cv-drop">'+esc(dt.label)+'</span>');
     if (c.consult) badges += '<span class="cv-bdg cv-consult">💬 相談</span>';
     if (!c.needLoaner) badges += '<span class="cv-bdg cv-none">代車なし</span>';
     h += '<div class="cv-wframe" style="border-left-color:'+wtColor+'">'

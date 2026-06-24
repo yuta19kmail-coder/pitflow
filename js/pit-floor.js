@@ -554,7 +554,7 @@
     var DROPC = { wait: '#f59e0b', sameDay: '#3b82f6' };
     var dt = (window.state && Array.isArray(state.dropTypes)) ? state.dropTypes.find(function (d) { return d.id === c.dropType; }) : null;
     var _dc = DROPC[dt && dt.id] || '#64748b';
-    var dropBadge = (dt && (c.dropType2 || DROPC[dt.id])) ? '<span class="pfv-wt" style="background:' + _dc + '22;color:' + _dc + ';border-color:' + _dc + '66">' + esc(window.pitDropLabel ? pitDropLabel(c) : dt.label) + '</span>' : '';
+    var dropBadge = (dt && (c.dropType2 || DROPC[dt.id])) ? (window.pitDropBadges ? pitDropBadges(c, function(o){ var dc = DROPC[o.id] || '#64748b'; return '<span class="pfv-wt" style="background:' + dc + '22;color:' + dc + ';border-color:' + dc + '66">' + esc(o.label) + '</span>'; }) : '<span class="pfv-wt" style="background:' + _dc + '22;color:' + _dc + ';border-color:' + _dc + '66">' + esc(dt.label) + '</span>') : '';
     var staff = c.frontStaff || c.staff || '';
     var loanerBadge = c.needLoaner ? '<span class="pfv-loaner">代車</span>' : '';
     var staffNm = (window.pitSurname ? pitSurname(staff) : staff);
