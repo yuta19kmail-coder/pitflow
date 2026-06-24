@@ -991,16 +991,25 @@ function _platePartsOf(c){
   return { region: toks[0] || '', cls: toks[1] || '', kana: toks[2] || '', num: toks[3] || '' };
 }
 function plateInput(c){
-  const p = _platePartsOf(c);
+  // v0.83.0「新規車両」スイッチON＝ナンバー未定の新しい車（c.plate に文言「新規車両」を入れる）
+  const isNew = (String(c.plate || '').trim() === '新規車両');
+  const p = isNew ? { region:'', cls:'', kana:'', num:'' } : _platePartsOf(c);
   let h = '<div class="cf-plate">';
   h += '<input type="text" class="cf-input cf-plate-main" data-plate-main readonly value="' + _pe(c.plate || '') + '" placeholder="クリックして入力" autocomplete="off">';
   h += '<div class="cf-plate-guide">';
+  h += '<div class="cf-plate-row">';                       // v0.83.0 既存グリッドはそのまま・右側にスイッチ列を足すための横並び
   h += '<div class="cf-plate-grid">';
   h += '<div><div class="cf-plate-l">地名（管轄）</div><input class="cf-input cf-plate-region" list="cf-plate-regions" data-plate="region" value="' + _pe(p.region) + '" placeholder="野田" autocomplete="off"></div>';
   h += '<div><div class="cf-plate-l">分類</div><input class="cf-input cf-plate-cls" data-plate="cls" value="' + _pe(p.cls) + '" placeholder="300" inputmode="numeric" maxlength="3"></div>';
   h += '<div><div class="cf-plate-l">かな</div><input class="cf-input cf-plate-kana" data-plate="kana" value="' + _pe(p.kana) + '" placeholder="ひ" maxlength="1"></div>';
   h += '<div><div class="cf-plate-l">ナンバー</div><input class="cf-input cf-plate-num" data-plate="num" value="' + _pe(p.num) + '" placeholder="5555" inputmode="numeric" maxlength="4"></div>';
   h += '</div>';
+  // v0.83.0 右側＝「新規車両」スイッチ。押すとナンバー欄に「新規車両」と入る（ナンバーがまだ無い新しい車向け）
+  h += '<div class="cf-plate-side">';
+  h += '<button type="button" class="cf-plate-newveh' + (isNew ? ' on' : '') + '" data-plate-newveh>新規車両</button>';
+  h += '<div class="cf-plate-side-hint">ナンバー未定の<br>新しい車に</div>';
+  h += '</div>';
+  h += '</div>';                                           // /.cf-plate-row
   h += '<datalist id="cf-plate-regions">';
   PLATE_REGIONS.forEach(function (r){ h += '<option value="' + r + '"></option>'; });
   h += '</datalist>';
@@ -1148,6 +1157,7 @@ function bindCardFormEvents(root){
   const plateWrap = root.querySelector('.cf-plate');
   if (plateWrap){
     const mainEl = plateWrap.querySelector('[data-plate-main]');
+    const newVehBtn = plateWrap.querySelector('[data-plate-newveh]');   // v0.83.0「新規車両」スイッチ
     const recompose = () => {
       const g = sel => { const x = plateWrap.querySelector(sel); return x ? x.value.trim() : ''; };
       c.plate = [g('.cf-plate-region'), g('.cf-plate-cls'), g('.cf-plate-kana'), g('.cf-plate-num')].filter(Boolean).join(' ');
@@ -1160,7 +1170,24 @@ function bindCardFormEvents(root){
       else if (part === 'num') el.value = _plateDigits(el.value, 4);   // ナンバー＝半角数字4桁・ハイフン/文字禁止・全角→半角
       else if (part === 'kana') el.value = el.value.slice(0, 1);       // かな＝1文字
       recompose();
+      if (newVehBtn) newVehBtn.classList.remove('on');                 // v0.83.0 ナンバーを打ったら「新規車両」は自動で解除
     }));
+    // v0.83.0「新規車両」スイッチ：押すと c.plate='新規車両'（ナンバー欄に文言が入る）。もう一度押すと解除。
+    if (newVehBtn){
+      newVehBtn.addEventListener('click', () => {
+        const willOn = !newVehBtn.classList.contains('on');
+        newVehBtn.classList.toggle('on', willOn);
+        if (willOn){
+          plateWrap.querySelectorAll('[data-plate]').forEach(el => { el.value = ''; });   // 4枠はクリア
+          c.plate = '新規車両';
+          if (mainEl) mainEl.value = c.plate;
+          if (window.PitDB) PitDB.save();
+          plateWrap.classList.remove('open');                          // 押したら閉じる
+        } else {
+          recompose();                                                 // 空の4枠から合成＝c.plate='' ＋保存
+        }
+      });
+    }
     const openGuide = () => plateWrap.classList.add('open');
     if (mainEl){
       mainEl.addEventListener('focus', openGuide);
