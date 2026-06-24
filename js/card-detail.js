@@ -245,6 +245,10 @@ function renderCardForm(c){
 
   // 🧰 作業内容テンプレート（症状ホイール）を起動（内容セクションがある時だけ）
   if (window.WorkContent && WorkContent.mount) WorkContent.mount(body);
+
+  // v0.83.1 フォーム再描画のたびに自動保存（チップ＝作業/受付タイプ・相談・Ⓕ・車種固定などの選択を取りこぼさない）。
+  //   ※デバウンス保存なので、カレンダー送り等の連続再描画でも localStorage 書き込みは1回にまとまる。
+  if (window.PitDB) PitDB.save();
 }
 
 /* ========================================
@@ -1067,6 +1071,7 @@ function bindCardFormEvents(root){
       if (el.type === 'number') v = v === '' ? null : Number(v);
       c[key] = v;
       if (_cardCheckOn) _cardMarkMisses(c, root);   // 入力したら、その項目の赤枠はその場で外れる
+      if (window.PitDB) PitDB.save();   // v0.83.1 入力を自動保存（従来は close/unload 任せで取りこぼし＝「保存されない」原因）
     });
     el.addEventListener('change', () => {
       const key = el.dataset.key;
@@ -1080,6 +1085,7 @@ function bindCardFormEvents(root){
         el.dataset.prev = fin;
       }
       c[key] = v;
+      if (window.PitDB) PitDB.save();   // v0.83.1 変更を自動保存
       // 担当（フロント/予約）を選んだら、その人の課を自動選択して再描画（→課チップ点灯＆もう一方の担当も同課で絞られる）
       if ((key === 'frontStaff' || key === 'reserveStaff') && v) {
         const d = _staffDivision(v);
@@ -1254,6 +1260,7 @@ function bindCardFormEvents(root){
         if (idx >= 0) c[key].splice(idx, 1);
         else c[key].push(v);
         btn.classList.toggle('active');
+        if (window.PitDB) PitDB.save();   // v0.83.1 代車条件の選択を自動保存
         // 代車条件を変えたら代車ガントを並べ替え直す（条件マッチを上へ）
         if (key === 'loanerConditions' && window.cfsLgRerender) cfsLgRerender();
       });
