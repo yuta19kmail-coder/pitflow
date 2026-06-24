@@ -553,7 +553,8 @@
     var wtBadge = wt ? '<span class="pfv-wt" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + '66">' + esc(wt.label) + '</span>' : '';
     var DROPC = { wait: '#f59e0b', sameDay: '#3b82f6' };
     var dt = (window.state && Array.isArray(state.dropTypes)) ? state.dropTypes.find(function (d) { return d.id === c.dropType; }) : null;
-    var dropBadge = (dt && DROPC[dt.id]) ? '<span class="pfv-wt" style="background:' + DROPC[dt.id] + '22;color:' + DROPC[dt.id] + ';border-color:' + DROPC[dt.id] + '66">' + esc(dt.label) + '</span>' : '';
+    var _dc = DROPC[dt && dt.id] || '#64748b';
+    var dropBadge = (dt && (c.dropType2 || DROPC[dt.id])) ? '<span class="pfv-wt" style="background:' + _dc + '22;color:' + _dc + ';border-color:' + _dc + '66">' + esc(window.pitDropLabel ? pitDropLabel(c) : dt.label) + '</span>' : '';
     var staff = c.frontStaff || c.staff || '';
     var loanerBadge = c.needLoaner ? '<span class="pfv-loaner">代車</span>' : '';
     var staffNm = (window.pitSurname ? pitSurname(staff) : staff);

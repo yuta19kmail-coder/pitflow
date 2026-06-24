@@ -150,7 +150,7 @@ function renderCardForm(c){
   h += '</div>';
   /* 2行目：受付タイプ（待/当/預）の右隣に「相談」を□っぽい別ボタンで配置（区切り線で違いを演出）＋担当を1行に詰める */
   h += '<div class="cf-row">';
-  h += field('受付タイプ', '<div class="cf-recv">' + chips(c, 'dropType', state.dropTypes, true)
+  h += field('受付タイプ', '<div class="cf-recv">' + dropChips(c)
        + '<span class="cf-recv-sep"></span>'
        + '<button type="button" id="cf-consult-btn" class="cf-consult' + (c.consult ? ' active' : '') + '">相談</button>'
        + '<button type="button" id="cf-codered-btn" class="cf-codered' + (c.codeRed ? ' active' : '') + '" title="マルエフ＝コードレッド（クレーム等の要注意案件）">F</button></div>');
@@ -768,6 +768,18 @@ function chips(c, key, items, allowNone){
   return h;
 }
 
+/* v0.85.0 受付タイプ＝最大2つまで選べるチップ（待/当/預）。「作業次第でどちらにもなる」用。
+   主＝c.dropType・副＝c.dropType2。両方選ぶと表示は「待or預」（pitDropLabel）。クリックの挙動は cf-dual ハンドラ参照。 */
+function dropChips(c){
+  let h = '<div class="cf-chips cf-dual" data-key="dropType">';
+  (state.dropTypes || []).forEach(it => {
+    const active = (c.dropType === it.id || c.dropType2 === it.id);
+    h += '<button type="button" class="cf-chip' + (active ? ' active' : '') + '" data-val="' + it.id + '">' + it.label + '</button>';
+  });
+  h += '</div>';
+  return h;
+}
+
 /* 作業タイプのチップ＝基本（単一選択＝c.workType）＋ 併用可タイプ（追加トグル＝c.workAddons[]）。
    設定で「併用可」にした作業（例：3M/1Y）は、基本の作業を選んでいても重ねて選べる。 */
 function _wtChipBtn(it, active){
@@ -1262,8 +1274,27 @@ function bindCardFormEvents(root){
     plateWrap.addEventListener('focusout', (e) => { if (!plateWrap.contains(e.relatedTarget)) plateWrap.classList.remove('open'); });
   }
 
+  // v0.85.0 受付タイプ＝最大2つ選択（待/当/預）。主=dropType・副=dropType2。表示は「待or預」。
+  root.querySelectorAll('.cf-chips.cf-dual').forEach(group => {
+    group.querySelectorAll('.cf-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.val;
+        const cur = [c.dropType, c.dropType2].filter(Boolean);
+        const idx = cur.indexOf(v);
+        if (idx >= 0) cur.splice(idx, 1);          // 選択中→解除（主を外したら副が主に繰り上がる）
+        else if (cur.length < 2) cur.push(v);      // 未選択→追加（最大2つ）
+        else cur[1] = v;                           // すでに2つ→2つ目を置き換え
+        c.dropType  = cur[0] || null;
+        c.dropType2 = cur[1] || null;
+        // 概算（預かり日数）は主の受付タイプで計算（従来どおり）
+        if (window.pitEstHold) c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType) : '';
+        renderCardForm(c);
+      });
+    });
+  });
+
   // チップ（単一選択）
-  root.querySelectorAll('.cf-chips:not([data-multi]):not([data-combo])').forEach(group => {
+  root.querySelectorAll('.cf-chips:not([data-multi]):not([data-combo]):not(.cf-dual)').forEach(group => {
     const key = group.dataset.key;
     group.querySelectorAll('.cf-chip').forEach(btn => {
       btn.addEventListener('click', () => {

@@ -301,6 +301,26 @@ function pitSurname(name){
 window.pitSurname = pitSurname;
 window.pitCardName = pitSurname;   // 別名（カード表示名の意味で使う用）
 
+/* v0.85.0 受付タイプの表示ラベル。2つ選んだ時は「待or預」のように連結（作業次第でどちらにもなる用）。
+   主＝c.dropType、副＝c.dropType2。色や占有判定など既存ロジックは従来どおり主(dropType)を見る。 */
+function pitDropLabel(c){
+  if (!c) return '';
+  var lab = function (id){ var o = (state.dropTypes || []).find(function (d){ return d.id === id; }); return o ? o.label : ''; };
+  var a = lab(c.dropType), b = lab(c.dropType2);
+  return (a && b) ? (a + 'or' + b) : (a || b || '');
+}
+window.pitDropLabel = pitDropLabel;
+
+/* v0.86.0 受付タイプを2つ選んだ時の「実効タイプ」＝重い方を採用（預かり > 当返 > 待ち）。
+   駐車場の占有判定で使う：預かりが入れば預かり予定／当返が入れば当日は駐車場を使う。 */
+function pitDropEffective(c){
+  var ids = [c && c.dropType, c && c.dropType2].filter(Boolean);
+  if (ids.indexOf('drop') >= 0) return 'drop';        // 預かり＝最重（複数日の占有）
+  if (ids.indexOf('sameDay') >= 0) return 'sameDay';  // 当返＝その日だけ駐車場を使う
+  return ids[0] || null;                               // 待ち＝最軽
+}
+window.pitDropEffective = pitDropEffective;
+
 /* 起動時：予約番号が無い既存カードに後から採番（入庫日→id順で安定）。1回で全カードに付く。 */
 function pitBackfillResNo(){
   const cards = state.cards || [];

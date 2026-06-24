@@ -2,7 +2,8 @@
    parking.js  -  駐車場ビュー（3ティア・実効キャパ）／PitFlow v0.71.0
    ----------------------------------------
    受付MTG(2026-06-05)＋設計モック確定の思想：
-   ・「明日の朝までに何台空けておくか」＝明日の預かり入庫＋バッファ（返車は当てにしない・待ち/当日は数えない・当日返車だけ空き候補）。
+   ・「明日の朝までに何台空けておくか」＝明日の預かり入庫＋バッファ（返車は当てにしない・待ちは数えない）。
+   ・v0.86.0：受付タイプ2つ選択は「重い方」を採用＝預かり入り→預かり占有／当返入り→その日だけ駐車場を使う(+1・翌日繰り越し無し)。
    ・置ける所は3ティア：①自社内（ピット＋自社置き場）→②赤井・斉藤（歩いて行ける）→③コインパ（最後）。
    ・各置き場は「理論値（設定）＋現実の増減（理由を1行＝±1で、ここで入力）」＝実効キャパ。
    ・棒は総台数を下から自社→赤井斉→コインパで色分け＝どこに何台。線を超えた分＝移動必要。
@@ -40,13 +41,15 @@
   function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function pd(s){ const p=String(s).split('-'); return new Date(+p[0],(+p[1])-1,+p[2]); }
   function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+  // v0.86.0 受付タイプを2つ選んだ時は「重い方」を採用（預かり>当返>待ち）。預かり入り=預かり扱い／当返入り=当日使用。
+  function eff(c){ return (window.pitDropEffective ? pitDropEffective(c) : (c && c.dropType)); }
   function occEnd(c){
     if(c.returnDate) return c.returnDate;
-    const est=(c.estHoldDays!=null&&c.estHoldDays!=='')?c.estHoldDays:(window.pitEstHold?pitEstHold(c.workType,c.dropType):3);
+    const est=(c.estHoldDays!=null&&c.estHoldDays!=='')?c.estHoldDays:(window.pitEstHold?pitEstHold(c.workType,eff(c)):3);
     return ymd(addDays(pd(c.reserveDate), est));
   }
-  // 預かり(占有)＝dropType drop・廃車除く・予約日あり
-  function isOccupy(c){ return c && c.dropType==='drop' && c.reserveDate && c.status!=='scrap'; }
+  // 預かり(占有)＝実効受付タイプが drop・廃車除く・予約日あり（「待or預」「当or預」など預かり入りも含む）
+  function isOccupy(c){ return c && eff(c)==='drop' && c.reserveDate && c.status!=='scrap'; }
   function closedDow(){ return (state.settings && state.settings.closedDow) || [3]; }
   function isClosed(dDate){ return closedDow().indexOf(dDate.getDay())>=0; }
   function bufferOf(dDate){
@@ -59,8 +62,10 @@
   }
   function carryN(ds){ return (state.cards||[]).filter(function(c){ return isOccupy(c) && c.reserveDate < ds && occEnd(c) >= ds; }).length; }
   function intakeN(ds){ return (state.cards||[]).filter(function(c){ return isOccupy(c) && c.reserveDate === ds; }).length; }
-  function retN(ds){ return (state.cards||[]).filter(function(c){ return c.dropType==='drop' && c.status!=='scrap' && c.returnDate === ds; }).length; }
-  function totalOf(ds, dDate){ return carryN(ds)+intakeN(ds)+bufferOf(dDate)-retN(ds); }
+  function retN(ds){ return (state.cards||[]).filter(function(c){ return eff(c)==='drop' && c.status!=='scrap' && c.returnDate === ds; }).length; }
+  // v0.86.0 当返（実効=sameDay）は入庫日その日だけ駐車場を使う＝当日に+1（翌日には繰り越さない）
+  function sameDayN(ds){ return (state.cards||[]).filter(function(c){ return eff(c)==='sameDay' && c.status!=='scrap' && c.reserveDate === ds; }).length; }
+  function totalOf(ds, dDate){ return carryN(ds)+intakeN(ds)+sameDayN(ds)+bufferOf(dDate)-retN(ds); }
 
   // ---- ティア実効 ----
   function lotEff(l){ return Math.max(0, (l.theo||0) + (l.reasons||[]).reduce(function(s,r){return s+(r.s||0);},0)); }
