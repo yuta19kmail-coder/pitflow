@@ -28,6 +28,15 @@
     showLogin();
   };
 
+  /* v0.82.0: いまログインしている人の「スタッフ名」を返すフック。
+     ★現状はサンプルログイン（個人を特定していない）ので空文字を返す＝予約担当は空のまま。
+     ★本番（CarFlow/StockFlow と同じ Google ログイン＋名簿 portalMembers）を接続したら、
+       ここを「ログインユーザーの uid/email → 名簿/state.staff の name」に解決して返すよう差し替えるだけで、
+       新規予約の「予約担当」が自動でその人になる（openNewReserve が起動時に参照）。 */
+  window.pitCurrentStaffName = function () {
+    return '';
+  };
+
   document.addEventListener('DOMContentLoaded', function () {
     let authed = false;
     try { authed = localStorage.getItem(FLAG) === '1'; } catch (e) {}
