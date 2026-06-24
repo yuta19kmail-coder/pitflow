@@ -571,6 +571,39 @@
 .cf-plate-l{ font-size:10px; color:var(--text3); margin-bottom:3px; white-space:nowrap; }
 .cf-plate-guide .cf-input{ padding:6px 6px; box-sizing:border-box; }
 .cf-plate-grid > div{ flex:0 0 auto; }
+/* v0.84.0 新規予約・右パネル：選んだ日の入庫/返車ミニ一覧（時間提案用） */
+.dl{background:var(--bg);border:1px solid var(--border2);border-radius:10px;overflow:hidden;margin-top:8px}
+.dl-cols{display:flex}
+.dl-col{flex:1;min-width:0}
+.dl-col + .dl-col{border-left:1px solid var(--border)}
+.dl-h{display:flex;align-items:center;justify-content:center;gap:5px;padding:6px;font-size:11.5px;font-weight:700;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border)}
+.dl-h.in{color:#7fe7c4}
+.dl-h.ret{color:#f6a9d3}
+.dl-body{padding:6px;display:flex;flex-direction:column;gap:4px;min-height:120px}
+.dl-ev{position:relative;background:var(--bg2);border:1px solid var(--border);border-left:3px solid #1db97a;border-radius:7px;padding:4px 7px}
+.dl-ev.imp{border-left-color:#ec4899}
+.dl-top{display:flex;align-items:center;gap:6px}
+.dl-time{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text)}
+.dl-badge{font-size:9.5px;font-weight:700;color:#06281d;background:#1db97a;border-radius:5px;padding:1px 5px;line-height:1.5;white-space:nowrap}
+.dl-ev.imp .dl-badge{background:#ec4899;color:#3a0b25}
+.dl-line{font-size:12px;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:30px}
+.dl-car{color:var(--text2)}
+.dl-ev.hl{box-shadow:inset 0 0 0 1px rgba(202,161,75,.40);background:rgba(202,161,75,.055)}
+.dl-ev.hl::after{content:"担当";position:absolute;top:4px;right:6px;font-size:8.5px;color:#d4ba7e;background:rgba(202,161,75,.12);border:1px solid rgba(202,161,75,.40);border-radius:5px;padding:0 4px}
+.dl-brk{display:flex;align-items:center;justify-content:center;gap:6px;font-size:10.5px;color:var(--text3);background:repeating-linear-gradient(45deg,#23283a,#23283a 6px,#1d2230 6px,#1d2230 12px);border:1px solid var(--border);border-radius:6px;padding:3px;letter-spacing:.06em}
+.dl-empty{color:var(--text3);font-size:11px;text-align:center;padding:14px 0}
+/* 担当フロントのMHS予定枠（来客以外＝MTG/外出など）＝代車カレンダーの上 */
+.mhs-box{background:var(--bg3);border:1px dashed var(--border2);border-radius:9px;padding:9px 11px;margin-top:8px}
+.mhs-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text)}
+.mhs-tag{margin-left:auto;font-size:9px;font-weight:700;color:#9fc4ff;background:rgba(55,138,221,.15);border:1px solid rgba(55,138,221,.4);border-radius:5px;padding:1px 5px;letter-spacing:.04em}
+.mhs-note{font-size:10.5px;color:var(--text3);margin:5px 0 8px;line-height:1.45}
+.mhs-row{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-top:1px solid var(--border)}
+.mhs-row:first-child{border-top:0}
+.mhs-t{font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--text2);white-space:nowrap;flex:0 0 auto;min-width:82px}
+.mhs-ic{font-size:11px;flex:0 0 auto}
+.mhs-l{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mhs-empty{font-size:11px;color:var(--text3);padding:4px 0}
+
 /* v0.83.0 ナンバーガイドの右に「新規車両」スイッチ列を足す（既存グリッドは無変更） */
 .cf-plate-row{ display:flex; gap:12px; align-items:flex-end; }
 .cf-plate-side{ display:flex; flex-direction:column; align-items:stretch; justify-content:flex-end; gap:5px; border-left:1px solid var(--border2); padding-left:12px; }

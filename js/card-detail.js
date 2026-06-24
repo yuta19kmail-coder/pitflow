@@ -348,11 +348,68 @@ function cfSideHtml(c){
     h += _cfsCalHtml(c, 'import', tStr);
   }
 
+  /* v0.84.0 選んだ日の入庫/返車ミニ一覧（時間提案用）＋担当のMHS予定 ＝ 代車カレンダーの上 */
+  h += _cfsDayListHtml(c);
+  h += _cfsMhsHtml(c);
+
   /* 🚙 代車の空き（「代車必要」を押すと出る・代車ビュー式＝どの車がいつ空くか） */
   if (c.needLoaner) h += _cfsLoanerGanttHtml(today, tStr, c);
 
   return h;
 }
+
+/* v0.84.0 選んだ日の入庫/返車ミニ一覧。入庫=左/返車=右・時間順・休憩バー・
+   左ライン＝国産緑/輸入ピンク・選択中フロント担当はゴールドで控えめ強調（左バー色は変えない）。
+   日付を選んだ後に「時間」を決める助け（接客スペースの溢れ防止）。 */
+function _cfsDayListHtml(c){
+  const ds = c.reserveDate;
+  if (!ds) return '';   // 入庫日が未選択なら出さない（最短カレンダーで日を選んでから）
+  const me = c.id;
+  const who = (c.frontStaff || '').trim();
+  const toMin = function (s){ s = String(s||'').split('-')[0].trim(); const m = /^(\d{1,2}):(\d{2})/.exec(s); return m ? (+m[1]*60 + +m[2]) : 9999; };
+  const live = function (x){ return x.status !== 'returned' && x.status !== 'scrap' && x.status !== 'canceled'; };
+  const intake = (state.cards||[]).filter(function(x){ return x && x.id!==me && x.reserveDate===ds && live(x); });
+  const ret    = (state.cards||[]).filter(function(x){ return x && x.id!==me && x.returnDate===ds && live(x); });
+  const BRK = [{from:'12:00',to:'13:00'},{from:'15:30',to:'16:30'}];
+  function evHtml(x, t){
+    const imp = (x.boardId==='import');
+    const isHl = who && (x.frontStaff||'').trim()===who;
+    const front = (window.pitSurname ? pitSurname(x.frontStaff||'') : (x.frontStaff||'')) || '—';
+    const car = ((x.maker?x.maker+' ':'') + (x.car||'')).trim();
+    return '<div class="dl-ev'+(imp?' imp':'')+(isHl?' hl':'')+'">'
+      + '<div class="dl-top"><span class="dl-time">'+_pe(t||'—')+'</span><span class="dl-badge">'+_pe(front)+'</span></div>'
+      + '<div class="dl-line">'+_pe(x.customer||'（未入力）')+' 様 <span class="dl-car">'+_pe(car)+'</span></div></div>';
+  }
+  function col(list, isRet){
+    if (!list.length) return '<div class="dl-empty">予定なし</div>';
+    const items = list.map(function(x){ const tt = isRet ? (x.returnTime||x.reserveTime||'') : (x.reserveTime||''); return { min: toMin(tt), html: evHtml(x, tt.split('-')[0]) }; });
+    BRK.forEach(function(b){ items.push({ min: toMin(b.from), html: '<div class="dl-brk">☕ 休憩 '+b.from+'–'+b.to+'</div>' }); });
+    items.sort(function(a,b){ return a.min-b.min; });
+    return items.map(function(i){ return i.html; }).join('');
+  }
+  let h = '<div class="dl"><div class="dl-cols">';
+  h += '<div class="dl-col"><div class="dl-h in">📥 入庫</div><div class="dl-body">'+col(intake,false)+'</div></div>';
+  h += '<div class="dl-col"><div class="dl-h ret">📤 返車</div><div class="dl-body">'+col(ret,true)+'</div></div>';
+  h += '</div></div>';
+  return h;
+}
+
+/* v0.84.0 担当フロントのMHS予定（来客以外＝MTG/外出など）。代車カレンダーの上。
+   データは window.pitMhsSchedule(担当名, 日付) フックから取得。本番のMHS連携を入れたらここに実データが流れる。 */
+function _cfsMhsHtml(c){
+  const who = (c.frontStaff || '').trim();
+  const head = '<div class="mhs-head">📅 <span>'+(who ? _pe(who)+' の予定' : '担当の予定')+'</span><span class="mhs-tag">MHS</span></div>';
+  if (!who) return '<div class="mhs-box">'+head+'<div class="mhs-empty">フロント担当を選ぶと、その人のMHS予定が出ます。</div></div>';
+  let list = [];
+  if (typeof window.pitMhsSchedule === 'function'){ try { list = window.pitMhsSchedule(who, c.reserveDate || ymd(new Date())) || []; } catch(e){ list = []; } }
+  if (!list.length) return '<div class="mhs-box">'+head+'<div class="mhs-empty">MHS連携は準備中（本番ログイン接続後に予定を表示）。</div></div>';
+  const ic = {mtg:'📋', out:'🚗', off:'☕', desk:'🖥'};
+  const rows = list.map(function(s){ return '<div class="mhs-row"><span class="mhs-t">'+_pe(s.t||'')+'</span><span class="mhs-ic">'+(ic[s.type]||'•')+'</span><span class="mhs-l">'+_pe(s.label||'')+'</span></div>'; }).join('');
+  return '<div class="mhs-box">'+head+'<div class="mhs-note">来客とは別の予定（MTG・外出など）。</div>'+rows+'</div>';
+}
+
+/* v0.84.0 MHS予定取得フック（既定は空＝「準備中」表示）。本番のMHS連携でここを実データ取得に差し替える。 */
+if (!window.pitMhsSchedule){ window.pitMhsSchedule = function(staffName, dateStr){ return []; }; }
 
 /* ⏱ 最短入庫カード（チーム別・クリックで入庫日に入る）
    ro=true（空きカレンダービュー）では読み取り専用＝クリックなしで日付だけ表示 */
@@ -1086,11 +1143,13 @@ function bindCardFormEvents(root){
       }
       c[key] = v;
       if (window.PitDB) PitDB.save();   // v0.83.1 変更を自動保存
-      // 担当（フロント/予約）を選んだら、その人の課を自動選択して再描画（→課チップ点灯＆もう一方の担当も同課で絞られる）
+      // 担当（フロント/予約）を選んだら、その人の課を自動選択（→課チップ点灯＆もう一方の担当も同課で絞られる）
       if ((key === 'frontStaff' || key === 'reserveStaff') && v) {
         const d = _staffDivision(v);
-        if (d && c.division !== d) { c.division = d; renderCardForm(c); return; }
+        if (d && c.division !== d) c.division = d;
       }
+      // v0.84.0 右パネル（選んだ日の入庫/返車・担当のMHS予定・担当ハイライト）を更新するため再描画
+      if (key === 'reserveDate' || key === 'frontStaff' || key === 'reserveStaff') { renderCardForm(c); return; }
     });
   });
 
