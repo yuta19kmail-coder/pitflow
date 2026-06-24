@@ -107,21 +107,8 @@
       const pri=c.contacts.find(x=>x.primary)||c.contacts[0]; c.tel=pri?(pri.tel||''):'';
     }
     const v=(cust.vehicles||[]).find(x=>x.id===vehId)||(cust.vehicles||[])[0];
+    // フロント担当は「その車両に登録済みのものだけ」入れる（推測での自動入力はしない・ゆうた方針 2026-06-23）。
     if(v){ c.plate=v.plate||c.plate; c.maker=v.maker||c.maker; c.car=v.car||c.car; if(v.boardId)c.boardId=v.boardId; if(v.division)c.division=v.division; if(v.frontStaff)c.frontStaff=v.frontStaff; }
-    // v0.82.0: 既存顧客を選んだらフロント担当も自動入力する。
-    //   選んだ車両に担当が無ければ → ①顧客の他車両の担当 → ②この顧客の直近予約の担当 の順で補う。
-    if(!(c.frontStaff||'').trim()){
-      const fromVeh=(cust.vehicles||[]).find(x=>(x.frontStaff||'').trim());
-      if(fromVeh) c.frontStaff=fromVeh.frontStaff;
-    }
-    if(!(c.frontStaff||'').trim()){
-      const past=(state.cards||[]).filter(x=>x.id!==c.id && (x.frontStaff||'').trim()
-        && ((c.customerId && x.customerId===c.customerId) || (cust.name && x.customer===cust.name)));
-      past.sort((a,b)=>String(b.bookedAt||b.reserveDate||'').localeCompare(String(a.bookedAt||a.reserveDate||'')));
-      if(past.length) c.frontStaff=past[0].frontStaff;
-    }
-    // 担当が決まったら、その人の課に合わせる（課セレクトとの整合＝選択が消えないように）
-    if((c.frontStaff||'').trim() && typeof _staffDivision==='function'){ const d=_staffDivision(c.frontStaff); if(d) c.division=d; }
     renderCardForm(c);
   };
 
