@@ -376,9 +376,10 @@ function _cfsDayListHtml(c){
     const isHl = who && (x.frontStaff||'').trim()===who;
     const front = (window.pitSurname ? pitSurname(x.frontStaff||'') : (x.frontStaff||'')) || '—';
     const car = (x.car || '').trim();   // v0.84.1 メーカーは出さない＝車種のみ
+    const nm = ((window.pitSurname ? pitSurname(x.customer) : (x.customer||'')) || '（未入力）');   // v0.86.1 名字だけ（法人はフル）
     return '<div class="dl-ev'+(imp?' imp':'')+(isHl?' hl':'')+'">'
       + '<div class="dl-top"><span class="dl-time">'+_pe(t||'—')+'</span><span class="dl-badge">'+_pe(front)+'</span></div>'
-      + '<div class="dl-line">'+_pe(x.customer||'（未入力）')+' 様 <span class="dl-car">'+_pe(car)+'</span></div></div>';
+      + '<div class="dl-line">'+_pe(nm)+' 様 <span class="dl-car">'+_pe(car)+'</span></div></div>';
   }
   function col(list, isRet){
     if (!list.length) return '<div class="dl-empty">予定なし</div>';
