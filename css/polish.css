@@ -1030,6 +1030,9 @@ th.cfs-lg-d{ z-index:3; }
 /* 入庫カード：作業タイプの「＋併用」チップ群（基本チップの下に少し離して） */
 .cf-wt-combo{ margin-top:6px; align-items:center; }
 .cf-combo-lab{ font-size:11px; font-weight:700; color:var(--text3); margin-right:2px; align-self:center; }
+/* v0.94.2 作業タイプ(基本)と併用可のチップを完全に同じ大きさに（短いB.P/1Y/3Mも車検と同寸＝最小幅で揃える） */
+.cf-chips[data-key="workType"] .cf-chip,
+.cf-chips[data-key="workAddons"] .cf-chip{ padding:4px 12px; font-size:12px; min-width:46px; text-align:center; box-sizing:border-box; }
 
 /* ===== 📅 予約・月ビュー＝日付リスト型（v0.26.0） ===== */
 .reserve-month.rml-host{ display:block; background:transparent; border:0; border-radius:0; overflow:visible; }
