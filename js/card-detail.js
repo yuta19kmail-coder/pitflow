@@ -150,8 +150,8 @@ function renderCardForm(c){
 
   /* === 予約内容（旧「作業内容」＝作業タイプ/課/受付/相談/担当/概算＋代車を統合・v0.35.2） === */
   h += sec('予約内容', '🗒️');
-  /* 1行目：作業タイプ(基本)｜併用可(B.P/1Y/3M)｜課 を1行に（v0.94.0） */
-  h += '<div class="cf-row" style="flex-wrap:nowrap">';
+  /* 1行目：作業タイプ(基本)｜併用可(B.P/1Y/3M)｜課 を1行に（v0.94.0）。v0.94.3 上揃え＝ラベル/チップの上端を揃える */
+  h += '<div class="cf-row" style="flex-wrap:nowrap;align-items:flex-start">';
   h += '<div class="cf-field" style="flex:0 1 auto;min-width:0"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">併用可</div>' + workTypeComboChips(c) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 auto;margin-left:auto"><div class="cf-label">課</div>' + chips(c, 'division', state.divisions, true) + '</div>';
