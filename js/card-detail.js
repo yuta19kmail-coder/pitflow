@@ -324,19 +324,21 @@ function _lstepUrl(raw){
 function lineField(c){
   const id = (c.lstepId || '').trim();
   const ok = ((c.lineStatus || '') === 'ok');
-  // v0.92.4 状態セレクト(未/お断り/案内してない/OK)は常に表示。OKなら横に番号入力 or 登録済みならLステップボタン。
-  let h = '<div class="cf-line-wrap"><select class="cf-input cf-line-status" data-key="lineStatus">'
-    + LINE_STATUS_ITEMS.map(function(o){ return '<option value="' + o.id + '"' + (((c.lineStatus || '') === o.id) ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')
-    + '</select>';
+  // v0.92.6 登録済（OK＋番号）＝埋め込み：状態は静的な「登録済」ラベル＋Lステップボタン（セレクトは出さない）。✕で解除して編集に戻る。
   if (ok && id){
     const url = _lstepUrl(id);
+    let h = '<div class="cf-line-wrap"><span class="cf-line-done">✓ 登録済</span>';
     h += url
       ? '<a class="cf-line-link" href="' + _pe(url) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>'
       : '<span class="cf-line-bad">番号を確認</span>';
-    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="番号を消して入れ直す">✕</button>';
-  } else if (ok){
-    h += textIn(c, 'lstepId', 'placeholder="Lステップ番号 / URL貼付OK"');
+    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="解除して入れ直す">✕</button></div>';
+    return h;
   }
+  // 未登録：編集できる状態セレクト（未案内/LINE NG/登録済）。「登録済」を選ぶと番号入力が出る。
+  let h = '<div class="cf-line-wrap"><select class="cf-input cf-line-status" data-key="lineStatus">'
+    + LINE_STATUS_ITEMS.map(function(o){ return '<option value="' + o.id + '"' + (((c.lineStatus || '') === o.id) ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')
+    + '</select>';
+  if (ok) h += textIn(c, 'lstepId', 'placeholder="Lステップ番号 / URL貼付OK"');
   h += '</div>';
   return h;
 }
