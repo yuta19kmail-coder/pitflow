@@ -405,6 +405,20 @@
     }
     return '';
   }
+  /* v0.96.2 LINE/Lステップを連絡先と同じ「枠（cd-ct）」で1つ表示。登録済＋番号＝🔗Lステップリンク／番号なし＝LINE登録済／NG＝LINE NG。未案内は出さない。 */
+  function _lineContactRow(o){
+    var st=(o&&o.lineStatus)||'';
+    if(st!=='ok' && st!=='ng') return '';
+    var main, lab;
+    if(st==='ng'){ main='LINE NG'; lab='LINE'; }
+    else {
+      var id=((o&&o.lstepId)||'').trim();
+      var url=(id&&window.pitLstepUrl)?pitLstepUrl(id):'';
+      main=url?'<a class="cd-pill green cd-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()" title="Lステップを開く">🔗 Lステップ</a>':'LINE登録済';
+      lab='LINE / Lステップ';
+    }
+    return '<div class="cd-ct"><div class="cd-ctic">💬</div><div class="cd-ctmain"><div class="cd-cttel">'+main+'</div><div class="cd-ctlab">'+lab+'</div></div></div>';
+  }
   window.custOpen=function(id){
     const cust=list().find(x=>x.id===id); if(!cust) return;
     _detailFromSearch = !!window._pitReturnToSearch; window._pitReturnToSearch=false;   // 検索由来かを取り込む
@@ -425,18 +439,20 @@
     h+='<div class="cd-hero"><div class="cd-hmain">'+
        '<div class="cd-hname">'+esc(cust.name||'(無名)')+' <small>様</small></div>'+
        (cust.kana?'<div class="cd-hkana">'+esc(cust.kana)+'</div>':'')+
-       '<div class="cd-hpills"><span class="cd-pill mut">最終入庫 '+fmtDate(last)+'</span>'+_lineHtml(cust)+'</div>'+
+       '<div class="cd-hpills"><span class="cd-pill mut">最終入庫 '+fmtDate(last)+'</span></div>'+
        '</div><div class="cd-stats"><div class="cd-statrow">'+
        '<div class="cd-stat"><b>'+visits+'</b><span>来店回数</span></div>'+
        '<div class="cd-stat"><b>'+vehicles.length+'</b><span>保有台数</span></div>'+
        '</div><div class="cd-total"><span>累計概算（合計金額）</span><b>'+yen(total)+'</b></div></div></div>';
-    // 連絡先
+    // 連絡先（電話＋LINE/Lステップを同じ枠で1つずつ表示）
+    const lineRow=_lineContactRow(cust);
     h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">📞 連絡先 <span class="cd-cnt">'+(cust.contacts||[]).length+'件</span></div></div>';
-    if((cust.contacts||[]).length){
+    if((cust.contacts||[]).length || lineRow){
       h+='<div class="cd-contacts">';
       (cust.contacts||[]).forEach(function(ct){
         h+='<div class="cd-ct"><div class="cd-ctic">'+(ct.primary?'📱':'📞')+'</div><div class="cd-ctmain"><div class="cd-cttel">'+esc(ct.tel||'—')+'</div><div class="cd-ctlab">'+esc(ct.label||'')+'</div></div>'+(ct.primary?'<span class="cd-ctpri">優先</span>':'')+'</div>';
       });
+      h+=lineRow;
       h+='</div>';
     } else { h+='<div class="cd-empty">連絡先は未登録です</div>'; }
     h+='</div>';
