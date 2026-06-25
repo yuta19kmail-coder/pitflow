@@ -367,8 +367,10 @@ function driveChips(c){
 /* 入庫時刻＝メインBOXに直接入力（全角→半角）。フォーカスで下にショートカット（AM/PM/決まり次第/未定） */
 function timeField(c){
   let h = '<div class="cf-time">';
-  h += '<input type="text" class="cf-input cf-time-main" value="' + _pe(c.reserveTime || '') + '" placeholder="09:30 / 9:00-10:00 など" autocomplete="off">';
-  h += '<div class="cf-time-guide"><div class="cf-time-l">ショートカット</div><div class="cf-time-quick">';
+  h += '<input type="text" class="cf-input cf-time-main" value="' + _pe(c.reserveTime || '') + '" placeholder="900 / 9時半 / 9:00-10:00 など" autocomplete="off">';
+  h += '<div class="cf-time-guide">';
+  h += '<div class="cf-time-l">時間で選ぶ</div><input type="time" class="cf-input cf-time-pick" value="' + _pe(_timePickVal(c.reserveTime)) + '">';
+  h += '<div class="cf-time-l">ショートカット</div><div class="cf-time-quick">';
   TIME_QUICK.forEach(t => { h += '<button type="button" class="cf-chip cf-chip-tm' + (c.reserveTime === t ? ' active' : '') + '" data-val="' + t + '">' + t + '</button>'; });
   h += '</div></div></div>';
   return h;
@@ -378,6 +380,45 @@ function _timeHalf(s){
   return String(s == null ? '' : s)
     .replace(/[０-９]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); })
     .replace(/[：]/g, ':').replace(/[－ー―〜～]/g, '-');
+}
+/* v0.95.0 入庫時刻の賢い自動補正。全角/半角不問で「9」「900」「0900」「9時」「9時半」「九時半」「0915」「0900-1000」等を HH:MM（範囲は HH:MM-HH:MM）に。
+   AM/PM/決まり次第/未定 などの語はそのまま残す。 */
+function _timeHHMM(h, m){ if (isNaN(h)) return ''; h = Math.max(0, Math.min(23, h)); m = isNaN(m) ? 0 : Math.max(0, Math.min(59, m)); return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'); }
+function _timeKanji(t){
+  const map = { '〇':'0','一':'1','二':'2','三':'3','四':'4','五':'5','六':'6','七':'7','八':'8','九':'9' };
+  t = t.replace(/十([一二三四五六七八九])/g, function(_m, b){ return '1' + map[b]; });
+  t = t.replace(/([一二三四五六七八九])十/g, function(_m, a){ return map[a] + '0'; });
+  t = t.replace(/十/g, '10');
+  return t.replace(/[〇一二三四五六七八九]/g, function(ch){ return map[ch]; });
+}
+function _normTimePart(t){
+  t = _timeKanji(String(t == null ? '' : t).trim());
+  if (!t) return '';
+  const half = /半/.test(t); t = t.replace(/半/g, '');
+  let m = t.match(/^(\d{1,2})\s*時\s*(\d{1,2})?\s*分?$/);
+  if (m) return _timeHHMM(+m[1], m[2] != null ? +m[2] : (half ? 30 : 0));
+  m = t.match(/^(\d{1,2}):(\d{1,2})$/);
+  if (m) return _timeHHMM(+m[1], +m[2]);
+  m = t.match(/^(\d{1,4})$/);
+  if (m){
+    const d = m[1];
+    if (d.length <= 2) return _timeHHMM(+d, half ? 30 : 0);   // 9 / 09 (＋半=30)
+    if (d.length === 3) return _timeHHMM(+d.slice(0,1), +d.slice(1));  // 915→9:15
+    return _timeHHMM(+d.slice(0,2), +d.slice(2));               // 0900→09:00
+  }
+  return String(t == null ? '' : t).trim();   // 解釈できない（AM等）はそのまま
+}
+function _normTime(raw){
+  const s = _timeHalf(raw).trim();
+  if (!s) return '';
+  if (s.indexOf('-') >= 0) return s.split('-').map(function(p){ return _normTimePart(p); }).filter(Boolean).join('-');
+  return _normTimePart(s);
+}
+/* 時間ピッカー(input type=time)用の値。単一のHH:MMの時だけ返す（範囲や語は空＝ピッカーは空表示） */
+function _timePickVal(v){
+  const n = _normTime(v || '');
+  const m = (n.split('-')[0] || '').match(/^\d{2}:\d{2}$/);
+  return m ? m[0] : '';
 }
 /* 姓→姓カナ／名→名カナ の自動フリガナ（_bindAutoKana を1セグメント用に。確定後 onCommit で合成保存） */
 function _bindAutoKanaSeg(nameEl, kanaEl, onCommit){
@@ -1253,10 +1294,16 @@ function bindCardFormEvents(root){
     const timeWrap = root.querySelector('.cf-time');
     if (!timeWrap) return;
     const mainEl = timeWrap.querySelector('.cf-time-main');
+    const pickEl = timeWrap.querySelector('.cf-time-pick');
     const syncChips = function(v){ timeWrap.querySelectorAll('.cf-time-quick .cf-chip').forEach(function(b){ b.classList.toggle('active', b.dataset.val === v); }); };
     if (mainEl){
       mainEl.addEventListener('focus', function(){ timeWrap.classList.add('open'); });
       mainEl.addEventListener('input', function(){ const v = _timeHalf(mainEl.value); if (mainEl.value !== v) mainEl.value = v; c.reserveTime = v; syncChips(v); });
+      // v0.95.0 確定(blur)で賢く補正：900/9時/9時半/九時半/0915/0900-1000 → HH:MM
+      mainEl.addEventListener('change', function(){ const v = _normTime(mainEl.value); mainEl.value = v; c.reserveTime = v; syncChips(v); if (pickEl) pickEl.value = _timePickVal(v); if (window.PitDB) PitDB.save(); });
+    }
+    if (pickEl){
+      pickEl.addEventListener('change', function(){ if (!pickEl.value) return; c.reserveTime = pickEl.value; if (mainEl) mainEl.value = pickEl.value; syncChips(pickEl.value); if (window.PitDB) PitDB.save(); });
     }
     timeWrap.querySelectorAll('.cf-time-quick .cf-chip').forEach(function(btn){
       btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
