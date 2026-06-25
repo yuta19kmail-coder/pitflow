@@ -69,6 +69,25 @@
     ta.focus();
   }
 
+  // v0.88.0 タグチップのトグル用：内容(c.menu)テキストエリアの行操作
+  function _menuTA(){ return document.querySelector('textarea.cf-input[data-key="menu"]'); }
+  function _menuHasLine(t){ var ta=_menuTA(); if(!ta) return false; return (ta.value||'').split('\n').some(function(l){ return l.trim()===t; }); }
+  function removeMenuLine(t){
+    var ta=_menuTA(); if(!ta) return;
+    var removed=false;
+    var out=(ta.value||'').split('\n').filter(function(l){ if(!removed && l.trim()===t){ removed=true; return false; } return true; });
+    ta.value=out.join('\n').replace(/\n+$/,'');
+    ta.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  // タグチップ（fillでないもの）の押下状態を、いま内容に入っているかで同期（再描画後も保つ）
+  function syncChips(){
+    var ta=_menuTA(); if(!ta) return;
+    var lines=(ta.value||'').split('\n').map(function(l){ return l.trim(); });
+    [].slice.call(document.querySelectorAll('.wc-chip[data-fill="0"]')).forEach(function(b){
+      b.classList.toggle('wc-on', lines.indexOf(b.textContent.trim())>=0);
+    });
+  }
+
   // =========================================
   // 新規予約フォーム側：ビルダー
   // =========================================
@@ -131,12 +150,22 @@
     fill(W1, cfg().parts); rebuild2();
     bindCol(W1, rebuild2); bindCol(W2, rebuild3); bindCol(W3, null);
     updPrev();
+    syncChips();   // v0.88.0 既に内容に入っているタグは「押した見た目」で開く
   }
   window.WorkContent = window.WorkContent || {};
   window.WorkContent.builderHtml = builderHtml;
   window.WorkContent.mount = mount;
   window.WorkContent.addPhrase = function () { const p = phrase(); if (p) appendMenu(p); };
-  window.WorkContent.chip = function (btn) { if (!btn) return; appendMenu(btn.textContent.trim()); };
+  // v0.88.0 タグチップ＝トグル。押すと内容に入り「押した見た目(wc-on)」に／もう一度押すと内容から消えて戻る。
+  //   ※「車検満了日：」等の fill チップは後から値を打つので従来どおり挿入のみ。
+  window.WorkContent.chip = function (btn) {
+    if (!btn) return;
+    var t = btn.textContent.trim();
+    if (btn.dataset.fill === '1'){ appendMenu(t); return; }
+    if (_menuHasLine(t)){ removeMenuLine(t); btn.classList.remove('wc-on'); }
+    else { appendMenu(t); btn.classList.add('wc-on'); }
+  };
+  window.WorkContent.syncChips = syncChips;
 
   // =========================================
   // 設定画面側：編集UI
