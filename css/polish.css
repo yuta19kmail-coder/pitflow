@@ -597,7 +597,7 @@
 .dl-brk{display:flex;align-items:center;justify-content:center;gap:6px;font-size:10.5px;color:var(--text3);background:repeating-linear-gradient(45deg,#23283a,#23283a 6px,#1d2230 6px,#1d2230 12px);border:1px solid var(--border);border-radius:6px;padding:3px;letter-spacing:.06em}
 .dl-empty{color:var(--text3);font-size:11px;text-align:center;padding:14px 0}
 /* 担当フロントのMHS予定枠（来客以外＝MTG/外出など）＝代車カレンダーの上 */
-.mhs-box{background:var(--bg3);border:1px dashed var(--border2);border-radius:9px;padding:9px 11px;margin-top:8px}
+.mhs-box{background:var(--bg3);border:1px dashed var(--border2);border-radius:9px;padding:9px 11px;margin-top:8px;margin-bottom:12px}/* v0.89.0 MHS欄と代車カレンダーがくっつくのでデフォの隙間を追加 */
 .mhs-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--text)}
 .mhs-tag{margin-left:auto;font-size:9px;font-weight:700;color:#9fc4ff;background:rgba(55,138,221,.15);border:1px solid rgba(55,138,221,.4);border-radius:5px;padding:1px 5px;letter-spacing:.04em}
 .mhs-note{font-size:10.5px;color:var(--text3);margin:5px 0 8px;line-height:1.45}

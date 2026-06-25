@@ -94,11 +94,20 @@
   function builderHtml() {
     const c = cfg();
     let h = '<div class="wc-tpl">';
-    h += '<div class="wc-lbls"><span class="l1">部位</span><span class="l2">症状</span><span>補足</span></div>';
-    h += '<div class="wc-wheel"><div class="wc-band"></div>'
-      + '<div class="wc-col" id="wc-w1"></div><div class="wc-col" id="wc-w2"></div><div class="wc-col" id="wc-w3"></div></div>';
-    h += '<div class="wc-build"><div class="wc-prev" id="wc-prev"><small>回して選ぶ…</small></div>'
-      + '<button type="button" class="wc-add" onclick="WorkContent.addPhrase()">＋ 入れる</button></div>';
+    // v0.89.0 内容テンプレ＝ホバーで右に開く3列一覧（部位→症状→補足・全候補が見える＝最短3〜4クリック）
+    h += '<div class="wc-pop">';
+    h += '<button type="button" class="wc-trigger">🧰 内容テンプレを選ぶ<span class="wc-arr">右にひらく ▸</span></button>';
+    h += '<div class="wc-panel">';
+    h += '<div class="wc-panel-h">部位 → 症状 → 補足（クリックで選ぶ）</div>';
+    h += '<div class="wc-cols">'
+       + '<div class="wc-listcol"><div class="wc-lh">部位</div><div class="wc-list" id="wc-c1"></div></div>'
+       + '<div class="wc-listcol"><div class="wc-lh">症状</div><div class="wc-list" id="wc-c2"></div></div>'
+       + '<div class="wc-listcol"><div class="wc-lh">補足</div><div class="wc-list" id="wc-c3"></div></div>'
+       + '</div>';
+    h += '<div class="wc-foot"><div class="wc-prev2" id="wc-prev2">症状を選んでください</div>'
+       + '<button type="button" class="wc-ins" id="wc-ins" onclick="WorkContent.insert()" disabled>挿入する</button></div>';
+    h += '</div></div>';
+    // タグチップ群（従来どおりインライン・内容欄の下に続く）
     c.chipGroups.forEach(function (g) {
       h += '<div class="wc-flat-h">' + esc(g.label) + '</div><div class="wc-chips">';
       g.items.forEach(function (it) {
@@ -110,52 +119,32 @@
     return h;
   }
 
-  let W1, W2, W3;
-  function fill(col, arr) {
-    col.innerHTML = '<div class="wc-pad"></div>' + arr.map(function (t, i) { return '<div class="wc-wi" data-i="' + i + '">' + esc(t) + '</div>'; }).join('') + '<div class="wc-pad"></div>';
-    col.scrollTop = 0; markCol(col);
-  }
-  function idxOf(col) { return Math.max(0, Math.round(col.scrollTop / IH)); }
-  function itemsOf(col) { return [].slice.call(col.querySelectorAll('.wc-wi')); }
-  function markCol(col) { const k = idxOf(col); itemsOf(col).forEach(function (el, i) { el.classList.toggle('on', i === k); }); }
-  function valOf(col) { const el = itemsOf(col)[idxOf(col)]; return el ? el.textContent : ''; }
+  // ===== v0.89.0 テンプレ3列一覧（部位/症状/補足）＝クリックで選択（緑アクティブ）→挿入 =====
+  var _selP = '', _selS = '', _selSub = '';
   function symsFor(part) { return cfg().symptoms.filter(function (s) { return s.parts === 'all' || (Array.isArray(s.parts) && s.parts.indexOf(part) >= 0); }); }
-  function subsOf(sname) { const s = cfg().symptoms.find(function (x) { return x.name === sname; }); return ['（補足なし）'].concat((s && s.sub) ? s.sub : []); }
-  function rebuild2() { if (W2) { fill(W2, symsFor(valOf(W1)).map(function (s) { return s.name; })); rebuild3(); } }
-  function rebuild3() { if (W3) fill(W3, subsOf(valOf(W2))); }
-  function phrase() {
-    const p = valOf(W1), s = valOf(W2), sub = valOf(W3);
-    if (!p || !s) return '';
-    return p + ' ' + s + ((sub && sub !== '（補足なし）') ? '（' + sub + '）' : '');
-  }
-  function updPrev() {
-    const el = document.getElementById('wc-prev'); if (!el) return;
-    const p = phrase();
-    el.innerHTML = p ? ('追加：' + esc(p)) : '<small>回して選ぶ…</small>';
-  }
-  function bindCol(col, after) {
-    col.addEventListener('scroll', function () {
-      markCol(col); updPrev();
-      clearTimeout(col._t);
-      col._t = setTimeout(function () { markCol(col); if (after) after(); updPrev(); }, 110);
-    });
-    col.addEventListener('click', function (e) {
-      const el = e.target.closest('.wc-wi'); if (!el) return;
-      col.scrollTo({ top: (+el.dataset.i) * IH, behavior: 'smooth' });
-    });
-  }
+  function subsOf(sname) { var s = cfg().symptoms.find(function (x) { return x.name === sname; }); return (s && s.sub) ? s.sub : []; }
+  function _qq(s) { return String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+  function _li(text, on, onclick, dim) { return '<div class="wc-li' + (on ? ' on' : '') + (dim ? ' dim' : '') + '"' + (onclick ? ' onclick="' + onclick + '"' : '') + '>' + esc(text) + '</div>'; }
+  function _renderC1() { var el = document.getElementById('wc-c1'); if (!el) return; el.innerHTML = cfg().parts.map(function (p) { return _li(p, p === _selP, "WorkContent.pickPart('" + _qq(p) + "')"); }).join(''); }
+  function _renderC2() { var el = document.getElementById('wc-c2'); if (!el) return; var list = _selP ? symsFor(_selP) : cfg().symptoms; el.innerHTML = list.map(function (s) { return _li(s.name, s.name === _selS, "WorkContent.pickSym('" + _qq(s.name) + "')"); }).join(''); }
+  function _renderC3() { var el = document.getElementById('wc-c3'); if (!el) return; var subs = _selS ? subsOf(_selS) : []; if (!subs.length) { el.innerHTML = _li(_selS ? '（補足なし）' : '症状を選ぶと出ます', false, '', true); return; } el.innerHTML = subs.map(function (x) { return _li(x, x === _selSub, "WorkContent.pickSub('" + _qq(x) + "')"); }).join(''); }
+  function _phrase() { if (!_selS) return ''; return (_selP ? _selP + ' ' : '') + _selS + (_selSub ? '（' + _selSub + '）' : ''); }
+  function _updPrev2() { var el = document.getElementById('wc-prev2'); var ins = document.getElementById('wc-ins'); var p = _phrase(); if (el) el.innerHTML = p ? ('追加：<b>' + esc(p) + '</b>') : '症状を選んでください'; if (ins) ins.disabled = !p; }
+  function renderTpl() { _renderC1(); _renderC2(); _renderC3(); _updPrev2(); }
+
   function mount(root) {
-    W1 = document.getElementById('wc-w1'); W2 = document.getElementById('wc-w2'); W3 = document.getElementById('wc-w3');
-    if (!W1 || !W2 || !W3) return; // 内容セクションが無い画面（modal等）では何もしない
-    fill(W1, cfg().parts); rebuild2();
-    bindCol(W1, rebuild2); bindCol(W2, rebuild3); bindCol(W3, null);
-    updPrev();
+    if (!document.getElementById('wc-c1')) return; // 内容セクションが無い画面（modal等）では何もしない
+    _selP = ''; _selS = ''; _selSub = '';
+    renderTpl();
     syncChips();   // v0.88.0 既に内容に入っているタグは「押した見た目」で開く
   }
   window.WorkContent = window.WorkContent || {};
   window.WorkContent.builderHtml = builderHtml;
   window.WorkContent.mount = mount;
-  window.WorkContent.addPhrase = function () { const p = phrase(); if (p) appendMenu(p); };
+  window.WorkContent.pickPart = function (p) { _selP = (_selP === p) ? '' : p; if (_selP && !symsFor(_selP).some(function (s) { return s.name === _selS; })) { _selS = ''; _selSub = ''; } renderTpl(); };
+  window.WorkContent.pickSym = function (s) { _selS = (_selS === s) ? '' : s; _selSub = ''; _renderC2(); _renderC3(); _updPrev2(); };
+  window.WorkContent.pickSub = function (x) { _selSub = (_selSub === x) ? '' : x; _renderC3(); _updPrev2(); };
+  window.WorkContent.insert = function () { var p = _phrase(); if (!p) return; appendMenu(p); _selS = ''; _selSub = ''; _renderC2(); _renderC3(); _updPrev2(); };
   // v0.88.0 タグチップ＝トグル。押すと内容に入り「押した見た目(wc-on)」に／もう一度押すと内容から消えて戻る。
   //   ※「車検満了日：」等の fill チップは後から値を打つので従来どおり挿入のみ。
   window.WorkContent.chip = function (btn) {
