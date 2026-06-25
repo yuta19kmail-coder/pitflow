@@ -310,17 +310,19 @@ const LINE_STATUS_ITEMS = [
   { id: 'ok',     label: 'OK' },
 ];
 function lineField(c){
-  let h = '<select class="cf-input cf-line-status" data-key="lineStatus">'
+  // v0.92.2 1行のまま：OK選択でその位置の横にLステップ番号＋リンクを並べる（新しい行を足さない）
+  let h = '<div class="cf-line-wrap"><select class="cf-input cf-line-status" data-key="lineStatus">'
     + LINE_STATUS_ITEMS.map(function(o){ return '<option value="' + o.id + '"' + (((c.lineStatus || '') === o.id) ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')
     + '</select>';
   if ((c.lineStatus || '') === 'ok'){
-    h += '<div class="cf-line-lstep">' + textIn(c, 'lstepId', 'placeholder="Lステップ番号"');
-    // v0.92.1 Lステップ顧客ページ＝ ...?member=<番号> （番号だけ変わる）。設定で上書き可。
+    h += textIn(c, 'lstepId', 'placeholder="Lステップ番号"');
+    // Lステップ顧客ページ＝ ...?member=<番号> （番号だけ変わる）。設定で上書き可。
     const base = (state.settings && state.settings.lstepBaseUrl) || 'https://manager.linestep.net/line/visual?member=';
     const id = (c.lstepId || '').trim();
-    if (base && id) h += '<a class="cf-line-link" href="' + _pe(base + encodeURIComponent(id)) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 Lステップ</a>';
-    h += '</div>';
+    // a要素はブラウザ標準でドラッグ可＝Chromeのタブのように掴んで別ウィンドウ/アドレスバーへ持っていける
+    if (base && id) h += '<a class="cf-line-link" href="' + _pe(base + encodeURIComponent(id)) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>';
   }
+  h += '</div>';
   return h;
 }
 /* 特殊運転チップ（複数選択＝既存の data-multi ハンドラで c.drive 配列をトグル） */
