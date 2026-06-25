@@ -68,6 +68,12 @@
 .cv-pill.cv-kokusan,.cv-pill.cv-div1{ background:rgba(29,185,122,.16); color:#37d39a; border-color:rgba(29,185,122,.45); }
 .cv-pill.cv-yunyu,.cv-pill.cv-div2{ background:rgba(236,72,153,.16); color:#f08fc4; border-color:rgba(236,72,153,.45); }
 .cv-pill.cv-staff{ background:var(--bg3); color:var(--text); border-color:var(--border2); font-weight:800; }
+/* v0.93.0 予約詳細に反映：カルテNo／LINE状態／Lステップボタン */
+.cv-karte{ font-size:12px; font-weight:700; color:var(--text2); background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:2px 9px; }
+.cv-pill.cv-line-ng{ background:var(--bg3); color:var(--text3); }
+.cv-pill.cv-line-ok{ background:var(--bg3); color:var(--text2); }
+.cv-line-link{ font-size:12px; font-weight:800; color:#06281d; background:#1db97a; border:1px solid #1db97a; border-radius:999px; padding:3px 12px; text-decoration:none; white-space:nowrap; cursor:grab; box-shadow:0 1px 6px rgba(29,185,122,.35); }
+.cv-line-link:hover{ filter:brightness(1.08); }
 /* 車両注意（特殊運転：左ハンドル/M/T/車高低い）＝メモの下・該当時のみ */
 .cv-drvbox{ margin-top:12px; border:1px solid rgba(245,158,11,.4); border-radius:10px; background:rgba(245,158,11,.06); padding:10px 12px; }
 .cv-drvh{ font-size:11px; color:#ffd27d; font-weight:800; margin-bottom:7px; display:flex; align-items:center; gap:6px; }

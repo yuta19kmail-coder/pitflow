@@ -40,7 +40,7 @@
   function upsertCustomerFromCard(c){
     if(!c) return;
     const name=(c.customer||'').trim();
-    const vehicle={ plate:(c.plate||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim() };
+    const vehicle={ plate:(c.plate||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(), karteNo:(c.karteNo||'').trim() };
     if(!name && !vehicle.plate) return;
     const contacts = Array.isArray(c.contacts)
       ? c.contacts.filter(x=>(x.tel||'').trim()||(x.label||'').trim()).map(x=>({tel:(x.tel||'').trim(),label:(x.label||'').trim(),primary:!!x.primary}))
@@ -49,13 +49,16 @@
     let p=_findPerson(c, vehicle);
     if(!p){ p={ id:'cu'+Date.now()+Math.floor(Math.random()*1000), name, kana:(c.kana||'').trim(), contacts, vehicles:[], updatedAt:Date.now() }; list().push(p); }
     else { p.name=name||p.name; p.kana=(c.kana||'').trim()||p.kana; if(contacts.length) p.contacts=contacts; }
+    // v0.93.0 LINEは人単位で保持（カードに値があれば更新・無ければ既存維持）
+    if(c.lineStatus) p.lineStatus=c.lineStatus;
+    if((c.lstepId||'').trim()) p.lstepId=(c.lstepId||'').trim();
     if(!Array.isArray(p.vehicles)) p.vehicles=[];
     let v = vehicle.plate ? p.vehicles.find(x=>norm(x.plate)===norm(vehicle.plate)) : null;
-    if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff)v.frontStaff=vehicle.frontStaff; v.updatedAt=Date.now(); }
+    if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff)v.frontStaff=vehicle.frontStaff; if(vehicle.karteNo)v.karteNo=vehicle.karteNo; v.updatedAt=Date.now(); }
     else if(vehicle.plate||vehicle.maker||vehicle.car){
       const base=p.vehicles[p.vehicles.length-1]||{};   // 新車両：未指定の担当/課/区分は既存からデフォ継承
       p.vehicles.push({ id:'v'+Date.now()+Math.floor(Math.random()*1000), plate:vehicle.plate, maker:vehicle.maker, car:vehicle.car,
-        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', updatedAt:Date.now() });
+        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', karteNo:vehicle.karteNo||'', updatedAt:Date.now() });
     }
     p.updatedAt=Date.now();
     c.customerId=p.id;
@@ -102,13 +105,16 @@
     const c=state.cards.find(x=>x.id===_editingCardId); if(!c) return;
     c.customer=cust.name||c.customer; c.kana=cust.kana||c.kana; c.customerId=cust.id;
     c.repeat='repeater';   // 呼び出した＝必ずリピーター（初回/リピーターを自動でリピーターに）
+    // v0.93.0 LINE（人単位）を引き継ぐ
+    if(cust.lineStatus!=null) c.lineStatus=cust.lineStatus;
+    if((cust.lstepId||'').trim()) c.lstepId=cust.lstepId;
     if(Array.isArray(cust.contacts)&&cust.contacts.length){
       c.contacts=cust.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary}));
       const pri=c.contacts.find(x=>x.primary)||c.contacts[0]; c.tel=pri?(pri.tel||''):'';
     }
     const v=(cust.vehicles||[]).find(x=>x.id===vehId)||(cust.vehicles||[])[0];
     // フロント担当は「その車両に登録済みのものだけ」入れる（推測での自動入力はしない・ゆうた方針 2026-06-23）。
-    if(v){ c.plate=v.plate||c.plate; c.maker=v.maker||c.maker; c.car=v.car||c.car; if(v.boardId)c.boardId=v.boardId; if(v.division)c.division=v.division; if(v.frontStaff)c.frontStaff=v.frontStaff; }
+    if(v){ c.plate=v.plate||c.plate; c.maker=v.maker||c.maker; c.car=v.car||c.car; if(v.boardId)c.boardId=v.boardId; if(v.division)c.division=v.division; if(v.frontStaff)c.frontStaff=v.frontStaff; if(v.karteNo)c.karteNo=v.karteNo; }
     renderCardForm(c);
   };
 
@@ -358,6 +364,17 @@
       return (c.customerId&&c.customerId===cust.id) || (c.plate&&plates.indexOf(norm(c.plate))>=0);
     }).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
   }
+  /* v0.93.0 LINE状態→表示HTML（NG=地味ピル／登録済+番号=Lステップボタン）。未案内は出さない。 */
+  function _lineHtml(o){
+    var st=(o&&o.lineStatus)||'';
+    if(st==='ng') return '<span class="cd-pill mut">LINE NG</span>';
+    if(st==='ok'){
+      var id=((o&&o.lstepId)||'').trim();
+      var url=(id&&window.pitLstepUrl)?pitLstepUrl(id):'';
+      return url?'<a class="cd-pill green cd-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()">🔗 Lステップ</a>':'<span class="cd-pill green">LINE登録済</span>';
+    }
+    return '';
+  }
   window.custOpen=function(id){
     const cust=list().find(x=>x.id===id); if(!cust) return;
     _detailFromSearch = !!window._pitReturnToSearch; window._pitReturnToSearch=false;   // 検索由来かを取り込む
@@ -378,7 +395,7 @@
     h+='<div class="cd-hero"><div class="cd-hmain">'+
        '<div class="cd-hname">'+esc(cust.name||'(無名)')+' <small>様</small></div>'+
        (cust.kana?'<div class="cd-hkana">'+esc(cust.kana)+'</div>':'')+
-       '<div class="cd-hpills"><span class="cd-pill mut">最終入庫 '+fmtDate(last)+'</span></div>'+
+       '<div class="cd-hpills"><span class="cd-pill mut">最終入庫 '+fmtDate(last)+'</span>'+_lineHtml(cust)+'</div>'+
        '</div><div class="cd-stats"><div class="cd-statrow">'+
        '<div class="cd-stat"><b>'+visits+'</b><span>来店回数</span></div>'+
        '<div class="cd-stat"><b>'+vehicles.length+'</b><span>保有台数</span></div>'+
@@ -407,7 +424,7 @@
         h+='<div class="cd-veh'+teamCls+'">'+
            '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
-           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+((v.karteNo||'').trim()?'<span class="cd-pill mut">カルテ '+esc(v.karteNo)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')">🕒 履歴</span>'+
            '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+
            '</div>';

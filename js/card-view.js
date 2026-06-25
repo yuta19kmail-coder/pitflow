@@ -81,16 +81,17 @@
     // 1行目：名前＋予約を編集
     h += '<div class="cv-id1"><span class="cv-nm">'+esc(c.customer||'（未入力）')+' <small>様</small></span>'
        + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')">✏️ 予約を編集</span></div>';
-    // 2行目：車種＋ナンバー
+    // 2行目：車種＋ナンバー＋カルテNo
     h += '<div class="cv-id2"><span class="cv-car">'+esc(c.car||'（車種未入力）')+'</span>'
-       + (c.plate?'<span class="cv-plate">'+esc(c.plate)+'</span>':'')+'</div>';
+       + (c.plate?'<span class="cv-plate">'+esc(c.plate)+'</span>':'')
+       + ((c.karteNo||'').trim()?'<span class="cv-karte">カルテ '+esc(c.karteNo)+'</span>':'')+'</div>';
     // 3行目：国産/課/担当＋電話(ホバー全件)
     const teamPill = (c.boardId==='import')
       ? '<span class="cv-pill cv-yunyu">輸入車</span>' : '<span class="cv-pill cv-kokusan">国産車</span>';
     const divPill = (c.division==='div2')
       ? '<span class="cv-pill cv-div2">2課</span>' : '<span class="cv-pill cv-div1">1課</span>';
     const staffPill = (c.frontStaff||c.staff) ? '<span class="cv-pill cv-staff">'+esc(c.frontStaff||c.staff)+'</span>' : '';
-    h += '<div class="cv-id3">'+teamPill+divPill+staffPill+telHtml(c)+'</div>';
+    h += '<div class="cv-id3">'+teamPill+divPill+staffPill+telHtml(c)+lineHtml(c)+'</div>';
 
     // 車検枠（作業内容コンテナ）
     let badges = '';
@@ -122,6 +123,18 @@
       + '</div></div>';
   }
 
+  // LINE：NG＝地味なピル／登録済＝Lステップボタン（番号あり時）。未案内は出さない。
+  function lineHtml(c){
+    const st = c.lineStatus || '';
+    if (st === 'ng') return '<span class="cv-pill cv-line-ng">LINE NG</span>';
+    if (st === 'ok'){
+      const id = (c.lstepId || '').trim();
+      const url = (id && window.pitLstepUrl) ? pitLstepUrl(id) : '';
+      if (url) return '<a class="cv-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()">🔗 Lステップ</a>';
+      return '<span class="cv-pill cv-line-ok">LINE登録済</span>';
+    }
+    return '';
+  }
   function telHtml(c){
     const list = (c.contacts && c.contacts.length) ? c.contacts : (c.tel?[{tel:c.tel,label:'電話',primary:true}]:[]);
     if (!list.length) return '';

@@ -321,6 +321,7 @@ function _lstepUrl(raw){
   if (/^https?:\/\//i.test(raw)) return raw;       // 既に何かのURL → そのまま
   return base + encodeURIComponent(raw);
 }
+window.pitLstepUrl = _lstepUrl;   // 予約詳細・顧客ビューでも同じURL生成を使う
 function lineField(c){
   const id = (c.lstepId || '').trim();
   const ok = ((c.lineStatus || '') === 'ok');
