@@ -56,6 +56,8 @@
             name: (c.name || '').trim(),
             kana: (c.kana || '').trim(),
             contacts: contacts,
+            lineStatus: c.lineStatus || '',           // LINE状態（人単位）
+            lstepId: (c.lstepId != null ? String(c.lstepId).trim() : ''), // Lステップ番号
             vehicles: vehicles,
             updatedAt: toMs(c.updatedAt) || lastVisit || Date.now(),
           };
