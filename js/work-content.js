@@ -95,7 +95,7 @@
     const c = cfg();
     let h = '<div class="wc-tpl">';
     // v0.90.0 内容テンプレ＝ボタンクリックで右カラムに大きく開く（クリックで開閉・固定）。3列一覧（部位→症状→補足）。
-    h += '<button type="button" class="wc-trigger" onclick="WorkContent.togglePanel(this)">🧰 内容テンプレを選ぶ<span class="wc-arr">クリックで右に開く ▸</span></button>';
+    h += '<div class="wc-trigrow"><button type="button" class="wc-trigger" onclick="WorkContent.togglePanel(this)">🧰 内容テンプレを選ぶ<span class="wc-arr">クリックで右に開く ▸</span></button></div>';
     h += '<div class="wc-panel" id="wc-panel">';
     h += '<div class="wc-panel-h"><span>🧰 内容テンプレ（部位 → 症状 → 補足）</span><button type="button" class="wc-x" onclick="WorkContent.closePanel()" title="閉じる">✕</button></div>';
     h += '<div class="wc-cols">'
@@ -150,10 +150,11 @@
     var side = document.querySelector('.cfp-side');
     if (side){
       var r = side.getBoundingClientRect();
-      p.style.left = r.left + 'px'; p.style.top = r.top + 'px'; p.style.width = r.width + 'px'; p.style.height = r.height + 'px';
+      var hh = Math.round(r.height * 0.5);   // v0.90.1 全体高さの約50%で固定
+      p.style.left = r.left + 'px'; p.style.top = r.top + 'px'; p.style.width = r.width + 'px'; p.style.height = hh + 'px';
     } else {
       // 右カラムが無い画面（既存カードのモーダル等）＝画面右側に出すフォールバック
-      p.style.left = ''; p.style.right = '24px'; p.style.top = '12vh'; p.style.width = 'min(420px, 92vw)'; p.style.height = '70vh';
+      p.style.left = ''; p.style.right = '24px'; p.style.top = '12vh'; p.style.width = 'min(420px, 92vw)'; p.style.height = '50vh';
     }
   }
   window.WorkContent.togglePanel = function (btn) {
