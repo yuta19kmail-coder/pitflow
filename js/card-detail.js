@@ -324,22 +324,19 @@ function _lstepUrl(raw){
 function lineField(c){
   const id = (c.lstepId || '').trim();
   const ok = ((c.lineStatus || '') === 'ok');
-  // v0.92.3 登録済み（OK＋番号）＝🔗リンクだけスッキリ表示（状態セレクト・生番号は隠す）。✕で編集に戻す。
-  if (ok && id){
-    const url = _lstepUrl(id);
-    let h = '<div class="cf-line-wrap">';
-    h += url
-      ? '<a class="cf-line-link" href="' + _pe(url) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>'
-      : '<span class="cf-line-bad">番号を確認</span>';
-    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="番号を消して編集">✕</button>';
-    h += '</div>';
-    return h;
-  }
-  // 未登録：状態セレクト（OKなら番号入力を出す＝同じ1行に横並び）
+  // v0.92.4 状態セレクト(未/お断り/案内してない/OK)は常に表示。OKなら横に番号入力 or 登録済みならLステップボタン。
   let h = '<div class="cf-line-wrap"><select class="cf-input cf-line-status" data-key="lineStatus">'
     + LINE_STATUS_ITEMS.map(function(o){ return '<option value="' + o.id + '"' + (((c.lineStatus || '') === o.id) ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')
     + '</select>';
-  if (ok) h += textIn(c, 'lstepId', 'placeholder="Lステップ番号 / URL貼付OK"');
+  if (ok && id){
+    const url = _lstepUrl(id);
+    h += url
+      ? '<a class="cf-line-link" href="' + _pe(url) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>'
+      : '<span class="cf-line-bad">番号を確認</span>';
+    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="番号を消して入れ直す">✕</button>';
+  } else if (ok){
+    h += textIn(c, 'lstepId', 'placeholder="Lステップ番号 / URL貼付OK"');
+  }
   h += '</div>';
   return h;
 }
