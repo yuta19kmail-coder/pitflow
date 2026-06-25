@@ -440,6 +440,7 @@ function cardHtml(c, opts){
     if (_dr.indexOf('leftHand') >= 0 && _dr.indexOf('mt') >= 0) _ct.push('左M/T');
     else { if (_dr.indexOf('leftHand') >= 0) _ct.push('左'); if (_dr.indexOf('mt') >= 0) _ct.push('M/T'); }
     if (_dr.indexOf('lowCar') >= 0) _ct.push('車高');
+    if (_dr.indexOf('noShoes') >= 0) _ct.push('土禁');
     if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 2).map(function(x){ return '<span class="pcm-caut">' + x + '</span>'; }).join('') + '</div>';
     /* 名前・車種・担当の title は撤去（ホバー情報カード card-hover.js で全文表示するため二重ツールチップを防ぐ） */
     var _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';

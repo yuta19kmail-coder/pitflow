@@ -671,6 +671,8 @@
 .cf-chip-tm.active{ background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600; }
 /* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
+/* v0.91.0 基本情報：顧客情報(上)と車両情報(下)を点線で区切る */
+.cf-divider{ border-top:1px dashed var(--border2); margin:12px 0 10px; }
 /* 内容セクション：テンプレを開いてクリックで挿入 */
 .cf-tpl{ margin-top:8px; }
 .cf-tpl-toggle{ background:transparent; border:1px dashed var(--border2); color:var(--text2); border-radius:7px; padding:5px 12px; font-size:12px; cursor:pointer; }

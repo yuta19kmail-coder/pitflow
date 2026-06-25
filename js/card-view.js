@@ -112,10 +112,10 @@
   }
 
   // 車両注意：左ハンドル/M/T/車高低い（card.drive 配列）。1つも無ければ枠ごと非表示
-  const DRIVE_LABELS = { leftHand:'左ハンドル', mt:'M/T', lowCar:'車高低い' };
+  const DRIVE_LABELS = { leftHand:'左ハンドル', mt:'M/T', lowCar:'車高低い', noShoes:'土足禁止' };
   function driveNoteHtml(c){
     const arr = Array.isArray(c.drive) ? c.drive : [];
-    const tags = ['leftHand','mt','lowCar'].filter(function(k){ return arr.indexOf(k)>=0; });
+    const tags = ['leftHand','mt','lowCar','noShoes'].filter(function(k){ return arr.indexOf(k)>=0; });
     if (!tags.length) return '';
     return '<div class="cv-drvbox"><div class="cv-drvh">⚠️ 車両注意</div><div class="cv-drvrow">'
       + tags.map(function(k){ return '<span class="cv-drv">'+DRIVE_LABELS[k]+'</span>'; }).join('')

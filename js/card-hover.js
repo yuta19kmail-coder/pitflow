@@ -9,7 +9,7 @@
 (function(){
   'use strict';
 
-  var DRIVE_LABELS = { leftHand:'左ハンドル', mt:'M/T', lowCar:'車高低い' };
+  var DRIVE_LABELS = { leftHand:'左ハンドル', mt:'M/T', lowCar:'車高低い', noShoes:'土足禁止' };
   var el = null, curId = null;
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }

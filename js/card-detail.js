@@ -120,20 +120,27 @@ function renderCardForm(c){
   h += '<div class="cf-field" style="flex:1"><div class="cf-label">お客様名（姓／名）</div>' + nameBoxInput(c) + '</div>';
   h += '<div class="cf-field" style="flex:1"><div class="cf-label">カナ（姓／名）</div>' + kanaBoxInput(c) + '</div>';
   h += '</div>';
-  /* 2行目：ナンバー｜TEL（残りを均等割り）｜その他連絡先（右端） */
+  /* 2行目：LINE(新設) ｜ TEL ｜ その他連絡先　＝ここまで顧客情報（v0.91.0） */
   h += '<div class="cf-row">';
-  h += field('ナンバー', plateInput(c));
-  h += field('TEL',      telInput(c));
+  h += field('LINE', textIn(c, 'lineId', 'placeholder="LINE名 / ID"'));
+  h += field('TEL',  telInput(c));
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">連絡先</div>' + contactsBtn(c) + '</div>';
   h += '</div>';
-  /* 3行目：国産輸入 → メーカー → 車種を左詰め、右端に特殊運転（左/M/T/車高） */
+  /* ── ここから下は車両情報。顧客情報と点線で区切る（v0.91.0） ── */
+  h += '<div class="cf-divider"></div>';
+  /* 3行目：国産輸入 ｜ カルテNo.(新設) ｜ メーカー ｜ ナンバー ｜ 車両注意 */
   h += '<div class="cf-row">';
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">国産車／輸入車</div>' + chips(c, 'boardId', TEAM_ITEMS) + '</div>';
-  h += '<div class="cf-field" style="flex:0 0 7em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
-  h += '<div class="cf-field" style="flex:1"><div class="cf-label">車種（グレード）</div>' + textIn(c, 'car', 'placeholder="例 アクアGz"') + '</div>';
-  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">特殊運転</div>' + driveChips(c) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 6em"><div class="cf-label">カルテNo.</div>' + textIn(c, 'karteNo', 'placeholder="例 1234"') + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 6.5em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">ナンバー</div>' + plateInput(c) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">車両注意</div>' + driveChips(c) + '</div>';
   h += '</div>';
-  /* 4行目：入庫日｜入庫時刻(1BOX＋ショートカット)｜予約受付日 */
+  /* 4行目：車種（グレード） */
+  h += '<div class="cf-row">';
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">車種（グレード）</div>' + textIn(c, 'car', 'placeholder="例 アクアGz"') + '</div>';
+  h += '</div>';
+  /* 5行目：入庫日｜入庫時刻(1BOX＋ショートカット)｜予約受付日（変わらず） */
   h += '<div class="cf-row">';
   h += field('入庫日', dateIn(c, 'reserveDate'));
   h += '<div class="cf-field" style="flex:1"><div class="cf-label">入庫時刻</div>' + timeField(c) + '</div>';
@@ -263,6 +270,7 @@ const DRIVE_ITEMS = [
   { id: 'leftHand', label: '左'   },
   { id: 'mt',       label: 'M/T'  },
   { id: 'lowCar',   label: '車高' },
+  { id: 'noShoes',  label: '土禁' },
 ];
 /* 入庫時刻のショートカット（メインBOXに直接入力も可） */
 const TIME_QUICK = ['AM', 'PM', '決まり次第', '未定'];
