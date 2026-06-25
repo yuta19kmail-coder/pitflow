@@ -150,10 +150,9 @@ function renderCardForm(c){
 
   /* === 予約内容（旧「作業内容」＝作業タイプ/課/受付/相談/担当/概算＋代車を統合・v0.35.2） === */
   h += sec('予約内容', '🗒️');
-  /* 1行目：作業タイプ（広め）＋ 課 */
+  /* 1行目：作業タイプ（1行・全幅）。v0.93.1 課はここから外して下（概算の行）へ＝空きを詰める */
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:3"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
-  h += field('課', chips(c, 'division', state.divisions, true));
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
   h += '</div>';
   /* 2行目：受付タイプ（待/当/預）の右隣に「相談」を□っぽい別ボタンで配置（区切り線で違いを演出）＋担当を1行に詰める */
   h += '<div class="cf-row">';
@@ -164,8 +163,9 @@ function renderCardForm(c){
   h += field('フロント担当', staffSelect(c, 'frontStaff'));
   h += field('予約担当',     staffSelect(c, 'reserveStaff'));
   h += '</div>';
-  /* 3行目：概算 */
+  /* 3行目：課＋概算（v0.93.1 課をここへ移動） */
   h += '<div class="cf-row">';
+  h += field('課', chips(c, 'division', state.divisions, true));
   h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
   h += field('概算 金額（円）', numIn(c, 'estAmount', 'placeholder="作業タイプから自動"'));
   h += '</div>';
