@@ -315,7 +315,8 @@ function lineField(c){
     + '</select>';
   if ((c.lineStatus || '') === 'ok'){
     h += '<div class="cf-line-lstep">' + textIn(c, 'lstepId', 'placeholder="Lステップ番号"');
-    const base = (state.settings && state.settings.lstepBaseUrl) || '';
+    // v0.92.1 Lステップ顧客ページ＝ ...?member=<番号> （番号だけ変わる）。設定で上書き可。
+    const base = (state.settings && state.settings.lstepBaseUrl) || 'https://manager.linestep.net/line/visual?member=';
     const id = (c.lstepId || '').trim();
     if (base && id) h += '<a class="cf-line-link" href="' + _pe(base + encodeURIComponent(id)) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 Lステップ</a>';
     h += '</div>';
