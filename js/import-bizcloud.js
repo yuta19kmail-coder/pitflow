@@ -45,6 +45,8 @@
               boardId: v.boardId || '',
               division: v.division || '',
               frontStaff: (v.frontStaff || '').trim(),
+              karteNo: (v.karteNo || '').trim(),     // カルテNo（車輌管理No）を保持
+              mgtNo: (v.mgtNo != null ? v.mgtNo : null), // 内部管理番号（再同期用キー）
               updatedAt: toMs(v.updatedAt) || Date.now(),
             };
           });
