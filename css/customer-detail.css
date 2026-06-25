@@ -68,6 +68,8 @@
 /* 車種名はナンバーと同格（濃さ・サイズを揃える） */
 .cd-vcar{ font-size:17px; color:var(--text1); font-weight:700; margin-top:4px; }
 .cd-vpills{ display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; align-items:center; }
+/* カルテNo＝2行目に直書きで一段目立たせる（「カルテ」表記なし） */
+.cd-vkarte{ display:inline-block; margin-top:9px; font-size:19px; font-weight:800; letter-spacing:1px; color:var(--brand); background:var(--brand-soft); border:1px solid rgba(38,162,105,.4); border-radius:9px; padding:4px 14px; line-height:1.2; }
 /* 担当＝1/2課ボードのカード（.pcm-front）と同じ角丸四角バッジ・名前のみ */
 .cd-vstaff{ margin-left:auto; font-size:12px; font-weight:700; line-height:1.42; padding:2px 9px; border-radius:7px; background:var(--bg3); color:var(--text); border:1px solid var(--border2); white-space:nowrap; }
 .cd-vacts{ display:flex; gap:8px; margin-top:12px; padding-top:10px; border-top:1px dashed var(--border); }

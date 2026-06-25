@@ -470,7 +470,8 @@
         h+='<div class="cd-veh'+teamCls+'">'+
            '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
-           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill mut">'+esc(t.course)+'</span>':'')+((v.karteNo||'').trim()?'<span class="cd-pill mut">カルテ '+esc(v.karteNo)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill" style="background:'+esc(t.courseColor)+'22;color:'+esc(t.courseColor)+';border-color:'+esc(t.courseColor)+'66">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           ((v.karteNo||'').trim()?'<div class="cd-vkarte" title="カルテNo">'+esc(v.karteNo.trim())+'</div>':'')+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')">🕒 履歴</span>'+
            '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+
            '</div>';
