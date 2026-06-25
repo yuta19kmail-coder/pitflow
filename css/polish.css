@@ -680,6 +680,9 @@
 .cf-line-link{ flex:0 0 auto; font-size:11px; font-weight:700; color:#06281d; background:#1db97a; border-radius:6px; padding:5px 9px; text-decoration:none; white-space:nowrap; cursor:grab; }
 .cf-line-link:active{ cursor:grabbing; }
 .cf-line-link:hover{ filter:brightness(1.08); }
+.cf-line-x{ flex:0 0 auto; background:none; border:1px solid var(--border2); color:var(--text3); border-radius:6px; font-size:11px; line-height:1; padding:5px 7px; cursor:pointer; }
+.cf-line-x:hover{ color:var(--text); border-color:var(--text3); }
+.cf-line-bad{ font-size:11px; color:var(--orange); }
 /* 内容セクション：テンプレを開いてクリックで挿入 */
 .cf-tpl{ margin-top:8px; }
 .cf-tpl-toggle{ background:transparent; border:1px dashed var(--border2); color:var(--text2); border-radius:7px; padding:5px 12px; font-size:12px; cursor:pointer; }

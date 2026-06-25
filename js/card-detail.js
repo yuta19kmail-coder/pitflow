@@ -309,22 +309,49 @@ const LINE_STATUS_ITEMS = [
   { id: 'notyet', label: '案内してない' },
   { id: 'ok',     label: 'OK' },
 ];
+/* v0.92.3 入力（番号 or 全文URL）から Lステップ顧客ページのURLを作る。
+   全文URL（…?member=数字）を貼られても member= の数字を抜いて正しいリンクにする。 */
+function _lstepUrl(raw){
+  raw = String(raw == null ? '' : raw).trim();
+  if (!raw) return '';
+  const base = (state.settings && state.settings.lstepBaseUrl) || 'https://manager.linestep.net/line/visual?member=';
+  const m = raw.match(/member=(\d+)/);
+  if (m) return base + m[1];                       // 全文URLを貼った → 数字だけ抜く
+  if (/^\d+$/.test(raw)) return base + raw;        // 数字だけ → そのまま付ける
+  if (/^https?:\/\//i.test(raw)) return raw;       // 既に何かのURL → そのまま
+  return base + encodeURIComponent(raw);
+}
 function lineField(c){
-  // v0.92.2 1行のまま：OK選択でその位置の横にLステップ番号＋リンクを並べる（新しい行を足さない）
+  const id = (c.lstepId || '').trim();
+  const ok = ((c.lineStatus || '') === 'ok');
+  // v0.92.3 登録済み（OK＋番号）＝🔗リンクだけスッキリ表示（状態セレクト・生番号は隠す）。✕で編集に戻す。
+  if (ok && id){
+    const url = _lstepUrl(id);
+    let h = '<div class="cf-line-wrap">';
+    h += url
+      ? '<a class="cf-line-link" href="' + _pe(url) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>'
+      : '<span class="cf-line-bad">番号を確認</span>';
+    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="番号を消して編集">✕</button>';
+    h += '</div>';
+    return h;
+  }
+  // 未登録：状態セレクト（OKなら番号入力を出す＝同じ1行に横並び）
   let h = '<div class="cf-line-wrap"><select class="cf-input cf-line-status" data-key="lineStatus">'
     + LINE_STATUS_ITEMS.map(function(o){ return '<option value="' + o.id + '"' + (((c.lineStatus || '') === o.id) ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')
     + '</select>';
-  if ((c.lineStatus || '') === 'ok'){
-    h += textIn(c, 'lstepId', 'placeholder="Lステップ番号"');
-    // Lステップ顧客ページ＝ ...?member=<番号> （番号だけ変わる）。設定で上書き可。
-    const base = (state.settings && state.settings.lstepBaseUrl) || 'https://manager.linestep.net/line/visual?member=';
-    const id = (c.lstepId || '').trim();
-    // a要素はブラウザ標準でドラッグ可＝Chromeのタブのように掴んで別ウィンドウ/アドレスバーへ持っていける
-    if (base && id) h += '<a class="cf-line-link" href="' + _pe(base + encodeURIComponent(id)) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>';
-  }
+  if (ok) h += textIn(c, 'lstepId', 'placeholder="Lステップ番号 / URL貼付OK"');
   h += '</div>';
   return h;
 }
+/* ✕＝Lステップ番号を消して編集に戻す（状態OKのまま入力欄を再表示） */
+function cfLineClear(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+  c.lstepId = '';
+  if (window.PitDB) PitDB.save();
+  renderCardForm(c);
+}
+window.cfLineClear = cfLineClear;
 /* 特殊運転チップ（複数選択＝既存の data-multi ハンドラで c.drive 配列をトグル） */
 function driveChips(c){
   const arr = Array.isArray(c.drive) ? c.drive : [];
