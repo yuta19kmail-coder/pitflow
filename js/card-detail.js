@@ -303,11 +303,11 @@ function kanaBoxInput(c){
 }
 /* v0.92.0 LINE欄：状態（未/お断り/案内してない/OK）。OK のときだけ Lステップ顧客番号を入力し、
    Lステップへのリンクを自動生成（リンクの土台URLは設定 state.settings.lstepBaseUrl・未設定なら番号だけ保持）。 */
+/* v0.92.5 LINE状態＝3パターン：未案内(既定) / LINE NG / 登録済（登録済＝Lステップ番号入力→ボタン埋め込み） */
 const LINE_STATUS_ITEMS = [
-  { id: '',       label: '未' },
-  { id: 'refuse', label: 'お断り' },
-  { id: 'notyet', label: '案内してない' },
-  { id: 'ok',     label: 'OK' },
+  { id: '',   label: '未案内' },
+  { id: 'ng', label: 'LINE NG' },
+  { id: 'ok', label: '登録済' },
 ];
 /* v0.92.3 入力（番号 or 全文URL）から Lステップ顧客ページのURLを作る。
    全文URL（…?member=数字）を貼られても member= の数字を抜いて正しいリンクにする。 */
