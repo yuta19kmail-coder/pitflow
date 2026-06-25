@@ -75,6 +75,8 @@
       customer: cu.name || '', kana: cu.kana || '',
       sei: nameParts[0] || '', mei: nameParts.slice(1).join(' ') || '', seiKana:'', meiKana:'',
       car: v.car || '', maker: v.maker || '', plate: v.plate || '',
+      karteNo: (v.karteNo || '').trim(),                    // カルテNo（車両単位）
+      lineStatus: cu.lineStatus || '', lstepId: (cu.lstepId != null ? String(cu.lstepId).trim() : ''), // LINE（人単位）
       drive: [], tel: tel, contacts: tel ? [{ tel: tel, label:'個人携帯', primary:true }] : [],
       office:'', boardId: board, division: div,
       frontStaff: front, staff: rnd(MECH[div]),

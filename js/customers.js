@@ -419,6 +419,45 @@
     }
     return '<div class="cd-ct"><div class="cd-ctic">💬</div><div class="cd-ctmain"><div class="cd-cttel">'+main+'</div><div class="cd-ctlab">'+lab+'</div></div></div>';
   }
+  /* v0.96.9 「🆕 新規予約」＝顧客/車両（or既存カード）から新規予約カードを作成。カルテNo・LINEも引き継ぐ。 */
+  function _newReserveBase(){
+    const id='c'+Date.now();
+    const today=(typeof ymd==='function')?ymd(new Date()):'';
+    return { id, resNo:(window.pitGenResNo?pitGenResNo():''), status:'reserved', boardId:null, bayId:null, division:null,
+      log:[{label:'予約作成',at:Date.now()}], customer:'', tel:'', maker:'', car:'', plate:'',
+      reserveDate:today, reserveTime:'', returnDate:'', bookedAt:today,
+      reserveStaff:(typeof pitCurrentStaffName==='function'?(pitCurrentStaffName()||''):''),
+      estHoldDays:'', estAmount:null, menu:'', workType:null, dropType:null, consult:false,
+      needLoaner:false, needWash:false, urgent:false, memo:'' };
+  }
+  function _openReserveWith(over){
+    const card=_newReserveBase(); Object.assign(card, over||{});
+    if(!Array.isArray(state.cards)) state.cards=[];
+    state.cards.push(card);
+    if(window.PitDB) PitDB.save(true);
+    if(window.openCard) openCard(card.id,'page');
+  }
+  window.custNewReserveFor=function(custId,vehId){
+    const cust=list().find(x=>x.id===custId); const over={};
+    if(cust){
+      over.customer=cust.name||''; over.kana=cust.kana||''; over.customerId=cust.id; over.repeat='repeater';
+      if(cust.lineStatus!=null) over.lineStatus=cust.lineStatus;
+      if((cust.lstepId||'')!=='') over.lstepId=String(cust.lstepId).trim();
+      if(Array.isArray(cust.contacts)&&cust.contacts.length){ over.contacts=cust.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary})); const p=over.contacts.find(x=>x.primary)||over.contacts[0]; over.tel=p?(p.tel||''):''; }
+      const v=(cust.vehicles||[]).find(x=>x.id===vehId)||(cust.vehicles||[])[0];
+      if(v){ over.plate=v.plate||''; over.maker=v.maker||''; over.car=v.car||''; if(v.boardId)over.boardId=v.boardId; if(v.division)over.division=v.division; if(v.frontStaff)over.frontStaff=v.frontStaff; if((v.karteNo||'').trim())over.karteNo=v.karteNo.trim(); }
+    }
+    _openReserveWith(over);
+  };
+  window.custNewReserveForCardId=function(cardId){
+    const c=(state.cards||[]).find(x=>x.id===cardId);
+    if(!c){ _openReserveWith({}); return; }
+    _openReserveWith({ customer:c.customer||'', kana:c.kana||'', customerId:c.customerId||null, repeat:'repeater',
+      contacts:Array.isArray(c.contacts)?c.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary})):[],
+      tel:c.tel||'', plate:c.plate||'', maker:c.maker||'', car:c.car||'',
+      boardId:c.boardId||null, division:c.division||null, frontStaff:c.frontStaff||'',
+      karteNo:(c.karteNo||'').trim(), lineStatus:c.lineStatus||'', lstepId:(c.lstepId!=null?String(c.lstepId).trim():'') });
+  };
   window.custOpen=function(id){
     const cust=list().find(x=>x.id===id); if(!cust) return;
     _detailFromSearch = !!window._pitReturnToSearch; window._pitReturnToSearch=false;   // 検索由来かを取り込む
