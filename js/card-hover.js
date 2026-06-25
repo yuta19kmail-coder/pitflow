@@ -56,7 +56,7 @@
     h += '<div class="ph-name">'+esc(c.customer||'（未入力）')+' <small>様</small></div>';
     if (c.kana) h += '<div class="ph-kana">'+esc(c.kana)+'</div>';
     h += '<div class="ph-car">'+carTxt+'</div>';
-    if (c.plate) h += '<div class="ph-plate-row"><span class="ph-plate">'+esc(c.plate)+'</span></div>';
+    if (c.plate || (c.karteNo||'').trim()) h += '<div class="ph-plate-row">'+(c.plate?'<span class="ph-plate">'+esc(c.plate)+'</span>':'')+((c.karteNo||'').trim()?'<span class="ph-karte">'+esc(c.karteNo.trim())+'</span>':'')+'</div>';
 
     // ===== 経過日数（預かり後）。ただし予約（入庫前）は予約日だけ =====
     var _resv = (c.status === 'reserved');

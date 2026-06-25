@@ -84,7 +84,7 @@
     // 2行目：車種＋ナンバー＋カルテNo
     h += '<div class="cv-id2"><span class="cv-car">'+esc(c.car||'（車種未入力）')+'</span>'
        + (c.plate?'<span class="cv-plate">'+esc(c.plate)+'</span>':'')
-       + ((c.karteNo||'').trim()?'<span class="cv-karte">カルテ '+esc(c.karteNo)+'</span>':'')+'</div>';
+       + ((c.karteNo||'').trim()?'<span class="cv-karte">'+esc(c.karteNo.trim())+'</span>':'')+'</div>';
     // 3行目：国産/課/担当＋電話(ホバー全件)
     const teamPill = (c.boardId==='import')
       ? '<span class="cv-pill cv-yunyu">輸入車</span>' : '<span class="cv-pill cv-kokusan">国産車</span>';
@@ -130,7 +130,7 @@
     if (st === 'ok'){
       const id = (c.lstepId || '').trim();
       const url = (id && window.pitLstepUrl) ? pitLstepUrl(id) : '';
-      if (url) return '<a class="cv-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()">🔗 Lステップ</a>';
+      if (url) return '<a class="cv-licon" href="'+esc(url)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Lステップを開く">L</a>';
       return '<span class="cv-pill cv-line-ok">LINE登録済</span>';
     }
     return '';
