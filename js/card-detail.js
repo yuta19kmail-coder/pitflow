@@ -122,7 +122,7 @@ function renderCardForm(c){
   h += '</div>';
   /* 2行目：LINE(新設) ｜ TEL ｜ その他連絡先　＝ここまで顧客情報（v0.91.0） */
   h += '<div class="cf-row">';
-  h += field('LINE', textIn(c, 'lineId', 'placeholder="LINE名 / ID"'));
+  h += field('LINE', lineField(c));
   h += field('TEL',  telInput(c));
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">連絡先</div>' + contactsBtn(c) + '</div>';
   h += '</div>';
@@ -300,6 +300,27 @@ function kanaBoxInput(c){
     + '<span class="cf-nb-sep"></span>'
     + '<input type="text" class="cf-nb-seg" data-name="meiKana" value="' + _pe(c.meiKana || '') + '" placeholder="メイ" autocomplete="off">'
     + '</div>';
+}
+/* v0.92.0 LINE欄：状態（未/お断り/案内してない/OK）。OK のときだけ Lステップ顧客番号を入力し、
+   Lステップへのリンクを自動生成（リンクの土台URLは設定 state.settings.lstepBaseUrl・未設定なら番号だけ保持）。 */
+const LINE_STATUS_ITEMS = [
+  { id: '',       label: '未' },
+  { id: 'refuse', label: 'お断り' },
+  { id: 'notyet', label: '案内してない' },
+  { id: 'ok',     label: 'OK' },
+];
+function lineField(c){
+  let h = '<select class="cf-input cf-line-status" data-key="lineStatus">'
+    + LINE_STATUS_ITEMS.map(function(o){ return '<option value="' + o.id + '"' + (((c.lineStatus || '') === o.id) ? ' selected' : '') + '>' + o.label + '</option>'; }).join('')
+    + '</select>';
+  if ((c.lineStatus || '') === 'ok'){
+    h += '<div class="cf-line-lstep">' + textIn(c, 'lstepId', 'placeholder="Lステップ番号"');
+    const base = (state.settings && state.settings.lstepBaseUrl) || '';
+    const id = (c.lstepId || '').trim();
+    if (base && id) h += '<a class="cf-line-link" href="' + _pe(base + encodeURIComponent(id)) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗 Lステップ</a>';
+    h += '</div>';
+  }
+  return h;
 }
 /* 特殊運転チップ（複数選択＝既存の data-multi ハンドラで c.drive 配列をトグル） */
 function driveChips(c){
@@ -1170,7 +1191,8 @@ function bindCardFormEvents(root){
         if (d && c.division !== d) c.division = d;
       }
       // v0.84.0 右パネル（選んだ日の入庫/返車・担当のMHS予定・担当ハイライト）を更新するため再描画
-      if (key === 'reserveDate' || key === 'frontStaff' || key === 'reserveStaff') { renderCardForm(c); return; }
+      // v0.92.0 LINE状態・Lステップ番号の変更でも再描画（OK選択でLステップ欄を出す／リンク生成）
+      if (key === 'reserveDate' || key === 'frontStaff' || key === 'reserveStaff' || key === 'lineStatus' || key === 'lstepId') { renderCardForm(c); return; }
     });
   });
 

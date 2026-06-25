@@ -673,6 +673,10 @@
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
 /* v0.91.0 基本情報：顧客情報(上)と車両情報(下)を点線で区切る */
 .cf-divider{ border-top:1px dashed var(--border2); margin:12px 0 10px; }
+/* v0.92.0 LINE欄：OK時のLステップ番号＋リンク */
+.cf-line-lstep{ display:flex; gap:6px; align-items:center; margin-top:5px; }
+.cf-line-link{ flex:0 0 auto; font-size:11px; font-weight:700; color:#06281d; background:#1db97a; border-radius:6px; padding:5px 9px; text-decoration:none; white-space:nowrap; }
+.cf-line-link:hover{ filter:brightness(1.08); }
 /* 内容セクション：テンプレを開いてクリックで挿入 */
 .cf-tpl{ margin-top:8px; }
 .cf-tpl-toggle{ background:transparent; border:1px dashed var(--border2); color:var(--text2); border-radius:7px; padding:5px 12px; font-size:12px; cursor:pointer; }
