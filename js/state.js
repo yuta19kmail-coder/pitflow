@@ -209,7 +209,7 @@ window.state = {
     { id: '12pt',    label: '12点',           color: '#f97316' },
     { id: 'general', label: '一般',           color: '#84cc16' },
     { id: 'oil',     label: 'オイル',         color: '#eab308' },
-    { id: 'bp',      label: 'B.P',            color: '#3b82f6' },
+    { id: 'bp',      label: 'B.P',            color: '#3b82f6', combinable: true },
     { id: 'coat1y',  label: '1Y', color: '#8b5cf6', combinable: true },
     { id: 'coat3m',  label: '3M', color: '#a855f7', combinable: true },
   ],

@@ -150,9 +150,11 @@ function renderCardForm(c){
 
   /* === 予約内容（旧「作業内容」＝作業タイプ/課/受付/相談/担当/概算＋代車を統合・v0.35.2） === */
   h += sec('予約内容', '🗒️');
-  /* 1行目：作業タイプ（1行・全幅）。v0.93.1 課はここから外して下（概算の行）へ＝空きを詰める */
-  h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:1"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
+  /* 1行目：作業タイプ(基本)｜併用可(B.P/1Y/3M)｜課 を1行に（v0.94.0） */
+  h += '<div class="cf-row" style="flex-wrap:nowrap">';
+  h += '<div class="cf-field" style="flex:0 1 auto;min-width:0"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">併用可</div>' + workTypeComboChips(c) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto;margin-left:auto"><div class="cf-label">課</div>' + chips(c, 'division', state.divisions, true) + '</div>';
   h += '</div>';
   /* 2行目：受付タイプ（待/当/預）の右隣に「相談」を□っぽい別ボタンで配置（区切り線で違いを演出）＋担当を1行に詰める */
   h += '<div class="cf-row">';
@@ -163,9 +165,8 @@ function renderCardForm(c){
   h += field('フロント担当', staffSelect(c, 'frontStaff'));
   h += field('予約担当',     staffSelect(c, 'reserveStaff'));
   h += '</div>';
-  /* 3行目：課＋概算（v0.93.1 課をここへ移動） */
+  /* 3行目：概算 */
   h += '<div class="cf-row">';
-  h += field('課', chips(c, 'division', state.divisions, true));
   h += field('概算 預かり日数', numIn(c, 'estHoldDays', 'placeholder="例 5（当日仕上げは0）"'));
   h += field('概算 金額（円）', numIn(c, 'estAmount', 'placeholder="作業タイプから自動"'));
   h += '</div>';
@@ -676,7 +677,7 @@ function _cardMarkMisses(c, root){
     ['maker',       'メーカー',        !!(c.maker || '').trim()],
     ['car',         '車種（グレード）', !!(c.car || '').trim()],
     ['reserveDate', '入庫日',          !!c.reserveDate],
-    ['workType',    '作業タイプ',      !!c.workType],
+    ['workType',    '作業タイプ',      !!c.workType || !!((c.workAddons||[]).length)],
     ['dropType',    '受付タイプ',      !!c.dropType],
   ];
   if (c.needLoaner){
@@ -848,19 +849,21 @@ function _wtChipBtn(it, active){
   else if (it.color)      style = 'style="border-color:' + it.color + ';color:' + it.color + ';"';
   return '<button type="button" class="cf-chip' + (active ? ' active' : '') + '" data-val="' + it.id + '" ' + style + '>' + it.label + '</button>';
 }
+// v0.94.0 基本（単独選択）チップだけ。併用可は workTypeComboChips に分離＝同じ1行に横並びにする。
 function workTypeChips(c){
-  const all = state.workTypes || [];
-  const base  = all.filter(w => !w.combinable);
-  const combo = all.filter(w => w.combinable);
-  const adds = Array.isArray(c.workAddons) ? c.workAddons : [];
+  const base = (state.workTypes || []).filter(w => !w.combinable);
   let h = '<div class="cf-chips" data-key="workType">';
   base.forEach(it => { h += _wtChipBtn(it, c.workType === it.id); });
   h += '</div>';
-  if (combo.length){
-    h += '<div class="cf-chips cf-wt-combo" data-key="workAddons" data-combo="1"><span class="cf-combo-lab">＋併用</span>';
-    combo.forEach(it => { h += _wtChipBtn(it, adds.indexOf(it.id) >= 0); });
-    h += '</div>';
-  }
+  return h;
+}
+// v0.94.0 併用可チップ（複数選択＝c.workAddons）。ラベルはフィールド側の「併用可」。チップ大きさは基本と同じ(.cf-chip)。
+function workTypeComboChips(c){
+  const combo = (state.workTypes || []).filter(w => w.combinable);
+  const adds = Array.isArray(c.workAddons) ? c.workAddons : [];
+  let h = '<div class="cf-chips" data-key="workAddons" data-combo="1">';
+  combo.forEach(it => { h += _wtChipBtn(it, adds.indexOf(it.id) >= 0); });
+  h += '</div>';
   return h;
 }
 /* 表示用 c.workTypes（基本＋併用の順）を同期。週/当日/PITカードの作業バッジはこれを見る。 */
@@ -1395,6 +1398,12 @@ function bindCardFormEvents(root){
         if (idx >= 0) c[key].splice(idx, 1);
         else c[key].push(v);
         _syncWorkTypes(c);
+        // v0.94.1 併用可は単独利用も可：主作業(workType)が無く併用可だけの時は、その先頭で概算を自動入力
+        if (!c.workType){
+          const eff = (c.workAddons || [])[0] || '';
+          if (window.pitEstHold)   c.estHoldDays = eff ? pitEstHold(eff, c.dropType) : '';
+          if (window.pitEstAmount) c.estAmount   = eff ? pitEstAmount(eff) : c.estAmount;
+        }
         renderCardForm(c);
       });
     });
