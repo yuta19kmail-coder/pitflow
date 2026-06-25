@@ -275,9 +275,12 @@
     h+='</div><button class="ce-add" onclick="custEditAddContact()">＋ 連絡先</button>';
     // LINE（新規予約欄と同じ：未案内/LINE NG/登録済＋Lステップ番号）
     const lineOpts=[['','未案内'],['ng','LINE NG'],['ok','登録済']].map(function(o){ return '<option value="'+o[0]+'"'+(((cust.lineStatus||'')===o[0])?' selected':'')+'>'+o[1]+'</option>'; }).join('');
+    const ceIsOk=((cust.lineStatus||'')==='ok');
+    const ceUrl=(ceIsOk && (cust.lstepId||'').trim() && window.pitLstepUrl)?pitLstepUrl(cust.lstepId):'';
     h+='<div class="ce-sec">LINE</div><div class="ce-line">'+
-       '<select id="ce-line-status" class="ce-line-sel">'+lineOpts+'</select>'+
-       '<input id="ce-lstep" class="ce-line-id" value="'+esc(cust.lstepId||'')+'" placeholder="Lステップ番号 / URL貼付OK（登録済のとき）">'+
+       '<select id="ce-line-status" class="ce-line-sel" onchange="custEditSyncLine()">'+lineOpts+'</select>'+
+       '<input id="ce-lstep" class="ce-line-id" value="'+esc(cust.lstepId||'')+'" placeholder="Lステップ番号 / URL貼付OK（登録済のとき）" oninput="custEditSyncLine()"'+(ceIsOk?'':' style="display:none"')+'>'+
+       '<a id="ce-lstep-link" class="ct-bline" href="'+esc(ceUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Lステップを開く"'+(ceUrl?'':' style="display:none"')+'>🔗 Lステップ</a>'+
        '</div>';
     // 車両
     h+='<div class="ce-sec">車両（複数台OK）</div><div id="ce-vehicles">';
@@ -331,6 +334,18 @@
   window.custEditDelContact=function(btn){ const cust=_editTarget(); if(!cust) return; _readEdit(cust); const row=btn.closest('.ce-ct'); const rows=[].slice.call(document.querySelectorAll('#ce-contacts .ce-ct')); const i=rows.indexOf(row); if(i>=0) cust.contacts.splice(i,1); _renderEdit(cust); };
   window.custEditAddVehicle=function(){ const cust=_editTarget(); if(!cust) return; _readEdit(cust); const base=cust.vehicles[cust.vehicles.length-1]||{}; cust.vehicles.push({ id:'v'+Date.now()+Math.floor(Math.random()*1000), plate:'',maker:'',car:'', boardId:base.boardId||'', division:base.division||'', frontStaff:base.frontStaff||'' }); _renderEdit(cust); };
   window.custEditDelVehicle=function(btn){ const cust=_editTarget(); if(!cust) return; _readEdit(cust); const row=btn.closest('.ce-veh'); const rows=[].slice.call(document.querySelectorAll('#ce-vehicles .ce-veh')); const i=rows.indexOf(row); if(i>=0) cust.vehicles.splice(i,1); _renderEdit(cust); };
+  // v0.96.1 編集画面のLINE欄：状態=登録済のときだけ番号入力を出し、番号→🔗Lステップリンクを自動生成（新規予約欄と同じ挙動）
+  window.custEditSyncLine=function(){
+    const sel=document.getElementById('ce-line-status');
+    const inp=document.getElementById('ce-lstep');
+    const link=document.getElementById('ce-lstep-link');
+    if(!sel||!inp||!link) return;
+    const ok=sel.value==='ok';
+    inp.style.display=ok?'':'none';
+    const url=(ok && inp.value.trim() && window.pitLstepUrl)?pitLstepUrl(inp.value.trim()):'';
+    if(url){ link.href=url; link.style.display=''; }
+    else { link.removeAttribute('href'); link.style.display='none'; }
+  };
   function _editTarget(){ const head=document.querySelector('#cust-modal .cm-save'); if(!head) return null; const m=head.getAttribute('onclick')||''; const id=(m.match(/custSaveEdit\('([^']+)'\)/)||[])[1]; return id?list().find(x=>x.id===id):null; }
 
   /* ===== 履歴（車両＝そのナンバー単位） ===== */
