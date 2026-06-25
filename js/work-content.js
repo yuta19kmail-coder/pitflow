@@ -94,11 +94,10 @@
   function builderHtml() {
     const c = cfg();
     let h = '<div class="wc-tpl">';
-    // v0.89.0 内容テンプレ＝ホバーで右に開く3列一覧（部位→症状→補足・全候補が見える＝最短3〜4クリック）
-    h += '<div class="wc-pop">';
-    h += '<button type="button" class="wc-trigger">🧰 内容テンプレを選ぶ<span class="wc-arr">右にひらく ▸</span></button>';
-    h += '<div class="wc-panel">';
-    h += '<div class="wc-panel-h">部位 → 症状 → 補足（クリックで選ぶ）</div>';
+    // v0.90.0 内容テンプレ＝ボタンクリックで右カラムに大きく開く（クリックで開閉・固定）。3列一覧（部位→症状→補足）。
+    h += '<button type="button" class="wc-trigger" onclick="WorkContent.togglePanel(this)">🧰 内容テンプレを選ぶ<span class="wc-arr">クリックで右に開く ▸</span></button>';
+    h += '<div class="wc-panel" id="wc-panel">';
+    h += '<div class="wc-panel-h"><span>🧰 内容テンプレ（部位 → 症状 → 補足）</span><button type="button" class="wc-x" onclick="WorkContent.closePanel()" title="閉じる">✕</button></div>';
     h += '<div class="wc-cols">'
        + '<div class="wc-listcol"><div class="wc-lh">部位</div><div class="wc-list" id="wc-c1"></div></div>'
        + '<div class="wc-listcol"><div class="wc-lh">症状</div><div class="wc-list" id="wc-c2"></div></div>'
@@ -106,7 +105,7 @@
        + '</div>';
     h += '<div class="wc-foot"><div class="wc-prev2" id="wc-prev2">症状を選んでください</div>'
        + '<button type="button" class="wc-ins" id="wc-ins" onclick="WorkContent.insert()" disabled>挿入する</button></div>';
-    h += '</div></div>';
+    h += '</div>';
     // タグチップ群（従来どおりインライン・内容欄の下に続く）
     c.chipGroups.forEach(function (g) {
       h += '<div class="wc-flat-h">' + esc(g.label) + '</div><div class="wc-chips">';
@@ -145,6 +144,30 @@
   window.WorkContent.pickSym = function (s) { _selS = (_selS === s) ? '' : s; _selSub = ''; _renderC2(); _renderC3(); _updPrev2(); };
   window.WorkContent.pickSub = function (x) { _selSub = (_selSub === x) ? '' : x; _renderC3(); _updPrev2(); };
   window.WorkContent.insert = function () { var p = _phrase(); if (!p) return; appendMenu(p); _selS = ''; _selSub = ''; _renderC2(); _renderC3(); _updPrev2(); };
+
+  // v0.90.0 パネル開閉（クリックで固定）。開いた時は右カラム(.cfp-side)にぴったり重ねて「右カラムに大きく表示」されているように見せる。
+  function _placePanel(p){
+    var side = document.querySelector('.cfp-side');
+    if (side){
+      var r = side.getBoundingClientRect();
+      p.style.left = r.left + 'px'; p.style.top = r.top + 'px'; p.style.width = r.width + 'px'; p.style.height = r.height + 'px';
+    } else {
+      // 右カラムが無い画面（既存カードのモーダル等）＝画面右側に出すフォールバック
+      p.style.left = ''; p.style.right = '24px'; p.style.top = '12vh'; p.style.width = 'min(420px, 92vw)'; p.style.height = '70vh';
+    }
+  }
+  window.WorkContent.togglePanel = function (btn) {
+    var p = document.getElementById('wc-panel'); if (!p) return;
+    if (p.classList.contains('open')) { p.classList.remove('open'); if (btn) btn.classList.remove('on'); return; }
+    p.style.right = ''; _placePanel(p);
+    p.classList.add('open');
+    if (btn) btn.classList.add('on');
+    renderTpl();
+  };
+  window.WorkContent.closePanel = function () {
+    var p = document.getElementById('wc-panel'); if (p) p.classList.remove('open');
+    var b = document.querySelector('.wc-trigger'); if (b) b.classList.remove('on');
+  };
   // v0.88.0 タグチップ＝トグル。押すと内容に入り「押した見た目(wc-on)」に／もう一度押すと内容から消えて戻る。
   //   ※「車検満了日：」等の fill チップは後から値を打つので従来どおり挿入のみ。
   window.WorkContent.chip = function (btn) {
