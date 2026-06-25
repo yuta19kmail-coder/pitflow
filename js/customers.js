@@ -140,6 +140,7 @@
       case 'name':  return norm(cust.kana)||norm(cust.name);
       case 'kana':  return norm(cust.kana);
       case 'maker': return norm(v.maker);
+      case 'karte': return norm(v.karteNo);
       case 'car':   return norm(v.car);
       case 'plate': return norm(v.plate);
       case 'tel':   return norm(primaryTel(cust));
@@ -190,7 +191,7 @@
     const cnt=document.getElementById('cust-count'); if(cnt) cnt.textContent=rows.length+' 人 / 全 '+list().length+' 人';
     if(!rows.length){ host.innerHTML='<div class="cust-empty">'+(list().length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>'; return; }
     // 以前の1行テーブル。基本1人1行＝先頭車両を表示。2台目以降は「車の欄だけ」を下に増やす（人の欄は空）
-    const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
+    const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['karte','カルテNo'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
     const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
     let h='<div class="ct-wrap"><table class="ct"><thead><tr>';
     cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
@@ -207,6 +208,7 @@
            '<td class="ct-name">'+(first?esc(cust.name||'(無名)'):'')+'</td>'+
            '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
            '<td>'+(v?esc(v.maker||'—'):'—')+'</td>'+
+           '<td class="ct-mut">'+(v?esc(v.karteNo||'—'):'—')+'</td>'+
            '<td>'+(v?esc(v.car||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?esc(v.plate||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(first?esc(primaryTel(cust)||'—'):'')+'</td>'+
@@ -215,6 +217,9 @@
            '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
            '<td class="ct-act">'+
+             ((first && (cust.lineStatus||'')==='ok' && (cust.lstepId||'').trim() && window.pitLstepUrl)
+               ? '<a class="ct-b ct-bline" href="'+esc(pitLstepUrl(cust.lstepId))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Lステップを開く">🔗 Lステップ</a>'
+               : '')+
              '<button class="ct-b ct-bnew" onclick="event.stopPropagation();custNewReserveFor(\''+cust.id+'\',\''+((v&&v.id)||'')+'\')" title="この車で新規予約">🆕 新規予約</button>'+
            '</td>'+
            '</tr>';
@@ -268,6 +273,12 @@
          '<button type="button" class="cf-ct-del" onclick="custEditDelContact(this)">🗑</button></div>';
     });
     h+='</div><button class="ce-add" onclick="custEditAddContact()">＋ 連絡先</button>';
+    // LINE（新規予約欄と同じ：未案内/LINE NG/登録済＋Lステップ番号）
+    const lineOpts=[['','未案内'],['ng','LINE NG'],['ok','登録済']].map(function(o){ return '<option value="'+o[0]+'"'+(((cust.lineStatus||'')===o[0])?' selected':'')+'>'+o[1]+'</option>'; }).join('');
+    h+='<div class="ce-sec">LINE</div><div class="ce-line">'+
+       '<select id="ce-line-status" class="ce-line-sel">'+lineOpts+'</select>'+
+       '<input id="ce-lstep" class="ce-line-id" value="'+esc(cust.lstepId||'')+'" placeholder="Lステップ番号 / URL貼付OK（登録済のとき）">'+
+       '</div>';
     // 車両
     h+='<div class="ce-sec">車両（複数台OK）</div><div id="ce-vehicles">';
     (cust.vehicles||[]).forEach(function(v){
@@ -275,6 +286,7 @@
          '<input class="ce-plate" value="'+esc(v.plate||'')+'" placeholder="野田 300 ひ 5555">'+
          '<input class="ce-maker" value="'+esc(v.maker||'')+'" placeholder="メーカー">'+
          '<input class="ce-car" value="'+esc(v.car||'')+'" placeholder="車種">'+
+         '<input class="ce-karte" value="'+esc(v.karteNo||'')+'" placeholder="カルテNo">'+
          '</div><div class="ce-veh-r">'+_boardSel(v.boardId)+_divSel(v.division)+_frontSel(v.frontStaff)+
          '<button type="button" class="cf-ct-del" onclick="custEditDelVehicle(this)">🗑</button></div></div>';
     });
@@ -285,6 +297,8 @@
   function _readEdit(cust){
     const g=id=>{ const e=document.getElementById(id); return e?e.value.trim():''; };
     cust.name=g('ce-name'); cust.kana=g('ce-kana');
+    const lsel=document.getElementById('ce-line-status'); cust.lineStatus=lsel?lsel.value:'';
+    cust.lstepId=g('ce-lstep');
     const contacts=[];
     document.querySelectorAll('#ce-contacts .ce-ct').forEach(function(row){
       const tel=(row.querySelector('.ce-ctel').value||'').trim();
@@ -299,10 +313,11 @@
       const plate=(row.querySelector('.ce-plate').value||'').trim();
       const maker=(row.querySelector('.ce-maker').value||'').trim();
       const car=(row.querySelector('.ce-car').value||'').trim();
+      const ke=row.querySelector('.ce-karte'); const karteNo=ke?(ke.value||'').trim():'';
       const boardId=row.querySelector('.ce-board').value;
       const division=row.querySelector('.ce-div').value;
       const frontStaff=row.querySelector('.ce-front').value;
-      if(plate||maker||car) vehicles.push({ id:row.dataset.vid||('v'+Date.now()+Math.floor(Math.random()*1000)), plate,maker,car,boardId,division,frontStaff });
+      if(plate||maker||car) vehicles.push({ id:row.dataset.vid||('v'+Date.now()+Math.floor(Math.random()*1000)), plate,maker,car,karteNo,boardId,division,frontStaff });
     });
     cust.vehicles=vehicles;
   }

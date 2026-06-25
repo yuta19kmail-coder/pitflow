@@ -260,6 +260,9 @@
 .ct-b{ background:transparent; border:1px solid var(--border); border-radius:6px; padding:3px 7px; cursor:pointer; color:var(--text2); font-size:12px; margin-left:2px; }
 .ct-b:hover{ border-color:var(--brand); color:var(--brand); }
 .ct-bd:hover{ border-color:var(--red); color:var(--red); }
+/* 一覧のLステップリンク（LINE登録済の人だけ・目立つ緑）v0.96.0 */
+.ct-bline{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; font-size:11.5px; font-weight:800; text-decoration:none; color:#fff; background:#1db97a; border:1px solid #19a86d; border-radius:7px; padding:4px 9px; box-shadow:0 1px 3px rgba(29,185,122,.35); }
+.ct-bline:hover{ background:#17a268; color:#fff; }
 /* 1人1行＋2台目以降は車の欄だけ下に増える（人の欄は空・行間の線を消して1人の塊に見せる）v0.38.1 */
 .ct-norb td{ border-bottom:none; }
 .ct-rb td{ border-bottom:1px solid var(--border); }
@@ -275,11 +278,16 @@
 .ce-veh-l .ce-plate{ flex:1 1 12em; }
 .ce-veh-l .ce-maker{ flex:0 0 6em; }
 .ce-veh-l .ce-car{ flex:1 1 7em; }
+.ce-veh-l .ce-karte{ flex:0 0 7em; }
 .ce-veh-r{ display:flex; gap:6px; align-items:center; }
 .ce-board, .ce-div, .ce-front, .ce-veh input, .ce-ct input.ce-ctel, .ce-ct input.ce-clabel{ background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:7px 9px; font-size:12.5px; font-family:inherit; box-sizing:border-box; }
 .ce-board, .ce-div, .ce-front{ cursor:pointer; }
 .ce-add{ background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:6px 12px; font-size:12px; cursor:pointer; margin-top:2px; }
 .ce-add:hover{ border-color:var(--brand); color:var(--brand); }
+/* 編集モーダル：LINE設定（新規予約欄と同じ3状態＋Lステップ番号）v0.96.0 */
+.ce-line{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.ce-line .ce-line-sel{ flex:0 0 9em; background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:7px 9px; font-size:12.5px; font-family:inherit; cursor:pointer; box-sizing:border-box; }
+.ce-line .ce-line-id{ flex:1 1 14em; background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:7px; padding:7px 9px; font-size:12.5px; font-family:inherit; box-sizing:border-box; }
 
 /* ===== カード設計サンプル（今だけ・たたき台） ===== */
 .sp-banner{ background:rgba(124,58,237,.10); border:1px solid rgba(124,58,237,.35); border-radius:10px; padding:11px 14px; font-size:12.5px; line-height:1.6; color:var(--text); margin-bottom:12px; }
