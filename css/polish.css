@@ -384,7 +384,7 @@
 /* ===== 代車ビュー（縦＝日付・横＝代車20台・両方向スクロール） ===== */
 .lo-scroll{ height:calc(100dvh - 150px); overflow:auto; border:1px solid var(--border); border-radius:var(--r); background:var(--bg2); }
 .lo-grid{ display:grid; min-width:max-content; }
-.lo-cell{ border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-height:30px; padding:3px 4px; font-size:11px; position:relative; }
+.lo-cell{ border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-height:38px; padding:3px 4px; font-size:11px; position:relative; }
 .lo-head{ position:sticky; top:0; z-index:4; background:var(--bg3); border-bottom:1px solid var(--border2); text-align:center; }
 .lo-corner{ position:sticky; left:0; top:0; z-index:6; }
 .lo-car{ font-weight:800; font-size:13px; white-space:nowrap; }
@@ -414,19 +414,45 @@
 .lo-date .lo-month{ font-size:9px; font-weight:800; color:var(--brand); }
 .lo-cell.lo-today{ background:var(--brand-soft); }
 .lo-date.lo-today{ color:var(--brand); box-shadow:inset 3px 0 0 var(--brand); }
-/* 予約＝開始バッジ → 縦線が↓に伸びる → 返却予定日に▼ */
-.lo-bk{ text-align:center; }   /* ★バッジを中央寄せ＝バー線/▼（中央）と縦に揃える */
-.lo-bk::before{ content:""; position:absolute; left:50%; transform:translateX(-50%); top:-1px; bottom:-1px; width:3px; border-radius:2px; background:var(--lo-team, var(--brand)); opacity:.85; }
-.lo-bk.bk-start::before{ top:18px; }
-.lo-bk.bk-end::before{ bottom:11px; }
-.lo-bk.bk-single::before{ display:none; }
-.lo-end{ position:absolute; left:50%; transform:translateX(-50%); bottom:-1px; font-size:10px; color:var(--lo-team, var(--brand)); cursor:ns-resize; z-index:2; padding:0 6px; }
+/* ===== 案A：帯バー（v0.99.0）＝予約をチーム色の帯で表示・開始セルに名前様/車種(同サイズ同ウェイト)＋固定(黄)＋条件メモ・返却予定日に▼ ===== */
+.lo-bk{ text-align:left; padding:0; background:color-mix(in srgb, var(--lo-team, var(--brand)) 20%, transparent); box-shadow:inset 3px 0 0 var(--lo-team, var(--brand)); }
+.lo-bk:not(.bk-end){ border-bottom-color:transparent; }   /* 連続した1本の帯に見せる */
+.lo-bk.bk-start{ border-top-left-radius:9px; border-top-right-radius:9px; }
+.lo-bk.bk-end{ border-bottom-left-radius:9px; border-bottom-right-radius:9px; }
+.lo-bk.bk-single{ border-radius:9px; }
+.lo-bk.lo-today{ background:color-mix(in srgb, var(--lo-team, var(--brand)) 30%, transparent); }   /* 今日列でも帯色を保つ */
+/* 車種固定＝アンバーの上ライン（🔒なし。バッジが主役） */
+.lo-bk.lo-fixed.bk-start{ box-shadow:inset 3px 0 0 var(--lo-team, var(--brand)), inset 0 3px 0 var(--amber); }
+/* 返却済み＝グレーアウト・アーカイブ（動かせない） */
+.lo-bk.lo-returned{ filter:grayscale(1); opacity:.5; }
+.lo-bk.lo-returned .lo-badge{ cursor:default; }
+.lo-end{ position:absolute; left:50%; transform:translateX(-50%); bottom:-1px; font-size:10px; color:var(--lo-team, var(--brand)); cursor:ns-resize; z-index:2; }
 /* 車両イベントのオーバーレイ（右端ストライプ＋開始日にタグ） */
 .lo-evs{ position:absolute; right:0; top:0; bottom:0; width:5px; opacity:.85; }
 .lo-evt-tag{ position:absolute; right:6px; top:2px; z-index:1; font-size:8.5px; font-weight:800; color:#fff; border-radius:4px; padding:1px 4px; white-space:nowrap; max-width:80%; overflow:hidden; text-overflow:ellipsis; }
-.lo-badge{ position:relative; z-index:1; display:inline-block; max-width:100%; font-size:9px; font-weight:700; background:var(--lo-team, var(--brand)); color:#fff; border-radius:999px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; vertical-align:top; cursor:grab; box-shadow:0 1px 4px rgba(0,0,0,.3); }
+/* ラベル：バッジ＝クリックで操作メニュー／ドラッグで移動 */
+.lo-badge{ position:relative; z-index:1; display:block; max-width:100%; background:transparent; color:var(--text); border-radius:0; padding:3px 6px 2px; box-shadow:none; cursor:grab; text-align:left; }
 .lo-badge:active{ cursor:grabbing; }
+.lo-lbl{ display:block; }
+.lo-nm{ display:block; font-size:11px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-lbl.one{ display:flex; align-items:center; gap:4px; }
+.lo-lbl.one .lo-nm{ display:inline; }
+.lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:var(--amber); border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
+.lo-memo{ display:block; margin-top:2px; font-size:9px; color:#06281d; background:color-mix(in srgb, var(--lo-team, var(--brand)) 80%, #fff); border-radius:4px; padding:0 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .lo-free{ background:transparent; }
+/* 代車バッジ操作メニュー（詳細/返却確定/キャンセル） */
+.lo-bpop{ position:fixed; z-index:210; width:220px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:8px; }
+.lo-bpop-h{ font-size:12px; font-weight:700; color:var(--text); padding:4px 6px 8px; border-bottom:1px solid var(--border); margin-bottom:2px; }
+.lo-bpop-h small{ color:var(--text2); font-weight:400; }
+.lo-bpop-b{ display:block; width:100%; text-align:left; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-size:12.5px; font-weight:600; cursor:pointer; margin-top:6px; }
+.lo-bpop-b:hover{ background:var(--bg4); }
+.lo-bpop-b.danger{ color:#ff6b6b; border-color:#5a2330; }
+.lo-bpop-b.primary{ background:#1db97a; border-color:#1db97a; color:#06281d; }
+.lo-bpop-f{ display:block; font-size:11px; color:var(--text2); margin:8px 6px 4px; }
+.lo-bpop-f input{ display:block; width:100%; margin-top:3px; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 9px; font-size:13px; font-family:inherit; box-sizing:border-box; }
+.lo-bpop-note{ font-size:10px; color:var(--text3); margin:4px 6px; line-height:1.4; }
+.lo-bpop-foot{ display:flex; gap:6px; margin-top:6px; }
+.lo-bpop-foot .lo-bpop-b{ flex:1; text-align:center; margin-top:0; }
 /* 整備予定（車検/点検/修理）＝日付枠で目立たせる：セル全体を色づけ＋濃いラベル */
 .lo-evbg{ position:absolute; inset:0; z-index:0; pointer-events:none; }
 .lo-evt-tag{ position:absolute; left:50%; transform:translateX(-50%); top:2px; z-index:2; font-size:9px; font-weight:800; color:#fff; border-radius:5px; padding:1px 6px; white-space:nowrap; max-width:96%; overflow:hidden; text-overflow:ellipsis; box-shadow:0 1px 4px rgba(0,0,0,.4); }

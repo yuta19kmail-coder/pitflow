@@ -213,7 +213,7 @@ function loRebuild(days){
   _loEnsureOpts();
   const ls = _loFiltered();
   grid.innerHTML = '';
-  grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(76px, 92px))';   // 「小池 様 ハイエース」が収まる幅に固定（1frで広がらない・それ以上は…）
+  grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(96px, 112px))';   // 案A：名前様＋車種＋メモが収まる幅
   let h = '<div class="lo-cell lo-head lo-corner">日付</div>';
   ls.forEach(function(l){
     const num = String(l.name || '').replace('代車', '') || l.name;
@@ -280,20 +280,35 @@ function _loRenderDays(start, n){
       if (a){
         const isStart = (a.fromDate === dStr);
         const isEnd = (a.toDate === dStr);
+        const single = isStart && isEnd;
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
         const isEmg = !!a.emergency;
+        const fixed = !!(card && card.loanerFixed);
+        const returned = !!a.returned;
         const teamColor = card ? (card.boardId === 'import' ? '#ec4899' : '#1db97a') : (isEmg ? '#ef4444' : (a.manual ? '#3b82f6' : 'var(--brand)'));
         const _nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || (isEmg ? '緊急' : '貸出'));
-        const _pp = (!card && a.purpose) ? ' <small class="lo-bk-pp">' + _loEsc(a.purpose) + '</small>' : '';
-        const label = _nm + ' 様' + (card && card.car ? ' ' + card.car : (a.car ? ' ' + a.car : '')) + _pp;
+        const carTxt = card ? (card.car || '') : (a.car || '');
+        const memoTxt = card ? (card.loanerOther || '') : (a.purpose || '');
+        const fixTag = fixed ? '<span class="lo-fix">固定</span>' : '';
+        // 案A：帯バー。多日＝名前様＋車種(同サイズ同ウェイト)＋固定＋メモ／1日＝コンパクト1行（車種・メモはホバー title）
+        let labelHtml = '';
+        if (isStart){
+          if (single){
+            labelHtml = '<span class="lo-lbl one"><span class="lo-nm">' + _nm + ' 様</span>' + fixTag + '</span>';
+          } else {
+            labelHtml = '<span class="lo-lbl"><span class="lo-nm">' + _nm + ' 様' + (carTxt ? ' ' + _loEsc(carTxt) : '') + '</span>' + fixTag
+              + (memoTxt ? '<span class="lo-memo">' + _loEsc(memoTxt) + '</span>' : '') + '</span>';
+          }
+        }
+        const titleAttr = ' title="' + _loEsc(_nm + ' 様' + (carTxt ? ' ' + carTxt : '') + (memoTxt ? ' / ' + memoTxt : '') + (fixed ? ' / 車種固定' : '')) + '"';
         const isBad = confSet && confSet.has(a.id);
         const isChg = _loAssignChanged(a);
-        h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (isStart && isEnd ? ' bk-single' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
+        h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
            + ' style="--lo-team:' + teamColor + '">' + gh;
         if (isStart){
-          h += '<span class="lo-badge' + (isChg?' chg':'') + '" draggable="true" data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '" onclick="openDetail(\'' + card.id + '\')"' : '') + '>' + label + '</span>';
+          h += '<span class="lo-badge' + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + titleAttr + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')">' + labelHtml + '</span>';
         }
-        if (isEnd){
+        if (isEnd && !single && !returned){
           h += '<span class="lo-end" draggable="true" data-aid="' + (a.id || '') + '">▼</span>';
         }
         h += ov + '</div>';
@@ -522,8 +537,14 @@ window.loDraftDiscard = function(){
 window.loDraftApply = function(){
   if (!_loDraftOrig) return;
   const changed = _loChangedList(); if (!changed.length) return;
-  if (_loConflictSet().size) { alert('重複している予約があります。重ならないように直してから一括実行してください。'); return; }
-  if (!confirm(changed.length + ' 件の代車変更をまとめて反映します。よろしいですか？')) return;
+  // ★今回「動かした予約」自体が他の貸出と重なる時だけ警告（無関係な既存の重複ではブロックしない）。
+  const bad = _loConflictSet();
+  const changedBad = changed.some(function(a){ return bad.has(a.id); });
+  if (changedBad){
+    if (!confirm('⚠ 動かした代車の期間が、別の貸出と重複します。\nそれでもこのまま反映しますか？')) return;
+  } else {
+    if (!confirm(changed.length + ' 件の代車変更をまとめて反映します。よろしいですか？')) return;
+  }
   _loApplySnap = _loDraftOrig;   // 実行前の状態＝やり直し用
   // 紐づくカードの代車情報を同期
   changed.forEach(function(a){
@@ -542,6 +563,74 @@ window.loDraftUndoApply = function(){
   _loApplySnap = null;
   if (window.PitDB) PitDB.save();
   _loRefresh();
+};
+
+/* ===== v0.99.0 代車バッジ クリック＝操作メニュー（当日ビュー式：詳細/返却確定/代車キャンセル） ===== */
+function _loBadgePopClose(){ const p = document.getElementById('lo-bpop'); if (p) p.remove(); document.removeEventListener('mousedown', _loBadgePopOutside, true); }
+function _loBadgePopOutside(e){ const p = document.getElementById('lo-bpop'); if (p && !p.contains(e.target)) _loBadgePopClose(); }
+function _loBadgePopOpen(anchorEl, html){
+  _loBadgePopClose();
+  const p = document.createElement('div'); p.id = 'lo-bpop'; p.className = 'lo-bpop'; p.innerHTML = html;
+  document.body.appendChild(p);
+  const r = anchorEl.getBoundingClientRect();
+  const w = 220, vw = document.documentElement.clientWidth;
+  let left = r.left; if (left + w > vw - 8) left = vw - w - 8;
+  let top = r.bottom + 6; if (top + 180 > window.innerHeight) top = Math.max(8, r.top - 186);
+  p.style.left = Math.max(8, left) + 'px'; p.style.top = top + 'px';
+  setTimeout(function(){ document.addEventListener('mousedown', _loBadgePopOutside, true); }, 0);
+}
+window.loBadgeMenu = function(ev, aid){
+  if (ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
+  if (!a) return;
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
+  const carTxt = card ? (card.car || '') : (a.car || '');
+  let h = '<div class="lo-bpop-h">' + _loEsc(nm) + ' 様' + (carTxt ? ' <small>' + _loEsc(carTxt) + '</small>' : '') + '</div>';
+  if (card) h += '<button class="lo-bpop-b" onclick="loBadgeDetail(\'' + aid + '\')">📋 予約詳細を見る</button>';
+  h += '<button class="lo-bpop-b" onclick="loReturnStart(\'' + aid + '\')">✅ 返却を確定する</button>';
+  h += '<button class="lo-bpop-b danger" onclick="loCancelLoaner(\'' + aid + '\')">🚫 この予約の代車をキャンセル</button>';
+  const anchor = (ev && ev.currentTarget) ? ev.currentTarget : document.querySelector('.lo-badge[data-aid="' + aid + '"]');
+  _loBadgePopOpen(anchor || document.body, h);
+};
+window.loBadgeDetail = function(aid){
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
+  _loBadgePopClose();
+  if (a && a.cardId && window.openDetail) openDetail(a.cardId);
+};
+window.loReturnStart = function(aid){
+  const today = ymd(new Date());
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
+  const anchor = document.getElementById('lo-bpop') || document.querySelector('.lo-badge[data-aid="' + aid + '"]');
+  const h = '<div class="lo-bpop-h">返却日を確定</div>'
+    + '<label class="lo-bpop-f">返却日<input type="date" id="lo-ret-date" value="' + today + '"></label>'
+    + '<div class="lo-bpop-note">返却した代車は完了（グレーアウト）になり、動かせなくなります。</div>'
+    + '<div class="lo-bpop-foot"><button class="lo-bpop-b" onclick="loBadgeMenu(null,\'' + aid + '\')">← 戻る</button><button class="lo-bpop-b primary" onclick="loReturnConfirm(\'' + aid + '\')">確定する</button></div>';
+  _loBadgePopOpen(anchor || document.body, h);
+};
+window.loReturnConfirm = function(aid){
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
+  if (!a) { _loBadgePopClose(); return; }
+  const el = document.getElementById('lo-ret-date');
+  const rd = el && el.value ? el.value : ymd(new Date());
+  if (!confirm('返却日 ' + rd + ' で確定します。よろしいですか？')) return;
+  a.returned = true; a.returnedAt = rd;
+  if (rd < a.toDate) a.toDate = rd;   // 早く返ってきたらバーを実際の返却日まで縮める
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  if (card){ card.loanerTo = a.toDate; card.loanerReturned = true; }
+  if (window.PitDB) PitDB.save();
+  _loBadgePopClose(); renderLoaner();
+};
+window.loCancelLoaner = function(aid){
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
+  if (!a) { _loBadgePopClose(); return; }
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || 'この予約') : (a.customer || 'この貸出');
+  if (!confirm(nm + ' の代車をキャンセルします（カレンダーから外します）。\nよろしいですか？')) return;
+  state.loanerAssigns = (state.loanerAssigns || []).filter(function(x){ return x.id !== aid; });
+  if (card){ card.needLoaner = false; card.loanerId = ''; card.loanerFrom = ''; card.loanerTo = ''; card.loanerFixed = false; }
+  if (window.PitDB) PitDB.save();
+  _loBadgePopClose(); renderLoaner();
 };
 
 /* ===== v0.98.0 予約以外の貸出ブロック／緊急車両追加（軽量モーダル） ===== */
