@@ -349,7 +349,42 @@ function loBindDnd(grid){
     _loDragAid = null;
   });
   grid.addEventListener('dragend', function(){ _loDragAid = null; loClearPreview(); });
+
+  // v0.98.1 空きセルをドラッグで範囲選択 → 「予約以外で貸出」ポップアップ（代車・期間プリフィル）
+  grid.addEventListener('mousedown', function(e){
+    const c = e.target.closest('.lo-free[data-lo][data-ld]');
+    if (!c) return;
+    e.preventDefault();   // テキスト選択を防ぐ
+    _loSel = { lo: c.getAttribute('data-lo'), a: c.getAttribute('data-ld'), b: c.getAttribute('data-ld') };
+    _loPaintSel();
+  });
+  grid.addEventListener('mousemove', function(e){
+    if (!_loSel) return;
+    const c = e.target.closest('[data-lo][data-ld]');
+    if (!c || c.getAttribute('data-lo') !== _loSel.lo) return;   // 同じ代車列の範囲だけ
+    _loSel.b = c.getAttribute('data-ld');
+    _loPaintSel();
+  });
+  document.addEventListener('mouseup', function(){
+    if (!_loSel) return;
+    const sel = _loSel; _loSel = null; _loClearSel();
+    const from = sel.a <= sel.b ? sel.a : sel.b;
+    const to   = sel.a <= sel.b ? sel.b : sel.a;
+    if (window.loAddManualBlock) loAddManualBlock({ loId: sel.lo, from: from, to: to });
+  });
 }
+let _loSel = null;
+function _loPaintSel(){
+  _loClearSel();
+  if (!_loSel) return;
+  const from = _loSel.a <= _loSel.b ? _loSel.a : _loSel.b;
+  const to   = _loSel.a <= _loSel.b ? _loSel.b : _loSel.a;
+  document.querySelectorAll('.lo-free[data-lo="' + _loSel.lo + '"]').forEach(function(el){
+    const d = el.getAttribute('data-ld');
+    if (d >= from && d <= to) el.classList.add('lo-selecting');
+  });
+}
+function _loClearSel(){ document.querySelectorAll('.lo-selecting').forEach(function(el){ el.classList.remove('lo-selecting'); }); }
 
 /* ===== ドラッグ中のゴーストプレビュー ===== */
 let _loPrevKey = null;
@@ -509,16 +544,18 @@ function _loModalClose(){ const m = document.getElementById('lo-modal'); if (m) 
 window.loCloseModal = _loModalClose;
 
 /* 🚗 予約以外で代車を貸出（車販の乗り換え等）＝整備予約に出さず代車カレンダーだけ埋める */
-window.loAddManualBlock = function(){
+window.loAddManualBlock = function(prefill){
+  prefill = prefill || {};
   const today = ymd(new Date());
+  const from0 = prefill.from || today, to0 = prefill.to || today;
   const opts = _loFiltered().filter(function(l){ return !l.emergency; })
-    .map(function(l){ return '<option value="' + l.id + '">' + _loEsc((String(l.name||'').replace('代車','')) + ' ' + (l.model||'')) + '</option>'; }).join('');
+    .map(function(l){ const sel = (prefill.loId && l.id === prefill.loId) ? ' selected' : ''; return '<option value="' + l.id + '"' + sel + '>' + _loEsc((String(l.name||'').replace('代車','')) + ' ' + (l.model||'')) + '</option>'; }).join('');
   _loModalOpen(
     '<h3 class="lo-modal-h">🚗 予約以外で代車を貸出</h3>'
     + '<label class="lo-modal-f">代車<select id="lmb-lo">' + opts + '</select></label>'
     + '<label class="lo-modal-f">用途<select id="lmb-pp"><option>車販・乗り換え</option><option>代車（整備外）</option><option>その他</option></select></label>'
     + '<label class="lo-modal-f">お客様名<input id="lmb-cust" placeholder="例：小林"></label>'
-    + '<div class="lo-modal-row"><label class="lo-modal-f">から<input type="date" id="lmb-from" value="' + today + '"></label><label class="lo-modal-f">まで<input type="date" id="lmb-to" value="' + today + '"></label></div>'
+    + '<div class="lo-modal-row"><label class="lo-modal-f">から<input type="date" id="lmb-from" value="' + from0 + '"></label><label class="lo-modal-f">まで<input type="date" id="lmb-to" value="' + to0 + '"></label></div>'
     + '<div class="lo-modal-foot"><button onclick="loCloseModal()">キャンセル</button><button class="primary" onclick="loSaveManualBlock()">登録</button></div>'
   );
 };
