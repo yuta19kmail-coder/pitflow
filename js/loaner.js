@@ -25,17 +25,28 @@ function _loStartDraft(){
 }
 function _loAssignChanged(a){ const o = _loDraftOrig && _loDraftOrig[a.id]; return !!o && (o.loanerId!==a.loanerId || o.fromDate!==a.fromDate || o.toDate!==a.toDate); }
 function _loChangedList(){ return _loDraftOrig ? (state.loanerAssigns||[]).filter(_loAssignChanged) : []; }
-/* 重複（同じ代車で期間が重なる）割当idの集合 */
+/* 重複（同じ代車で期間が重なる）割当idの集合。
+   ※同じ予約（同じ cardId）の割当どうしは「同一予約」なので衝突に数えない（日数調整が誤って重複扱いされるのを防ぐ）。 */
 function _loConflictSet(){
   const bad = new Set(), byLo = {};
   (state.loanerAssigns || []).forEach(function(a){ (byLo[a.loanerId] = byLo[a.loanerId] || []).push(a); });
   Object.keys(byLo).forEach(function(lo){
     const arr = byLo[lo].slice().sort(function(x,y){ return x.fromDate < y.fromDate ? -1 : 1; });
     for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){
+      if (arr[i].cardId && arr[j].cardId && arr[i].cardId === arr[j].cardId) continue;   // 同一予約は除外
       if (!(arr[j].fromDate > arr[i].toDate || arr[j].toDate < arr[i].fromDate)){ bad.add(arr[i].id); bad.add(arr[j].id); }
     }
   });
   return bad;
+}
+/* 同じ予約(cardId)に対する代車割当が二重に残っていたら1件に掃除する（過去データ救済）。 */
+function _loDedupeAssigns(){
+  const seen = {}, out = []; let changed = false;
+  (state.loanerAssigns || []).forEach(function(a){
+    if (a && a.cardId){ if (seen[a.cardId]){ changed = true; return; } seen[a.cardId] = 1; }
+    out.push(a);
+  });
+  if (changed){ state.loanerAssigns = out; if (window.PitDB) PitDB.save(); }
 }
 function _loAssignLabel(a){
   const card = a.cardId ? (state.cards||[]).find(function(c){return c.id===a.cardId;}) : null;
@@ -128,6 +139,7 @@ function renderLoaner(){
     if (a && !a.id) a.id = 'la' + Date.now().toString(36) + i.toString(36);
   });
   _loEnsureOpts();
+  _loDedupeAssigns();         // 同一予約の二重割当を掃除（日数調整が重複扱いされる不具合の元）
   _loProcessReplacements();   // 入替日を過ぎた予定を確定
   _loProcessEmergency();      // 返車済みの緊急車両は列を消す（履歴は残す）
   const today = new Date(); today.setHours(0,0,0,0);
