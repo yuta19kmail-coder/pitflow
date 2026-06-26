@@ -110,7 +110,7 @@
       alert('先に顧客データが必要です（顧客ビューでサンプル投入 or 実データを入れてから実行してください）。');
       return;
     }
-    if (!opts.silent && !confirm('今のサンプル予約（カード）を全部消して、顧客データから\n前後約2ヶ月ぶんのサンプル（過去＝実績／未来＝予約／今＝預かり中）を敷き詰めます。\nよろしいですか？')) return;
+    if (!opts.silent && !confirm('今のサンプル予約（カード）を全部消して、顧客データから\n前後約2ヶ月ぶんのサンプル（過去＝実績／未来＝予約／今＝預かり中）を敷き詰めます。\n※このサンプルは保存され、リロードしても消えません。\nよろしいですか？')) return;
 
     const closed = Array.isArray(state.settings.closedDow) ? state.settings.closedDow : [];
     const isClosed = (d) => closed.indexOf(d.getDay()) >= 0;
@@ -121,11 +121,12 @@
     let pi = 0;
     const nextPair = () => { const p = pairs[pi % pairs.length]; pi++; return p; };
 
-    // 1日の入庫台数＝平日3〜8・土日9〜14（ゆうたの実数感：土日が多い）。定休は0。
+    // 1日の入庫台数＝平日3〜6・土日8〜14（土日多め）。定休(水)は0。
+    // 月あたり概算＝(平日4日×約4.5 ＋ 土日2日×約11)×4.3週 ≒ 月170〜180台（150〜200の範囲）。
     function intakeCount(d){
       const dow = d.getDay();
-      if (dow === 0 || dow === 6) return 9 + Math.floor(Math.random() * 6);   // 土日 9〜14
-      return 3 + Math.floor(Math.random() * 6);                                // 平日 3〜8
+      if (dow === 0 || dow === 6) return 8 + Math.floor(Math.random() * 7);   // 土日 8〜14（多め）
+      return 3 + Math.floor(Math.random() * 4);                                // 平日 3〜6
     }
     // 預かり日数（営業日ベースではなく暦日・返車が定休に当たったら翌営業日へ）
     function holdDays(wt, dt){
@@ -190,10 +191,11 @@
         }
 
         // 代車ニーズ（drop＋車検/板金は多め）。実際の代車(loanerId)は後で重複しないよう割当。
-        if (dt === 'drop' && (wt === 'shaken' || wt === 'bp' || Math.random() < 0.4)){
+        // 未来予約も期間（入庫日〜返車日）で代車を押さえる＝代車カレンダーが先（約1.5ヶ月先）まで埋まる。
+        if (dt === 'drop' && (wt === 'shaken' || wt === 'bp' || Math.random() < 0.55)){
           c.needLoaner = true;
           c.loanerFrom = c.reserveDate;
-          c.loanerTo = (c.status === 'returned') ? c.returnDate : '';   // 預かり中(開 end)は後で+7日扱い
+          c.loanerTo = c.returnDate || '';   // 返車日が決まっていれば期間を確定（未確定は割当時に+数日で補完）
         }
         // ちょい足し
         if (Math.random() < 0.10) c.consult = true;
@@ -216,7 +218,7 @@
     }
 
     // 代車割当（代車カレンダー用）＝実際の代車(state.loaners)に重複しないよう割当＋必ず id を振る。
-    const plus7 = ymd(new Date(Date.now() + 7 * 86400000));
+    const _plus = function(fromStr, n){ return ymd(new Date(new Date(fromStr).getTime() + n * 86400000)); };
     const loanerIds = (state.loaners || []).map(l => l.id);
     const busy = {};   // loanerId -> [[from,to], ...]
     const _ov = function(ranges, from, to){ return ranges.some(function(r){ return !(to < r[0] || from > r[1]); }); };
@@ -225,7 +227,7 @@
     cards.filter(function(c){ return c.needLoaner && c.loanerFrom; })
       .sort(function(a, b){ return a.loanerFrom < b.loanerFrom ? -1 : 1; })
       .forEach(function(c){
-        const from = c.loanerFrom, to = c.loanerTo || plus7;
+        const from = c.loanerFrom, to = c.loanerTo || _plus(c.loanerFrom, 5);   // 返車未定は入庫から+5日で仮押さえ
         let lid = null;
         for (let i = 0; i < loanerIds.length; i++){
           const id = loanerIds[i];
@@ -254,7 +256,7 @@
     if (ok === false){
       alert('カードは作りましたが保存に失敗しました（容量オーバーの可能性）。\n台数を減らして再実行してください。');
     } else {
-      alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。\n※サンプルは容量節約のため保存しません＝リロードすると消えます。見たい時にまたこのボタンを押してください。\n顧客控えはそのまま保持しています。');
+      alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。\n※このサンプルは保存され、リロードしても消えません。\n顧客控えはそのまま保持しています。');
     }
   };
 })();

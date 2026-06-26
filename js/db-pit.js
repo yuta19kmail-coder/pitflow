@@ -95,12 +95,10 @@
         try {
           localStorage.setItem(LS_KEY, JSON.stringify({
             v: 1,
-            // ★サンプル生成カード（_sample）は保存しない＝容量(localStorage)を食わない。セッション中のみ表示。
-            cards: (state.cards || []).filter(function (c) { return !c._sample; }),
-            loanerAssigns: (state.loanerAssigns || []).filter(function (a) {
-              var c = (state.cards || []).find(function (x) { return x.id === a.cardId; });
-              return !(c && c._sample);   // サンプルカードの代車割当も保存しない
-            }),
+            // v0.97.0 サンプル生成カード（_sample）も保存する＝リロードしても消えない（顧客500人規模で容量に余裕）。
+            // ※ _sample フラグはカード開閉時の顧客控え書き戻し防止／サンプル作り直し時の識別に引き続き使用。
+            cards: (state.cards || []),
+            loanerAssigns: (state.loanerAssigns || []),
             loaners: state.loaners,
             customers: state.customers,
             companyCars: state.companyCars,
