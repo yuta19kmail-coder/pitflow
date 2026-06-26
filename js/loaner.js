@@ -304,7 +304,7 @@ function _loRenderDays(start, n){
         const isBad = confSet && confSet.has(a.id);
         const isChg = _loAssignChanged(a);
         h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
-           + ' style="--lo-team:' + teamColor + '">' + gh;
+           + ' style="--lo-team:' + teamColor + '"><i class="lo-fill"></i>' + gh;
         if (isStart){
           h += '<span class="lo-badge' + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + titleAttr + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')">' + labelHtml + '</span>';
         }
