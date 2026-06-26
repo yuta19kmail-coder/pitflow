@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=37">
-<link rel="stylesheet" href="css/polish.css?v=116">
+<link rel="stylesheet" href="css/polish.css?v=117">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
 <link rel="stylesheet" href="css/search.css?v=5">
@@ -72,7 +72,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.97.2</div>
+    <div class="pl-ver">PitFlow v0.98.0</div>
   </div>
 </div>
 
@@ -84,7 +84,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.97.2</span>
+      <span class="ver">v0.98.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -299,6 +299,8 @@
             <button class="lo-filter" data-sort="length" onclick="loToggleSort('length')" title="短い順">長さ↑</button>
             <button class="lo-filter" data-sort="seats"  onclick="loToggleSort('seats')"  title="少ない順">定員↑</button>
           </div>
+          <button class="vh-btn" onclick="loAddManualBlock()" title="車販の乗り換え等：整備予約に出さず代車だけ貸出">🚗 予約以外で貸出</button>
+          <button class="vh-btn lo-emg-btn" onclick="loAddEmergency()" title="クレーム等で社用車を緊急で出す（一番左に追加・返車で消える）">🚨 緊急車両追加</button>
           <button class="vh-btn" onclick="loScrollToday()">📍 今日へ</button>
           <button class="vh-btn" onclick="showView('fleet')">🚐 車両管理へ</button>
         </div>
@@ -663,7 +665,7 @@
 <script src="js/card-tabs.js?v=8"></script>
 <script src="js/customers.js?v=30"></script>
 <script src="js/sample-customers.js?v=7"></script>
-<script src="js/sample-reservations.js?v=12"></script>
+<script src="js/sample-reservations.js?v=13"></script>
 <script src="js/sample-patterns.js?v=2"></script>
 <script src="js/dashboard.js?v=13"></script>
 <script src="js/parking.js?v=3"></script>
@@ -682,7 +684,7 @@
 <script src="js/work.js?v=13"></script>
 <script src="js/result.js?v=9"></script>
 <script src="js/outsource.js?v=2"></script>
-<script src="js/loaner.js?v=25"></script>
+<script src="js/loaner.js?v=26"></script>
 <script src="js/fleet.js?v=10"></script>
 <script src="js/auth-pit.js?v=9"></script>
 <script src="js/launcher.js?v=7"></script>

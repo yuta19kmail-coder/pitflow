@@ -223,7 +223,8 @@
     const busy = {};   // loanerId -> [[from,to], ...]
     const _ov = function(ranges, from, to){ return ranges.some(function(r){ return !(to < r[0] || from > r[1]); }); };
     let _laSeq = 0;
-    state.loanerAssigns = [];
+    // 手動貸出・緊急車両の割当はサンプル作り直しでも残す（実運用データのため）
+    state.loanerAssigns = (state.loanerAssigns || []).filter(function(a){ return a && (a.manual || a.emergency); });
     cards.filter(function(c){ return c.needLoaner && c.loanerFrom; })
       .sort(function(a, b){ return a.loanerFrom < b.loanerFrom ? -1 : 1; })
       .forEach(function(c){
