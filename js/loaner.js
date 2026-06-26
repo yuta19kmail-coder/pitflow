@@ -543,6 +543,22 @@ function _loModalOpen(html){
 function _loModalClose(){ const m = document.getElementById('lo-modal'); if (m) m.remove(); }
 window.loCloseModal = _loModalClose;
 
+/* 期間重なり判定＋衝突する割当の一覧（貸出ポップアップの衝突警報用） */
+function _loOverlaps(aF, aT, bF, bT){ return !(aT < bF || aF > bT); }
+function _loConflictAssigns(loanerId, from, to, excludeAid){
+  return (state.loanerAssigns || []).filter(function(a){
+    return a.loanerId === loanerId && a.id !== excludeAid && _loOverlaps(from, to, a.fromDate, a.toDate);
+  });
+}
+function _loConflictMsg(list){
+  const lines = list.slice(0, 3).map(function(a){
+    const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+    const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
+    return '・' + _loMD(a.fromDate) + '〜' + _loMD(a.toDate) + '　' + nm + (a.purpose ? '（' + a.purpose + '）' : (card ? ' 様' : ''));
+  });
+  return lines.join('\n') + (list.length > 3 ? ('\n…他 ' + (list.length - 3) + ' 件') : '');
+}
+
 /* 🚗 予約以外で代車を貸出（車販の乗り換え等）＝整備予約に出さず代車カレンダーだけ埋める */
 window.loAddManualBlock = function(prefill){
   prefill = prefill || {};
@@ -564,6 +580,8 @@ window.loSaveManualBlock = function(){
   const lo = g('lmb-lo'), pp = g('lmb-pp'), cust = g('lmb-cust').trim(), from = g('lmb-from'), to = g('lmb-to');
   if (!lo || !from || !to){ alert('代車と期間を入れてください'); return; }
   if (to < from){ alert('「まで」は「から」以降にしてください'); return; }
+  const conf = _loConflictAssigns(lo, from, to);
+  if (conf.length && !confirm('⚠ この代車は選んだ期間、すでに他の貸出・予約と重複します：\n\n' + _loConflictMsg(conf) + '\n\nそれでも登録しますか？')) return;
   state.loanerAssigns = state.loanerAssigns || [];
   state.loanerAssigns.push({ id:'la'+Date.now().toString(36), loanerId:lo, cardId:null, customer:(cust||'(貸出)'), purpose:pp, fromDate:from, toDate:to, manual:true });
   if (window.PitDB) PitDB.save();
@@ -594,9 +612,15 @@ window.loSaveEmergency = function(){
   const cust = g('lem-cust').trim(), pp = (g('lem-pp').trim() || '緊急'), from = g('lem-from'), to = g('lem-to');
   if (!from || !to){ alert('期間を入れてください'); return; }
   if (to < from){ alert('「まで」は「から」以降にしてください'); return; }
+  const srcId = (src && src !== '__manual__') ? src : '';
+  // 同じ社用車(srcId) or 同じナンバーの車が、その期間すでに緊急で出ていないか衝突チェック
+  const dupLo = (state.loaners || []).filter(function(l){ return l.emergency && ((srcId && l.srcId === srcId) || (plate && l.plate && l.plate === plate)); });
+  let conf = [];
+  dupLo.forEach(function(l){ conf = conf.concat(_loConflictAssigns(l.id, from, to)); });
+  if (conf.length && !confirm('⚠ この車両（' + _loEsc(model) + (plate ? ' / ' + _loEsc(plate) : '') + '）は選んだ期間、すでに緊急で出ています：\n\n' + _loConflictMsg(conf) + '\n\nそれでも追加しますか？')) return;
   const lid = 'emg' + Date.now().toString(36);
   state.loaners = state.loaners || [];
-  state.loaners.push({ id:lid, name:'緊急', model:model, plate:plate, emergency:true, category:'normal', etc:false, navi:false, iso:false });
+  state.loaners.push({ id:lid, name:'緊急', model:model, plate:plate, srcId:srcId, emergency:true, category:'normal', etc:false, navi:false, iso:false });
   state.loanerAssigns = state.loanerAssigns || [];
   state.loanerAssigns.push({ id:'la'+Date.now().toString(36), loanerId:lid, cardId:null, customer:(cust||'(緊急)'), purpose:pp, fromDate:from, toDate:to, manual:true, emergency:true });
   if (window.PitDB) PitDB.save();
