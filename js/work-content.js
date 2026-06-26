@@ -150,13 +150,13 @@
     var side = document.querySelector('.cfp-side');
     if (side){
       var r = side.getBoundingClientRect();
-      var hh = Math.round(r.height * 0.5);   // v0.90.1 全体高さの約50%で固定
-      // v0.90.2 右下に寄せる（下端を右カラムの下端に合わせる）
+      var hh = Math.round(r.height * 0.5);   // v0.90.1 全体高さの約50%で固定（大きさは据え置き）
+      // v0.97.1 右カラムの上下中央に配置（従来は下半分に寄せていた）
       p.style.right = ''; p.style.bottom = '';
-      p.style.left = r.left + 'px'; p.style.top = (r.top + r.height - hh) + 'px'; p.style.width = r.width + 'px'; p.style.height = hh + 'px';
+      p.style.left = r.left + 'px'; p.style.top = (r.top + (r.height - hh) / 2) + 'px'; p.style.width = r.width + 'px'; p.style.height = hh + 'px';
     } else {
-      // 右カラムが無い画面（既存カードのモーダル等）＝画面右下に出すフォールバック
-      p.style.left = ''; p.style.top = ''; p.style.right = '24px'; p.style.bottom = '24px'; p.style.width = 'min(420px, 92vw)'; p.style.height = '50vh';
+      // 右カラムが無い画面（既存カードのモーダル等）＝画面の上下中央に出すフォールバック
+      p.style.left = ''; p.style.bottom = ''; p.style.right = '24px'; p.style.top = '25vh'; p.style.width = 'min(420px, 92vw)'; p.style.height = '50vh';
     }
   }
   window.WorkContent.togglePanel = function (btn) {

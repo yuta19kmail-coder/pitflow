@@ -616,11 +616,21 @@ function _cfsLgRows(from, to, today, tStr, c, ro){
   return h;
 }
 
-/* 予約の代車条件(c.loanerConditions の etc/navi/iso)に合う代車を先頭へ並べ替え（ソート有の時）。 */
+/* 予約の代車条件で並べ替え（ソート有の時）。
+   ・サイズ条件(高さ/幅/長さ)を選んだら＝その寸法の合計で「低い順」に左づめ（代車カレンダービューと同じ）。
+   ・装備条件(ETC/ナビ/ISO)だけなら＝合う代車を先頭へ。 */
 function _cfsLgLoaners(c){
   const ls = (state.loaners || []).slice();
   if (window._cfsLgSort === false) return ls;   // ソート無＝元の並び
   const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions : [];
+  const sizes = conds.filter(function(k){ return k === 'height' || k === 'width' || k === 'length'; });
+  if (sizes.length){   // サイズ＝低い順（左づめ）
+    return ls.sort(function(a, b){
+      const av = sizes.reduce(function(s, k){ return s + (Number(a[k]) || 0); }, 0);
+      const bv = sizes.reduce(function(s, k){ return s + (Number(b[k]) || 0); }, 0);
+      return av - bv;
+    });
+  }
   const bools = conds.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; });
   if (!bools.length) return ls;
   const match = [], rest = [];
@@ -649,11 +659,11 @@ window.cfsLgRerender = function(){
 function _cfsLoanerGanttHtml(today, tStr, c, ro){
   const loaners = _cfsLgLoaners(c);
   if (!window._cfsLgN) window._cfsLgN = 28;
-  // 代車条件（ETC/ナビ/ISO）が入っていれば「ソート有/無」トグルを出す（デフォルト＝条件ありでソート有）
-  const condBools = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; }) : [];
+  // 代車条件（ETC/ナビ/ISO/高さ/幅/長さ）が入っていれば「ソート有/無」トグルを出す（デフォルト＝条件ありでソート有）
+  const condKeys = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return ['etc','navi','iso','height','width','length'].indexOf(k) >= 0; }) : [];
   const sortOn = (window._cfsLgSort !== false);
-  const sortBtn = (!ro && condBools.length)
-    ? '<button type="button" class="cfs-sortbtn' + (sortOn ? ' on' : '') + '" onclick="cfsLgToggleSort()" title="代車条件に合う代車を上に並べる">' + (sortOn ? '✓ 条件で並べ替え' : '並べ替えなし') + '</button>'
+  const sortBtn = (!ro && condKeys.length)
+    ? '<button type="button" class="cfs-sortbtn' + (sortOn ? ' on' : '') + '" onclick="cfsLgToggleSort()" title="条件で並べ替え（サイズは低い順／装備は合う車を先頭）">' + (sortOn ? '✓ 条件で並べ替え' : '並べ替えなし') + '</button>'
     : '';
   let h = '<div class="cfs-card" id="cfs-lg-card">';
   h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車カレンダー</span>'

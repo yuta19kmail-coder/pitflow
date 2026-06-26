@@ -155,8 +155,10 @@ window.state = {
   loanerConditions: [
     { id: 'etc',    label: 'ETC' },
     { id: 'navi',   label: 'ナビ' },
-    { id: 'height', label: '高さ' },
     { id: 'iso',    label: 'ISO' },
+    { id: 'height', label: '高さ' },
+    { id: 'width',  label: '幅' },
+    { id: 'length', label: '長さ' },
   ],
 
   settings: {
