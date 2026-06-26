@@ -146,30 +146,56 @@
   window.WorkContent.insert = function () { var p = _phrase(); if (!p) return; appendMenu(p); _selS = ''; _selSub = ''; _renderC2(); _renderC3(); _updPrev2(); };
 
   // v0.90.0 パネル開閉（クリックで固定）。開いた時は右カラム(.cfp-side)にぴったり重ねて「右カラムに大きく表示」されているように見せる。
+  // v0.97.2 パネルは「トリガーボタンの上下中央」に合わせて配置し、左カラム(.cfp-main)スクロールに追従する。
   function _placePanel(p){
+    var btn = document.querySelector('.wc-trigger');
+    var br  = btn ? btn.getBoundingClientRect() : null;
     var side = document.querySelector('.cfp-side');
+    var clamp = function(top, hh){ return Math.max(8, Math.min(top, window.innerHeight - hh - 8)); };
     if (side){
       var r = side.getBoundingClientRect();
-      var hh = Math.round(r.height * 0.5);   // v0.90.1 全体高さの約50%で固定（大きさは据え置き）
-      // v0.97.1 右カラムの上下中央に配置（従来は下半分に寄せていた）
+      var hh = Math.round(r.height * 0.5);   // 大きさ（高さ約50%）は据え置き
+      var top = br ? (br.top + br.height / 2 - hh / 2) : (r.top + (r.height - hh) / 2);
       p.style.right = ''; p.style.bottom = '';
-      p.style.left = r.left + 'px'; p.style.top = (r.top + (r.height - hh) / 2) + 'px'; p.style.width = r.width + 'px'; p.style.height = hh + 'px';
+      p.style.left = r.left + 'px'; p.style.top = clamp(top, hh) + 'px'; p.style.width = r.width + 'px'; p.style.height = hh + 'px';
     } else {
-      // 右カラムが無い画面（既存カードのモーダル等）＝画面の上下中央に出すフォールバック
-      p.style.left = ''; p.style.bottom = ''; p.style.right = '24px'; p.style.top = '25vh'; p.style.width = 'min(420px, 92vw)'; p.style.height = '50vh';
+      // 右カラムが無い画面（既存カードのモーダル等）＝ボタンの高さ中央・画面右に出すフォールバック
+      var hh2 = Math.round(window.innerHeight * 0.5);
+      var top2 = br ? (br.top + br.height / 2 - hh2 / 2) : (window.innerHeight * 0.25);
+      p.style.left = ''; p.style.bottom = ''; p.style.right = '24px'; p.style.top = clamp(top2, hh2) + 'px'; p.style.width = 'min(420px, 92vw)'; p.style.height = hh2 + 'px';
     }
+  }
+  // 左カラムスクロール／リサイズでパネル位置を追従させる（開いている間だけ）
+  var _wcReposition = null;
+  function _bindReposition(p){
+    _unbindReposition();
+    _wcReposition = function(){ if (p.classList.contains('open')) _placePanel(p); else _unbindReposition(); };
+    var main = document.querySelector('.cfp-main');
+    if (main) main.addEventListener('scroll', _wcReposition, { passive: true });
+    window.addEventListener('resize', _wcReposition);
+    window.addEventListener('scroll', _wcReposition, { passive: true });
+  }
+  function _unbindReposition(){
+    if (!_wcReposition) return;
+    var main = document.querySelector('.cfp-main');
+    if (main) main.removeEventListener('scroll', _wcReposition);
+    window.removeEventListener('resize', _wcReposition);
+    window.removeEventListener('scroll', _wcReposition);
+    _wcReposition = null;
   }
   window.WorkContent.togglePanel = function (btn) {
     var p = document.getElementById('wc-panel'); if (!p) return;
-    if (p.classList.contains('open')) { p.classList.remove('open'); if (btn) btn.classList.remove('on'); return; }
+    if (p.classList.contains('open')) { p.classList.remove('open'); if (btn) btn.classList.remove('on'); _unbindReposition(); return; }
     p.style.right = ''; _placePanel(p);
     p.classList.add('open');
     if (btn) btn.classList.add('on');
+    _bindReposition(p);
     renderTpl();
   };
   window.WorkContent.closePanel = function () {
     var p = document.getElementById('wc-panel'); if (p) p.classList.remove('open');
     var b = document.querySelector('.wc-trigger'); if (b) b.classList.remove('on');
+    _unbindReposition();
   };
   // v0.88.0 タグチップ＝トグル。押すと内容に入り「押した見た目(wc-on)」に／もう一度押すと内容から消えて戻る。
   //   ※「車検満了日：」等の fill チップは後から値を打つので従来どおり挿入のみ。
