@@ -435,6 +435,11 @@
 /* ラベル札＝チーム色カード（クリックで操作メニュー／ドラッグで移動） */
 .lo-badge{ background:var(--lo-team, var(--brand)); color:#fff; box-shadow:0 2px 6px rgba(0,0,0,.4); cursor:grab; text-align:left; }
 .lo-badge:active{ cursor:grabbing; }
+/* 看板スティッキー：トラック（予約期間ぶんの縦範囲）の中でラベルだけ上端に貼り付く＝スクロールしても看板が見える。矢印・茎はトラック外で独立。 */
+.lo-track{ position:absolute; left:0; right:0; top:2px; z-index:2; pointer-events:none; }
+.lo-track .lo-badge{ pointer-events:auto; }
+.lo-track .lo-badge.full{ position:sticky; inset:auto; top:42px; height:56px; margin:0 4px; }
+.lo-track .lo-badge.mini{ position:sticky; top:42px; }
 /* 3行カード（必要最小の高さ＝約1.5日分・最大幅維持・はみ出しは…） */
 .lo-badge.full{ position:absolute; z-index:2; top:2px; left:4px; right:4px; height:56px; border-radius:8px; padding:4px 7px; overflow:hidden; }
 .lo-badge.full .lo-lbl.full{ display:flex; flex-direction:column; gap:1px; height:100%; min-width:0; overflow:hidden; }
@@ -460,7 +465,7 @@
     calc(50% + 11px) 17px, calc(50% + 6px) 17px, calc(50% + 6px) 0,
     100% 0, 100% 100%, 0 100%); }
 /* 返却済み＝アーカイブ（消し過ぎず読める・茎は実線でグレー） */
-.lo-bk.lo-returned .lo-badge{ background:#5b6675; color:#dfe6ef; box-shadow:none; cursor:default; opacity:1; }
+.lo-bk.lo-returned .lo-badge{ background:#5b6675; color:#dfe6ef; box-shadow:inset 5px 0 0 var(--lo-team, #888); cursor:default; opacity:1; }   /* 左に国産=緑/輸入=ピンクのカラーバー＝どちらか分かる */
 .lo-bk.lo-returned .lo-badge.full .lo-memo{ background:rgba(255,255,255,.75); }
 .lo-bk.lo-returned .lo-fill{ background:#46505e; filter:none; opacity:1; }
 .lo-bk.lo-returned .lo-end{ color:#46505e; }
