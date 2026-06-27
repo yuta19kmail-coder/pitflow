@@ -652,9 +652,9 @@ window.loInfoHover = function(el, aid){
   p.className = 'lo-info lo-badge full';   // フルサイズ札と同じ見た目
   p.style.setProperty('--lo-team', teamColor);
   p.style.background = teamColor;
-  p.innerHTML = '<span class="lo-nm">' + _loEsc(nm) + ' 様</span>'
+  p.innerHTML = '<span class="lo-lbl full"><span class="lo-nm">' + _loEsc(nm) + ' 様</span>'
     + '<span class="lo-car2"><span class="lo-cartxt">' + _loEsc(car) + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
-    + (memo ? '<span class="lo-memo">' + _loEsc(memo) + '</span>' : '');
+    + (memo ? '<span class="lo-memo">' + _loEsc(memo) + '</span>' : '') + '</span>';
   // ミニ札のあるセルにぴったり重ねる（フルサイズ札の位置＝left/right 4px）
   const cell = el.closest('.lo-cell') || el;
   const r = cell.getBoundingClientRect(); const vw = document.documentElement.clientWidth;
