@@ -255,7 +255,7 @@ function loRebuild(days){
 function loScrollToday(){
   const wrap = document.getElementById('loaner-scroll');
   const t = document.querySelector('.lo-date.lo-today');
-  if (wrap && t) wrap.scrollTop = Math.max(0, t.offsetTop - 60);
+  if (wrap && t) wrap.scrollTop = Math.max(0, t.offsetTop - 38 * 5);   // 当日の上に前5日分を見せる
 }
 
 /* 指定開始日から n 日ぶんの行HTMLを作る（append/prepend 共通） */
@@ -326,8 +326,8 @@ function _loRenderDays(start, n){
         let labelHtml = '';
         if (isStart){
           if (compact){
-            // 省スペース：客名・車種を各略＋固（黄）。詳細はホバーでフルサイズ札。固は…で消えないよう別枠。
-            labelHtml = '<span class="lo-lbl mini"><span class="lo-minitxt">' + _loEsc(_loAbbr(fullName, 3) + (carTxt ? ' ' + _loAbbr(carTxt, 3) : '')) + '</span>' + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
+            // 省スペース：客名（長い時だけ…）＋車種（省略しない）＋固（黄）。詳細はホバーでフルサイズ札。
+            labelHtml = '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(fullName) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
             labelHtml = '<span class="lo-lbl full">'
               + '<span class="lo-nm">' + _nm + ' 様</span>'

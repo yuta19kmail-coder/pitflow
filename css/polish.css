@@ -440,10 +440,11 @@
 .lo-badge.full .lo-cartxt{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .lo-badge.full .lo-fix{ margin-left:auto; }
 .lo-badge.full .lo-memo{ font-size:9.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:4px; padding:0 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* 省スペース1行（1〜2日）：客名・車種を各略＋固（固は…で消えないよう別枠で右固定） */
-.lo-badge.mini{ position:relative; z-index:2; display:inline-block; max-width:96%; margin-top:2px; border-radius:7px; padding:2px 6px; vertical-align:top; overflow:hidden; }
-.lo-badge.mini .lo-lbl.mini{ display:flex; align-items:center; gap:3px; min-width:0; font-size:10.5px; font-weight:600; color:#fff; }
-.lo-badge.mini .lo-minitxt{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* 省スペース1行（1〜2日）：カードはセル幅いっぱい。客名は長い時だけ…／車種は省略しない／固は右に保持 */
+.lo-badge.mini{ position:relative; z-index:2; display:block; margin:2px 4px; border-radius:7px; padding:2px 6px; overflow:hidden; }
+.lo-badge.mini .lo-lbl.mini{ display:flex; align-items:center; gap:4px; min-width:0; font-size:10.5px; font-weight:600; color:#fff; }
+.lo-badge.mini .lo-mininm{ flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-badge.mini .lo-minicar{ flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; opacity:.95; }
 .lo-badge.mini .lo-fix{ flex:0 0 auto; margin-left:0; }
 /* 固定バッジ（黄） */
 .lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
