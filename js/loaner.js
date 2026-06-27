@@ -26,10 +26,10 @@ function _loStartDraft(){
 function _loAssignChanged(a){ const o = _loDraftOrig && _loDraftOrig[a.id]; return !!o && (o.loanerId!==a.loanerId || o.fromDate!==a.fromDate || o.toDate!==a.toDate); }
 function _loChangedList(){ return _loDraftOrig ? (state.loanerAssigns||[]).filter(_loAssignChanged) : []; }
 /* 重複（同じ代車で期間が重なる）割当idの集合。
-   ※同じ予約（同じ cardId）の割当どうしは「同一予約」なので衝突に数えない（日数調整が誤って重複扱いされるのを防ぐ）。 */
-function _loConflictSet(){
+   ※同じ予約（同じ cardId）の割当どうしは「同一予約」なので衝突に数えない。 */
+function _loConflictSetFrom(list){
   const bad = new Set(), byLo = {};
-  (state.loanerAssigns || []).forEach(function(a){ (byLo[a.loanerId] = byLo[a.loanerId] || []).push(a); });
+  (list || []).forEach(function(a){ (byLo[a.loanerId] = byLo[a.loanerId] || []).push(a); });
   Object.keys(byLo).forEach(function(lo){
     const arr = byLo[lo].slice().sort(function(x,y){ return x.fromDate < y.fromDate ? -1 : 1; });
     for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){
@@ -38,6 +38,21 @@ function _loConflictSet(){
     }
   });
   return bad;
+}
+function _loConflictSet(){ return _loConflictSetFrom(state.loanerAssigns || []); }
+/* 「今回の編集で新しく発生した重複」だけを返す（元から重なっていた既存の重複は無視＝日数調整を邪魔しない）。 */
+function _loNewBad(){
+  if (!_loDraftOrig) return new Set();
+  const now = _loConflictSet();
+  const origList = (state.loanerAssigns || []).map(function(a){
+    const o = _loDraftOrig[a.id];
+    return o ? { id:a.id, cardId:a.cardId, loanerId:o.loanerId, fromDate:o.fromDate, toDate:o.toDate }
+             : { id:a.id, cardId:a.cardId, loanerId:a.loanerId, fromDate:a.fromDate, toDate:a.toDate };
+  });
+  const base = _loConflictSetFrom(origList);
+  const out = new Set();
+  now.forEach(function(id){ if (!base.has(id)) out.add(id); });
+  return out;
 }
 /* 同じ予約(cardId)に対する代車割当が二重に残っていたら1件に掃除する（過去データ救済）。 */
 function _loDedupeAssigns(){
@@ -236,7 +251,7 @@ function loScrollToday(){
 function _loRenderDays(start, n){
   const ls = _loFiltered();
   const todayStr = ymd(new Date());
-  const confSet = _loDraftOrig ? _loConflictSet() : null;        // 下書き中だけ重複判定
+  const confSet = _loDraftOrig ? _loNewBad() : null;        // 下書き中だけ・今回新しく発生した重複のみ赤表示
   const changedList = _loChangedList();                          // 元位置ゴースト用
   let h = '';
   for (let i = 0; i < n; i++){
@@ -504,7 +519,7 @@ function _loRenderDraftBar(){
     host.style.display = (_loApplySnap) ? 'block' : 'none';
     return;
   }
-  const bad = _loConflictSet();
+  const bad = _loNewBad();
   const chips = changed.map(function(a){
     const o = _loDraftOrig[a.id], ib = bad.has(a.id);
     return '<span class="lod-chip' + (ib?' bad':'') + '"><b>' + _loEsc(_loAssignLabel(a)) + '</b> '
@@ -537,8 +552,8 @@ window.loDraftDiscard = function(){
 window.loDraftApply = function(){
   if (!_loDraftOrig) return;
   const changed = _loChangedList(); if (!changed.length) return;
-  // ★今回「動かした予約」自体が他の貸出と重なる時だけ警告（無関係な既存の重複ではブロックしない）。
-  const bad = _loConflictSet();
+  // ★今回の編集で「新しく」重複が発生した予約がある時だけ警告（元から重なっていた既存重複・無関係な重複ではブロックしない）。
+  const bad = _loNewBad();
   const changedBad = changed.some(function(a){ return bad.has(a.id); });
   if (changedBad){
     if (!confirm('⚠ 動かした代車の期間が、別の貸出と重複します。\nそれでもこのまま反映しますか？')) return;
