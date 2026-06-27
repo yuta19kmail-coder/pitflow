@@ -435,10 +435,9 @@
 .lo-nm{ display:block; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .lo-lbl.one{ display:flex; align-items:center; gap:4px; }
 .lo-lbl.one .lo-nm{ display:inline; }
-.lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:var(--amber); border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
+.lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
 .lo-memo{ display:block; margin-top:2px; font-size:9px; color:#0e141c; background:rgba(255,255,255,.88); border-radius:4px; padding:0 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* 車種固定＝札にアンバーの枠（🔒なし・黄バッジが主役） */
-.lo-bk.lo-fixed .lo-badge{ box-shadow:0 0 0 2px var(--amber), 0 2px 6px rgba(0,0,0,.4); }
+/* 車種固定＝黄色「固定」バッジのみ（🔒なし・枠なし） */
 /* 返却済み＝札・茎をグレーアウト（動かせないアーカイブ） */
 .lo-bk.lo-returned .lo-badge{ filter:grayscale(1); opacity:.55; cursor:default; }
 .lo-bk.lo-returned .lo-fill{ filter:grayscale(1); opacity:.4; }
