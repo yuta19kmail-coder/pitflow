@@ -638,23 +638,29 @@ window.loBadgeMenu = function(ev, aid){
   h += '<button class="lo-bpop-b danger" onclick="loCancelLoaner(\'' + aid + '\')">🚫 この予約の代車をキャンセル</button>';
   _loBadgePopOpen(h);
 };
-/* 省スペース表示の真下フルサイズ情報ホバー */
+/* 省スペース表示のホバー＝代車カレンダーのフルサイズ札（3行カード）をそのまま上に重ねて表示 */
 window.loInfoHover = function(el, aid){
   if (!el || !el.classList.contains('mini')) return;   // 省スペース(1〜2日)だけ
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; }); if (!a) return;
   const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  const nm = card ? (card.customer || '予約') : (a.customer || '貸出');
+  const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
   const car = card ? (card.car || '') : (a.car || '');
   const memo = card ? (card.loanerOther || '') : (a.purpose || '');
   const fixed = !!(card && card.loanerFixed);
-  let p = document.getElementById('lo-info'); if (!p){ p = document.createElement('div'); p.id = 'lo-info'; p.className = 'lo-info'; document.body.appendChild(p); }
-  p.innerHTML = '<div class="li-nm">' + _loEsc(nm) + ' 様</div>' + (car ? '<div class="li-car">' + _loEsc(car) + '</div>' : '')
-    + '<div class="li-period">' + _loMD(a.fromDate) + ' 〜 ' + _loMD(a.toDate) + '</div>'
-    + (fixed ? '<div><span class="li-fix">固定</span></div>' : '')
-    + (memo ? '<div class="li-memo">' + _loEsc(memo) + '</div>' : '');
-  const r = el.getBoundingClientRect(); const w = 200, vw = document.documentElement.clientWidth;
-  let left = r.left; if (left + w > vw - 8) left = vw - w - 8;
-  p.style.left = Math.max(8, left) + 'px'; p.style.top = (r.bottom + 4) + 'px';
+  const teamColor = _loTeamColor(a);
+  let p = document.getElementById('lo-info'); if (!p){ p = document.createElement('div'); p.id = 'lo-info'; document.body.appendChild(p); }
+  p.className = 'lo-info lo-badge full';   // フルサイズ札と同じ見た目
+  p.style.setProperty('--lo-team', teamColor);
+  p.style.background = teamColor;
+  p.innerHTML = '<span class="lo-nm">' + _loEsc(nm) + ' 様</span>'
+    + '<span class="lo-car2"><span class="lo-cartxt">' + _loEsc(car) + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
+    + (memo ? '<span class="lo-memo">' + _loEsc(memo) + '</span>' : '');
+  // ミニ札のあるセルにぴったり重ねる（フルサイズ札の位置＝left/right 4px）
+  const cell = el.closest('.lo-cell') || el;
+  const r = cell.getBoundingClientRect(); const vw = document.documentElement.clientWidth;
+  let left = r.left + 4; const w = r.width - 8;
+  if (left + w > vw - 8) left = vw - w - 8;
+  p.style.left = Math.max(8, left) + 'px'; p.style.top = (r.top + 2) + 'px'; p.style.width = w + 'px';
 };
 window.loInfoHide = function(){ const p = document.getElementById('lo-info'); if (p) p.remove(); };
 window.loUnreturn = function(aid){

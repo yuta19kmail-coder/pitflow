@@ -453,13 +453,8 @@
 .lo-bk.lo-returned .lo-end{ color:#46505e; }
 .lo-bk.lo-returned .lo-badge::after{ content:"返却済"; display:inline-block; margin-left:4px; font-size:8.5px; font-weight:700; color:#cdd6e2; }
 .lo-free{ background:transparent; }
-/* 省スペースのフルサイズ情報ホバー（真下に展開） */
-.lo-info{ position:fixed; z-index:215; width:200px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; box-shadow:0 12px 34px rgba(0,0,0,.5); padding:9px 11px; pointer-events:none; }
-.lo-info .li-nm{ font-size:12.5px; font-weight:700; color:var(--text); }
-.lo-info .li-car{ font-size:12px; color:var(--text); margin-top:2px; }
-.lo-info .li-period{ font-size:10.5px; color:var(--text2); margin-top:3px; }
-.lo-info .li-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 6px; margin-top:5px; }
-.lo-info .li-memo{ font-size:10.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:5px; padding:2px 7px; margin-top:5px; }
+/* 省スペースのホバー＝フルサイズ札(.lo-badge.full)をそのまま重ねて表示（位置だけ上書き） */
+.lo-info{ position:fixed !important; right:auto !important; height:auto !important; min-height:54px; z-index:215; box-shadow:0 8px 24px rgba(0,0,0,.55); pointer-events:none; }
 /* 代車バッジ操作メニュー（詳細/返却確定/キャンセル） */
 .lo-bpop{ position:fixed; z-index:210; width:220px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:8px; }
 .lo-bpop-h{ font-size:12px; font-weight:700; color:var(--text); padding:4px 6px 8px; border-bottom:1px solid var(--border); margin-bottom:2px; }
