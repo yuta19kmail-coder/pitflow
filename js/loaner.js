@@ -351,10 +351,7 @@ function _loRenderDays(start, n){
         h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (compact ? ' bk-compact' : ' bk-full') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
            + ' style="--lo-team:' + teamColor + '"><i class="lo-fill"></i>' + gh;
         if (isStart){
-          const badgeEl = '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (hand ? ' lo-handoff' : '') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
-          // 看板（ラベル）は予約期間内でスティッキー＝スクロールしても上端に残す（矢印・茎とは独立）。最終日は矢印用に空けるためトラックは days-1。
-          if (hand){ h += badgeEl; }   // 当日かぶりは従来通り（くり抜き・絶対配置）
-          else { h += '<div class="lo-track" data-days="' + days + '">' + badgeEl + '</div>'; }
+          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (hand ? ' lo-handoff' : '') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
         }
         if (isEnd && !single){
           h += '<span class="lo-end"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '">▼</span>';
@@ -373,17 +370,6 @@ function loAppendDays(n){
   if (!grid || !_loStart) return;
   grid.insertAdjacentHTML('beforeend', _loRenderDays(addDays(_loStart, _loCount), n));
   _loCount += n;
-  _loSetTrackHeights();
-}
-/* 看板スティッキー用：各トラックの高さ＝(予約日数-1)×実測行ピッチ。最終日は矢印用に空ける。 */
-function _loSetTrackHeights(){
-  const grid = document.getElementById('loaner-grid'); if (!grid) return;
-  const dates = grid.querySelectorAll('.lo-date');
-  const rh = (dates.length > 1) ? Math.max(20, dates[1].offsetTop - dates[0].offsetTop) : 38;
-  grid.querySelectorAll('.lo-track').forEach(function(tr){
-    const d = parseInt(tr.getAttribute('data-days'), 10) || 1;
-    tr.style.height = Math.max(rh, (d - 1) * rh) + 'px';
-  });
 }
 /* 過去側（上）に継ぎ足し＝アーカイブとして遡れる。スクロール位置は維持。 */
 function loPrependDays(n){
@@ -398,7 +384,6 @@ function loPrependDays(n){
   if (firstDate) firstDate.insertAdjacentHTML('beforebegin', h); else grid.insertAdjacentHTML('beforeend', h);
   _loStart = newStart; _loCount += n;
   wrap.scrollTop += (wrap.scrollHeight - oldH);   // 見た目の位置を保つ
-  _loSetTrackHeights();
   _loPrepending = false;
 }
 
