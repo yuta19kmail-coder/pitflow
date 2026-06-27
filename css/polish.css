@@ -447,8 +447,10 @@
 .lo-badge.mini .lo-fix{ flex:0 0 auto; margin-left:0; }
 /* 固定バッジ（黄） */
 .lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
-/* 当日かぶりの「耳」＝後発予約が先行の返却日に頭を出す印（既存表示は変えない） */
-.lo-ear{ position:absolute; left:6px; top:-1px; width:26px; height:9px; border-radius:0 0 6px 6px; background:var(--lo-ear, #888); box-shadow:0 1px 3px rgba(0,0,0,.4); z-index:5; pointer-events:none; }
+/* 当日かぶりの「耳」＝後発予約が先行の返却日（共有日）の下端から頭を出し、先行の▼に食い込む印（既存表示は変えない）。
+   翌日からが後発の本体カード＝この耳はその頭が前日に少し出ているイメージ。 */
+.lo-ear{ position:absolute; left:5px; right:5px; bottom:-1px; height:13px; border-radius:7px 7px 0 0; background:var(--lo-ear, #888); box-shadow:0 -2px 6px rgba(0,0,0,.45); z-index:6; pointer-events:none; }
+.lo-ear::after{ content:"翌客"; position:absolute; left:0; right:0; top:0; text-align:center; font-size:8px; font-weight:800; line-height:13px; color:#0e141c; }
 /* 返却済み＝アーカイブ（消し過ぎず読める・茎は実線でグレー） */
 .lo-bk.lo-returned .lo-badge{ background:#5b6675; color:#dfe6ef; box-shadow:none; cursor:default; opacity:1; }
 .lo-bk.lo-returned .lo-badge.full .lo-memo{ background:rgba(255,255,255,.75); }
