@@ -134,6 +134,13 @@
     if (dr.length){
       h += '<div class="ph-note">⚠️ 車両注意：'+dr.map(function(k){return DRIVE_LABELS[k]||k;}).join('・')+'</div>';
     }
+    // 代車の車種固定・条件メモ（あれば代車/予約ボックスの下に表示）
+    if (c.needLoaner && (c.loanerFixed || (c.loanerOther||'').trim())){
+      h += '<div class="ph-loaner">'
+        + (c.loanerFixed ? '<span class="ph-fix">固定</span>' : '')
+        + ((c.loanerOther||'').trim() ? '<span class="ph-lmemo">'+esc(c.loanerOther)+'</span>' : '')
+        + '</div>';
+    }
 
     ensureEl().innerHTML = h;
   }

@@ -34,7 +34,8 @@ function _loConflictSetFrom(list){
     const arr = byLo[lo].slice().sort(function(x,y){ return x.fromDate < y.fromDate ? -1 : 1; });
     for (let i=0;i<arr.length;i++) for (let j=i+1;j<arr.length;j++){
       if (arr[i].cardId && arr[j].cardId && arr[i].cardId === arr[j].cardId) continue;   // 同一予約は除外
-      if (!(arr[j].fromDate > arr[i].toDate || arr[j].toDate < arr[i].fromDate)){ bad.add(arr[i].id); bad.add(arr[j].id); }
+      // 当日かぶり（返却日＝次の貸出開始日）は重複に数えない（耳で表現）＝境界は>=/<=で許容
+      if (!(arr[j].fromDate >= arr[i].toDate || arr[j].toDate <= arr[i].fromDate)){ bad.add(arr[i].id); bad.add(arr[j].id); }
     }
   });
   return bad;
@@ -68,6 +69,16 @@ function _loAssignLabel(a){
   return card ? ((window.pitSurname?pitSurname(card.customer):(card.customer||''))||'予約') : (a.customer || '予約');
 }
 function _loName(id){ const l=(state.loaners||[]).find(function(x){return x.id===id;}); return l?l.name:id; }
+function _loAbbr(s, n){ s = String(s == null ? '' : s); return s.length > n ? (s.slice(0, n) + '…') : s; }
+/* 当日かぶり（後発）：この割当の開始日に、同じ代車で別予約の返却(toDate)が重なるか＝後発は初日が「耳」・実質翌日開始 */
+function _loHandoffLater(a){
+  return (state.loanerAssigns || []).some(function(x){ return x.id !== a.id && x.loanerId === a.loanerId && x.toDate === a.fromDate; });
+}
+function _loEffStart(a){ return _loHandoffLater(a) ? ymd(addDays(_loPd(a.fromDate), 1)) : a.fromDate; }
+function _loTeamColor(a){
+  const card = a.cardId ? (state.cards||[]).find(function(c){ return c.id===a.cardId; }) : null;
+  return card ? (card.boardId === 'import' ? '#ec4899' : '#1db97a') : (a.emergency ? '#ef4444' : (a.manual ? '#3b82f6' : '#1db97a'));
+}
 function _loMD(s){ const p=String(s).split('-'); return (+p[1])+'/'+(+p[2]); }
 
 function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
@@ -291,44 +302,59 @@ function _loRenderDays(start, n){
              + (o.fromDate===dStr ? '<span class="lo-gh-tag">元 ' + _loEsc(_loAssignLabel(g)) + '</span>' : '');
         }
       }
-      const a = (state.loanerAssigns || []).find(function(x){ return x.loanerId === l.id && x.fromDate <= dStr && x.toDate >= dStr; });
+      // この代車・この日を覆う割当（当日かぶり対応）
+      const covering = (state.loanerAssigns || []).filter(function(x){ return x.loanerId === l.id && x.fromDate <= dStr && x.toDate >= dStr; });
+      // バーの主役＝実効開始(effStart)がこの日以前で覆う割当（後発の同日かぶりは初日を除外＝翌日からバー）
+      const a = covering.find(function(x){ return _loEffStart(x) <= dStr; }) || null;
+      // この日に「耳」を出す後発予約（共有日＝先行の返却日に開始）
+      const earB = covering.find(function(x){ return _loHandoffLater(x) && x.fromDate === dStr; });
+      let earHtml = '';
+      if (earB && earB !== a){
+        earHtml = '<span class="lo-ear" style="--lo-ear:' + _loTeamColor(earB) + '" title="当日かぶり：' + _loEsc((earB.cardId ? ((window.pitSurname?pitSurname((state.cards.find(function(c){return c.id===earB.cardId;})||{}).customer):'')||'予約') : (earB.customer||'貸出'))) + ' 様 が同日開始"></span>';
+      }
       if (a){
-        const isStart = (a.fromDate === dStr);
+        const sFrom = _loEffStart(a);
+        const isStart = (sFrom === dStr);
         const isEnd = (a.toDate === dStr);
         const single = isStart && isEnd;
+        const days = Math.round((_loPd(a.toDate) - _loPd(sFrom)) / 86400000) + 1;
+        const compact = days <= 2;
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
         const isEmg = !!a.emergency;
         const fixed = !!(card && card.loanerFixed);
         const returned = !!a.returned;
-        const teamColor = card ? (card.boardId === 'import' ? '#ec4899' : '#1db97a') : (isEmg ? '#ef4444' : (a.manual ? '#3b82f6' : 'var(--brand)'));
+        const teamColor = _loTeamColor(a);
         const _nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || (isEmg ? '緊急' : '貸出'));
+        const fullName = card ? (card.customer || _nm) : (a.customer || _nm);
         const carTxt = card ? (card.car || '') : (a.car || '');
         const memoTxt = card ? (card.loanerOther || '') : (a.purpose || '');
-        const fixTag = fixed ? '<span class="lo-fix">固定</span>' : '';
-        // 案A：帯バー。多日＝名前様＋車種(同サイズ同ウェイト)＋固定＋メモ／1日＝コンパクト1行（車種・メモはホバー title）
         let labelHtml = '';
         if (isStart){
-          if (single){
-            labelHtml = '<span class="lo-lbl one"><span class="lo-nm">' + _nm + ' 様</span>' + fixTag + '</span>';
+          if (compact){
+            // 省スペース：客名・車種を各略＋固（黄）。詳細はホバー(data-aid)で。
+            labelHtml = '<span class="lo-lbl mini">' + _loAbbr(fullName, 3) + (carTxt ? ' ' + _loAbbr(carTxt, 3) : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
-            labelHtml = '<span class="lo-lbl"><span class="lo-nm">' + _nm + ' 様' + (carTxt ? ' ' + _loEsc(carTxt) : '') + '</span>' + fixTag
-              + (memoTxt ? '<span class="lo-memo">' + _loEsc(memoTxt) + '</span>' : '') + '</span>';
+            labelHtml = '<span class="lo-lbl full">'
+              + '<span class="lo-nm">' + _nm + ' 様</span>'
+              + '<span class="lo-car2">' + (carTxt ? _loEsc(carTxt) : '') + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
+              + (memoTxt ? '<span class="lo-memo">' + _loEsc(memoTxt) + '</span>' : '')
+              + '</span>';
           }
         }
-        const titleAttr = ' title="' + _loEsc(_nm + ' 様' + (carTxt ? ' ' + carTxt : '') + (memoTxt ? ' / ' + memoTxt : '') + (fixed ? ' / 車種固定' : '')) + '"';
+        const titleAttr = ' title="' + _loEsc(fullName + ' 様' + (carTxt ? ' ' + carTxt : '') + (memoTxt ? ' / ' + memoTxt : '') + (fixed ? ' / 車種固定' : '')) + '"';
         const isBad = confSet && confSet.has(a.id);
         const isChg = _loAssignChanged(a);
-        h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
+        h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (compact ? ' bk-compact' : ' bk-full') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
            + ' style="--lo-team:' + teamColor + '"><i class="lo-fill"></i>' + gh;
         if (isStart){
-          h += '<span class="lo-badge' + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + titleAttr + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')">' + labelHtml + '</span>';
+          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + titleAttr + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')" onmouseenter="loInfoHover(this,\'' + (a.id || '') + '\')" onmouseleave="loInfoHide()">' + labelHtml + '</span>';
         }
-        if (isEnd && !single && !returned){
-          h += '<span class="lo-end" draggable="true" data-aid="' + (a.id || '') + '">▼</span>';
+        if (isEnd && !single){
+          h += '<span class="lo-end"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '">▼</span>';
         }
-        h += ov + '</div>';
+        h += earHtml + ov + '</div>';
       } else {
-        h += '<div class="lo-cell lo-free' + (isToday ? ' lo-today' : '') + evCls + dayMods + '"' + attrs + '>' + gh + ov + '</div>';
+        h += '<div class="lo-cell lo-free' + (isToday ? ' lo-today' : '') + evCls + dayMods + '"' + attrs + '>' + gh + earHtml + ov + '</div>';
       }
     });
   }
@@ -583,30 +609,62 @@ window.loDraftUndoApply = function(){
 /* ===== v0.99.0 代車バッジ クリック＝操作メニュー（当日ビュー式：詳細/返却確定/代車キャンセル） ===== */
 function _loBadgePopClose(){ const p = document.getElementById('lo-bpop'); if (p) p.remove(); document.removeEventListener('mousedown', _loBadgePopOutside, true); }
 function _loBadgePopOutside(e){ const p = document.getElementById('lo-bpop'); if (p && !p.contains(e.target)) _loBadgePopClose(); }
-function _loBadgePopOpen(anchorEl, html){
+let _loPopXY = null;   // 直近クリック座標（ポップアップをそこに出す）
+function _loBadgePopOpen(html){
   _loBadgePopClose();
   const p = document.createElement('div'); p.id = 'lo-bpop'; p.className = 'lo-bpop'; p.innerHTML = html;
   document.body.appendChild(p);
-  const r = anchorEl.getBoundingClientRect();
-  const w = 220, vw = document.documentElement.clientWidth;
-  let left = r.left; if (left + w > vw - 8) left = vw - w - 8;
-  let top = r.bottom + 6; if (top + 180 > window.innerHeight) top = Math.max(8, r.top - 186);
+  const w = 224, vw = document.documentElement.clientWidth;
+  const xy = _loPopXY || { x: vw/2, y: 120 };
+  let left = xy.x; if (left + w > vw - 8) left = vw - w - 8;
+  const ph = p.offsetHeight || 180;
+  let top = xy.y + 10; if (top + ph > window.innerHeight - 8) top = Math.max(8, xy.y - ph - 10);
   p.style.left = Math.max(8, left) + 'px'; p.style.top = top + 'px';
   setTimeout(function(){ document.addEventListener('mousedown', _loBadgePopOutside, true); }, 0);
 }
 window.loBadgeMenu = function(ev, aid){
-  if (ev){ ev.stopPropagation(); ev.preventDefault(); }
+  if (ev){ ev.stopPropagation(); ev.preventDefault(); if (ev.clientX != null) _loPopXY = { x: ev.clientX, y: ev.clientY }; }
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
   if (!a) return;
+  loInfoHide();
   const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
   const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
   const carTxt = card ? (card.car || '') : (a.car || '');
-  let h = '<div class="lo-bpop-h">' + _loEsc(nm) + ' 様' + (carTxt ? ' <small>' + _loEsc(carTxt) + '</small>' : '') + '</div>';
+  const ret = !!a.returned;
+  let h = '<div class="lo-bpop-h">' + _loEsc(nm) + ' 様' + (carTxt ? ' <small>' + _loEsc(carTxt) + '</small>' : '') + (ret ? ' <small>（返却済）</small>' : '') + '</div>';
   if (card) h += '<button class="lo-bpop-b" onclick="loBadgeDetail(\'' + aid + '\')">📋 予約詳細を見る</button>';
-  h += '<button class="lo-bpop-b" onclick="loReturnStart(\'' + aid + '\')">✅ 返却を確定する</button>';
+  if (!ret) h += '<button class="lo-bpop-b" onclick="loReturnStart(\'' + aid + '\')">✅ 返却を確定する</button>';
+  else h += '<button class="lo-bpop-b" onclick="loUnreturn(\'' + aid + '\')">↩ 返却を取り消す</button>';
   h += '<button class="lo-bpop-b danger" onclick="loCancelLoaner(\'' + aid + '\')">🚫 この予約の代車をキャンセル</button>';
-  const anchor = (ev && ev.currentTarget) ? ev.currentTarget : document.querySelector('.lo-badge[data-aid="' + aid + '"]');
-  _loBadgePopOpen(anchor || document.body, h);
+  _loBadgePopOpen(h);
+};
+/* 省スペース表示の真下フルサイズ情報ホバー */
+window.loInfoHover = function(el, aid){
+  if (!el || !el.classList.contains('mini')) return;   // 省スペース(1〜2日)だけ
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; }); if (!a) return;
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  const nm = card ? (card.customer || '予約') : (a.customer || '貸出');
+  const car = card ? (card.car || '') : (a.car || '');
+  const memo = card ? (card.loanerOther || '') : (a.purpose || '');
+  const fixed = !!(card && card.loanerFixed);
+  let p = document.getElementById('lo-info'); if (!p){ p = document.createElement('div'); p.id = 'lo-info'; p.className = 'lo-info'; document.body.appendChild(p); }
+  p.innerHTML = '<div class="li-nm">' + _loEsc(nm) + ' 様</div>' + (car ? '<div class="li-car">' + _loEsc(car) + '</div>' : '')
+    + '<div class="li-period">' + _loMD(a.fromDate) + ' 〜 ' + _loMD(a.toDate) + '</div>'
+    + (fixed ? '<div><span class="li-fix">固定</span></div>' : '')
+    + (memo ? '<div class="li-memo">' + _loEsc(memo) + '</div>' : '');
+  const r = el.getBoundingClientRect(); const w = 200, vw = document.documentElement.clientWidth;
+  let left = r.left; if (left + w > vw - 8) left = vw - w - 8;
+  p.style.left = Math.max(8, left) + 'px'; p.style.top = (r.bottom + 4) + 'px';
+};
+window.loInfoHide = function(){ const p = document.getElementById('lo-info'); if (p) p.remove(); };
+window.loUnreturn = function(aid){
+  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
+  if (!a) { _loBadgePopClose(); return; }
+  a.returned = false; delete a.returnedAt;
+  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+  if (card) card.loanerReturned = false;
+  if (window.PitDB) PitDB.save();
+  _loBadgePopClose(); renderLoaner();
 };
 window.loBadgeDetail = function(aid){
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
@@ -615,13 +673,11 @@ window.loBadgeDetail = function(aid){
 };
 window.loReturnStart = function(aid){
   const today = ymd(new Date());
-  const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
-  const anchor = document.getElementById('lo-bpop') || document.querySelector('.lo-badge[data-aid="' + aid + '"]');
   const h = '<div class="lo-bpop-h">返却日を確定</div>'
     + '<label class="lo-bpop-f">返却日<input type="date" id="lo-ret-date" value="' + today + '"></label>'
-    + '<div class="lo-bpop-note">返却した代車は完了（グレーアウト）になり、動かせなくなります。</div>'
+    + '<div class="lo-bpop-note">返却した代車はアーカイブ（薄い色）になり、動かせなくなります（あとで取り消し可）。</div>'
     + '<div class="lo-bpop-foot"><button class="lo-bpop-b" onclick="loBadgeMenu(null,\'' + aid + '\')">← 戻る</button><button class="lo-bpop-b primary" onclick="loReturnConfirm(\'' + aid + '\')">確定する</button></div>';
-  _loBadgePopOpen(anchor || document.body, h);
+  _loBadgePopOpen(h);
 };
 window.loReturnConfirm = function(aid){
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });

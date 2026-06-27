@@ -414,34 +414,51 @@
 .lo-date .lo-month{ font-size:9px; font-weight:800; color:var(--brand); }
 .lo-cell.lo-today{ background:var(--brand-soft); }
 .lo-date.lo-today{ color:var(--brand); box-shadow:inset 3px 0 0 var(--brand); }
-/* ===== 案F：茎＋ラベル札＋大▼（v0.99.2）＝中央に細い茎、開始にチーム色の札、終端に大きい▼。窮屈感を抑える ===== */
+/* ===== 案F改（v0.99.5）＝中央の茎＋複数日枠を使う3行カード／1〜2日は省スペース1行／当日かぶりは耳 ===== */
 .lo-bk{ text-align:center; padding:0; background:transparent; }
-/* 中央の茎（細い縦線）＝予約の継続を表す */
+.lo-bk.bk-start{ z-index:3; }   /* カードが下の日付セルに被さって隠れないよう前面へ（見出しz4より下） */
+/* 中央の茎（細い縦線）＝予約の継続 */
 .lo-bk .lo-fill{ position:absolute; left:50%; transform:translateX(-50%); top:0; bottom:0; width:4px; z-index:0; background:var(--lo-team, var(--brand)); border-radius:2px; pointer-events:none; }
-.lo-bk.bk-start .lo-fill{ top:21px; }     /* 開始＝札の下から茎が伸びる */
-.lo-bk.bk-end .lo-fill{ bottom:12px; }    /* 終端＝▼の上で止める */
+.lo-bk.bk-start.bk-full .lo-fill{ top:102px; }   /* 3行カード（約3日枠）の下から茎 */
+.lo-bk.bk-start.bk-compact .lo-fill{ top:21px; } /* 省スペース1行の下から茎 */
+.lo-bk.bk-end .lo-fill{ bottom:12px; }
 .lo-bk.bk-single .lo-fill{ display:none; }
-/* 定休/祝日の斜線は予約セルでは消す（後ろに透けない） */
 .lo-bk.lo-closed, .lo-bk.lo-holiday{ background:transparent !important; }
 /* 終端の大きい▼ */
-.lo-end{ position:absolute; left:50%; transform:translateX(-50%); bottom:0; font-size:15px; line-height:1; color:var(--lo-team, var(--brand)); cursor:ns-resize; z-index:2; }
-/* 車両イベントのオーバーレイ（右端ストライプ＋開始日にタグ） */
+.lo-end{ position:absolute; left:50%; transform:translateX(-50%); bottom:0; font-size:15px; line-height:1; color:var(--lo-team, var(--brand)); cursor:ns-resize; z-index:3; }
+/* 車両イベントのオーバーレイ */
 .lo-evs{ position:absolute; right:0; top:0; bottom:0; width:5px; opacity:.85; }
 .lo-evt-tag{ position:absolute; right:6px; top:2px; z-index:1; font-size:8.5px; font-weight:800; color:#fff; border-radius:4px; padding:1px 4px; white-space:nowrap; max-width:80%; overflow:hidden; text-overflow:ellipsis; }
-/* ラベル札＝チーム色のカード（クリックで操作メニュー／ドラッグで移動） */
-.lo-badge{ position:relative; z-index:1; display:inline-block; max-width:94%; margin-top:2px; background:var(--lo-team, var(--brand)); color:#fff; border-radius:8px; padding:3px 7px; box-shadow:0 2px 6px rgba(0,0,0,.4); cursor:grab; text-align:left; vertical-align:top; }
+/* ラベル札＝チーム色カード（クリックで操作メニュー／ドラッグで移動） */
+.lo-badge{ background:var(--lo-team, var(--brand)); color:#fff; box-shadow:0 2px 6px rgba(0,0,0,.4); cursor:grab; text-align:left; }
 .lo-badge:active{ cursor:grabbing; }
-.lo-lbl{ display:block; }
-.lo-nm{ display:block; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lo-lbl.one{ display:flex; align-items:center; gap:4px; }
-.lo-lbl.one .lo-nm{ display:inline; }
+/* 3行カード（複数日枠を使う・最大幅維持） */
+.lo-badge.full{ position:absolute; z-index:2; top:2px; left:4px; right:4px; height:100px; border-radius:8px; padding:5px 7px; display:flex; flex-direction:column; gap:2px; }
+.lo-badge.full .lo-nm{ font-size:11.5px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-badge.full .lo-car2{ display:flex; align-items:center; justify-content:space-between; gap:4px; font-size:11.5px; font-weight:600; color:#fff; min-width:0; }
+.lo-badge.full .lo-car2 > :first-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-badge.full .lo-memo{ margin-top:auto; font-size:9.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:4px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* 省スペース1行（1〜2日）：客名・車種を各略＋固 */
+.lo-badge.mini{ position:relative; z-index:2; display:inline-block; max-width:96%; margin-top:2px; border-radius:7px; padding:2px 6px; vertical-align:top; }
+.lo-badge.mini .lo-lbl.mini{ display:block; font-size:10.5px; font-weight:600; color:#fff; white-space:nowrap; }
+/* 固定バッジ（黄） */
 .lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
-.lo-memo{ display:block; margin-top:2px; font-size:9px; color:#0e141c; background:rgba(255,255,255,.88); border-radius:4px; padding:0 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* 車種固定＝黄色「固定」バッジのみ（🔒なし・枠なし） */
-/* 返却済み＝札・茎をグレーアウト（動かせないアーカイブ） */
-.lo-bk.lo-returned .lo-badge{ filter:grayscale(1); opacity:.55; cursor:default; }
-.lo-bk.lo-returned .lo-fill{ filter:grayscale(1); opacity:.4; }
+/* 当日かぶりの「耳」＝後発予約が先行の返却日に頭を出す印（既存表示は変えない） */
+.lo-ear{ position:absolute; left:6px; top:-1px; width:26px; height:9px; border-radius:0 0 6px 6px; background:var(--lo-ear, #888); box-shadow:0 1px 3px rgba(0,0,0,.4); z-index:5; pointer-events:none; }
+/* 返却済み＝アーカイブ（消し過ぎず読める・茎は実線でグレー） */
+.lo-bk.lo-returned .lo-badge{ background:#5b6675; color:#dfe6ef; box-shadow:none; cursor:default; opacity:1; }
+.lo-bk.lo-returned .lo-badge.full .lo-memo{ background:rgba(255,255,255,.75); }
+.lo-bk.lo-returned .lo-fill{ background:#46505e; filter:none; opacity:1; }
+.lo-bk.lo-returned .lo-end{ color:#46505e; }
+.lo-bk.lo-returned .lo-badge::after{ content:"返却済"; display:inline-block; margin-left:4px; font-size:8.5px; font-weight:700; color:#cdd6e2; }
 .lo-free{ background:transparent; }
+/* 省スペースのフルサイズ情報ホバー（真下に展開） */
+.lo-info{ position:fixed; z-index:215; width:200px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; box-shadow:0 12px 34px rgba(0,0,0,.5); padding:9px 11px; pointer-events:none; }
+.lo-info .li-nm{ font-size:12.5px; font-weight:700; color:var(--text); }
+.lo-info .li-car{ font-size:12px; color:var(--text); margin-top:2px; }
+.lo-info .li-period{ font-size:10.5px; color:var(--text2); margin-top:3px; }
+.lo-info .li-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 6px; margin-top:5px; }
+.lo-info .li-memo{ font-size:10.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:5px; padding:2px 7px; margin-top:5px; }
 /* 代車バッジ操作メニュー（詳細/返却確定/キャンセル） */
 .lo-bpop{ position:fixed; z-index:210; width:220px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:8px; }
 .lo-bpop-h{ font-size:12px; font-weight:700; color:var(--text); padding:4px 6px 8px; border-bottom:1px solid var(--border); margin-bottom:2px; }

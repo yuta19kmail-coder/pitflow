@@ -32,6 +32,10 @@
 .ph-plate{ display:inline-block; font-size:12.5px; font-weight:700; color:var(--text2); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:3px 9px; letter-spacing:.02em; }
 /* カルテNo＝番号直書き（グレー・少し大きめ） */
 .ph-karte{ display:inline-block; font-size:14px; font-weight:800; color:var(--text2); letter-spacing:.04em; }
+/* 代車の固定・条件メモ（代車/予約ボックスの下） */
+.ph-loaner{ margin-top:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.ph-fix{ display:inline-block; font-size:10px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:5px; padding:1px 8px; }
+.ph-lmemo{ font-size:11px; color:var(--text); background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:1px 8px; }
 
 /* 3つの経過日数 */
 .ph-stats{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-top:12px; }
