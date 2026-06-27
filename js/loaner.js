@@ -181,7 +181,7 @@ function renderLoaner(){
     });
   }
   if (!_loDnd){ _loDnd = true; loBindDnd(grid); }
-  setTimeout(loScrollToday, 0);
+  requestAnimationFrame(function(){ loScrollToday(); setTimeout(loScrollToday, 60); });   // レイアウト確定後に確実にアンカー
 }
 
 /* 代車の詳細ホバーは「常時・どのビューでも」効くようグローバルに1回だけ紐付け。
@@ -254,13 +254,13 @@ function loRebuild(days){
 
 function loScrollToday(){
   const wrap = document.getElementById('loaner-scroll');
-  const t = document.querySelector('.lo-date.lo-today');
-  if (!wrap || !t) return;
-  const head = wrap.querySelector('.lo-head');         // 固定ヘッダの高さ分も差し引く
+  if (!wrap) return;
+  const head = wrap.querySelector('.lo-head');
   const hh = head ? head.offsetHeight : 40;
-  const rows = wrap.querySelectorAll('.lo-date');      // 実際の行ピッチを測る
-  const rh = (rows.length > 1) ? Math.max(20, rows[1].offsetTop - rows[0].offsetTop) : 38;
-  wrap.scrollTop = Math.max(0, t.offsetTop - hh - rh * 5);   // ヘッダの下に前5日分を見せる
+  // 「今日の5日前の日付セル」を固定ヘッダの直下に持ってくる＝前5日を確実に見せる（行高のズレに左右されない）
+  const past = ymd(addDays(new Date(), -5));
+  let target = wrap.querySelector('.lo-date[data-ld="' + past + '"]') || wrap.querySelector('.lo-date.lo-today');
+  if (target) wrap.scrollTop = Math.max(0, target.offsetTop - hh - 2);
 }
 
 /* 指定開始日から n 日ぶんの行HTMLを作る（append/prepend 共通） */
