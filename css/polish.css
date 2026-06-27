@@ -449,11 +449,11 @@
 .lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
 /* 当日かぶり（本当に同日）＝後客の3行札を共有日の上端まで伸ばし、上辺を“下向き矢印型”にくり抜く。
    くり抜きの中を先客の棒＋▼が均一の隙間で通る（先客の▼は共有日の下端まで）。テキストはくり抜きの下＝翌日から。 */
-.lo-badge.full.lo-handoff{ top:-36px; height:94px; padding:42px 7px 4px;
+.lo-badge.full.lo-handoff{ top:-36px; height:96px; padding:44px 7px 4px;
   clip-path:polygon(0 0,
-    calc(50% - 7px) 0, calc(50% - 7px) 16px, calc(50% - 12px) 16px,
-    50% 34px,
-    calc(50% + 12px) 16px, calc(50% + 7px) 16px, calc(50% + 7px) 0,
+    calc(50% - 6px) 0, calc(50% - 6px) 17px, calc(50% - 11px) 17px,
+    50% 40px,
+    calc(50% + 11px) 17px, calc(50% + 6px) 17px, calc(50% + 6px) 0,
     100% 0, 100% 100%, 0 100%); }
 /* 返却済み＝アーカイブ（消し過ぎず読める・茎は実線でグレー） */
 .lo-bk.lo-returned .lo-badge{ background:#5b6675; color:#dfe6ef; box-shadow:none; cursor:default; opacity:1; }
