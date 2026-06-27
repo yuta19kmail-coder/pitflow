@@ -419,7 +419,7 @@
 .lo-bk.bk-start{ z-index:3; }   /* カードが下の日付セルに被さって隠れないよう前面へ（見出しz4より下） */
 /* 中央の茎（細い縦線）＝予約の継続 */
 .lo-bk .lo-fill{ position:absolute; left:50%; transform:translateX(-50%); top:0; bottom:0; width:4px; z-index:0; background:var(--lo-team, var(--brand)); border-radius:2px; pointer-events:none; }
-.lo-bk.bk-start.bk-full .lo-fill{ top:102px; }   /* 3行カード（約3日枠）の下から茎 */
+.lo-bk.bk-start.bk-full .lo-fill{ top:60px; }   /* 3行カード（約1.5日枠）の下から茎 */
 .lo-bk.bk-start.bk-compact .lo-fill{ top:21px; } /* 省スペース1行の下から茎 */
 .lo-bk.bk-end .lo-fill{ bottom:12px; }
 .lo-bk.bk-single .lo-fill{ display:none; }
@@ -432,12 +432,13 @@
 /* ラベル札＝チーム色カード（クリックで操作メニュー／ドラッグで移動） */
 .lo-badge{ background:var(--lo-team, var(--brand)); color:#fff; box-shadow:0 2px 6px rgba(0,0,0,.4); cursor:grab; text-align:left; }
 .lo-badge:active{ cursor:grabbing; }
-/* 3行カード（複数日枠を使う・最大幅維持） */
-.lo-badge.full{ position:absolute; z-index:2; top:2px; left:4px; right:4px; height:100px; border-radius:8px; padding:5px 7px; display:flex; flex-direction:column; gap:2px; }
-.lo-badge.full .lo-nm{ font-size:11.5px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lo-badge.full .lo-car2{ display:flex; align-items:center; justify-content:space-between; gap:4px; font-size:11.5px; font-weight:600; color:#fff; min-width:0; }
-.lo-badge.full .lo-car2 > :first-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lo-badge.full .lo-memo{ margin-top:auto; font-size:9.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:4px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* 3行カード（必要最小の高さ＝約1.5日分・最大幅維持・はみ出しは…） */
+.lo-badge.full{ position:absolute; z-index:2; top:2px; left:4px; right:4px; height:56px; border-radius:8px; padding:4px 7px; display:flex; flex-direction:column; gap:1px; overflow:hidden; }
+.lo-badge.full .lo-nm{ font-size:11.5px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.lo-badge.full .lo-car2{ display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; color:#fff; min-width:0; }
+.lo-badge.full .lo-cartxt{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-badge.full .lo-fix{ margin-left:auto; }
+.lo-badge.full .lo-memo{ font-size:9.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:4px; padding:0 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* 省スペース1行（1〜2日）：客名・車種を各略＋固 */
 .lo-badge.mini{ position:relative; z-index:2; display:inline-block; max-width:96%; margin-top:2px; border-radius:7px; padding:2px 6px; vertical-align:top; }
 .lo-badge.mini .lo-lbl.mini{ display:block; font-size:10.5px; font-weight:600; color:#fff; white-space:nowrap; }

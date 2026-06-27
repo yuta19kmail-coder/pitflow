@@ -336,7 +336,7 @@ function _loRenderDays(start, n){
           } else {
             labelHtml = '<span class="lo-lbl full">'
               + '<span class="lo-nm">' + _nm + ' 様</span>'
-              + '<span class="lo-car2">' + (carTxt ? _loEsc(carTxt) : '') + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
+              + '<span class="lo-car2"><span class="lo-cartxt">' + (carTxt ? _loEsc(carTxt) : '') + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
               + (memoTxt ? '<span class="lo-memo">' + _loEsc(memoTxt) + '</span>' : '')
               + '</span>';
           }
