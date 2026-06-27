@@ -428,7 +428,7 @@
 .lo-bk.bk-single .lo-fill{ display:none; }
 .lo-bk.lo-closed, .lo-bk.lo-holiday{ background:transparent !important; }
 /* 終端の大きい▼ */
-.lo-end{ position:absolute; left:50%; transform:translateX(-50%); bottom:0; font-size:15px; line-height:1; color:var(--lo-team, var(--brand)); cursor:ns-resize; z-index:3; }
+.lo-end{ position:absolute; left:50%; transform:translateX(-50%); bottom:0; font-size:15px; line-height:1; color:var(--lo-team, var(--brand)); cursor:ns-resize; z-index:2; }
 /* 車両イベントのオーバーレイ */
 .lo-evs{ position:absolute; right:0; top:0; bottom:0; width:5px; opacity:.85; }
 .lo-evt-tag{ position:absolute; right:6px; top:2px; z-index:1; font-size:8.5px; font-weight:800; color:#fff; border-radius:4px; padding:1px 4px; white-space:nowrap; max-width:80%; overflow:hidden; text-overflow:ellipsis; }

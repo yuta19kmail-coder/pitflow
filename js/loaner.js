@@ -169,8 +169,8 @@ function renderLoaner(){
   _loProcessReplacements();   // 入替日を過ぎた予定を確定
   _loProcessEmergency();      // 返車済みの緊急車両は列を消す（履歴は残す）
   const today = new Date(); today.setHours(0,0,0,0);
-  _loStart = addDays(today, -7);
-  loRebuild(42);
+  _loStart = addDays(today, -14);   // 過去を多めに描画＝当日アンカー後に過去継ぎ足しが暴発しない＋前5日を確実に表示
+  loRebuild(56);
 
   const wrap = document.getElementById('loaner-scroll');
   if (wrap && !_loBound){
@@ -258,7 +258,9 @@ function loScrollToday(){
   if (!wrap || !t) return;
   const head = wrap.querySelector('.lo-head');         // 固定ヘッダの高さ分も差し引く
   const hh = head ? head.offsetHeight : 40;
-  wrap.scrollTop = Math.max(0, t.offsetTop - hh - 38 * 5);   // ヘッダの下に前5日分を見せる
+  const rows = wrap.querySelectorAll('.lo-date');      // 実際の行ピッチを測る
+  const rh = (rows.length > 1) ? Math.max(20, rows[1].offsetTop - rows[0].offsetTop) : 38;
+  wrap.scrollTop = Math.max(0, t.offsetTop - hh - rh * 5);   // ヘッダの下に前5日分を見せる
 }
 
 /* 指定開始日から n 日ぶんの行HTMLを作る（append/prepend 共通） */
