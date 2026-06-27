@@ -439,34 +439,40 @@ function loBindDnd(grid){
     if (window.loAddManualBlock) loAddManualBlock({ loId: sel.lo, from: from, to: to });
   });
 
-  // v0.99.16 左の日付をドラッグで範囲選択＝その日付区間をハイライト（単クリックで解除）
+  // v0.99.17 左の日付＝ドラッグで範囲／1日クリックで1日選択（同じ1日を再クリックで解除）
   grid.addEventListener('mousedown', function(e){
     const d = e.target.closest('.lo-date[data-ld]');
     if (!d) return;
     e.preventDefault();
+    _loDatePrev = _loDateRange;   // この操作前の確定範囲を控える
     _loDateSel = { a: d.getAttribute('data-ld'), b: d.getAttribute('data-ld') };
-    _loPaintDateSel();
+    _loPaintRange(_loDateSel.a, _loDateSel.a);
   });
   grid.addEventListener('mousemove', function(e){
     if (!_loDateSel) return;
     const d = e.target.closest('.lo-date[data-ld]');
     if (!d) return;
     _loDateSel.b = d.getAttribute('data-ld');
-    _loPaintDateSel();
+    const lo = _loDateSel.a <= _loDateSel.b ? _loDateSel.a : _loDateSel.b;
+    const hi = _loDateSel.a <= _loDateSel.b ? _loDateSel.b : _loDateSel.a;
+    _loPaintRange(lo, hi);
   });
   document.addEventListener('mouseup', function(){
     if (!_loDateSel) return;
-    const single = _loDateSel.a === _loDateSel.b;
+    const lo = _loDateSel.a <= _loDateSel.b ? _loDateSel.a : _loDateSel.b;
+    const hi = _loDateSel.a <= _loDateSel.b ? _loDateSel.b : _loDateSel.a;
     _loDateSel = null;
-    if (single) _loClearDateSel();   // 単クリック＝ハイライト解除
+    const single = lo === hi;
+    if (single && _loDatePrev && _loDatePrev.lo === lo && _loDatePrev.hi === hi){
+      _loDateRange = null; _loClearDateSel();   // 同じ1日を再クリック＝解除
+    } else {
+      _loDateRange = { lo: lo, hi: hi }; _loPaintRange(lo, hi);   // 範囲 or 1日 を選択
+    }
   });
 }
-let _loDateSel = null;
-function _loPaintDateSel(){
+let _loDateSel = null, _loDateRange = null, _loDatePrev = null;
+function _loPaintRange(lo, hi){
   _loClearDateSel();
-  if (!_loDateSel) return;
-  const lo = _loDateSel.a <= _loDateSel.b ? _loDateSel.a : _loDateSel.b;
-  const hi = _loDateSel.a <= _loDateSel.b ? _loDateSel.b : _loDateSel.a;
   document.querySelectorAll('#loaner-grid [data-ld]').forEach(function(el){
     const ld = el.getAttribute('data-ld');
     if (ld >= lo && ld <= hi) el.classList.add('lo-row-hl');
