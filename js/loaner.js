@@ -255,7 +255,10 @@ function loRebuild(days){
 function loScrollToday(){
   const wrap = document.getElementById('loaner-scroll');
   const t = document.querySelector('.lo-date.lo-today');
-  if (wrap && t) wrap.scrollTop = Math.max(0, t.offsetTop - 38 * 5);   // 当日の上に前5日分を見せる
+  if (!wrap || !t) return;
+  const head = wrap.querySelector('.lo-head');         // 固定ヘッダの高さ分も差し引く
+  const hh = head ? head.offsetHeight : 40;
+  wrap.scrollTop = Math.max(0, t.offsetTop - hh - 38 * 5);   // ヘッダの下に前5日分を見せる
 }
 
 /* 指定開始日から n 日ぶんの行HTMLを作る（append/prepend 共通） */
@@ -274,7 +277,7 @@ function _loRenderDays(start, n){
     const isClosed = ((state.settings && state.settings.closedDow) || []).indexOf(dow) >= 0;
     const dayMods = (isClosed ? ' lo-closed' : '') + (hol ? ' lo-holiday' : '');
 
-    h += '<div class="lo-cell lo-date' + (isToday ? ' lo-today' : '') + (dow === 0 ? ' sun' : (dow === 6 ? ' sat' : '')) + (isClosed ? ' closed' : '') + '">'
+    h += '<div class="lo-cell lo-date' + (isToday ? ' lo-today' : '') + (dow === 0 ? ' sun' : (dow === 6 ? ' sat' : '')) + (isClosed ? ' closed' : '') + '" data-ld="' + dStr + '">'
        + (d.getDate() === 1 ? '<div class="lo-month">' + (d.getMonth()+1) + '月</div>' : '')
        + (d.getMonth()+1) + '/' + d.getDate() + ' <span>' + '日月火水木金土'[dow] + '</span>'
        + (hol ? '<div class="lo-hol">' + hol + '</div>' : '')
@@ -326,8 +329,8 @@ function _loRenderDays(start, n){
         let labelHtml = '';
         if (isStart){
           if (compact){
-            // 省スペース：客名（長い時だけ…）＋車種（省略しない）＋固（黄）。詳細はホバーでフルサイズ札。
-            labelHtml = '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(fullName) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
+            // 省スペース：客名＝苗字/法人略記(㈱)（長い時だけ…）＋車種（長い時だけ…）＋固（黄）。詳細はホバーでフルサイズ札。
+            labelHtml = '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
             labelHtml = '<span class="lo-lbl full">'
               + '<span class="lo-nm">' + _nm + ' 様</span>'
@@ -435,7 +438,41 @@ function loBindDnd(grid){
     const to   = sel.a <= sel.b ? sel.b : sel.a;
     if (window.loAddManualBlock) loAddManualBlock({ loId: sel.lo, from: from, to: to });
   });
+
+  // v0.99.16 左の日付をドラッグで範囲選択＝その日付区間をハイライト（単クリックで解除）
+  grid.addEventListener('mousedown', function(e){
+    const d = e.target.closest('.lo-date[data-ld]');
+    if (!d) return;
+    e.preventDefault();
+    _loDateSel = { a: d.getAttribute('data-ld'), b: d.getAttribute('data-ld') };
+    _loPaintDateSel();
+  });
+  grid.addEventListener('mousemove', function(e){
+    if (!_loDateSel) return;
+    const d = e.target.closest('.lo-date[data-ld]');
+    if (!d) return;
+    _loDateSel.b = d.getAttribute('data-ld');
+    _loPaintDateSel();
+  });
+  document.addEventListener('mouseup', function(){
+    if (!_loDateSel) return;
+    const single = _loDateSel.a === _loDateSel.b;
+    _loDateSel = null;
+    if (single) _loClearDateSel();   // 単クリック＝ハイライト解除
+  });
 }
+let _loDateSel = null;
+function _loPaintDateSel(){
+  _loClearDateSel();
+  if (!_loDateSel) return;
+  const lo = _loDateSel.a <= _loDateSel.b ? _loDateSel.a : _loDateSel.b;
+  const hi = _loDateSel.a <= _loDateSel.b ? _loDateSel.b : _loDateSel.a;
+  document.querySelectorAll('#loaner-grid [data-ld]').forEach(function(el){
+    const ld = el.getAttribute('data-ld');
+    if (ld >= lo && ld <= hi) el.classList.add('lo-row-hl');
+  });
+}
+function _loClearDateSel(){ document.querySelectorAll('#loaner-grid .lo-row-hl').forEach(function(el){ el.classList.remove('lo-row-hl'); }); }
 let _loSel = null;
 function _loPaintSel(){
   _loClearSel();

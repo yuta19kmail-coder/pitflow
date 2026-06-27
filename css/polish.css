@@ -408,6 +408,9 @@
 .lo-modal-foot button{ background:var(--bg3); border:1px solid var(--border2); color:var(--text); border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; }
 .lo-modal-foot button.primary{ background:#1db97a; border-color:#1db97a; color:#06281d; }
 .lo-date{ position:sticky; left:0; z-index:3; font-weight:600; color:var(--text2); background:var(--bg2); padding:3px 6px; }
+/* 左の日付ドラッグ範囲ハイライト（その区間だけ薄く） */
+.lo-cell.lo-row-hl{ background:rgba(96,165,250,.10); }
+.lo-date.lo-row-hl{ background:rgba(96,165,250,.20); box-shadow:inset 3px 0 0 #60a5fa; }
 .lo-date span{ font-size:9.5px; color:var(--text3); }
 .lo-date.sun{ color:#f87171; } .lo-date.sat{ color:#60a5fa; }
 .lo-date .lo-hol{ font-size:8.5px; color:var(--red); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -416,7 +419,7 @@
 .lo-date.lo-today{ color:var(--brand); box-shadow:inset 3px 0 0 var(--brand); }
 /* ===== 案F改（v0.99.5）＝中央の茎＋複数日枠を使う3行カード／1〜2日は省スペース1行／当日かぶりは耳 ===== */
 .lo-bk{ text-align:center; padding:0; background:transparent; }
-.lo-bk.bk-start{ z-index:3; }   /* カードが下の日付セルに被さって隠れないよう前面へ（見出しz4より下） */
+.lo-bk.bk-start{ z-index:2; }   /* カードは下の日付セルより前面・ただし左の日付列(z5)より後ろ＝横スクロールで日付に被らない */
 /* 中央の茎（細い縦線）＝予約の継続 */
 .lo-bk .lo-fill{ position:absolute; left:50%; transform:translateX(-50%); top:0; bottom:0; width:4px; z-index:0; background:var(--lo-team, var(--brand)); border-radius:2px; pointer-events:none; }
 .lo-bk.bk-start.bk-full .lo-fill{ top:60px; }   /* 3行カード（約1.5日枠）の下から茎 */
