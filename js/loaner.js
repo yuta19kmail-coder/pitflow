@@ -256,11 +256,15 @@ function loScrollToday(){
   const wrap = document.getElementById('loaner-scroll');
   if (!wrap) return;
   const head = wrap.querySelector('.lo-head');
-  const hh = head ? head.offsetHeight : 40;
-  // 「今日の5日前の日付セル」を固定ヘッダの直下に持ってくる＝前5日を確実に見せる（行高のズレに左右されない）
+  // 「今日の5日前の日付セル」を固定ヘッダの直下に持ってくる＝前5日を確実に見せる。
+  // offsetTop基準ズレを避けるため getBoundingClientRect で実測してスクロール量を計算。
   const past = ymd(addDays(new Date(), -5));
-  let target = wrap.querySelector('.lo-date[data-ld="' + past + '"]') || wrap.querySelector('.lo-date.lo-today');
-  if (target) wrap.scrollTop = Math.max(0, target.offsetTop - hh - 2);
+  const target = wrap.querySelector('.lo-date[data-ld="' + past + '"]') || wrap.querySelector('.lo-date.lo-today');
+  if (!target) return;
+  const wrapTop = wrap.getBoundingClientRect().top;
+  const hh = head ? head.getBoundingClientRect().height : 40;
+  const cur = target.getBoundingClientRect().top;
+  wrap.scrollTop = Math.max(0, wrap.scrollTop + (cur - wrapTop - hh - 2));
 }
 
 /* 指定開始日から n 日ぶんの行HTMLを作る（append/prepend 共通） */
