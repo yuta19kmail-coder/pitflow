@@ -306,19 +306,14 @@ function _loRenderDays(start, n){
       const covering = (state.loanerAssigns || []).filter(function(x){ return x.loanerId === l.id && x.fromDate <= dStr && x.toDate >= dStr; });
       // バーの主役＝実効開始(effStart)がこの日以前で覆う割当（後発の同日かぶりは初日を除外＝翌日からバー）
       const a = covering.find(function(x){ return _loEffStart(x) <= dStr; }) || null;
-      // この日に「耳」を出す後発予約（共有日＝先行の返却日に開始）
-      const earB = covering.find(function(x){ return _loHandoffLater(x) && x.fromDate === dStr; });
-      let earHtml = '';
-      if (earB && earB !== a){
-        earHtml = '<span class="lo-ear" style="--lo-ear:' + _loTeamColor(earB) + '" title="当日かぶり：' + _loEsc((earB.cardId ? ((window.pitSurname?pitSurname((state.cards.find(function(c){return c.id===earB.cardId;})||{}).customer):'')||'予約') : (earB.customer||'貸出'))) + ' 様 が同日開始"></span>';
-      }
       if (a){
+        const hand = _loHandoffLater(a);   // この予約＝当日かぶりの後発（共有日に上へ伸ばし矢印型くり抜き）
         const sFrom = _loEffStart(a);
         const isStart = (sFrom === dStr);
         const isEnd = (a.toDate === dStr);
         const single = isStart && isEnd;
         const days = Math.round((_loPd(a.toDate) - _loPd(sFrom)) / 86400000) + 1;
-        const compact = days <= 2;
+        const compact = days <= 2 && !hand;   // 後発の当日かぶりはフル札（くり抜きを綺麗に出す）
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
         const isEmg = !!a.emergency;
         const fixed = !!(card && card.loanerFixed);
@@ -347,14 +342,14 @@ function _loRenderDays(start, n){
         h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (compact ? ' bk-compact' : ' bk-full') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
            + ' style="--lo-team:' + teamColor + '"><i class="lo-fill"></i>' + gh;
         if (isStart){
-          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
+          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (hand ? ' lo-handoff' : '') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
         }
         if (isEnd && !single){
           h += '<span class="lo-end"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '">▼</span>';
         }
-        h += earHtml + ov + '</div>';
+        h += ov + '</div>';
       } else {
-        h += '<div class="lo-cell lo-free' + (isToday ? ' lo-today' : '') + evCls + dayMods + '"' + attrs + '>' + gh + earHtml + ov + '</div>';
+        h += '<div class="lo-cell lo-free' + (isToday ? ' lo-today' : '') + evCls + dayMods + '"' + attrs + '>' + gh + ov + '</div>';
       }
     });
   }

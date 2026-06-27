@@ -447,10 +447,14 @@
 .lo-badge.mini .lo-fix{ flex:0 0 auto; margin-left:0; }
 /* 固定バッジ（黄） */
 .lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
-/* 当日かぶり（本当に同日）の「耳」＝後客カードの頭を共有日の“上端まで”空白で延長（テキストは翌日から）。
-   先客の▼はこの耳の上にそのまま下端まで出す＝同じ日に返して即貸しを表現。 */
-.lo-ear{ position:absolute; left:5px; right:5px; top:2px; bottom:0; border-radius:8px 8px 0 0; background:var(--lo-ear, #888); z-index:1; pointer-events:none; }
-.lo-bk .lo-end{ z-index:6; }   /* 先客の▼は耳より前面（下端まで見える） */
+/* 当日かぶり（本当に同日）＝後客の3行札を共有日の上端まで伸ばし、上辺を“下向き矢印型”にくり抜く。
+   くり抜きの中を先客の棒＋▼が均一の隙間で通る（先客の▼は共有日の下端まで）。テキストはくり抜きの下＝翌日から。 */
+.lo-badge.full.lo-handoff{ top:-36px; height:94px; padding:42px 7px 4px;
+  clip-path:polygon(0 0,
+    calc(50% - 11px) 0, calc(50% - 11px) 16px, calc(50% - 17px) 16px,
+    50% 35px,
+    calc(50% + 17px) 16px, calc(50% + 11px) 16px, calc(50% + 11px) 0,
+    100% 0, 100% 100%, 0 100%); }
 /* 返却済み＝アーカイブ（消し過ぎず読める・茎は実線でグレー） */
 .lo-bk.lo-returned .lo-badge{ background:#5b6675; color:#dfe6ef; box-shadow:none; cursor:default; opacity:1; }
 .lo-bk.lo-returned .lo-badge.full .lo-memo{ background:rgba(255,255,255,.75); }
