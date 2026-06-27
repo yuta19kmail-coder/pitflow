@@ -331,8 +331,8 @@ function _loRenderDays(start, n){
         let labelHtml = '';
         if (isStart){
           if (compact){
-            // 省スペース：客名・車種を各略＋固（黄）。詳細はホバー(data-aid)で。
-            labelHtml = '<span class="lo-lbl mini">' + _loAbbr(fullName, 3) + (carTxt ? ' ' + _loAbbr(carTxt, 3) : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
+            // 省スペース：客名・車種を各略＋固（黄）。詳細はホバーでフルサイズ札。固は…で消えないよう別枠。
+            labelHtml = '<span class="lo-lbl mini"><span class="lo-minitxt">' + _loEsc(_loAbbr(fullName, 3) + (carTxt ? ' ' + _loAbbr(carTxt, 3) : '')) + '</span>' + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
             labelHtml = '<span class="lo-lbl full">'
               + '<span class="lo-nm">' + _nm + ' 様</span>'
@@ -341,13 +341,13 @@ function _loRenderDays(start, n){
               + '</span>';
           }
         }
-        const titleAttr = ' title="' + _loEsc(fullName + ' 様' + (carTxt ? ' ' + carTxt : '') + (memoTxt ? ' / ' + memoTxt : '') + (fixed ? ' / 車種固定' : '')) + '"';
         const isBad = confSet && confSet.has(a.id);
         const isChg = _loAssignChanged(a);
+        const hoverAttr = compact ? (' onmouseenter="loInfoHover(this,\'' + (a.id || '') + '\')" onmouseleave="loInfoHide()"') : '';
         h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (compact ? ' bk-compact' : ' bk-full') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
            + ' style="--lo-team:' + teamColor + '"><i class="lo-fill"></i>' + gh;
         if (isStart){
-          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + titleAttr + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')" onmouseenter="loInfoHover(this,\'' + (a.id || '') + '\')" onmouseleave="loInfoHide()">' + labelHtml + '</span>';
+          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
         }
         if (isEnd && !single){
           h += '<span class="lo-end"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '">▼</span>';

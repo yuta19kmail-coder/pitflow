@@ -440,9 +440,11 @@
 .lo-badge.full .lo-cartxt{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .lo-badge.full .lo-fix{ margin-left:auto; }
 .lo-badge.full .lo-memo{ font-size:9.5px; color:#0e141c; background:rgba(255,255,255,.9); border-radius:4px; padding:0 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-/* 省スペース1行（1〜2日）：客名・車種を各略＋固 */
-.lo-badge.mini{ position:relative; z-index:2; display:inline-block; max-width:96%; margin-top:2px; border-radius:7px; padding:2px 6px; vertical-align:top; }
-.lo-badge.mini .lo-lbl.mini{ display:block; font-size:10.5px; font-weight:600; color:#fff; white-space:nowrap; }
+/* 省スペース1行（1〜2日）：客名・車種を各略＋固（固は…で消えないよう別枠で右固定） */
+.lo-badge.mini{ position:relative; z-index:2; display:inline-block; max-width:96%; margin-top:2px; border-radius:7px; padding:2px 6px; vertical-align:top; overflow:hidden; }
+.lo-badge.mini .lo-lbl.mini{ display:flex; align-items:center; gap:3px; min-width:0; font-size:10.5px; font-weight:600; color:#fff; }
+.lo-badge.mini .lo-minitxt{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-badge.mini .lo-fix{ flex:0 0 auto; margin-left:0; }
 /* 固定バッジ（黄） */
 .lo-fix{ display:inline-block; font-size:9px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:4px; padding:0 5px; margin-left:3px; flex:0 0 auto; }
 /* 当日かぶりの「耳」＝後発予約が先行の返却日に頭を出す印（既存表示は変えない） */
@@ -455,7 +457,7 @@
 .lo-bk.lo-returned .lo-badge::after{ content:"返却済"; display:inline-block; margin-left:4px; font-size:8.5px; font-weight:700; color:#cdd6e2; }
 .lo-free{ background:transparent; }
 /* 省スペースのホバー＝フルサイズ札(.lo-badge.full)をそのまま重ねて表示（位置だけ上書き） */
-.lo-info{ position:fixed !important; right:auto !important; height:auto !important; min-height:54px; z-index:215; box-shadow:0 8px 24px rgba(0,0,0,.55); pointer-events:none; }
+.lo-info{ position:fixed !important; right:auto !important; height:auto !important; min-height:54px; z-index:2147483600 !important; box-shadow:0 8px 24px rgba(0,0,0,.55); pointer-events:none; }
 /* 代車バッジ操作メニュー（詳細/返却確定/キャンセル） */
 .lo-bpop{ position:fixed; z-index:210; width:220px; background:var(--bg2); border:1px solid var(--border2); border-radius:12px; box-shadow:0 14px 40px rgba(0,0,0,.55); padding:8px; }
 .lo-bpop-h{ font-size:12px; font-weight:700; color:var(--text); padding:4px 6px 8px; border-bottom:1px solid var(--border); margin-bottom:2px; }
