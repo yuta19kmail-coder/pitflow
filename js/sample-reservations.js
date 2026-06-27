@@ -196,6 +196,13 @@
           c.needLoaner = true;
           c.loanerFrom = c.reserveDate;
           c.loanerTo = c.returnDate || '';   // 返車日が決まっていれば期間を確定（未確定は割当時に+数日で補完）
+          // ★案Fの表示確認用：車種固定と条件メモ(固定理由)をランダム付与
+          if (Math.random() < 0.35){
+            c.loanerFixed = true;
+            c.loanerOther = rnd(['同クラス希望','普段これに乗ってる','ETC必須','禁煙車で','8人乗り指定','大きめ希望','小さめ希望','ナビ付き希望','積載できる車','チャイルドシート可']);
+          } else if (Math.random() < 0.30){
+            c.loanerOther = rnd(['ETCあれば','禁煙希望','なるべく軽','ナビ付きだと助かる','長距離で使う']);
+          }
         }
         // ちょい足し
         if (Math.random() < 0.10) c.consult = true;
