@@ -464,7 +464,8 @@ function cardHtml(c, opts){
   const timeStr = isRet ? (c.returnTime || c.reserveTime || '') : (c.reserveTime || '');
 
   let html = '';
-  html += '<div class="pit-card' + (isRet ? ' return' : '') + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="min-width:200px;border-left-color:' + accent2 + ';">';
+  const _clickJs = opts.onClick ? opts.onClick : ("openDetail('" + c.id + "')");
+  html += '<div class="pit-card' + (isRet ? ' return' : '') + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="' + _clickJs + '" style="min-width:200px;border-left-color:' + accent2 + ';">';
   html += '<div class="pc-line1">';
   html += '<span class="pc-time">' + timeStr + '</span>';
   html += '<span class="pc-status" style="--sc:' + statusColor(c.status) + ';">' + statusLabel(c.status) + '</span>';

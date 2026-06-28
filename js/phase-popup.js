@@ -138,7 +138,7 @@
       var mode = null;
       if (from === 'estim'   && to === 'contact') mode = 'estimate';
       else if (from === 'contact' && to === 'parts') mode = 'order';
-      else if (to === 'workDone') mode = 'final';
+      // 作業完了(workDone)への移動は確定金額プロンプトを出さず単純移動（v0.99.34）。確定金額は完TELポップアップで入れる。
       else if (to === 'outsource') mode = 'outsource';
       if (!mode) return false;
       pending = { card: card, from: from, to: to, commit: commit, mode: mode };

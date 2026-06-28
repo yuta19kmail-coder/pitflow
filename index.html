@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.99.33"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.99.34"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=37">
-<link rel="stylesheet" href="css/polish.css?v=144">
+<link rel="stylesheet" href="css/polish.css?v=145">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
 <link rel="stylesheet" href="css/search.css?v=5">
@@ -20,7 +20,7 @@
 <link rel="stylesheet" href="css/work-content.css?v=6">
 <link rel="stylesheet" href="css/parking.css?v=3">
 <link rel="stylesheet" href="css/launcher.css?v=7">
-<link rel="stylesheet" href="css/card-view.css?v=12">
+<link rel="stylesheet" href="css/card-view.css?v=13">
 <link rel="stylesheet" href="css/card-hover.css?v=10">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -72,7 +72,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.99.33</div>
+    <div class="pl-ver">PitFlow v0.99.34</div>
   </div>
 </div>
 
@@ -84,7 +84,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.99.33</span>
+      <span class="ver">v0.99.34</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -212,11 +212,11 @@
       <div class="view-header">
         <div class="view-title"><span class="icon">📤</span>返車</div>
         <div class="range-tabs" data-mode="return">
-          <button class="active" data-range="day">当日</button>
+          <button class="active" data-range="tbd">🕒 未定</button>
+          <button data-range="day">当日</button>
           <button data-range="week">週</button>
           <button data-range="month">月</button>
           <button data-range="2month">2ヶ月</button>
-          <button data-range="tbd">🕒 未定</button>
         </div>
         <div class="view-actions">
           <button class="vh-btn" onclick="returnPrev()">◀</button>
@@ -379,13 +379,19 @@
 
     <section id="view-course1" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">1️⃣</span>1課（国産）タスクボード</div>
-        <div class="view-actions"><button class="vh-btn" onclick="PitPip.toggle('course1')">🏭 PITボード</button></div></div>
+        <div class="view-actions">
+          <div class="kb-droparea" data-drop="callDone"><div class="kb-droparea-t">📞 完TEL済</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <div class="kb-droparea" data-drop="callReq"><div class="kb-droparea-t">📞 完TEL依頼</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <button class="vh-btn" onclick="PitPip.toggle('course1')">🏭 PITボード</button></div></div>
       <div class="kanban" id="kanban-cols-1"></div>
     </section>
 
     <section id="view-course2" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">2️⃣</span>2課（輸入）タスクボード</div>
-        <div class="view-actions"><button class="vh-btn" onclick="PitPip.toggle('course2')">🏭 PITボード</button></div></div>
+        <div class="view-actions">
+          <div class="kb-droparea" data-drop="callDone"><div class="kb-droparea-t">📞 完TEL済</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <div class="kb-droparea" data-drop="callReq"><div class="kb-droparea-t">📞 完TEL依頼</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <button class="vh-btn" onclick="PitPip.toggle('course2')">🏭 PITボード</button></div></div>
       <div class="kanban" id="kanban-cols-2"></div>
     </section>
 
@@ -652,7 +658,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=47"></script>
+<script src="js/state.js?v=48"></script>
 <script src="js/sample-data.js?v=17"></script>
 <script src="js/sample-fleet.js?v=8"></script>
 <script src="js/firebase-init.js?v=8"></script>
@@ -660,7 +666,7 @@
 <script src="js/views.js?v=34"></script>
 <script src="js/work-content.js?v=8"></script>
 <script src="js/card-detail.js?v=85"></script>
-<script src="js/card-view.js?v=19"></script>
+<script src="js/card-view.js?v=20"></script>
 <script src="js/avail.js?v=5"></script>
 <script src="js/card-tabs.js?v=8"></script>
 <script src="js/customers.js?v=30"></script>
@@ -677,10 +683,10 @@
 <script src="js/import-bizcloud.js?v=5"></script>
 <script src="js/rules.js?v=9"></script>
 <script src="js/today.js?v=19"></script>
-<script src="js/undetermined.js?v=2"></script>
-<script src="js/reserve.js?v=52"></script>
-<script src="js/return.js?v=17"></script>
-<script src="js/task.js?v=17"></script>
+<script src="js/undetermined.js?v=3"></script>
+<script src="js/reserve.js?v=53"></script>
+<script src="js/return.js?v=18"></script>
+<script src="js/task.js?v=18"></script>
 <script src="js/work.js?v=13"></script>
 <script src="js/result.js?v=9"></script>
 <script src="js/outsource.js?v=2"></script>
@@ -689,10 +695,11 @@
 <script src="js/auth-pit.js?v=9"></script>
 <script src="js/launcher.js?v=7"></script>
 <script src="js/holidays.js?v=1"></script>
-<script src="js/dnd.js?v=12"></script>
+<script src="js/dnd.js?v=13"></script>
 <script src="js/pit-pip.js?v=8"></script>
 <script src="js/card-hover.js?v=13"></script>
-<script src="js/phase-popup.js?v=8"></script>
+<script src="js/phase-popup.js?v=9"></script>
+<script src="js/return-popup.js?v=1"></script>
 <script src="js/main.js?v=11"></script>
 <script src="js/auto-update.js?v=1"></script>
 

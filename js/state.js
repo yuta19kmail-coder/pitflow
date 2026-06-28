@@ -15,7 +15,7 @@ window.state = {
   reserveRange: 'day',
   reserveDate: new Date(),
 
-  returnRange: 'day',
+  returnRange: 'tbd',   // 返車ビューの既定タブ＝未定（完TEL待ち/返車未定）
   returnDate: new Date(),
 
   currentBoardId: 'default',

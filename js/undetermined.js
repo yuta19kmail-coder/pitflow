@@ -58,7 +58,10 @@ function renderReserveTbd(){
 }
 window.renderReserveTbd = renderReserveTbd;
 
-/* 返車ビュー内「未定」タブ：作業完了・完TEL待ち */
+/* 返車ビュー内「未定」タブ：2カラム（完TEL待ち／返車未定）。標準カード表示。
+   ・完TEL待ち＝完TEL依頼した（金額入力済・未架電）＝returnStage:'callWait'
+   ・返車未定 ＝完TEL済だが返車日が未定＝returnStage:'returnWait' かつ returnDate無し
+   どちらもカードクリックで完TELポップアップ（返車日時を入れて返車カレンダーへ）。 */
 function renderReturnTbd(){
   ['return-day-list','return-week','return-month','return-2month'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -67,14 +70,22 @@ function renderReturnTbd(){
   if (!wrap) return;
   wrap.style.display = '';
 
-  const returnTbd = state.cards.filter(c => c.returnTbd && c.status !== 'returned' && c.status !== 'scrap');
+  const active = c => c.status !== 'returned' && c.status !== 'scrap';
+  const callWait = state.cards.filter(c => c.returnStage === 'callWait' && active(c));
+  const noDate   = state.cards.filter(c => c.returnStage === 'returnWait' && !c.returnDate && active(c));
 
-  let h = '<div class="und-half">';
-  h += '<div class="und-sec"><div class="und-sec-h">🕒 未定（作業完了・完TEL待ち）<span class="und-cnt">' + returnTbd.length + '</span></div>';
-  if (!returnTbd.length) h += '<div class="today-empty">なし</div>';
-  else returnTbd.forEach(c => h += _undRow(c, 'returnTbd'));
-  h += '<div class="und-note">※ 完TEL（完成電話）で返車日を入れると返車カレンダーへ移ります。タスクで作業完了にしたカードがここに来ます。</div>';
-  h += '</div>';
+  const card = c => (typeof cardHtml === 'function')
+    ? cardHtml(c, { returnView: true, onClick: "PitReturnPopup.open('" + c.id + "','callDone')" })
+    : '';
+
+  let h = '<div class="ret-tbd-cols">';
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h">📞 完TEL待ち <small>（完TEL依頼ぶん）</small><span class="und-cnt">' + callWait.length + '</span></div>';
+  h += '<div class="ret-tbd-body">' + (callWait.length ? callWait.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
+  h += '<div class="und-note">完TELしたら、カードを押して確定金額・返車日時を入れてください。</div></div>';
+
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h">🚗 返車未定 <small>（完TEL済・日付待ち）</small><span class="und-cnt">' + noDate.length + '</span></div>';
+  h += '<div class="ret-tbd-body">' + (noDate.length ? noDate.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
+  h += '<div class="und-note">カードを押して返車日を入れると、当日／週／月へ移ります。</div></div>';
   h += '</div>';
   wrap.innerHTML = h;
 }

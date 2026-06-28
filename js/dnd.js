@@ -16,6 +16,12 @@
     const c = state.cards.find(x => x.id === cardId);
     if (!c) return;
 
+    // 完TEL済／完TEL依頼エリアへドロップ＝ポップアップで入力（カードは盤面から外れる）
+    if (kind === 'callDone' || kind === 'callReq') {
+      if (window.PitReturnPopup) PitReturnPopup.open(c, kind === 'callDone' ? 'callDone' : 'callReq');
+      return;
+    }
+
     if (kind === 'status') {
       var _fromStatus = c.status;
       var _changed = (c.status !== val);
@@ -23,8 +29,6 @@
       var _commitStatus = function(){
         c.status = val;
         c.testDrive = false;   // メイン領域に置く＝試運転フラグOFF（試運転ゾーンから戻した時も解除）
-        // 作業完了（workDone）にしたら、返車日が未定なら「返車・未定」へ自動で乗せる（完TEL待ち）
-        if (val === 'workDone' && !c.returnDate) c.returnTbd = true;
         if (_changed){
           if (window.logPhaseMove) logPhaseMove(c, _fromStatus, val);
           else if (window.logFlow && typeof statusLabel === 'function') logFlow(c, statusLabel(val) + 'へ');

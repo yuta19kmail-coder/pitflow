@@ -28,7 +28,8 @@ function _renderKanban(board, cols){
   if (!board || !cols) return;
 
   function renderCol(col){
-    const inCol = state.cards.filter(c => c.status === col.id && c.boardId === board.id);
+    // returnStage（完TEL待ち/返車待ち）が付いたカードは盤面から外れ、返車ビューへ移る
+    const inCol = state.cards.filter(c => c.status === col.id && c.boardId === board.id && !c.returnStage);
     const hasTD = !col.terminal && !col.side;   // 試運転エリアを付ける＝完了以外のフロー列
     let colClass = 'kanban-col';
     if (col.terminal) colClass += ' terminal';

@@ -54,7 +54,7 @@ function renderReturnDay(){
   }
 
   const todays = state.cards.filter(c =>
-    c.returnDate === dateStr && c.status !== 'returned'
+    c.returnDate === dateStr && c.status !== 'returned' && c.returnStage === 'returnWait'
   );
 
   let html = '';
@@ -114,7 +114,7 @@ function renderReturnWeek(){
     const isToday = dStr === todayStr;
     const isClosed = state.settings.closedDow.includes(d.getDay());
     const cnt = state.cards.filter(c =>
-      c.returnDate === dStr && c.status !== 'returned'
+      c.returnDate === dStr && c.status !== 'returned' && c.returnStage === 'returnWait'
     ).length;
     const hol = (window.Holidays && Holidays.name(dStr)) || null;
     html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + '">';
@@ -134,7 +134,7 @@ function renderReturnWeek(){
       const inCell = state.cards.filter(c =>
         c.returnDate === dStr &&
         (c.returnTime || c.reserveTime || '').startsWith(hh) &&
-        c.status !== 'returned'
+        c.status !== 'returned' && c.returnStage === 'returnWait'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
       inCell.forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c) : ''); });
@@ -188,7 +188,7 @@ function _rmlRowsReturn(from, to){
     const isClosed = state.settings.closedDow.includes(dow);
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
-      .filter(c => c.returnDate === ds && c.status !== 'returned')
+      .filter(c => c.returnDate === ds && c.status !== 'returned' && c.returnStage === 'returnWait')
       .sort((a, b) => ((a.returnTime || a.reserveTime || '99:99') < (b.returnTime || b.reserveTime || '99:99') ? -1 : 1));
 
     let dCls = '';
@@ -278,7 +278,7 @@ function monthGridCellsReturn(refDate){
     if (dow === 6) dowClass = ' sat';
 
     const cardsOfDay = state.cards.filter(c =>
-      c.returnDate === dateStr && c.status !== 'returned'
+      c.returnDate === dateStr && c.status !== 'returned' && c.returnStage === 'returnWait'
     );
 
     const visible = cardsOfDay.slice(0, 3);

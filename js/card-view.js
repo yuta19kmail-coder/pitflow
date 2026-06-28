@@ -54,6 +54,9 @@
     if(c.handover == null) c.handover = 'store';
     if(c.handoffMemo == null) c.handoffMemo = '';
     if(c.returnDateFinal === undefined) c.returnDateFinal = null;
+    if(c.washNote == null) c.washNote = '';
+    if(c.noThanksLine == null) c.noThanksLine = false;
+    if(c.returnStage == null) c.returnStage = '';
     return c;
   }
 
@@ -243,7 +246,10 @@
     const finRet = c.returnDateFinal || '';
     h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
       + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
-      + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div></div>';
+      + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div>';
+    // 返車時間（新規予約と同じスマート入力＝900/9時半/9:00-10:00 など）
+    h += '<div class="cv-fixrow"><div class="cv-frt">返車時間（例 900 / 9時半 / 9:00-10:00）</div><div class="cv-frb">'
+      + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px"></div></div></div>';
 
     // 車検スケジュール（車検タイプのみ表示）
     if (c.workType==='shaken') h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
@@ -266,7 +272,11 @@
        + (c.coverCall.done && c.coverCall.at ? '<div class="cv-callat">'+esc(c.coverCall.at)+(c.coverCall.staff?'・'+esc(c.coverCall.staff):'')+'</div>' : '');
     h += pickRow('支払い', pm.map(function(p){return [p.id,p.label];}), c.payment, 'pay');
     h += pickRow('洗車', [['1','要'],['0','不要']], c.needWash?'1':'0', 'wash');
+    h += '<div class="cv-pickrow"><span class="cv-pk">洗車備考</span><div class="cv-chips" style="flex:1">'
+       + '<input class="cv-fixinput" type="text" value="'+esc(c.washNote||'')+'" placeholder="洗車の備考（1行・任意）" onchange="cvWashNote(this.value)" style="flex:1;min-width:180px"></div></div>';
     h += pickRow('引き渡し', [['store','来店'],['delivery','納車']], c.handover, 'handover');
+    h += '<div class="cv-pickrow"><span class="cv-pk">お礼LINE</span><div class="cv-chips">'
+       + '<label class="cv-linecheck"><input type="checkbox" '+(c.noThanksLine?'checked':'')+' onchange="cvNoThanks(this.checked)"> 不要</label></div></div>';
     h += '<div class="cv-hint">※ パターン（型）で選ぶ方式。選択肢は将来 ⚙設定で増減できる想定。</div></div>';
     return h;
   }
@@ -425,7 +435,16 @@
     const el=document.getElementById('cv-amt-'+kind); el.value=el.dataset.prev;
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
-  window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; save(); };
+  window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; if(v && !_c.returnDate) _c.returnDate = v; save(); };
+  // 返車時間（スマート入力で正規化）／洗車備考／お礼LINE不要＝完TELポップアップと同じ項目（相互反映）
+  window.cvReturnTime = function(input){
+    var v = (input && typeof input === 'object') ? input.value : input;
+    v = (window._normTime ? _normTime(v) : v) || '';
+    if (input && typeof input === 'object') input.value = v;
+    _c.returnTime = v; save();
+  };
+  window.cvWashNote = function(v){ _c.washNote = (v||'').trim(); save(); };
+  window.cvNoThanks = function(on){ _c.noThanksLine = !!on; save(); };
 
   // 引継ぎメモ＝この画面で直接入力（入力中はデバウンス保存・フォーカスアウトで確定保存）
   let _hoTimer = null;
