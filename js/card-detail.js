@@ -621,6 +621,10 @@ function _cfsLgRows(from, to, today, tStr, c, ro){
    ・サイズ条件(高さ/幅/長さ)を選んだら＝その寸法の合計で「低い順」に左づめ（代車カレンダービューと同じ）。
    ・装備条件(ETC/ナビ/ISO)だけなら＝合う代車を先頭へ。 */
 function _cfsLgLoaners(c){
+  // 代車カレンダー側と同じ基準で寸法/装備を補完してから読む。これを通さないと、
+  // 代車カレンダーを未表示のセッションでは state.loaners に属性が無く、条件ソートが効かない。
+  // （未設定のみ補完＝設定画面で入力済みの実値は上書きしない）
+  if (typeof _loEnsureOpts === 'function') _loEnsureOpts();
   const ls = (state.loaners || []).slice();
   if (window._cfsLgSort === false) return ls;   // ソート無＝元の並び
   const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions : [];
