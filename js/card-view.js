@@ -175,7 +175,9 @@
     let h = '<div class="cv-work"><div class="cv-wtop"><span class="cv-wtt">予約担当 <span class="cv-pill cv-staff">'+esc(staff)+'</span></span>'
       + '<span class="cv-editmini" onclick="openCardEditForm(\''+c.id+'\')">✏️ 編集</span></div>';
     h += '<div class="cv-wsec"><div class="cv-gt">予約時内容</div>'+memoLines(c.menu||c.memo)+'</div>';
-    h += '<div class="cv-wsec"><div class="cv-gt">引継ぎ・伝達 <small>（入庫後）</small></div>'+memoLines(c.handoffMemo)+'</div>';
+    // 引継ぎメモはこの画面から直接入力＝自動保存（予約時内容は新規予約で入れるので編集ボタンのまま）
+    h += '<div class="cv-wsec"><div class="cv-gt">引継ぎ・伝達 <small>（入庫後・ここに直接入力できます）</small></div>'
+       + '<textarea class="cv-hoinput" placeholder="引継ぎ・伝達を入力（自動で保存されます）" oninput="cvHandoff(this.value)" onchange="cvHandoffSave(this.value)">'+esc(c.handoffMemo||'')+'</textarea></div>';
     return h + '</div>';
   }
 
@@ -425,6 +427,21 @@
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
   window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; save(); };
+
+  // 引継ぎメモ＝この画面で直接入力（入力中はデバウンス保存・フォーカスアウトで確定保存）
+  let _hoTimer = null;
+  window.cvHandoff = function(v){
+    if (!_c) return;
+    _c.handoffMemo = v;
+    clearTimeout(_hoTimer);
+    _hoTimer = setTimeout(save, 600);
+  };
+  window.cvHandoffSave = function(v){
+    if (!_c) return;
+    _c.handoffMemo = v;
+    clearTimeout(_hoTimer);
+    try { if (window.PitDB) PitDB.save(true); } catch(e){}
+  };
 
   // ===== 外注（外注先・メモ・完了予定日＝戻りの日数を詳細モーダルで編集） =====
   window.cvOutPartner = function(v){
