@@ -575,7 +575,8 @@ function _cfsCalHtml(c, team, tStr, ro){
       }
     }
     const dayClick = ro ? '' : ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"';
-    h += '<div class="cfs-day' + cls + (!ro && c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + '"' + dayClick + ' title="' + (ym.m + 1) + '/' + dd + (hol ? '・🎌' + hol : '') + (num ? '：' + num + '台' : '') + '">'
+    const avSel = (ro && window._availPick === ds) ? ' av-sel' : '';   // 空きカレンダービュー：選択日のハイライト
+    h += '<div class="cfs-day' + cls + (!ro && c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + avSel + '" data-ds="' + ds + '" data-team="' + team + '"' + dayClick + ' title="' + (ym.m + 1) + '/' + dd + (hol ? '・🎌' + hol : '') + (num ? '：' + num + '台' : '') + '">'
        + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';

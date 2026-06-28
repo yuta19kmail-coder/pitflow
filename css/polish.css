@@ -1104,6 +1104,29 @@ th.cfs-lg-d{ z-index:3; }
 .cfs-lg-ro{ cursor:default; }
 .cfs-lg-ro:hover{ background:transparent; }
 
+/* 🗓️ 空きカレンダービュー：日付クリック→その日の入庫一覧（v0.99.24） */
+#view-availcal-body .cfs-cal-ro .cfs-day[data-ds]{ cursor:pointer; }
+#view-availcal-body .cfs-cal-ro .cfs-day[data-ds]:hover{ outline:2px solid var(--blue); outline-offset:-2px; }
+.cfs-day.av-sel{ box-shadow:0 0 0 2px var(--blue) inset; border-radius:6px; }
+.av-list-card .av-list-date{ margin-left:auto; font-size:11px; color:var(--text2); white-space:nowrap; }
+.av-list-card .av-list-date b{ font-size:13px; color:var(--text); }
+.av-list-body{ display:flex; flex-direction:column; gap:6px; margin-top:8px; max-height:46vh; overflow:auto; }
+.av-list-empty{ font-size:11px; color:var(--text3); padding:12px 4px; text-align:center; line-height:1.6; }
+.av-it{ display:flex; align-items:center; gap:8px; padding:7px 9px; background:var(--bg3); border:1px solid var(--border); border-left:4px solid var(--team,#1db97a); border-radius:8px; cursor:pointer; }
+.av-it:hover{ background:var(--bg2); }
+.av-it.urgent{ background:#fef2f2; border-color:#fecaca; }
+.av-it-time{ font-size:13px; font-weight:800; min-width:42px; color:var(--text); }
+.av-it-main{ flex:1 1 auto; min-width:0; }
+.av-it-head{ display:flex; align-items:center; gap:6px; }
+.av-it-name{ font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.av-it-done{ font-size:9px; font-weight:800; color:#fff; background:#9ca3af; border-radius:4px; padding:1px 4px; flex-shrink:0; }
+.av-it-car{ font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.av-it-tags{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.av-it-work{ font-size:10px; font-weight:700; border:1px solid; border-radius:4px; padding:1px 5px; white-space:nowrap; }
+.av-it-tag{ font-size:10px; font-weight:700; border-radius:4px; padding:1px 5px; white-space:nowrap; }
+.av-it-tag.consult{ background:#fef3c7; color:#92400e; }
+.av-it-tag.loaner{ background:#dbeafe; color:#1e40af; }
+
 /* 設定：作業タイプ編集行（v0.27.0） */
 .ps-wt-row{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed var(--border); }
 .ps-wt-row:last-child{ border-bottom:0; }
