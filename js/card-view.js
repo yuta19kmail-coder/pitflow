@@ -275,8 +275,7 @@
     h += '<div class="cv-pickrow"><span class="cv-pk">洗車備考</span><div class="cv-chips" style="flex:1">'
        + '<input class="cv-fixinput" type="text" value="'+esc(c.washNote||'')+'" placeholder="洗車の備考（1行・任意）" onchange="cvWashNote(this.value)" style="flex:1;min-width:180px"></div></div>';
     h += pickRow('引き渡し', [['store','来店'],['delivery','納車']], c.handover, 'handover');
-    h += '<div class="cv-pickrow"><span class="cv-pk">お礼LINE</span><div class="cv-chips">'
-       + '<label class="cv-linecheck"><input type="checkbox" '+(c.noThanksLine?'checked':'')+' onchange="cvNoThanks(this.checked)"> 不要</label></div></div>';
+    h += pickRow('お礼LINE', [['1','要'],['0','不要']], c.noThanksLine?'0':'1', 'line');
     h += '<div class="cv-hint">※ パターン（型）で選ぶ方式。選択肢は将来 ⚙設定で増減できる想定。</div></div>';
     return h;
   }
@@ -489,6 +488,7 @@
     else if(group==='pay'){ _c.payment = val; }
     else if(group==='wash'){ _c.needWash = (val==='1'); }
     else if(group==='handover'){ _c.handover = val; }
+    else if(group==='line'){ _c.noThanksLine = (val==='0'); }   // 要='1'→false／不要='0'→true
     save();
   };
 

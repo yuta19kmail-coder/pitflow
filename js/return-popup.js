@@ -54,7 +54,9 @@
       + '    <input class="rp-text" id="rp-washnote" type="text" placeholder="洗車の備考（1行・任意）" style="margin-top:6px">'
       + '  </div>'
       + '  <div class="pp-field">'
-      + '    <label class="rp-check"><input type="checkbox" id="rp-noline"> お礼LINE不要</label>'
+      + '    <label class="pp-lb">お礼LINE</label>'
+      + '    <div class="rp-chips"><button type="button" class="rp-chip" id="rp-line-1" onclick="PitReturnPopup.onLine(\'1\')">要</button>'
+      + '      <button type="button" class="rp-chip" id="rp-line-0" onclick="PitReturnPopup.onLine(\'0\')">不要</button></div>'
       + '  </div>'
       + '  <div class="pp-actions">'
       + '    <button class="vh-btn" onclick="PitReturnPopup.close(false)">キャンセル</button>'
@@ -65,11 +67,15 @@
     bd.addEventListener('click', function(e){ if (e.target.id==='rp-backdrop') PitReturnPopup.close(false); });
   }
 
-  function setWash(on){
-    var a = el('rp-wash-1'), b = el('rp-wash-0'), n = el('rp-washnote');
+  function setWash(on){   // 洗車備考は要/不要にかかわらず常時表示
+    var a = el('rp-wash-1'), b = el('rp-wash-0');
     if (a) a.classList.toggle('on', !!on);
     if (b) b.classList.toggle('on', !on);
-    if (n) n.style.display = on ? '' : 'none';
+  }
+  function setLine(on){   // on=お礼LINE「要」
+    var a = el('rp-line-1'), b = el('rp-line-0');
+    if (a) a.classList.toggle('on', !!on);
+    if (b) b.classList.toggle('on', !on);
   }
 
   function openModal(card, mode){
@@ -88,14 +94,14 @@
     el('rp-date-field').style.display = isDone ? '' : 'none';
     el('rp-time-field').style.display = isDone ? '' : 'none';
     if (isDone){
-      el('rp-date').value = card.returnDate || card.returnDateFinal || '';
+      el('rp-date').value = '';   // 返車予定日はデフォルト空（その場で決めて入れる）
       el('rp-time').value = card.returnTime || '';
     }
 
-    // 洗車・備考・お礼LINE
-    setWash(!!card.needWash);
+    // 洗車＝デフォ要（明示的に不要のものだけ不要）・備考は常時表示／お礼LINE＝デフォ要
+    setWash(card.needWash !== false);
     el('rp-washnote').value = card.washNote || '';
-    el('rp-noline').checked = !!card.noThanksLine;
+    setLine(!card.noThanksLine);
 
     el('rp-backdrop').classList.add('show');
     setTimeout(function(){ try{ el('rp-amt').focus(); }catch(e){} }, 30);
@@ -113,6 +119,7 @@
     onAmt: function(input){ input.value = comma(input.value); },
     onTime: function(input){ if (window._normTime) input.value = _normTime(input.value); },
     onWash: function(v){ setWash(v === '1'); },
+    onLine: function(v){ setLine(v === '1'); },
     close: function(ok){
       var bd = el('rp-backdrop'); if (bd) bd.classList.remove('show');
       var p = pending; pending = null;
@@ -124,11 +131,11 @@
       // 確定金額
       var amt = digits(el('rp-amt') ? el('rp-amt').value : '');
       if (amt !== '') c.amountFinal = Number(amt);
-      // 洗車＋備考
+      // 洗車（要/不要）＋備考（不要でも備考は保存）
       c.needWash = !!(el('rp-wash-1') && el('rp-wash-1').classList.contains('on'));
-      c.washNote = c.needWash ? ((el('rp-washnote') && el('rp-washnote').value.trim()) || '') : '';
-      // お礼LINE不要
-      c.noThanksLine = !!(el('rp-noline') && el('rp-noline').checked);
+      c.washNote = (el('rp-washnote') && el('rp-washnote').value.trim()) || '';
+      // お礼LINE（要/不要）。要=on → noThanksLine=false
+      c.noThanksLine = !(el('rp-line-1') && el('rp-line-1').classList.contains('on'));
 
       // 作業は完了扱いに（盤面からは returnStage で外れる）。PIT枠も外す。
       c.status = 'workDone';
