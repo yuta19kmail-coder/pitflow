@@ -190,20 +190,7 @@
           }
         }
 
-        // 代車ニーズ（drop＋車検/板金は多め）。実際の代車(loanerId)は後で重複しないよう割当。
-        // 未来予約も期間（入庫日〜返車日）で代車を押さえる＝代車カレンダーが先（約1.5ヶ月先）まで埋まる。
-        if (dt === 'drop' && (wt === 'shaken' || wt === 'bp' || Math.random() < 0.55)){
-          c.needLoaner = true;
-          c.loanerFrom = c.reserveDate;
-          c.loanerTo = c.returnDate || '';   // 返車日が決まっていれば期間を確定（未確定は割当時に+数日で補完）
-          // ★案Fの表示確認用：車種固定と条件メモ(固定理由)をランダム付与
-          if (Math.random() < 0.35){
-            c.loanerFixed = true;
-            c.loanerOther = rnd(['同クラス希望','普段これに乗ってる','ETC必須','禁煙車で','8人乗り指定','大きめ希望','小さめ希望','ナビ付き希望','積載できる車','チャイルドシート可']);
-          } else if (Math.random() < 0.30){
-            c.loanerOther = rnd(['ETCあれば','禁煙希望','なるべく軽','ナビ付きだと助かる','長距離で使う']);
-          }
-        }
+        // 代車は別途「代車ごとのリアルなスケジュール」で生成するため、入庫カードには付けない。
         // ちょい足し
         if (Math.random() < 0.10) c.consult = true;
         if (Math.random() < 0.05) c.codeRed = true;
@@ -224,31 +211,62 @@
       });
     }
 
-    // 代車割当（代車カレンダー用）＝実際の代車(state.loaners)に重複しないよう割当＋必ず id を振る。
-    const _plus = function(fromStr, n){ return ymd(new Date(new Date(fromStr).getTime() + n * 86400000)); };
-    const loanerIds = (state.loaners || []).map(l => l.id);
-    const busy = {};   // loanerId -> [[from,to], ...]
-    // 同日受け渡し（返却日＝次の貸出開始日）は重複としない＝当日かぶり（耳）がサンプルでも発生する
-    const _ov = function(ranges, from, to){ return ranges.some(function(r){ return !(to <= r[0] || from >= r[1]); }); };
-    let _laSeq = 0;
+    // ===== 代車スケジュール（リアル）：代車ごとに 基本1〜2週間ブロック＋2〜3日OFF・土日終わりは同日かぶり多め・単発少なめ =====
     // 手動貸出・緊急車両の割当はサンプル作り直しでも残す（実運用データのため）
     state.loanerAssigns = (state.loanerAssigns || []).filter(function(a){ return a && (a.manual || a.emergency); });
-    cards.filter(function(c){ return c.needLoaner && c.loanerFrom; })
-      .sort(function(a, b){ return a.loanerFrom < b.loanerFrom ? -1 : 1; })
-      .forEach(function(c){
-        const from = c.loanerFrom, to = c.loanerTo || _plus(c.loanerFrom, 5);   // 返車未定は入庫から+5日で仮押さえ
-        let lid = null;
-        for (let i = 0; i < loanerIds.length; i++){
-          const id = loanerIds[i];
-          if (!busy[id]) busy[id] = [];
-          if (!_ov(busy[id], from, to)){ lid = id; busy[id].push([from, to]); break; }
+    let _laSeq = 0;
+    const FIX_MEMO = ['同クラス希望','普段これに乗ってる','ETC必須','禁煙車で','8人乗り指定','大きめ希望','小さめ希望','ナビ付き希望','積載できる車','チャイルドシート可'];
+    const SOFT_MEMO = ['ETCあれば','禁煙希望','なるべく軽','ナビ付きだと助かる','長距離で使う'];
+    const dMS = function(ms){ const d = new Date(ms); d.setHours(0,0,0,0); return d; };
+    const isWknd = function(d){ const w = d.getDay(); return w === 0 || w === 6; };
+    function pickDur(){
+      const r = Math.random();
+      if (r < 0.55) return 7 + Math.floor(Math.random() * 8);   // 7〜14日（1〜2週・多め）
+      if (r < 0.75) return 4 + Math.floor(Math.random() * 3);   // 4〜6日
+      if (r < 0.90) return 2 + Math.floor(Math.random() * 2);   // 2〜3日
+      return 1;                                                  // 単発（少なめ）
+    }
+    const startMs = todayMs - PAST_DAYS * 86400000;
+    const endMs   = todayMs + FUTURE_DAYS * 86400000;
+    const loanerCards = [];
+    (state.loaners || []).filter(function(l){ return !l.retired && !l.emergency; }).forEach(function(l){
+      let cur = startMs + Math.floor(Math.random() * 6) * 86400000;   // 開始を代車ごとに少しずらす
+      let guard = 0;
+      while (cur <= endMs && guard++ < 80){
+        const dur = pickDur();
+        const fromD = dMS(cur);
+        let toD = dMS(cur + (dur - 1) * 86400000);
+        let g = 0; while (isClosed(toD) && g++ < 7) toD = dMS(toD.getTime() + 86400000);   // 返車が定休なら翌営業日
+        const fromStr = ymd(fromD), toStr = ymd(toD);
+        const c = makeCard(nextPair(), fromStr, rnd(WORK_WEIGHT), 'drop', 'reserved');
+        c.needLoaner = true; c.loanerId = l.id; c.loanerFrom = fromStr; c.loanerTo = toStr;
+        if (Math.random() < 0.30){ c.loanerFixed = true; c.loanerOther = rnd(FIX_MEMO); }
+        else if (Math.random() < 0.30){ c.loanerOther = rnd(SOFT_MEMO); }
+        // 日付で状態を決める（過去＝返却済み・今またぎ＝預かり中・未来＝予約）
+        if (fromD.getTime() > todayMs){ c.status = 'reserved'; c.returnDate = toStr; }
+        else if (toD.getTime() < todayMs){
+          c.status = 'returned'; c.returnDate = toStr; c.returnTime = rndTime(); c.completedAt = toStr; c.returnDateFinal = toStr;
+          c.amountQuote = c.amountOrder = c.amountFinal = c.estAmount;
+        } else {
+          const span = Math.max(1, Math.round((toD.getTime() - fromD.getTime()) / 86400000));
+          const prog = (todayMs - fromD.getTime()) / (span * 86400000);
+          c.status = prog < 0.3 ? 'check' : prog < 0.6 ? 'contact' : prog < 0.85 ? 'parts' : 'work';
+          c.returnDate = toStr; c.phaseAt = todayMs;
         }
-        if (!lid){ c.needLoaner = false; c.loanerId = ''; c.loanerFrom = ''; c.loanerTo = ''; return; }   // 空き無し＝代車なしに（重複を作らない）
-        c.loanerId = lid;
-        c.loanerFrom = from;
-        c.loanerTo = to;   // ★カードの代車期日＝割当(カレンダー)と一致させる（リミット計算が合うように）
-        state.loanerAssigns.push({ id: 'la' + Date.now().toString(36) + (_laSeq++).toString(36), loanerId: lid, cardId: c.id, fromDate: from, toDate: to });
-      });
+        loanerCards.push(c);
+        const asg = { id: 'la' + Date.now().toString(36) + (_laSeq++).toString(36), loanerId: l.id, cardId: c.id, fromDate: fromStr, toDate: toStr };
+        if (toD.getTime() < todayMs){ asg.returned = true; asg.returnedAt = toStr; c.loanerReturned = true; }   // 過去はアーカイブ表示（カラーバー確認用）
+        state.loanerAssigns.push(asg);
+        // 次の開始：土日終わりは同日かぶり多め／平日終わりはたまに同日／基本は2〜3日OFF
+        const r2 = Math.random();
+        let nextMs;
+        if (isWknd(toD) && r2 < 0.5)      nextMs = toD.getTime();                                     // 同日かぶり（土日多め）
+        else if (!isWknd(toD) && r2 < 0.15) nextMs = toD.getTime();                                   // たまに同日
+        else                              nextMs = toD.getTime() + (2 + Math.floor(Math.random() * 2)) * 86400000;  // 2〜3日OFF
+        cur = nextMs;
+      }
+    });
+    loanerCards.forEach(function(c){ cards.push(c); });   // 代車カードも保存カードに含める
 
     // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
     // v0.87.1 重大バグ修正：以前は state.cards = cards（全置換）で、実カード（あなたが作った予約＝非_sample）まで
