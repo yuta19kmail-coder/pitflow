@@ -75,7 +75,7 @@ function renderReturnTbd(){
   const noDate   = state.cards.filter(c => c.returnStage === 'returnWait' && !c.returnDate && active(c));
 
   const card = c => (typeof cardHtml === 'function')
-    ? cardHtml(c, { returnView: true, onClick: "PitReturnPopup.open('" + c.id + "','callDone')" })
+    ? cardHtml(c, { compact: true, onClick: "PitReturnPopup.open('" + c.id + "','callDone')" })
     : '';
 
   let h = '<div class="ret-tbd-cols">';

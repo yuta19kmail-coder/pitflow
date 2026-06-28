@@ -98,10 +98,10 @@
       el('rp-time').value = card.returnTime || '';
     }
 
-    // 洗車＝デフォ要（明示的に不要のものだけ不要）・備考は常時表示／お礼LINE＝デフォ要
-    setWash(card.needWash !== false);
+    // 洗車＝デフォ要／お礼LINE＝デフォ要（初回＝盤面からのドラッグ時は必ず要。再編集時は保存値を尊重）
+    setWash(card.returnStage ? (card.needWash !== false) : true);
     el('rp-washnote').value = card.washNote || '';
-    setLine(!card.noThanksLine);
+    setLine(card.returnStage ? !card.noThanksLine : true);
 
     el('rp-backdrop').classList.add('show');
     setTimeout(function(){ try{ el('rp-amt').focus(); }catch(e){} }, 30);

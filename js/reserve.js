@@ -433,7 +433,8 @@ function cardHtml(c, opts){
     // PITカードと同じ2行構成：上=客名＋様／車種、右上=内容・代車、右下=担当。名前/車種はホバーでフル表示
     // 看板内はカード自体をドロップ先(reorder)にして同フェーズ内の並び替えに対応
     var _reorderAttr = opts.kanban ? (' data-drop="reorder" data-drop-val="' + c.id + '"') : '';
-    let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (c.resNo ? ' pcm-tab' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '"' + _reorderAttr + ' onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
+    const _clickC = opts.onClick ? opts.onClick : ("openDetail('" + c.id + "')");
+    let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (c.resNo ? ' pcm-tab' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '"' + _reorderAttr + ' onclick="' + _clickC + '" style="border-left-color:' + teamColor + ';">';
     h += (c.resNo ? '<div class="pcm-ear" style="border-left-color:' + (c.codeRed ? '#ef4444' : teamColor) + (c.codeRed ? ';border-top-color:#ef4444' : '') + '">' + at(c.resNo) + '</div><i class="pcm-ear-slide"></i>' : '');
     // 車両注意タブ（左/M/T/車高・左M/T合体・最大2・該当時のみ・耳の右の上辺）
     var _dr = Array.isArray(c.drive) ? c.drive : [], _ct = [];
