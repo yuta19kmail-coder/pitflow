@@ -29,7 +29,7 @@ function _availRow(c){
   let workTag = '';
   wts.slice(0, 2).forEach(function (id) {
     const w = (state.workTypes || []).find(function (x) { return x.id === id; });
-    if (w) workTag += '<span class="av-it-work" style="background:' + w.color + '20;color:' + w.color + ';border-color:' + w.color + ';">' + _avEsc(w.label) + '</span>';
+    if (w) workTag += '<span class="av-it-work' + ((w.label || '').length >= 4 ? ' long' : '') + '" style="background:' + w.color + '20;color:' + w.color + ';border-color:' + w.color + ';">' + _avEsc(w.label) + '</span>';
   });
   // 添え物タグ（他の予約ビュー・当日ビューと同じ tag-side の配色に合わせる）
   let side = '';

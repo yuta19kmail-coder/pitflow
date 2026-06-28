@@ -1122,11 +1122,17 @@ th.cfs-lg-d{ z-index:3; }
 .av-it-done{ font-size:9px; font-weight:800; color:#fff; background:#9ca3af; border-radius:4px; padding:1px 4px; flex-shrink:0; }
 .av-it-car{ font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }/* 客名とウェイト・サイズを揃える */
 .av-it-tags{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
-/* 作業バッジ(3M/1y/BP/車検/一般…)と添え物チップ(代車/相談=tag-side)を見た目で同サイズに。
-   ローマ字(BP/3M/1y)は和文(代車/相談)より小さく見えるので作業バッジは12pxに少し上げる */
-.av-it-work{ font-size:12px; font-weight:700; border:1px solid; border-radius:5px; padding:2px 6px; white-space:nowrap; }
-.av-it-tags .tag-side{ font-size:11px; padding:2px 6px; }
-/* 相談・代車チップは他ビューと共通の tag-side 配色を使用（individual styleは持たない） */
+/* 枠ありき：作業バッジ(3M/1y/BP/車検/一般…)も添え物チップ(代車/相談)も
+   全部まったく同じ固定枠（同じ縦横）にして中身を中央寄せ。色だけ各自で持つ。 */
+.av-it-tags > *{
+  width:42px; height:22px; box-sizing:border-box;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; line-height:1;
+  border:1px solid; border-radius:5px; padding:0 4px;
+  white-space:nowrap; overflow:hidden;
+}
+.av-it-tags > .long{ font-size:9px; }/* 4文字以上のラベルは枠内で文字だけ縮める（枠サイズは固定のまま） */
+/* 相談・代車チップは他ビューと共通の tag-side 配色（背景/文字/枠色）を流用。サイズはこの枠で統一 */
 
 /* 設定：作業タイプ編集行（v0.27.0） */
 .ps-wt-row{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed var(--border); }
