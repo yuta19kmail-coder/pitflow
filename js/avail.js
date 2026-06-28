@@ -31,10 +31,10 @@ function _availRow(c){
     const w = (state.workTypes || []).find(function (x) { return x.id === id; });
     if (w) workTag += '<span class="av-it-work" style="background:' + w.color + '20;color:' + w.color + ';border-color:' + w.color + ';">' + _avEsc(w.label) + '</span>';
   });
-  // 添え物タグ
+  // 添え物タグ（他の予約ビュー・当日ビューと同じ tag-side の配色に合わせる）
   let side = '';
-  if (c.consult)    side += '<span class="av-it-tag consult">相談</span>';
-  if (c.needLoaner) side += '<span class="av-it-tag loaner">代車</span>';
+  if (c.consult)    side += '<span class="tag-side consult">相談</span>';
+  if (c.needLoaner) side += '<span class="tag-side loaner">代車</span>';
 
   let h = '<div class="av-it' + (c.urgent ? ' urgent' : '') + '" style="--team:' + teamColor + '" onclick="pitOpenCardDetail(\'' + c.id + '\')" title="クリックで予約詳細">';
   h += '<div class="av-it-time">' + (time || '—') + '</div>';

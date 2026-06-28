@@ -1120,12 +1120,10 @@ th.cfs-lg-d{ z-index:3; }
 .av-it-head{ display:flex; align-items:center; gap:6px; }
 .av-it-name{ font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .av-it-done{ font-size:9px; font-weight:800; color:#fff; background:#9ca3af; border-radius:4px; padding:1px 4px; flex-shrink:0; }
-.av-it-car{ font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.av-it-car{ font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }/* 客名とウェイト・サイズを揃える */
 .av-it-tags{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
 .av-it-work{ font-size:10px; font-weight:700; border:1px solid; border-radius:4px; padding:1px 5px; white-space:nowrap; }
-.av-it-tag{ font-size:10px; font-weight:700; border-radius:4px; padding:1px 5px; white-space:nowrap; }
-.av-it-tag.consult{ background:#fef3c7; color:#92400e; }
-.av-it-tag.loaner{ background:#dbeafe; color:#1e40af; }
+/* 相談・代車チップは他ビューと共通の tag-side 配色を使用（individual styleは持たない） */
 
 /* 設定：作業タイプ編集行（v0.27.0） */
 .ps-wt-row{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px dashed var(--border); }
