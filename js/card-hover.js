@@ -11,6 +11,8 @@
 
   var DRIVE_LABELS = { leftHand:'左ハンドル', mt:'M/T', lowCar:'車高低い', noShoes:'土足禁止' };
   var el = null, curId = null;
+  var overRegion = false;          // カード or パネルの上にカーソルがあるか
+  var hideTimer = null, saveTimer = null;
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
@@ -36,7 +38,41 @@
     el = document.createElement('div');
     el.id = 'pit-hovercard';
     document.body.appendChild(el);
+
+    // パネル自体にカーソルが乗っている間は消さない（カード→パネルへ移動できる）
+    el.addEventListener('mouseenter', function(){ overRegion = true; cancelHide(); });
+    el.addEventListener('mouseleave', function(){ overRegion = false; scheduleHide(); });
+
+    // 引継ぎメモ：その場で入力＝自動保存（入力中はデバウンス・フォーカスを外したら即保存）
+    el.addEventListener('input', function(e){
+      var t = e.target;
+      if (!t || !t.classList || !t.classList.contains('ph-hoinput')) return;
+      var id = t.getAttribute('data-cid') || curId;
+      if (!id || !window.state) return;
+      var c = state.cards.find(function(x){ return x.id === id; });
+      if (!c) return;
+      c.handoffMemo = t.value;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(function(){ if (window.PitDB && PitDB.save) PitDB.save(); }, 600);
+    });
+    el.addEventListener('focusout', function(e){
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('ph-hoinput')){
+        clearTimeout(saveTimer);
+        if (window.PitDB && PitDB.save) PitDB.save(true);   // 確定保存
+      }
+      if (!overRegion) scheduleHide();
+    });
     return el;
+  }
+  function cancelHide(){ clearTimeout(hideTimer); }
+  function scheduleHide(){
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(function(){
+      if (overRegion) return;                                  // まだカード/パネル上
+      if (el && el.contains(document.activeElement)) return;   // 引継ぎメモ編集中は閉じない
+      hide();
+    }, 280);
   }
 
   function fill(c){
@@ -134,13 +170,25 @@
     if (dr.length){
       h += '<div class="ph-note">⚠️ 車両注意：'+dr.map(function(k){return DRIVE_LABELS[k]||k;}).join('・')+'</div>';
     }
-    // 代車の車種固定・条件メモ（あれば代車/予約ボックスの下に表示）
+    // ===== 下部メモ群（代車条件・予約内容・引継ぎ）＝区切り線つきで統一表示 =====
+    // 代車の車種固定・条件メモ（あれば）
     if (c.needLoaner && (c.loanerFixed || (c.loanerOther||'').trim())){
-      h += '<div class="ph-loaner">'
+      h += '<div class="ph-sec ph-sec-loaner"><div class="ph-sec-lb">🚙 代車条件</div>'
+        + '<div class="ph-sec-body">'
         + (c.loanerFixed ? '<span class="ph-fix">固定</span>' : '')
         + ((c.loanerOther||'').trim() ? '<span class="ph-lmemo">'+esc(c.loanerOther)+'</span>' : '')
-        + '</div>';
+        + '</div></div>';
     }
+    // 予約内容メモ（読み取り専用）
+    var _resmemo = (c.menu || c.memo || '').trim();
+    h += '<div class="ph-sec"><div class="ph-sec-lb">📝 予約内容メモ</div>'
+       + '<div class="ph-sec-body ph-memo">'
+       + (_resmemo ? esc(_resmemo).replace(/\n/g,'<br>') : '<span class="ph-empty">（なし）</span>')
+       + '</div></div>';
+    // 引継ぎメモ（その場で入力＝自動保存）。data-cid で保存先カードを固定
+    h += '<div class="ph-sec"><div class="ph-sec-lb">🔁 引継ぎメモ <small>（入庫後・ここに直接入力できます）</small></div>'
+       + '<textarea class="ph-hoinput" data-cid="'+esc(c.id)+'" rows="2" placeholder="引継ぎ・伝達を入力（自動で保存されます）">'+esc(c.handoffMemo||'')+'</textarea>'
+       + '</div>';
 
     ensureEl().innerHTML = h;
   }
@@ -177,7 +225,7 @@
     ensureEl().classList.add('show');
     position(cardEl);
   }
-  function hide(){ curId=null; if (el) el.classList.remove('show'); }
+  function hide(){ curId=null; overRegion=false; if (el) el.classList.remove('show'); }
 
   // 出す対象：タスクボードのコンパクト（.pit-card.pcm）／PITリスト枠内（.pfv-card）／
   //   予約・返車の 月リスト(.rml-ev)・2ヶ月チップ(.reserve-month-event)・週ミニ(.rwk-card)。
@@ -187,6 +235,7 @@
     var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card){ return; }
     if (!card.dataset || !card.dataset.cardId) return;   // 拡大カード等 id無しは無視
+    overRegion = true; cancelHide();
     if (card.dataset.cardId === curId) return;   // 同じカード上の移動は無視
     show(card);
   });
@@ -194,9 +243,14 @@
     var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card) return;
     var to = e.relatedTarget;
-    if (!to || !(to.closest && to.closest(HOVER_SEL))) hide();
+    // 別カードへ＝そちらでshow／パネルへ＝パネルのmouseenterがcancel。それ以外は猶予つきで閉じる
+    if (to && to.closest && (to.closest(HOVER_SEL) || (el && el.contains(to)))) return;
+    overRegion = false; scheduleHide();
   });
-  // スクロール／ドラッグ中は隠す（位置ズレ防止）
-  document.addEventListener('scroll', hide, true);
+  // スクロール／ドラッグ中は隠す（位置ズレ防止）。ただしパネル内スクロール・引継ぎ編集中は維持
+  document.addEventListener('scroll', function(e){
+    if (el && (el.contains(e.target) || el.contains(document.activeElement))) return;
+    hide();
+  }, true);
   document.addEventListener('dragstart', hide, true);
 })();

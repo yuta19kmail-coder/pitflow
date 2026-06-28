@@ -9,7 +9,8 @@
   position:fixed; z-index:140; width:300px; display:none;
   background:var(--bg2); border:1px solid var(--border2); border-radius:14px;
   box-shadow:0 16px 44px rgba(0,0,0,.6); padding:14px 15px 13px;
-  pointer-events:none;   /* ホバーを奪わない＝チラつき防止 */
+  pointer-events:auto;   /* パネル上にカーソルを乗せて引継ぎメモを直接編集できる（消えない制御はJS側） */
+  max-height:90vh; overflow:auto;
 }
 #pit-hovercard.show{ display:block; }
 
@@ -32,10 +33,24 @@
 .ph-plate{ display:inline-block; font-size:12.5px; font-weight:700; color:var(--text2); background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:3px 9px; letter-spacing:.02em; }
 /* カルテNo＝番号直書き（グレー・少し大きめ） */
 .ph-karte{ display:inline-block; font-size:14px; font-weight:800; color:var(--text2); letter-spacing:.04em; }
-/* 代車の固定・条件メモ（代車/予約ボックスの下） */
-.ph-loaner{ margin-top:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-.ph-fix{ display:inline-block; font-size:10px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:5px; padding:1px 8px; }
-.ph-lmemo{ font-size:11px; color:var(--text); background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:1px 8px; }
+.ph-fix{ display:inline-block; font-size:10px; font-weight:800; color:#3a2a00; background:#fbbf24; border-radius:5px; padding:1px 8px; margin-right:6px; vertical-align:middle; }
+.ph-lmemo{ font-size:11.5px; color:var(--text); }
+
+/* ===== 下部メモ群（代車条件・予約内容メモ・引継ぎメモ）＝区切り線つきで統一 ===== */
+.ph-sec{ margin-top:10px; border-top:1px dashed var(--border); padding-top:9px; }
+.ph-sec-lb{ font-size:10.5px; font-weight:700; color:var(--text2); margin-bottom:5px; display:flex; align-items:baseline; gap:4px; }
+.ph-sec-lb small{ font-size:9.5px; font-weight:600; color:var(--text3); }
+.ph-sec-body{ font-size:11.5px; color:var(--text); line-height:1.55; }
+.ph-memo{ overflow-wrap:anywhere; }
+.ph-empty{ color:var(--text3); }
+/* 引継ぎメモ＝その場で編集（パネル内入力欄） */
+.ph-hoinput{
+  width:100%; box-sizing:border-box; resize:vertical; min-height:40px;
+  font-family:inherit; font-size:12px; line-height:1.5; color:var(--text);
+  background:var(--bg3); border:1px solid var(--border2); border-radius:8px; padding:7px 9px;
+}
+.ph-hoinput::placeholder{ color:var(--text3); }
+.ph-hoinput:focus{ outline:none; border-color:var(--brand); box-shadow:0 0 0 2px rgba(29,185,122,.25); }
 
 /* 3つの経過日数 */
 .ph-stats{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:7px; margin-top:12px; }
