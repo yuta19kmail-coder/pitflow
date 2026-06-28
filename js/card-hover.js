@@ -228,7 +228,12 @@
        + '<div class="ph-sec-body ph-memo">'
        + (_resmemo ? esc(_resmemo).replace(/\n/g,'<br>') : '<span class="ph-empty">（なし）</span>')
        + '</div></div>';
-    // 完TEL / 返車の入力（returnStage カード＝完TEL待ち/返車待ちのみ）。ここで直接編集できる。クリックは予約詳細へ。
+    // 引継ぎメモ（その場で入力＝自動保存）。data-cid で保存先カードを固定。※位置は従来どおり（メモ群の最後）
+    h += '<div class="ph-sec"><div class="ph-sec-lb">🔁 引継ぎメモ <small>（入庫後・ここに直接入力できます）</small></div>'
+       + '<textarea class="ph-hoinput" data-cid="'+esc(c.id)+'" rows="2" placeholder="引継ぎ・伝達を入力（自動で保存されます）">'+esc(c.handoffMemo||'')+'</textarea>'
+       + '</div>';
+
+    // 完TEL / 返車の入力（returnStage カード＝完TEL待ち/返車待ちのみ）＝最下部。ここで直接編集できる。クリックは予約詳細へ。
     if (c.returnStage){
       var _amtStr = (c.amountFinal!=null && c.amountFinal!=='') ? Number(c.amountFinal).toLocaleString() : '';
       var _washOn = (c.needWash !== false);
@@ -243,11 +248,6 @@
       h += '<div class="ph-rt-row"><span class="ph-rt-k">お礼LINE</span><span class="ph-rt-chips"><button type="button" class="ph-rt-line'+(_lineOn?' on':'')+'" data-l="1">要</button><button type="button" class="ph-rt-line'+(!_lineOn?' on':'')+'" data-l="0">不要</button></span></div>';
       h += '</div>';
     }
-
-    // 引継ぎメモ（その場で入力＝自動保存）。data-cid で保存先カードを固定
-    h += '<div class="ph-sec"><div class="ph-sec-lb">🔁 引継ぎメモ <small>（入庫後・ここに直接入力できます）</small></div>'
-       + '<textarea class="ph-hoinput" data-cid="'+esc(c.id)+'" rows="2" placeholder="引継ぎ・伝達を入力（自動で保存されます）">'+esc(c.handoffMemo||'')+'</textarea>'
-       + '</div>';
 
     ensureEl().innerHTML = h;
   }
