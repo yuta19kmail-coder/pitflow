@@ -74,9 +74,8 @@ function renderReturnTbd(){
   const callWait = state.cards.filter(c => c.returnStage === 'callWait' && active(c));
   const noDate   = state.cards.filter(c => c.returnStage === 'returnWait' && !c.returnDate && active(c));
 
-  const card = c => (typeof cardHtml === 'function')
-    ? cardHtml(c, { compact: true, onClick: "PitReturnPopup.open('" + c.id + "','callDone')" })
-    : '';
+  // クリックは予約詳細（openDetail）。完TEL/返車の入力はマウスオーバー情報カード(card-hover.js)で行う。
+  const card = c => (typeof cardHtml === 'function') ? cardHtml(c, { compact: true }) : '';
 
   let h = '<div class="ret-tbd-cols">';
   h += '<div class="ret-tbd-col"><div class="ret-tbd-h">📞 完TEL待ち <small>（完TEL依頼ぶん）</small><span class="und-cnt">' + callWait.length + '</span></div>';

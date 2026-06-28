@@ -63,8 +63,51 @@
       }
       if (!overRegion) scheduleHide();
     });
+
+    // 📞 完TEL/返車 のその場編集（returnStage カード）
+    el.addEventListener('input', function(e){
+      var t = e.target; if (!t || !t.classList) return;
+      var c = curCard(); if (!c) return;
+      if (t.classList.contains('ph-rt-amt')){
+        var d = String(t.value).replace(/[^\d]/g,'').replace(/^0+(?=\d)/,'').slice(0,9);
+        t.value = d ? Number(d).toLocaleString() : '';
+        c.amountFinal = d ? Number(d) : '';
+        saveDebounced();
+      } else if (t.classList.contains('ph-rt-washnote')){
+        c.washNote = t.value; saveDebounced();
+      }
+    });
+    el.addEventListener('change', function(e){
+      var t = e.target; if (!t || !t.classList) return;
+      var c = curCard(); if (!c) return;
+      if (t.classList.contains('ph-rt-date')){
+        c.returnDate = t.value || '';
+        if (c.returnDate){ c.returnStage = 'returnWait'; c.returnDateFinal = c.returnDate; }
+        saveNow(); rerenderReturn();
+      } else if (t.classList.contains('ph-rt-time')){
+        c.returnTime = (window._normTime ? _normTime(t.value) : t.value) || '';
+        t.value = c.returnTime; saveNow();
+      }
+    });
+    el.addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('.ph-rt-wash, .ph-rt-line');
+      if (!b) return;
+      var c = curCard(); if (!c) return;
+      if (b.classList.contains('ph-rt-wash')){
+        var on = b.getAttribute('data-w') === '1'; c.needWash = on;
+        el.querySelectorAll('.ph-rt-wash').forEach(function(x){ x.classList.toggle('on', (x.getAttribute('data-w')==='1') === on); });
+      } else {
+        var lon = b.getAttribute('data-l') === '1'; c.noThanksLine = !lon;
+        el.querySelectorAll('.ph-rt-line').forEach(function(x){ x.classList.toggle('on', (x.getAttribute('data-l')==='1') === lon); });
+      }
+      saveNow();
+    });
     return el;
   }
+  function curCard(){ return (window.state && curId) ? state.cards.find(function(x){ return x.id === curId; }) : null; }
+  function saveDebounced(){ clearTimeout(saveTimer); saveTimer = setTimeout(function(){ if (window.PitDB && PitDB.save) PitDB.save(); }, 600); }
+  function saveNow(){ clearTimeout(saveTimer); if (window.PitDB && PitDB.save) PitDB.save(true); }
+  function rerenderReturn(){ if (window.state && state.currentView === 'return' && window.renderReturn) renderReturn(); }
   function cancelHide(){ clearTimeout(hideTimer); }
   function scheduleHide(){
     clearTimeout(hideTimer);
@@ -185,6 +228,22 @@
        + '<div class="ph-sec-body ph-memo">'
        + (_resmemo ? esc(_resmemo).replace(/\n/g,'<br>') : '<span class="ph-empty">（なし）</span>')
        + '</div></div>';
+    // 完TEL / 返車の入力（returnStage カード＝完TEL待ち/返車待ちのみ）。ここで直接編集できる。クリックは予約詳細へ。
+    if (c.returnStage){
+      var _amtStr = (c.amountFinal!=null && c.amountFinal!=='') ? Number(c.amountFinal).toLocaleString() : '';
+      var _washOn = (c.needWash !== false);
+      var _lineOn = !c.noThanksLine;
+      h += '<div class="ph-sec ph-rt">';
+      h += '<div class="ph-sec-lb">📞 完TEL / 返車 <small>（ここで入力できます）</small></div>';
+      h += '<div class="ph-rt-row"><span class="ph-rt-k">確定金額</span><span class="ph-rt-in"><span class="ph-rt-yen">¥</span><input class="ph-rt-amt" inputmode="numeric" value="'+esc(_amtStr)+'"></span></div>';
+      h += '<div class="ph-rt-row"><span class="ph-rt-k">返車予定日</span><span class="ph-rt-in"><input class="ph-rt-date" type="date" value="'+esc(c.returnDate||'')+'"></span></div>';
+      h += '<div class="ph-rt-row"><span class="ph-rt-k">返車時間</span><span class="ph-rt-in"><input class="ph-rt-time" type="text" placeholder="900 / 9時半" value="'+esc(c.returnTime||'')+'"></span></div>';
+      h += '<div class="ph-rt-row"><span class="ph-rt-k">洗車</span><span class="ph-rt-chips"><button type="button" class="ph-rt-wash'+(_washOn?' on':'')+'" data-w="1">要</button><button type="button" class="ph-rt-wash'+(!_washOn?' on':'')+'" data-w="0">不要</button></span></div>';
+      h += '<input class="ph-rt-washnote" type="text" placeholder="洗車の備考（1行）" value="'+esc(c.washNote||'')+'">';
+      h += '<div class="ph-rt-row"><span class="ph-rt-k">お礼LINE</span><span class="ph-rt-chips"><button type="button" class="ph-rt-line'+(_lineOn?' on':'')+'" data-l="1">要</button><button type="button" class="ph-rt-line'+(!_lineOn?' on':'')+'" data-l="0">不要</button></span></div>';
+      h += '</div>';
+    }
+
     // 引継ぎメモ（その場で入力＝自動保存）。data-cid で保存先カードを固定
     h += '<div class="ph-sec"><div class="ph-sec-lb">🔁 引継ぎメモ <small>（入庫後・ここに直接入力できます）</small></div>'
        + '<textarea class="ph-hoinput" data-cid="'+esc(c.id)+'" rows="2" placeholder="引継ぎ・伝達を入力（自動で保存されます）">'+esc(c.handoffMemo||'')+'</textarea>'
