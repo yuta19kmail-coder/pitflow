@@ -172,8 +172,7 @@
   }
   function memoHtml(c){
     const staff = c.frontStaff || c.staff || '—';
-    let h = '<div class="cv-work"><div class="cv-wtop"><span class="cv-wtt">予約担当 <span class="cv-pill cv-staff">'+esc(staff)+'</span></span>'
-      + '<span class="cv-editmini" onclick="openCardEditForm(\''+c.id+'\')">✏️ 編集</span></div>';
+    let h = '<div class="cv-work"><div class="cv-wtop"><span class="cv-wtt">予約担当 <span class="cv-pill cv-staff">'+esc(staff)+'</span></span></div>';
     h += '<div class="cv-wsec"><div class="cv-gt">予約時内容</div>'+memoLines(c.menu||c.memo)+'</div>';
     // 引継ぎメモはこの画面から直接入力＝自動保存（予約時内容は新規予約で入れるので編集ボタンのまま）
     h += '<div class="cv-wsec"><div class="cv-gt">引継ぎ・伝達 <small>（入庫後・ここに直接入力できます）</small></div>'
