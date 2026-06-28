@@ -1122,9 +1122,9 @@ th.cfs-lg-d{ z-index:3; }
 .av-it-done{ font-size:9px; font-weight:800; color:#fff; background:#9ca3af; border-radius:4px; padding:1px 4px; flex-shrink:0; }
 .av-it-car{ font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }/* 客名とウェイト・サイズを揃える */
 .av-it-tags{ display:flex; align-items:center; gap:4px; flex-shrink:0; }
-/* メイン作業バッジ（車検・一般など）＝添え物チップ(代車/相談=tag-side)より必ず大きく・太く */
-.av-it-work{ font-size:12px; font-weight:800; border:1px solid; border-radius:5px; padding:3px 7px; white-space:nowrap; }
-.av-it-tags .tag-side{ font-size:10.5px; padding:2px 6px; }/* 添え物チップは作業バッジより一段小さく */
+/* 作業バッジ(3M/1y/BP/車検/一般…)も添え物チップ(代車/相談=tag-side)も全部同じサイズに揃える */
+.av-it-work{ font-size:11px; font-weight:700; border:1px solid; border-radius:5px; padding:2px 6px; white-space:nowrap; }
+.av-it-tags .tag-side{ font-size:11px; padding:2px 6px; }
 /* 相談・代車チップは他ビューと共通の tag-side 配色を使用（individual styleは持たない） */
 
 /* 設定：作業タイプ編集行（v0.27.0） */
