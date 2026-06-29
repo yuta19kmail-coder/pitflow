@@ -249,6 +249,14 @@
       h += '</div>';
     }
 
+    // 🚗 車販（ライト磨き・その他車販依頼）＝ある時だけ末尾に表示
+    if (c.headlight || c.salesReq){
+      h += '<div class="ph-sec"><div class="ph-sec-lb">🚗 車販</div><div class="ph-sec-body">';
+      if (c.headlight) h += '<div class="ph-sales-line">🔦 車検ヘッドライト磨き</div>';
+      if (c.salesReq)  h += '<div class="ph-sales-line">🛒 車販依頼' + (c.salesReqMemo ? '：' + esc(c.salesReqMemo) : '') + '</div>';
+      h += '</div></div>';
+    }
+
     ensureEl().innerHTML = h;
   }
 
