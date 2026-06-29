@@ -143,7 +143,10 @@
       var wids = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
       wids.forEach(function(id){
         var w = (window.state && state.workTypes || []).find(function(x){ return x.id === id; });
-        if (w) bd.push('<span class="ph-b" style="background:'+w.color+'22;color:'+w.color+';border-color:'+w.color+'88">'+esc(w.label)+'</span>');
+        if (w){
+          var _cd = ((id==='coat1y'||id==='coat3m') && c.coatingDone) ? ' ph-done' : '';   // コーティング完了＝済スタンプ
+          bd.push('<span class="ph-b'+_cd+'" style="background:'+w.color+'22;color:'+w.color+';border-color:'+w.color+'88">'+esc(w.label)+'</span>');
+        }
       });
       if (c.dropType){
         bd.push(window.pitDropBadges
@@ -151,14 +154,14 @@
           : (function(){ var dt=(state.dropTypes||[]).find(function(x){return x.id===c.dropType;}); return dt?'<span class="ph-b ph-b-drop">'+esc(dt.label)+'</span>':''; })());
       }
       if (c.needLoaner) bd.push('<span class="ph-b ph-b-loaner">代車</span>');
-      if (c.needWash)   bd.push('<span class="ph-b ph-b-wash">洗車</span>');
+      if (c.needWash)   bd.push('<span class="ph-b ph-b-wash'+(c.washSalesDone?' ph-done':'')+'">洗車</span>');
       if (c.consult)    bd.push('<span class="ph-b ph-b-consult">相談</span>');
       if (c.urgent)     bd.push('<span class="ph-b ph-b-urg">緊急</span>');
       if (c.codeRed)    bd.push('<span class="ph-b ph-b-red">クレーム</span>');
       if (c.testDrive)  bd.push('<span class="ph-b ph-b-td">試運転</span>');
-      if (c.headlight)  bd.push('<span class="ph-b ph-b-hl">🔦ライト磨き</span>');
-      if (c.coatingOK)  bd.push('<span class="ph-b ph-b-coat">✨コーティング受注</span>');
-      if (c.salesReq)   bd.push('<span class="ph-b ph-b-sales">🛒車販依頼</span>');
+      if (c.headlight)  bd.push('<span class="ph-b ph-b-hl'+(c.headlightDone?' ph-done':'')+'">ライト磨き</span>');
+      if (c.coatingOK)  bd.push('<span class="ph-b ph-b-coat">コーティング受注</span>');
+      if (c.salesReq)   bd.push('<span class="ph-b ph-b-sales'+(c.salesReqDone?' ph-done':'')+'">車販依頼</span>');
       if (bd.length) h += '<div class="ph-badges">'+bd.join('')+'</div>';
     })();
 
