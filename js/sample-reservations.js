@@ -273,6 +273,57 @@
     });
     loanerCards.forEach(function(c){ cards.push(c); });   // 代車カードも保存カードに含める
 
+    // ===== 車販部門の仕事＝返車待ち・サービス洗車・車検ヘッドライト磨き・その他車販依頼 を絡めて生成 =====
+    const SALES_MEMO = ['窓だけ拭いてほしい','内装作業したのでそこだけ拭いて','ダッシュボード拭き上げ','ホイールだけ洗っといて','足元マットだけ清掃','フロントガラス内側の油膜取り','ナビ画面の指紋拭き','灰皿だけ掃除','トランク内かるく清掃','給油口まわり拭き'];
+    const WASH_MEMO  = ['内装も軽く','水アカ落とし','鳥フン跡あり','下回りも','花粉ひどめ'];
+    function nextBizFrom(ms){ let d = dMS(ms); let g = 0; do { d = dMS(d.getTime() + 86400000); } while (isClosed(d) && g++ < 14); return d; }
+    const thisSunStr = (function(){ const d = new Date(today); d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); return ymd(d); })();
+    const nextBizStr = ymd(nextBizFrom(todayMs));
+    const finishCard = function(c){
+      c.status = 'workDone';
+      c.amountQuote = c.amountOrder = c.amountFinal = c.estAmount;
+      c.coverCall = { done:true, at:(today.getMonth()+1)+'/'+today.getDate(), staff:'' };
+      c.completeCallAt = ymd(today);
+      const _coat = Array.isArray(c.workTypes) && (c.workTypes.indexOf('coat1y')>=0 || c.workTypes.indexOf('coat3m')>=0);
+      if (_coat) c.coatingOK = true;
+      if (c.workType === 'shaken' && Math.random() < 0.5) c.headlight = true;
+      if (Math.random() < 0.25){ c.salesReq = true; c.salesReqMemo = rnd(SALES_MEMO); }
+    };
+
+    // (a) 返車待ち（完TEL済・returnStage='returnWait'）＝返車ビュー当日/週/月＋洗車予定に出る。返車日を散らす。
+    for (let i = 0; i < 22; i++){
+      const c = makeCard(nextPair(), ymd(today), rnd(WORK_WEIGHT), 'drop', 'workDone');
+      finishCard(c); c.returnStage = 'returnWait';
+      let retD; const r = Math.random();
+      if (r < 0.32) retD = dMS(new Date(nextBizStr + 'T00:00:00').getTime());                    // 翌営業日（＝明日の洗車対象）
+      else if (r < 0.68) retD = dMS(todayMs + (2 + Math.floor(Math.random() * 5)) * 86400000);    // 数日内（今週寄り）
+      else retD = dMS(todayMs + (7 + Math.floor(Math.random() * 14)) * 86400000);                  // 来週以降
+      let g = 0; while (isClosed(retD) && g++ < 7) retD = dMS(retD.getTime() + 86400000);
+      c.returnDate = ymd(retD); c.returnDateFinal = c.returnDate; c.returnTime = rndTime();
+      if (Math.random() < 0.55){ c.needWash = true; if (Math.random() < 0.45) c.washNote = rnd(WASH_MEMO); }
+      if (Math.random() < 0.20) c.noThanksLine = true;
+      cards.push(c);
+    }
+    // (b) 完TEL待ち（returnStage='callWait'・返車日未定）＝返車ビュー未定「完TEL待ち」。洗車で返車日未定にも出る。
+    for (let i = 0; i < 8; i++){
+      const c = makeCard(nextPair(), ymd(today), rnd(WORK_WEIGHT), 'drop', 'workDone');
+      finishCard(c); c.returnStage = 'callWait'; c.returnDate = '';
+      if (Math.random() < 0.6){ c.needWash = true; if (Math.random() < 0.45) c.washNote = rnd(WASH_MEMO); }
+      cards.push(c);
+    }
+    // (c) 返車未定（完TEL済だが返車日未定・returnStage='returnWait' で returnDate無し）
+    for (let i = 0; i < 5; i++){
+      const c = makeCard(nextPair(), ymd(today), rnd(WORK_WEIGHT), 'drop', 'workDone');
+      finishCard(c); c.returnStage = 'returnWait'; c.returnDate = ''; c.returnDateFinal = null;
+      if (Math.random() < 0.5) c.needWash = true;
+      cards.push(c);
+    }
+    // (d) 預かり中（returnStage以外）のカードにも 車販依頼・ヘッドライト磨きを少し散らす
+    shuffle(cards.filter(function(c){ return !c.returnStage && PHASES.indexOf(c.status) >= 0; })).slice(0, 10).forEach(function(c){
+      if (Math.random() < 0.5){ c.salesReq = true; c.salesReqMemo = rnd(SALES_MEMO); }
+      if (c.workType === 'shaken' && Math.random() < 0.5) c.headlight = true;
+    });
+
     // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
     // v0.87.1 重大バグ修正：以前は state.cards = cards（全置換）で、実カード（あなたが作った予約＝非_sample）まで
     //   消えて save で空保存され、リロードで予約が消えていた。→ 実カードは残し、サンプルだけ作り直す。
