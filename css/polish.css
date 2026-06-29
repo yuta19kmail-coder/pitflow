@@ -1113,8 +1113,9 @@ th.cfs-lg-d{ z-index:3; }
 .cfs-day.av-sel{ box-shadow:0 0 0 2px var(--blue) inset; border-radius:6px; }
 
 /* ===== 🧽 車販作業ビュー（v0.99.42） ===== */
-.cs-cols{ display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; padding:4px 2px 30px; }
-.cs-sec{ flex:1 1 340px; min-width:300px; background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; }
+/* セクションは縦に積む／中のカードは横並び＝レスポンシブで折り返し（横スクロールなし） */
+.cs-cols{ display:flex; flex-direction:column; gap:14px; padding:4px 2px 30px; }
+.cs-sec{ width:100%; box-sizing:border-box; background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:10px 12px; }
 .cs-sec-h{ font-size:13.5px; font-weight:800; color:var(--text); margin-bottom:8px; display:flex; align-items:baseline; gap:6px; }
 .cs-sec-h small{ font-size:10.5px; font-weight:600; color:var(--text3); }
 .cs-sec-body{ display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; }
