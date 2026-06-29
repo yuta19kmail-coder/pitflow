@@ -447,7 +447,9 @@ function cardHtml(c, opts){
     var _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
     var _stf = (window.pitSurname ? pitSurname(staff) : staff);
     h += '<div class="pcm-r"><span class="pcm-name">' + _nm + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
-    h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + (_stf ? '<span class="pcm-front">' + _stf + '</span>' : '') + '</div>';
+    // 完TEL待ち以降（returnStage）で洗車対象なら、担当の左に洗車バッジ
+    var _washB = (c.returnStage && c.needWash) ? '<span class="pcm-wash" title="洗車対象">洗車</span>' : '';
+    h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + _washB + (_stf ? '<span class="pcm-front">' + _stf + '</span>' : '') + '</div>';
     // 外注フェーズ＝外注先名(＋メモ)＋そのフェーズに入ってからの日数ラベル
     if (c.status === 'outsource'){
       var _odN = c.phaseAt ? (Math.floor((Date.now() - c.phaseAt) / 86400000) + 1) : null;

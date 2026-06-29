@@ -88,6 +88,9 @@
 .pcm-drop{ border:1px solid; }
 .pcm-loaner{ background:rgba(245,158,11,.16); color:#f59e0b; border:1px solid rgba(245,158,11,.55); }
 .pcm-front{ background:var(--bg3); color:var(--text); border:1px solid var(--border2); }
+/* 洗車バッジ（完TEL待ち以降・洗車対象）＝担当の左 */
+.pcm-wash{ flex:0 0 auto; font-size:13px; line-height:1.42; padding:0 6px; border-radius:6px; font-weight:700; white-space:nowrap;
+  background:rgba(59,130,246,.14); color:#2563eb; border:1px solid rgba(59,130,246,.5); }
 .pit-card.pcm.pcm-claim{ border-color:#ef4444 !important; box-shadow:var(--shadow-card); }
 .pcm-loaner.pcm-dead{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important; box-shadow:0 0 8px rgba(239,68,68,.7); animation:pcmDeadPulse 1.2s ease-in-out infinite; }
 /* 外注フェーズのカード下ラベル＝外注先名＋経過日数 */
