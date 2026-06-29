@@ -57,6 +57,10 @@
     if(c.washNote == null) c.washNote = '';
     if(c.noThanksLine == null) c.noThanksLine = false;
     if(c.returnStage == null) c.returnStage = '';
+    if(c.salesReq == null) c.salesReq = false;
+    if(c.salesReqMemo == null) c.salesReqMemo = '';
+    if(c.headlight == null) c.headlight = false;
+    if(c.coatingOK == null) c.coatingOK = false;
     return c;
   }
 
@@ -250,6 +254,18 @@
     // 返車時間（新規予約と同じスマート入力＝900/9時半/9:00-10:00 など）
     h += '<div class="cv-fixrow"><div class="cv-frt">返車時間（例 900 / 9時半 / 9:00-10:00）</div><div class="cv-frb">'
       + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px"></div></div></div>';
+
+    // 🛒 車販部門への依頼（車販依頼/ヘッドライト磨き/コーティング受注OK）＝車販作業ビューのトリガー
+    const _csIds = (Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]);
+    const _csShaken = (c.workType==='shaken' || _csIds.indexOf('shaken')>=0);
+    const _csCoat = (_csIds.indexOf('coat1y')>=0 || _csIds.indexOf('coat3m')>=0);
+    h += '<div class="cv-sec"><div class="cv-sect">🛒 車販部門への依頼</div>';
+    if (_csShaken) h += pickRow('車検ライト磨き', [['1','する'],['0','しない']], c.headlight?'1':'0', 'headlight');
+    if (_csCoat)   h += pickRow('コーティング受注', [['1','OK'],['0','—']], c.coatingOK?'1':'0', 'coatingok');
+    h += pickRow('車販依頼', [['1','あり'],['0','なし']], c.salesReq?'1':'0', 'salesreq');
+    h += '<div class="cv-pickrow"><span class="cv-pk">依頼メモ</span><div class="cv-chips" style="flex:1">'
+       + '<input class="cv-fixinput" type="text" value="'+esc(c.salesReqMemo||'')+'" placeholder="車販への依頼（1行・任意）" onchange="cvSalesMemo(this.value)" style="flex:1;min-width:180px"></div></div>';
+    h += '</div>';
 
     // 車検スケジュール（車検タイプのみ表示）
     if (c.workType==='shaken') h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
@@ -488,8 +504,12 @@
     else if(group==='wash'){ _c.needWash = (val==='1'); }
     else if(group==='handover'){ _c.handover = val; }
     else if(group==='line'){ _c.noThanksLine = (val==='0'); }   // 要='1'→false／不要='0'→true
+    else if(group==='headlight'){ _c.headlight = (val==='1'); }
+    else if(group==='coatingok'){ _c.coatingOK = (val==='1'); }
+    else if(group==='salesreq'){ _c.salesReq = (val==='1'); }
     save();
   };
+  window.cvSalesMemo = function(v){ _c.salesReqMemo = (v||'').trim(); save(); };
 
   // ===== 整備/バックオフィス チェック =====
   function toggleCheck(holder, i, el){

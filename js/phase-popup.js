@@ -42,6 +42,7 @@
       + '    <label class="pp-lb">返車予定日</label>'
       + '    <input class="pp-date" id="pp-ret" type="date">'
       + '  </div>'
+      + '  <div class="pp-field pp-sales" id="pp-sales-field" style="display:none"></div>'
       + '  <div class="pp-field" id="pp-partner-field" style="display:none">'
       + '    <label class="pp-lb">外注先</label>'
       + '    <select class="pp-date" id="pp-partner" onchange="PitPhasePopup.onPartner()"></select>'
@@ -71,6 +72,9 @@
     var fromL = statusName(pending.from), toL = statusName(pending.to);
     el('pp-move').innerHTML = '<span class="pp-from">'+esc(fromL)+'</span><span class="pp-arrow">→</span><span class="pp-to">'+esc(toL)+'</span>'
       + '<span class="pp-who">'+esc((card.customer||'（未入力）')+' 様')+(card.car?' ／ '+esc(card.car):'')+'</span>';
+
+    // 車販依頼フィールドは既定で隠す（order時のみ出す）
+    var _sf = el('pp-sales-field'); if (_sf){ _sf.style.display = 'none'; _sf.innerHTML = ''; }
 
     // フィールドの出し分け
     var isOut = (mode === 'outsource');
@@ -121,6 +125,16 @@
       el('pp-ret').value = retPrefill;
       el('pp-note').textContent = '確定見積と、お客様に伝えた返車予定日を入れてください。';
       el('pp-ok').textContent = 'パーツ待ちへ';
+      // 受注時に車販部門への依頼トリガーを設定（返車予定日の下）
+      var _ids = (Array.isArray(card.workTypes) && card.workTypes.length) ? card.workTypes : (card.workType ? [card.workType] : []);
+      var _isShaken = (card.workType === 'shaken' || _ids.indexOf('shaken') >= 0);
+      var _hasCoat = (_ids.indexOf('coat1y') >= 0 || _ids.indexOf('coat3m') >= 0);
+      var _sh = '<div class="pp-saleshd">🛒 車販部門への依頼</div>';
+      if (_isShaken) _sh += '<label class="pp-check"><input type="checkbox" id="pp-headlight"' + (card.headlight ? ' checked' : '') + '> 🔦 車検ヘッドライト磨き</label>';
+      if (_hasCoat)  _sh += '<label class="pp-check"><input type="checkbox" id="pp-coatingok"' + (card.coatingOK ? ' checked' : '') + '> ✨ コーティング受注OK</label>';
+      _sh += '<label class="pp-check"><input type="checkbox" id="pp-salesreq"' + (card.salesReq ? ' checked' : '') + '> 🛒 その他 車販依頼</label>';
+      _sh += '<input class="pp-salesmemo" id="pp-salesmemo" type="text" placeholder="依頼メモ（1行・任意）" value="' + esc(card.salesReqMemo || '') + '">';
+      if (_sf){ _sf.innerHTML = _sh; _sf.style.display = ''; }
     } else { // final（作業完了）
       el('pp-title').textContent = '✅ 作業完了 — 確定金額';
       el('pp-amt-lb').textContent = '確定金額（請求額）';
@@ -176,10 +190,14 @@
           else if (p.mode === 'order') card.amountOrder = Number(amt);
           else card.amountFinal = Number(amt);
         }
-        // 返車予定日（order時のみ）
+        // 返車予定日（order時のみ）＋車販依頼トリガー
         if (p.mode === 'order'){
           var r = el('pp-ret') ? el('pp-ret').value : '';
           if (r){ card.returnDateFinal = r; if (!card.returnDate) card.returnDate = r; }
+          var _hl = el('pp-headlight'); if (_hl) card.headlight = _hl.checked;
+          var _co = el('pp-coatingok'); if (_co) card.coatingOK = _co.checked;
+          var _sr = el('pp-salesreq');  if (_sr) card.salesReq  = _sr.checked;
+          var _sm = el('pp-salesmemo'); if (_sm) card.salesReqMemo = _sm.value.trim();
         }
       }
       try { p.commit(); } catch(e){ if (window.console) console.error(e); }
