@@ -44,6 +44,19 @@
 .ph-memo{ overflow-wrap:anywhere; }
 .ph-empty{ color:var(--text3); }
 .ph-sales-line{ font-size:11.5px; color:var(--text); line-height:1.6; overflow-wrap:anywhere; }
+/* バッジ行（該当するもの全部） */
+.ph-badges{ display:flex; flex-wrap:wrap; gap:5px; margin-top:9px; }
+.ph-b{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px; border:1px solid; white-space:nowrap; line-height:1.5; }
+.ph-b-drop{ background:var(--bg3); color:var(--text2); border-color:var(--border2); }
+.ph-b-loaner{ background:rgba(245,158,11,.16); color:#f59e0b; border-color:rgba(245,158,11,.55); }
+.ph-b-wash{ background:#2563eb; color:#fff; border-color:#2563eb; }
+.ph-b-consult{ background:rgba(234,179,8,.15); color:#a16207; border-color:#eab308; }
+.ph-b-urg{ background:#ef4444; color:#fff; border-color:#ef4444; }
+.ph-b-red{ background:rgba(239,68,68,.14); color:#ef4444; border-color:rgba(239,68,68,.55); }
+.ph-b-td{ background:rgba(29,185,122,.14); color:var(--green); border-color:rgba(29,185,122,.5); }
+.ph-b-hl{ background:rgba(139,92,246,.16); color:#8b5cf6; border-color:rgba(139,92,246,.55); }
+.ph-b-coat{ background:rgba(168,85,247,.16); color:#a855f7; border-color:rgba(168,85,247,.55); }
+.ph-b-sales{ background:rgba(37,99,235,.14); color:#2563eb; border-color:rgba(37,99,235,.5); }
 /* 📞 完TEL/返車 のその場編集（ホバーパネル内） */
 .ph-rt-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
 .ph-rt-k{ font-size:11px; color:var(--text2); width:64px; flex:0 0 64px; }

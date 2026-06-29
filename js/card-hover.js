@@ -137,6 +137,31 @@
     h += '<div class="ph-car">'+carTxt+'</div>';
     if (c.plate || (c.karteNo||'').trim()) h += '<div class="ph-plate-row">'+(c.plate?'<span class="ph-plate">'+esc(c.plate)+'</span>':'')+((c.karteNo||'').trim()?'<span class="ph-karte">'+esc(c.karteNo.trim())+'</span>':'')+'</div>';
 
+    // ===== バッジ（該当するものだけ全部）：作業タイプ／受付／代車・洗車・相談・緊急・クレーム・試運転・ライト磨き・コーティング・車販依頼 =====
+    (function(){
+      var bd = [];
+      var wids = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
+      wids.forEach(function(id){
+        var w = (window.state && state.workTypes || []).find(function(x){ return x.id === id; });
+        if (w) bd.push('<span class="ph-b" style="background:'+w.color+'22;color:'+w.color+';border-color:'+w.color+'88">'+esc(w.label)+'</span>');
+      });
+      if (c.dropType){
+        bd.push(window.pitDropBadges
+          ? pitDropBadges(c, function(o){ return '<span class="ph-b ph-b-drop" title="'+esc(o.desc||'')+'">'+esc(o.label)+'</span>'; })
+          : (function(){ var dt=(state.dropTypes||[]).find(function(x){return x.id===c.dropType;}); return dt?'<span class="ph-b ph-b-drop">'+esc(dt.label)+'</span>':''; })());
+      }
+      if (c.needLoaner) bd.push('<span class="ph-b ph-b-loaner">代車</span>');
+      if (c.needWash)   bd.push('<span class="ph-b ph-b-wash">洗車</span>');
+      if (c.consult)    bd.push('<span class="ph-b ph-b-consult">相談</span>');
+      if (c.urgent)     bd.push('<span class="ph-b ph-b-urg">緊急</span>');
+      if (c.codeRed)    bd.push('<span class="ph-b ph-b-red">クレーム</span>');
+      if (c.testDrive)  bd.push('<span class="ph-b ph-b-td">試運転</span>');
+      if (c.headlight)  bd.push('<span class="ph-b ph-b-hl">🔦ライト磨き</span>');
+      if (c.coatingOK)  bd.push('<span class="ph-b ph-b-coat">✨コーティング受注</span>');
+      if (c.salesReq)   bd.push('<span class="ph-b ph-b-sales">🛒車販依頼</span>');
+      if (bd.length) h += '<div class="ph-badges">'+bd.join('')+'</div>';
+    })();
+
     // ===== 経過日数（預かり後）。ただし予約（入庫前）は予約日だけ =====
     var _resv = (c.status === 'reserved');
     h += '<div class="ph-stats' + (_resv ? (c.needLoaner ? ' ph-stats-2' : ' ph-stats-1') : '') + '">';
@@ -249,12 +274,9 @@
       h += '</div>';
     }
 
-    // 🚗 車販（ライト磨き・その他車販依頼）＝ある時だけ末尾に表示
-    if (c.headlight || c.salesReq){
-      h += '<div class="ph-sec"><div class="ph-sec-lb">🚗 車販</div><div class="ph-sec-body">';
-      if (c.headlight) h += '<div class="ph-sales-line">🔦 車検ヘッドライト磨き</div>';
-      if (c.salesReq)  h += '<div class="ph-sales-line">🛒 車販依頼' + (c.salesReqMemo ? '：' + esc(c.salesReqMemo) : '') + '</div>';
-      h += '</div></div>';
+    // 🛒 車販依頼メモ（バッジは上のバッジ行に出るので、ここはメモ本文だけ末尾に）
+    if (c.salesReq && (c.salesReqMemo||'').trim()){
+      h += '<div class="ph-sec"><div class="ph-sec-lb">🛒 車販依頼メモ</div><div class="ph-sec-body ph-sales-line">' + esc(c.salesReqMemo) + '</div></div>';
     }
 
     ensureEl().innerHTML = h;
