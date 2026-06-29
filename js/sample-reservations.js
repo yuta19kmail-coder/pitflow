@@ -95,8 +95,9 @@
       phaseAt: Date.now(), workTypes: [wt],
       _sample: true,   // ★サンプル生成カード印＝カード開閉時に顧客控えへ書き戻さない（重複追加防止）
     };
-    // 併用：車検/12点/一般 の一部にコーティング（3M/1Y）を追加＝バッジ2個
-    if (['shaken','12pt','general'].indexOf(wt) >= 0 && Math.random() < 0.2){
+    // 併用：車検/12点/一般 の一部にコーティング（3M/1Y）を追加＝バッジ2個。
+    // 月あたり 5〜10台に収まるよう低確率に（入庫 約170台/月 × 対象7割 × 0.06 ≒ 月7台）。
+    if (['shaken','12pt','general'].indexOf(wt) >= 0 && Math.random() < 0.06){
       const add = rnd(['coat3m','coat1y']);
       c.workAddons = [add];
       c.workTypes = [wt, add];
@@ -189,6 +190,10 @@
             if (Math.random() < 0.12) c.testDrive = true;
           }
         }
+
+        // コーティング車（1Y/3M）が見積以降に入っていれば「コーティング受注OK」を立てる＝車販作業ビューに出る
+        var _isCoatCard = Array.isArray(c.workTypes) && (c.workTypes.indexOf('coat1y') >= 0 || c.workTypes.indexOf('coat3m') >= 0);
+        if (_isCoatCard && ['parts','work','workDone'].indexOf(c.status) >= 0) c.coatingOK = true;
 
         // 代車は別途「代車ごとのリアルなスケジュール」で生成するため、入庫カードには付けない。
         // ちょい足し

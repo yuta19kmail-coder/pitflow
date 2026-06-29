@@ -1153,8 +1153,10 @@ th.cfs-lg-d{ z-index:3; }
 .ret-tbd-body .today-empty{ flex:1 1 100%; }
 
 /* ===== 完TEL済／依頼ポップアップ（return-popup.js・pp-* を流用） ===== */
-#rp-backdrop .pp-box{ width:min(360px,92vw) !important; }
-#rp-backdrop .pp-box .modal-body{ padding:14px; gap:11px; display:flex; flex-direction:column; }
+#rp-backdrop .pp-box{ width:min(460px,93vw) !important; border-radius:16px; }
+#rp-backdrop .pp-box .modal-body{ padding:18px 20px 20px; gap:14px; display:flex; flex-direction:column; }
+#rp-backdrop .pp-box .modal-head{ padding:14px 18px; }
+#rp-backdrop .pp-box .modal-title{ font-size:16px; font-weight:800; }
 .rp-time{ align-self:flex-start; min-width:210px; font-size:15px; padding:7px 9px; border:1px solid var(--border2); border-radius:8px; background:var(--bg3); color:var(--text); }
 .rp-text{ width:100%; box-sizing:border-box; font-size:13px; padding:7px 9px; border:1px solid var(--border2); border-radius:8px; background:var(--bg3); color:var(--text); }
 .rp-chips{ display:flex; gap:8px; }
