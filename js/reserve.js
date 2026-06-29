@@ -426,7 +426,8 @@ function cardHtml(c, opts){
     }
     wts.slice(0, 2).forEach(function(id){
       const w = state.workTypes.find(x => x.id === id);
-      if (w) top += '<span class="pcm-wt" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>';
+      if (w){ const _cd = ((id==='coat1y'||id==='coat3m') && c.coatingDone) ? ' pcm-done' : '';   // コーティング完了＝済
+        top += '<span class="pcm-wt' + _cd + '" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + w.label + '</span>'; }
     });
     const staff = c.frontStaff || c.staff || '';
     const placed = !!(opts.kanban && c.bayId && window.PitPip && PitPip.isOpen());   // PITボード(PiP)が開いている時だけグレーアウト（閉じてる時は普通表示）
@@ -447,8 +448,8 @@ function cardHtml(c, opts){
     var _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
     var _stf = (window.pitSurname ? pitSurname(staff) : staff);
     h += '<div class="pcm-r"><span class="pcm-name">' + _nm + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
-    // 完TEL待ち以降（returnStage）で洗車対象なら、担当の左に洗車バッジ
-    var _washB = (c.returnStage && c.needWash) ? '<span class="pcm-wash" title="洗車対象">洗車</span>' : '';
+    // 完TEL待ち以降（returnStage）で洗車対象なら、担当の左に洗車バッジ（洗車完了＝済スタンプ）
+    var _washB = (c.returnStage && c.needWash) ? '<span class="pcm-wash' + (c.washSalesDone?' pcm-done':'') + '" title="洗車対象">洗車</span>' : '';
     h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + _washB + (_stf ? '<span class="pcm-front">' + _stf + '</span>' : '') + '</div>';
     // 外注フェーズ＝外注先名(＋メモ)＋そのフェーズに入ってからの日数ラベル
     if (c.status === 'outsource'){

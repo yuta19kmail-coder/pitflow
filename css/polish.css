@@ -91,6 +91,11 @@
 /* 洗車バッジ（完TEL待ち以降・洗車対象）＝担当の左。青ベタ・白字で目立たせる（代車の緊急と同様の見せ方） */
 .pcm-wash{ flex:0 0 auto; font-size:13px; line-height:1.42; padding:0 7px; border-radius:6px; font-weight:800; white-space:nowrap;
   background:#2563eb; color:#fff; border:1px solid #2563eb; }
+/* 通常カードのバッジにも「済」スタンプ（1Y/3M・洗車）。ホバーと同じ案E。 */
+.pcm-wt, .pcm-wash{ position:relative; overflow:visible; }
+.pcm-done::after{ content:"済"; position:absolute; top:-7px; right:-4px; transform:rotate(-12deg);
+  font-size:10px; font-weight:900; color:#fff; background:#ef4444; border-radius:3px; padding:0 1.5px; line-height:1.25;
+  box-shadow:0 1px 3px rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.18); pointer-events:none; }
 .pit-card.pcm.pcm-claim{ border-color:#ef4444 !important; box-shadow:var(--shadow-card); }
 .pcm-loaner.pcm-dead{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important; box-shadow:0 0 8px rgba(239,68,68,.7); animation:pcmDeadPulse 1.2s ease-in-out infinite; }
 /* 外注フェーズのカード下ラベル＝外注先名＋経過日数 */
