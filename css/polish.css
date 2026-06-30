@@ -1328,7 +1328,7 @@ th.cfs-lg-d{ z-index:3; }
 .kari-name{
   flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
   width:19px; height:19px; margin-left:4px;
-  border:2px solid #f59e0b; color:#f59e0b; background:rgba(245,158,11,.10);
+  border:1.5px solid #d97706; color:#fff; background:#f59e0b;
   border-radius:50%; font-family:serif; font-weight:900; font-size:12px; line-height:1; letter-spacing:0;
 }
 
@@ -1350,7 +1350,7 @@ th.cfs-lg-d{ z-index:3; }
 /* ③ カレンダー行の右端の小さな丸「仮」 */
 .kari-edge{
   flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
-  width:17px; height:17px; border:2px solid #f59e0b; color:#f59e0b; background:rgba(245,158,11,.10);
+  width:17px; height:17px; border:1.5px solid #d97706; color:#fff; background:#f59e0b;
   border-radius:50%; font-family:serif; font-weight:900; font-size:11px; line-height:1; vertical-align:middle;
 }
 .rml-ev .kari-edge{ float:right; margin-left:6px; }   /* 月リスト行はflexでないので右端へfloat */
@@ -1360,21 +1360,28 @@ th.cfs-lg-d{ z-index:3; }
 .kari-mini{
   display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px;
   font-size:11px; font-weight:900; line-height:1;
-  color:#f59e0b; background:rgba(245,158,11,.10); border:1.5px solid #f59e0b; border-radius:50%;
+  color:#fff; background:#f59e0b; border:1.5px solid #d97706; border-radius:50%;
   font-family:serif; letter-spacing:0; vertical-align:middle; padding:0 2px;
 }
 
-/* 代車カレンダーのバッジ用「〇仮」丸スタンプ（他と同じオレンジ丸・名前/車種に少し被せる）v0.100.4 */
+/* 代車カレンダーのバッジ用「〇仮」丸スタンプ（他と同じ・塗りオレンジ＋白字でハッキリ）v0.100.5
+   ※透けは無し（バッジを透かすと中の茎(棒)が出てしまうため） */
 .kari-lo{
   position:absolute; top:50%; right:6px; transform:translateY(-50%);
   width:20px; height:20px; display:flex; align-items:center; justify-content:center;
   font-family:serif; font-weight:900; font-size:13px; line-height:1; letter-spacing:0;
-  color:#f59e0b; border:2px solid #f59e0b; border-radius:50%; background:rgba(245,158,11,.12);
-  pointer-events:none; z-index:3;
+  color:#fff; border:1.5px solid #d97706; border-radius:50%; background:#f59e0b;
+  box-shadow:0 1px 3px rgba(0,0,0,.3); pointer-events:none; z-index:3;
 }
-.lo-badge.mini .kari-lo{ width:16px; height:16px; font-size:10px; right:3px; border-width:1.5px; }
-/* 仮予約の代車バッジ＝全体をやや透けさせて「仮」感を出す（v0.100.4） */
-.lo-badge.lo-kari{ opacity:.72; }
+.lo-badge.mini .kari-lo{ width:16px; height:16px; font-size:10px; right:3px; }
+
+/* ホバー情報カードのバッジ一覧に出す〇仮（塗りオレンジの丸） */
+.ph-b.ph-b-kari{
+  width:20px; min-width:20px; height:20px; padding:0; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#fff; background:#f59e0b; border:1.5px solid #d97706;
+  font-family:serif; font-weight:900; font-size:12px; line-height:1;
+}
 
 /* 新規予約画面ヘッダの「📝 仮予約で登録」ボタン */
 .vh-btn.vh-kari{ border-color:#f59e0b88; color:#f59e0b; }

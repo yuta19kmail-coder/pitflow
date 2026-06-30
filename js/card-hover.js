@@ -132,7 +132,7 @@
     h += '<span class="ph-pill ph-div">'+ku+'</span>';
     if (staff) h += '<span class="ph-staffwrap"><span class="ph-stafflb">担当</span><span class="ph-staff">'+esc(staff)+'</span></span>';
     h += '</div>';
-    h += '<div class="ph-name">'+esc(c.customer||'（未入力）')+' <small>様</small>'+(c.tentative?'<span class="kari-name" title="仮予約">仮</span>':'')+'</div>';
+    h += '<div class="ph-name">'+esc(c.customer||'（未入力）')+' <small>様</small></div>';
     if (c.kana) h += '<div class="ph-kana">'+esc(c.kana)+'</div>';
     h += '<div class="ph-car">'+carTxt+'</div>';
     if (c.plate || (c.karteNo||'').trim()) h += '<div class="ph-plate-row">'+(c.plate?'<span class="ph-plate">'+esc(c.plate)+'</span>':'')+((c.karteNo||'').trim()?'<span class="ph-karte">'+esc(c.karteNo.trim())+'</span>':'')+'</div>';
@@ -140,6 +140,7 @@
     // ===== バッジ（該当するものだけ全部）：作業タイプ／受付／代車・洗車・相談・緊急・クレーム・試運転・ライト磨き・コーティング・車販依頼 =====
     (function(){
       var bd = [];
+      if (c.tentative) bd.push('<span class="ph-b ph-b-kari" title="仮予約">仮</span>');   // 仮予約は先頭に〇仮（v0.100.5）
       var wids = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
       wids.forEach(function(id){
         var w = (window.state && state.workTypes || []).find(function(x){ return x.id === id; });
