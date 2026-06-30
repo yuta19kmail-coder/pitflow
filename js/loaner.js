@@ -378,10 +378,10 @@ function _loRenderDays(start, n){
         if (isStart){
           if (compact){
             // 省スペース：客名＝苗字/法人略記(㈱)（長い時だけ…）＋車種（長い時だけ…）＋固（黄）。詳細はホバーでフルサイズ札。
-            labelHtml = '<span class="lo-lbl mini">' + (isKari ? '<span class="kari-mini" title="仮予約">仮</span>' : '') + '<span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
+            labelHtml = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : '') + '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
-            labelHtml = '<span class="lo-lbl full">'
-              + (isKari ? '<span class="kari-mini" title="仮予約">仮</span>' : '')
+            labelHtml = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : '')
+              + '<span class="lo-lbl full">'
               + '<span class="lo-nm">' + _nm + ' 様</span>'
               + '<span class="lo-car2"><span class="lo-cartxt">' + (carTxt ? _loEsc(carTxt) : '') + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
               + (memoTxt ? '<span class="lo-memo">' + _loEsc(memoTxt) + '</span>' : '')
