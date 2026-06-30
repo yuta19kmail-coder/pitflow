@@ -394,7 +394,7 @@ function _loRenderDays(start, n){
         h += '<div class="lo-cell lo-bk' + (isStart ? ' bk-start' : '') + (isEnd ? ' bk-end' : '') + (single ? ' bk-single' : '') + (compact ? ' bk-compact' : ' bk-full') + (fixed ? ' lo-fixed' : '') + (returned ? ' lo-returned' : '') + (isToday ? ' lo-today' : '') + (isBad?' lo-bad':(isChg?' lo-chg':'')) + evCls + dayMods + '"' + attrs
            + ' style="--lo-team:' + teamColor + '"><i class="lo-fill"></i>' + gh;
         if (isStart){
-          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (hand ? ' lo-handoff' : '') + (isChg?' chg':'') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
+          h += '<span class="lo-badge ' + (compact ? 'mini' : 'full') + (hand ? ' lo-handoff' : '') + (isChg?' chg':'') + (isKari ? ' lo-kari' : '') + '"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '"' + (card ? ' data-card-id="' + card.id + '"' : '') + ' onclick="loBadgeMenu(event,\'' + (a.id || '') + '\')"' + hoverAttr + '>' + labelHtml + '</span>';
         }
         if (isEnd && !single){
           h += '<span class="lo-end"' + (returned ? '' : ' draggable="true"') + ' data-aid="' + (a.id || '') + '">▼</span>';
@@ -734,12 +734,14 @@ window.loInfoHover = function(el, aid){
   const car = card ? (card.car || '') : (a.car || '');
   const memo = card ? (card.loanerOther || '') : (a.purpose || '');
   const fixed = !!(card && card.loanerFixed);
+  const isKari = !!(card && card.tentative);   // 仮予約 v0.100.4
   const teamColor = _loTeamColor(a);
   let p = document.getElementById('lo-info'); if (!p){ p = document.createElement('div'); p.id = 'lo-info'; document.body.appendChild(p); }
-  p.className = 'lo-info lo-badge full';   // フルサイズ札と同じ見た目
+  p.className = 'lo-info lo-badge full' + (isKari ? ' lo-kari' : '');   // フルサイズ札と同じ見た目
   p.style.setProperty('--lo-team', teamColor);
   p.style.background = teamColor;
-  p.innerHTML = '<span class="lo-lbl full"><span class="lo-nm">' + _loEsc(nm) + ' 様</span>'
+  p.innerHTML = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : '')
+    + '<span class="lo-lbl full"><span class="lo-nm">' + _loEsc(nm) + ' 様</span>'
     + '<span class="lo-car2"><span class="lo-cartxt">' + _loEsc(car) + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
     + (memo ? '<span class="lo-memo">' + _loEsc(memo) + '</span>' : '') + '</span>';
   // ミニ札のあるセルにぴったり重ねる（フルサイズ札の位置＝left/right 4px）
