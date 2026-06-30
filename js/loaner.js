@@ -325,6 +325,7 @@ function _loRenderDays(start, n){
         const compact = days <= 2 && !hand;   // 後発の当日かぶりはフル札（くり抜きを綺麗に出す）
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
         const isEmg = !!a.emergency;
+        const isKari = !!(card && card.tentative);   // 仮予約の代車＝バッジに「仮」 v0.100.0
         const fixed = !!(card && card.loanerFixed);
         const returned = !!a.returned;
         const teamColor = _loTeamColor(a);
@@ -336,9 +337,10 @@ function _loRenderDays(start, n){
         if (isStart){
           if (compact){
             // 省スペース：客名＝苗字/法人略記(㈱)（長い時だけ…）＋車種（長い時だけ…）＋固（黄）。詳細はホバーでフルサイズ札。
-            labelHtml = '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
+            labelHtml = '<span class="lo-lbl mini">' + (isKari ? '<span class="kari-mini" title="仮予約">仮</span>' : '') + '<span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
             labelHtml = '<span class="lo-lbl full">'
+              + (isKari ? '<span class="kari-mini" title="仮予約">仮</span>' : '')
               + '<span class="lo-nm">' + _nm + ' 様</span>'
               + '<span class="lo-car2"><span class="lo-cartxt">' + (carTxt ? _loEsc(carTxt) : '') + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
               + (memoTxt ? '<span class="lo-memo">' + _loEsc(memoTxt) + '</span>' : '')

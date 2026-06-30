@@ -64,6 +64,20 @@ function closeDetail(){
   }
 }
 
+/* 📝 仮予約で登録（新規予約画面の右上ボタン）＝今のカードを仮予約フラグONで保存して戻る。
+   仮予約は予約カレンダー/代車カレンダーには「仮」付きで載り、予約ビューの未定タブ「仮予約」カラムに集まる。
+   本予約への確定は予約詳細画面の⋮メニューで行う（v0.100.0）。 */
+function pitSaveTentative(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (c){
+    c.tentative = true;
+    if (window.logFlow) logFlow(c, '仮予約で登録');
+    if (window.pitToast) pitToast('📝 仮予約として登録しました');
+  }
+  closeDetail();
+}
+window.pitSaveTentative = pitSaveTentative;
+
 function renderCardForm(c){
   const body = document.getElementById(_cardBodyId || 'md-body');
   if (!body) return;

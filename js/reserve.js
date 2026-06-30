@@ -95,6 +95,7 @@ function weekMiniCard(c){
   const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
   const wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
   let badges = '';
+  if (c.tentative) badges += '<span class="kari-mini" title="仮予約">仮</span>';
   if (c.needLoaner) badges += '<span class="rwk-lo" title="代車">代</span>';
   wts.slice(0, 3).forEach(function(id){
     const w = state.workTypes.find(x => x.id === id);
@@ -230,6 +231,7 @@ function _rmlRows(from, to){
              + ' onclick="openDetail(\'' + c.id + '\')">'
              + '<b>' + (c.reserveTime || '--:--') + '</b> ' + nm + ' 様' + (c.car ? ' ' + c.car : '')
              + (side ? '<span class="rml-side">' + side + '</span>' : '')
+             + (c.tentative ? '<span class="kari-edge" title="仮予約">仮</span>' : '')   // 仮は右端に小さく（v0.100.1）
              + '</div>';
       });
     }
@@ -315,6 +317,7 @@ function monthGridCells(refDate){
       html += ' onclick="event.stopPropagation();openDetail(\'' + c.id + '\')">';
       html += '<span class="rme-txt">' + nm + ' 様' + (c.car ? ' ' + c.car : '') + '</span>';   // 時間なし・苗字＋様・…省略
       if (side) html += '<span class="rme-side">' + side + '</span>';   // 右側＝代車＋作業(色付き)
+      if (c.tentative) html += '<span class="kari-edge" title="仮予約">仮</span>';   // 仮は右端に小さく（v0.100.1）
       html += '</div>';
     });
     if (remaining > 0){
@@ -435,7 +438,7 @@ function cardHtml(c, opts){
     // 看板内はカード自体をドロップ先(reorder)にして同フェーズ内の並び替えに対応
     var _reorderAttr = opts.kanban ? (' data-drop="reorder" data-drop-val="' + c.id + '"') : '';
     const _clickC = opts.onClick ? opts.onClick : ("openDetail('" + c.id + "')");
-    let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (c.resNo ? ' pcm-tab' : '') + (placed ? ' pcm-placed' : '') + '" draggable="true" data-card-id="' + c.id + '"' + _reorderAttr + ' onclick="' + _clickC + '" style="border-left-color:' + teamColor + ';">';
+    let h = '<div class="pit-card pcm' + (c.codeRed ? ' pcm-claim' : '') + (c.resNo ? ' pcm-tab' : '') + (placed ? ' pcm-placed' : '') + (c.tentative ? ' is-tentative' : '') + '" draggable="true" data-card-id="' + c.id + '"' + _reorderAttr + ' onclick="' + _clickC + '" style="border-left-color:' + teamColor + ';">';
     h += (c.resNo ? '<div class="pcm-ear" style="border-left-color:' + (c.codeRed ? '#ef4444' : teamColor) + (c.codeRed ? ';border-top-color:#ef4444' : '') + '">' + at(c.resNo) + '</div><i class="pcm-ear-slide"></i>' : '');
     // 車両注意タブ（左/M/T/車高・左M/T合体・最大2・該当時のみ・耳の右の上辺）
     var _dr = Array.isArray(c.drive) ? c.drive : [], _ct = [];
@@ -447,7 +450,9 @@ function cardHtml(c, opts){
     /* 名前・車種・担当の title は撤去（ホバー情報カード card-hover.js で全文表示するため二重ツールチップを防ぐ） */
     var _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
     var _stf = (window.pitSurname ? pitSurname(staff) : staff);
-    h += '<div class="pcm-r"><span class="pcm-name">' + _nm + ' 様</span><span class="pcm-badges">' + top + '</span></div>';
+    // 仮予約は「様」のすぐ後ろに小さな「仮」をインライン表示。名前が長い時は名前だけ…省略し「…様 仮」は必ず残る（v0.100.1）
+    var _kn = c.tentative ? '<span class="kari-name" title="仮予約">仮</span>' : '';
+    h += '<div class="pcm-r"><span class="pcm-nm2"><span class="pcm-name">' + _nm + '</span><span class="pcm-sama">様</span>' + _kn + '</span><span class="pcm-badges">' + top + '</span></div>';
     // 完TEL待ち以降（returnStage）で洗車対象なら、担当の左に洗車バッジ（洗車完了＝済スタンプ）
     var _washB = (c.returnStage && c.needWash) ? '<span class="pcm-wash' + (c.washSalesDone?' pcm-done':'') + '" title="洗車対象">洗車</span>' : '';
     h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + _washB + (_stf ? '<span class="pcm-front">' + _stf + '</span>' : '') + '</div>';
@@ -469,7 +474,8 @@ function cardHtml(c, opts){
 
   let html = '';
   const _clickJs = opts.onClick ? opts.onClick : ("openDetail('" + c.id + "')");
-  html += '<div class="pit-card' + (isRet ? ' return' : '') + (c.urgent ? ' is-urgent' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="' + _clickJs + '" style="min-width:200px;border-left-color:' + accent2 + ';">';
+  html += '<div class="pit-card' + (isRet ? ' return' : '') + (c.urgent ? ' is-urgent' : '') + (c.tentative ? ' is-tentative' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="' + _clickJs + '" style="min-width:200px;border-left-color:' + accent2 + ';">';
+  if (c.tentative) html += '<span class="kari-stamp">仮</span>';   // 仮予約スタンプ v0.100.0
   html += '<div class="pc-line1">';
   html += '<span class="pc-time">' + timeStr + '</span>';
   html += '<span class="pc-status" style="--sc:' + statusColor(c.status) + ';">' + statusLabel(c.status) + '</span>';

@@ -30,7 +30,11 @@ window.pitAutoArchive = pitAutoArchive;
 
 function _undTeamColor(c){ return (c.boardId === 'import') ? '#ec4899' : '#1db97a'; }
 
-/* 予約ビュー内「未定」タブ：縦半分で 未定（パーツ待ち）／未入庫（キャンセル） */
+/* 予約ビュー内「未定」タブ：3カラム横並び（仮予約／未定（パーツ待ち）／未入庫（キャンセル））。
+   返車ビュー未定と同じ通常カード方式（cardHtml compact）。v0.100.0 仮予約カラム新設。
+   ・仮予約 ＝ status:reserved かつ tentative。入庫日が入っていれば予約カレンダーにも「仮」で出る。本予約化は予約詳細の⋮メニュー。
+   ・未定（パーツ待ち）＝ intakeTbd（仮予約を除く）。カードの📅で入庫日を入れて予約へ。
+   ・未入庫（キャンセル）＝ cancelled。↩で予約に戻す。 */
 function renderReserveTbd(){
   ['reserve-day-list','reserve-week','reserve-month','reserve-2month'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -40,19 +44,32 @@ function renderReserveTbd(){
   wrap.style.display = '';
   pitAutoArchive();
 
-  const intakeTbd = state.cards.filter(c => c.status === 'reserved' && c.intakeTbd);
+  const tentative = state.cards.filter(c => c.status === 'reserved' && c.tentative);
+  const intakeTbd = state.cards.filter(c => c.status === 'reserved' && c.intakeTbd && !c.tentative);
   const noShow    = state.cards.filter(c => c.status === 'cancelled' && !c.archived);
 
-  let h = '<div class="und-half">';
-  h += '<div class="und-sec"><div class="und-sec-h">🅿️ 未定（パーツ待ち・入庫日決まらず）<span class="und-cnt">' + intakeTbd.length + '</span></div>';
-  if (!intakeTbd.length) h += '<div class="today-empty">なし</div>';
-  else intakeTbd.forEach(c => h += _undRow(c, 'intakeTbd'));
-  h += '</div>';
-  h += '<div class="und-sec"><div class="und-sec-h">🚫 未入庫（来店なし・キャンセル）<span class="und-cnt">' + noShow.length + '</span></div>';
-  if (!noShow.length) h += '<div class="today-empty">なし</div>';
-  else noShow.forEach(c => h += _undRow(c, 'noShow'));
-  h += '<div class="und-note">※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でキャンセル・アーカイブされます。</div>';
-  h += '</div>';
+  const card = c => (typeof cardHtml === 'function') ? cardHtml(c, { compact: true }) : '';
+  const item = (c, act) => '<div class="rtbd-item">' + card(c) + (act || '') + '</div>';
+  const empty = '<div class="today-empty">なし</div>';
+  const col = (title, n, bodyHtml, note) =>
+    '<div class="ret-tbd-col"><div class="ret-tbd-h">' + title + '<span class="und-cnt">' + n + '</span></div>'
+    + '<div class="ret-tbd-body">' + bodyHtml + '</div>'
+    + (note ? '<div class="und-note">' + note + '</div>' : '') + '</div>';
+
+  let h = '<div class="ret-tbd-cols">';
+
+  h += col('📝 仮予約 <small>（仮おさえ）</small>', tentative.length,
+    tentative.length ? tentative.map(c => item(c, '')).join('') : empty,
+    '入庫日が決まっている仮予約は、予約カレンダーにも「仮」で出ます。本予約に確定するときはカードを開いて⋮メニューから。');
+
+  h += col('🅿️ 未定 <small>（パーツ待ち・入庫日決まらず）</small>', intakeTbd.length,
+    intakeTbd.length ? intakeTbd.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndSetIntake(\'' + c.id + '\')">📅 入庫日を入れる</button>')).join('') : empty,
+    'カードの📅で入庫日を入れると予約カレンダーへ移ります。');
+
+  h += col('🚫 未入庫 <small>（来店なし・キャンセル）</small>', noShow.length,
+    noShow.length ? noShow.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndRestore(\'' + c.id + '\')">↩ 予約に戻す</button>')).join('') : empty,
+    '※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でキャンセル・アーカイブされます。');
+
   h += '</div>';
   wrap.innerHTML = h;
 }

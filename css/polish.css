@@ -1309,3 +1309,73 @@ th.cfs-lg-d{ z-index:3; }
 .md-alert-tags{ flex:none; display:flex; align-items:center; gap:7px; }
 .md-alert-div{ color:#fff; font-size:11px; font-weight:800; padding:2px 9px; border-radius:999px; }
 .md-alert-st{ font-size:11px; font-weight:700; padding:2px 8px; border:1px solid; border-radius:7px; background:var(--bg2); }
+
+/* ===========================================================
+   仮予約システム（v0.100.1・ゆうた調整反映）
+   ① compactカード＝「様」のすぐ後ろにインライン「仮」（名前が長いと…様 仮で省略）
+   ② 予約標準カード（full）＝上寄り中央に丸スタンプ
+   ③ 月/2ヶ月カレンダー＝行の右端に小さく「仮」
+   色は全て #f59e0b（オレンジ）。
+   =========================================================== */
+
+/* 共通：仮予約カードは左ボーダーを点線にして「未確定っぽく」 */
+.pit-card.is-tentative{ position:relative; border-left-style:dashed; }
+
+/* ① compactカード：様の直後に小さな丸「仮」。名前だけ…省略し「様 仮」は必ず残す */
+.pcm-nm2{ display:flex; align-items:center; min-width:0; flex:1 1 auto; }
+.pcm-nm2 .pcm-name{ flex:0 1 auto; }   /* 名前だけ縮めて…省略（様/仮は縮めない） */
+.pcm-sama{ flex:0 0 auto; font-weight:800; font-size:15px; color:var(--text); margin-left:3px; }
+.kari-name{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  width:19px; height:19px; margin-left:4px;
+  border:2px solid #f59e0b; color:#f59e0b; background:rgba(245,158,11,.10);
+  border-radius:50%; font-family:serif; font-weight:900; font-size:12px; line-height:1; letter-spacing:0;
+}
+
+/* ② full（予約標準カード）：上寄り中央の丸スタンプ（ゆうた指定 left46/top27/φ42/26px/回転0/枠2） */
+.kari-stamp{
+  position:absolute;
+  top:var(--k-top,27%); left:var(--k-left,46%);
+  transform:translate(-50%,-50%) rotate(var(--k-rot,0deg));
+  width:var(--k-d,42px); height:var(--k-d,42px);
+  display:flex; align-items:center; justify-content:center;
+  font-family:serif; font-weight:900; font-size:var(--k-size,26px); letter-spacing:-1px;
+  color:var(--k-color,rgba(245,158,11,.95));
+  border:var(--k-bw,2px) solid var(--k-color,rgba(245,158,11,.95));
+  border-radius:50%;
+  text-shadow:1px 1px 0 rgba(255,255,255,.35);
+  pointer-events:none; z-index:6;
+}
+
+/* ③ カレンダー行の右端の小さな丸「仮」 */
+.kari-edge{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; border:2px solid #f59e0b; color:#f59e0b; background:rgba(245,158,11,.10);
+  border-radius:50%; font-family:serif; font-weight:900; font-size:11px; line-height:1; vertical-align:middle;
+}
+.rml-ev .kari-edge{ float:right; margin-left:6px; }   /* 月リスト行はflexでないので右端へfloat */
+.reserve-month-event .kari-edge{ margin-left:4px; }     /* 2ヶ月チップはflex＝最後の要素＝右端 */
+
+/* 小さい「仮」チップ（週ミニカード・代車バッジ用＝バッジ群の中で右寄せ） */
+.kari-mini{
+  display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px;
+  font-size:11px; font-weight:900; line-height:1;
+  color:#f59e0b; background:rgba(245,158,11,.10); border:1.5px solid #f59e0b; border-radius:50%;
+  font-family:serif; letter-spacing:0; vertical-align:middle; padding:0 2px;
+}
+
+/* 新規予約画面ヘッダの「📝 仮予約で登録」ボタン */
+.vh-btn.vh-kari{ border-color:#f59e0b88; color:#f59e0b; }
+.vh-btn.vh-kari:hover{ background:#f59e0b1a; }
+
+/* カード詳細：状態横の「📝 仮予約」バッジ＋⋮メニューの切替 */
+.cv-karibadge{ font-size:11px; font-weight:800; color:#f59e0b; background:#f59e0b1f;
+  border:1px solid #f59e0b66; border-radius:7px; padding:2px 8px; }
+.cv-opti.cv-kariopt{ color:#f59e0b; font-weight:700; }
+
+/* 予約・未定タブの3カラム：各カードに小さなアクションボタンを下げる用の枠 */
+.ret-tbd-body .rtbd-item{ width:224px; flex:0 0 224px; display:flex; flex-direction:column; gap:4px; }
+.ret-tbd-body .rtbd-item .pit-card{ width:100%; flex:0 0 auto; }
+.rtbd-act{ font-size:11px; font-weight:700; padding:5px 8px; border-radius:7px;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text2); cursor:pointer; width:100%; }
+.rtbd-act:hover{ border-color:var(--brand); color:var(--text); }

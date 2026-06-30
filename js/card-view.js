@@ -61,6 +61,7 @@
     if(c.salesReqMemo == null) c.salesReqMemo = '';
     if(c.headlight == null) c.headlight = false;
     if(c.coatingOK == null) c.coatingOK = false;
+    if(c.tentative == null) c.tentative = false;   // 仮予約フラグ（旧データ対策）v0.100.0
     return c;
   }
 
@@ -358,11 +359,16 @@
     let h = '<div class="cv-top">'
       + (c.resNo?'<span class="cv-resno">'+esc(c.resNo)+'</span>':'')
       + '<span class="cv-status" style="color:'+sc+';border-color:'+sc+'66;background:'+sc+'1f">'+esc(sl)+'</span>'
+      + (c.tentative?'<span class="cv-karibadge">📝 仮予約</span>':'')
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
       + '<button class="cv-iconbtn" title="この車両に付箋を発行" onclick="cvToggleFusen(event)">🗒️</button>'
       + '<div class="cv-optwrap"><button class="cv-iconbtn" title="オプション" onclick="cvToggleOpt(event)">⋮</button>'
-      + '<div class="cv-optmenu" id="cv-optmenu"><div class="cv-opth">フェーズ移動</div>'
+      + '<div class="cv-optmenu" id="cv-optmenu">'
+      + (c.tentative
+          ? '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">✓ 本予約に確定する</button>'
+          : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">📝 仮予約にする</button>')
+      + '<div class="cv-optdiv"></div><div class="cv-opth">フェーズ移動</div>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'estim\')">→ 見積もり中に移動</button>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'work\')">→ 作業中に移動</button>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'workDone\')">→ 完了にする</button>'
@@ -550,6 +556,18 @@
     save(); if(window.renderBoardNotes) try{ renderBoardNotes(); }catch(e){}
     cvCloseFusen();
     if(window.toast) toast('🗒️ 付箋を発行しました');
+  };
+
+  /* 仮予約 ⇄ 本予約 の切替（⋮メニュー）v0.100.0 */
+  window.cvToggleTentative = function(){
+    if(!_c) return;
+    _c.tentative = !_c.tentative;
+    if(!Array.isArray(_c.log)) _c.log=[];
+    const d=new Date();
+    _c.log.push({ text:(_c.tentative?'仮予約にした':'本予約に確定した'), at:(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()), by:(window.bnMe||'') });
+    save(); closeAllPop();
+    if(window.pitToast) pitToast(_c.tentative?'📝 仮予約にしました':'✓ 本予約に確定しました');
+    renderCardView(_c, 'md-body-modal');
   };
 
   window.cvMovePhase = function(status){
