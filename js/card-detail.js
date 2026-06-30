@@ -55,6 +55,7 @@ function closeDetail(){
   const _c = state.cards.find(x => x.id === _editingCardId);
   if (_c && !_c._sample && window.upsertCustomerFromCard) upsertCustomerFromCard(_c);
   _editingCardId = null;
+  if (window.pitSyncLoanerAssigns) pitSyncLoanerAssigns();   // 代車を入れた予約を代車カレンダーへ同期（v0.100.2）
   if (window.PitDB) PitDB.save();
   if (modalOpen){
     modal.classList.remove('show');

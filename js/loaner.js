@@ -157,9 +157,50 @@ window.loToggleSort = function(key){
   _loRefresh();
 };
 
+/* カードの代車情報(needLoaner+loanerId+loanerFrom)を代車カレンダーの割当(loanerAssigns)へ同期する（v0.100.2）。
+   ◎背景：従来は実予約・仮予約で代車を入れてもカードに値が入るだけで割当が作られず、代車カレンダーに載らなかった
+     （割当はサンプル生成と手動貸出だけが作っていた）。これで通常予約も仮予約も代車カレンダーに反映される。
+   ・cardIdで突き合わせ：無ければ作成／あれば日付・代車を更新／代車不要・カード消滅になったら削除。
+   ・手動貸出(manual)・緊急(emergency)＝cardId無しは対象外（そのまま残す）。
+   ・代車カレンダーで下書き編集中(_loDraftOrig)は既存割当を上書きしない（編集を壊さない）。 */
+function pitSyncLoanerAssigns(){
+  if (!state.cards) return;
+  const assigns = state.loanerAssigns = (state.loanerAssigns || []);
+  const drafting = !!_loDraftOrig;
+  let changed = false;
+  // 1) カード → 割当（作成・更新）
+  state.cards.forEach(function(c){
+    if (!(c.needLoaner && c.loanerId && c.loanerFrom)) return;
+    const to = c.loanerTo || c.loanerFrom;
+    let a = assigns.find(function(x){ return x.cardId === c.id; });
+    if (!a){
+      assigns.push({ id:'la' + Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+        cardId:c.id, loanerId:c.loanerId, fromDate:c.loanerFrom, toDate:to });
+      changed = true;
+    } else if (!drafting && !a.returned){
+      if (a.loanerId !== c.loanerId || a.fromDate !== c.loanerFrom || a.toDate !== to){
+        a.loanerId = c.loanerId; a.fromDate = c.loanerFrom; a.toDate = to; changed = true;
+      }
+    }
+  });
+  // 2) 不要になった割当を削除（カード由来なのに代車不要/カード消滅）。手動・緊急は残す。
+  if (!drafting){
+    const before = assigns.length;
+    state.loanerAssigns = assigns.filter(function(a){
+      if (!a.cardId) return true;   // 手動/緊急
+      const c = state.cards.find(function(x){ return x.id === a.cardId; });
+      return !!(c && c.needLoaner && c.loanerId && c.loanerFrom);
+    });
+    if (state.loanerAssigns.length !== before) changed = true;
+  }
+  if (changed && window.PitDB) PitDB.save();
+}
+window.pitSyncLoanerAssigns = pitSyncLoanerAssigns;
+
 function renderLoaner(){
   const grid = document.getElementById('loaner-grid');
   if (!grid) return;
+  pitSyncLoanerAssigns();   // カードの代車情報を割当に反映してから描画
   // 代車割当に id が無いとドラッグ移動(data-aid)が効かない＝旧データ/サンプル救済で必ず採番
   (state.loanerAssigns || []).forEach(function(a, i){
     if (a && !a.id) a.id = 'la' + Date.now().toString(36) + i.toString(36);
