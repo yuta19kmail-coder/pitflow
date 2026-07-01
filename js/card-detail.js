@@ -642,7 +642,8 @@ function _cfsLgLoaners(c){
   // 代車カレンダーを未表示のセッションでは state.loaners に属性が無く、条件ソートが効かない。
   // （未設定のみ補完＝設定画面で入力済みの実値は上書きしない）
   if (typeof _loEnsureOpts === 'function') _loEnsureOpts();
-  const ls = (state.loaners || []).slice();
+  // 緊急車両（emergency）は代車カレンダー専用の特殊列＝予約側・空きカレンダーには出さない（v0.101.5）
+  const ls = (state.loaners || []).filter(function(l){ return !l.emergency; });
   if (window._cfsLgSort === false) return ls;   // ソート無＝元の並び
   const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions : [];
   const sizes = conds.filter(function(k){ return k === 'height' || k === 'width' || k === 'length'; });
@@ -1229,7 +1230,7 @@ function plateInput(c){
 function loanerSelect(c, key){
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">使用代車を選ぶ</option>';
-  state.loaners.forEach(l => {
+  (state.loaners || []).filter(l => !l.emergency).forEach(l => {   // 緊急車両は予約側に出さない（v0.101.5）
     const sel = c[key] === l.id ? ' selected' : '';
     h += '<option value="' + l.id + '"' + sel + '>' + l.name + ' ' + l.model + '</option>';
   });
