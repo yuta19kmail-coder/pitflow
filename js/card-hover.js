@@ -163,6 +163,12 @@
       if (c.headlight)  bd.push('<span class="ph-b ph-b-hl'+(c.headlightDone?' ph-done':'')+'">ライト磨き</span>');
       if (c.coatingOK)  bd.push('<span class="ph-b ph-b-coat">コーティング受注</span>');
       if (c.salesReq)   bd.push('<span class="ph-b ph-b-sales'+(c.salesReqDone?' ph-done':'')+'">車販依頼</span>');
+      // 車両注意（左/M/T/車高/土禁）＝耳と同じく左M/T合体・該当時のみ。他バッジと同じ行に並べる
+      var _hdr = Array.isArray(c.drive) ? c.drive : [];
+      if (_hdr.indexOf('leftHand')>=0 && _hdr.indexOf('mt')>=0) bd.push('<span class="ph-b ph-b-cau">左M/T</span>');
+      else { if (_hdr.indexOf('leftHand')>=0) bd.push('<span class="ph-b ph-b-cau">左ハンドル</span>'); if (_hdr.indexOf('mt')>=0) bd.push('<span class="ph-b ph-b-cau">M/T</span>'); }
+      if (_hdr.indexOf('lowCar')>=0)  bd.push('<span class="ph-b ph-b-cau">車高低い</span>');
+      if (_hdr.indexOf('noShoes')>=0) bd.push('<span class="ph-b ph-b-cau">土足禁止</span>');
       if (bd.length) h += '<div class="ph-badges">'+bd.join('')+'</div>';
     })();
 
@@ -234,13 +240,9 @@
     }
     h += '</div>'; // .ph-stats
 
-    // ===== 注意（外注先・車両注意など） =====
+    // ===== 注意（外注先） ※車両注意は上部バッジ行に集約（.ph-b-cau） =====
     if (c.status === 'outsource'){
       h += '<div class="ph-note">🤝 外注先：'+esc(c.outsourceTo||'未定')+(c.outsourceNote?'（'+esc(c.outsourceNote)+'）':'')+'</div>';
-    }
-    var dr = Array.isArray(c.drive) ? c.drive : [];
-    if (dr.length){
-      h += '<div class="ph-note">⚠️ 車両注意：'+dr.map(function(k){return DRIVE_LABELS[k]||k;}).join('・')+'</div>';
     }
     // ===== 下部メモ群（代車条件・予約内容・引継ぎ）＝区切り線つきで統一表示 =====
     // 代車の車種固定・条件メモ（あれば）
