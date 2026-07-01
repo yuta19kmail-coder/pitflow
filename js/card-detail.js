@@ -536,8 +536,10 @@ function _cfsShortHtml(c, team, today, tStr, ro){
   const teamName  = (team === 'import') ? '🌍 輸入車' : '🚗 国産車';
   let h = '<div class="cfs-card">';
   h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">⏱ 最短入庫 <span class="cfs-team" style="color:' + teamColor + '">' + teamName + '</span></div>';
+  // 代車ありの最短は、作業タイプの概算預かり日数ぶん代車が連続で空く日を探す（車検5日なら5日連続確保できる日・v0.101.4）
+  const _holdOv = (c && c.estHoldDays != null && c.estHoldDays !== '' && +c.estHoldDays > 0) ? +c.estHoldDays : null;
   [{ k: 'noLoaner', n: '代車なし' }, { k: 'loaner', n: '代車あり' }, { k: 'same', n: '当日作業' }].forEach(function (x) {
-    const d = dashEarliestIntake(team, x.k, today);
+    const d = dashEarliestIntake(team, x.k, today, x.k === 'loaner' ? _holdOv : null);
     const ds = d ? ymd(d) : null;
     const lbl = !d ? 'なし' : (ds === tStr ? '今日' : (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）');
     if (ro){

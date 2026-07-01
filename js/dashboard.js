@@ -61,8 +61,9 @@ function _loanerFreeRun(startStr, days){
     return true;
   });
 }
-function dashEarliestIntake(team, kind, today){
-  const hold = (state.settings && state.settings.holdDaysDefault) || 3;
+function dashEarliestIntake(team, kind, today, holdOverride){
+  // holdOverride（作業タイプの概算預かり日数）が来たら、その日数ぶん代車が連続で空く日を最短に（v0.101.4）
+  const hold = (holdOverride && +holdOverride > 0) ? +holdOverride : ((state.settings && state.settings.holdDaysDefault) || 3);
   for (let i = 0; i < 180; i++){
     const d = addDays(today, i);
     const ds = ymd(d);
