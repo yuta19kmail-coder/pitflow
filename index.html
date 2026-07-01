@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.101.6"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.102.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="css/launcher.css?v=7">
 <link rel="stylesheet" href="css/card-view.css?v=13">
 <link rel="stylesheet" href="css/card-hover.css?v=16">
+<link rel="stylesheet" href="css/sales.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -72,7 +73,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.101.6</div>
+    <div class="pl-ver">PitFlow v0.102.0</div>
   </div>
 </div>
 
@@ -84,7 +85,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.101.6</span>
+      <span class="ver">v0.102.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -122,7 +123,7 @@
     <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon">✅</span><span>実績</span></div>
 
     <div class="si-section-title">データ</div>
-    <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon">💴</span><span>売上</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon">💴</span><span>売上</span></div>
     <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon">👤</span><span>顧客</span></div>
 
     <div class="si-section-title">管理</div>
@@ -404,7 +405,7 @@
 
     <section id="view-sales" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">💴</span>売上</div></div>
-      <div class="soon-card"><div class="soon-emoji">💴</div><h3>売上ダッシュボード（準備中）</h3><p>クォーター制（月4分割）の実績・抱え高、国産/輸入の内訳などを集計する売上ダッシュボードを作ります。</p></div>
+      <div id="view-sales-body"></div>
     </section>
 
     <section id="view-members" class="view">
@@ -687,6 +688,7 @@
 <script src="js/board-notes.js?v=1"></script>
 <script src="js/search.js?v=8"></script>
 <script src="js/maintdash.js?v=1"></script>
+<script src="js/sales.js?v=1"></script>
 <script src="js/pit-floor.js?v=31"></script>
 <script src="js/settings.js?v=18"></script>
 <script src="js/import-bizcloud.js?v=5"></script>
