@@ -225,11 +225,11 @@
     const dMS = function(ms){ const d = new Date(ms); d.setHours(0,0,0,0); return d; };
     const isWknd = function(d){ const w = d.getDay(); return w === 0 || w === 6; };
     function pickDur(){
+      // v0.101.6 代車をしっかり埋める（＝5日連続の空きを貴重にして、最短入庫「代車あり」が作業日数で切り替わるように）
       const r = Math.random();
-      if (r < 0.55) return 7 + Math.floor(Math.random() * 8);   // 7〜14日（1〜2週・多め）
-      if (r < 0.75) return 4 + Math.floor(Math.random() * 3);   // 4〜6日
-      if (r < 0.90) return 2 + Math.floor(Math.random() * 2);   // 2〜3日
-      return 1;                                                  // 単発（少なめ）
+      if (r < 0.60) return 10 + Math.floor(Math.random() * 9);  // 10〜18日（2週前後・多め）
+      if (r < 0.85) return 6 + Math.floor(Math.random() * 4);   // 6〜9日
+      return 3 + Math.floor(Math.random() * 3);                 // 3〜5日
     }
     const startMs = todayMs - PAST_DAYS * 86400000;
     const endMs   = todayMs + FUTURE_DAYS * 86400000;
@@ -262,12 +262,18 @@
         const asg = { id: 'la' + Date.now().toString(36) + (_laSeq++).toString(36), loanerId: l.id, cardId: c.id, fromDate: fromStr, toDate: toStr };
         if (toD.getTime() < todayMs){ asg.returned = true; asg.returnedAt = toStr; c.loanerReturned = true; }   // 過去はアーカイブ表示（カラーバー確認用）
         state.loanerAssigns.push(asg);
-        // 次の開始：土日終わりは同日かぶり多め／平日終わりはたまに同日／基本は2〜3日OFF
+        // 次の開始：空きは主に3〜4日（車検5日は入らない）／たまに1〜2日／時々6〜8日（＝5日以上まとめて確保できる貴重な枠）。土日終わりは同日かぶりも（v0.101.6）
         const r2 = Math.random();
         let nextMs;
-        if (isWknd(toD) && r2 < 0.5)      nextMs = toD.getTime();                                     // 同日かぶり（土日多め）
-        else if (!isWknd(toD) && r2 < 0.15) nextMs = toD.getTime();                                   // たまに同日
-        else                              nextMs = toD.getTime() + (2 + Math.floor(Math.random() * 2)) * 86400000;  // 2〜3日OFF
+        if (isWknd(toD) && r2 < 0.35)       nextMs = toD.getTime();                                   // 同日かぶり（土日）
+        else if (!isWknd(toD) && r2 < 0.10) nextMs = toD.getTime();                                   // たまに同日
+        else {
+          const rr = Math.random();
+          const off = (rr < 0.62) ? (4 + Math.floor(Math.random() * 2))   // 空き3〜4日（多め）
+                    : (rr < 0.85) ? (2 + Math.floor(Math.random() * 2))   // 空き1〜2日
+                    :               (7 + Math.floor(Math.random() * 3));   // 空き6〜8日（貴重）
+          nextMs = toD.getTime() + off * 86400000;
+        }
         cur = nextMs;
       }
     });
