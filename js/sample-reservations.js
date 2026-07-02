@@ -333,6 +333,9 @@
     // ★顧客控え（state.customers）には一切触れていない＝そのまま保持。
     // v0.87.1 重大バグ修正：以前は state.cards = cards（全置換）で、実カード（あなたが作った予約＝非_sample）まで
     //   消えて save で空保存され、リロードで予約が消えていた。→ 実カードは残し、サンプルだけ作り直す。
+    // フロント指標用：受注日(orderedAt)＝連絡中→パーツ待ちに移った想定日を後付け（入庫+1〜4日・返車を超えない）
+    (function(){ function _pm(x){ var p=String(x).split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime(); }
+      cards.forEach(function(c){ var ordered = c.returnStage || ['parts','work','workDone','outsource','returned'].indexOf(c.status)>=0; if(!ordered || !c.reserveDate) return; var base=_pm(c.reserveDate)+(1+Math.floor(Math.random()*4))*86400000; if(c.returnDate){ var rm=_pm(c.returnDate); if(base>rm) base=rm; } c.orderedAt=base; }); })();
     state.cards = (state.cards || []).filter(function(c){ return !c._sample; }).concat(cards);
     // 予約番号（resNo）を採番＝カードの「耳」が出るように（通常は起動時backfillだが、ボタン生成分はここで採番）。
     if (window.pitBackfillResNo) pitBackfillResNo();
