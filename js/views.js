@@ -37,9 +37,9 @@ function showView(viewId){
   if (viewId === 'result')  renderResult();
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
-  if (viewId === 'samplepat' && window.renderSamplePatterns) renderSamplePatterns();
   if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
   if (viewId === 'maintdash' && window.renderMaintDash) renderMaintDash();
+  if (viewId === 'shakencal' && window.renderShaken) renderShaken();
   if (viewId === 'sales' && window.renderSales) renderSales();
   if (viewId === 'parking' && window.renderParking) renderParking();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();

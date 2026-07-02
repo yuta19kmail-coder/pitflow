@@ -336,6 +336,20 @@
     // フロント指標用：受注日(orderedAt)＝連絡中→パーツ待ちに移った想定日を後付け（入庫+1〜4日・返車を超えない）
     (function(){ function _pm(x){ var p=String(x).split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime(); }
       cards.forEach(function(c){ var ordered = c.returnStage || ['parts','work','workDone','outsource','returned'].indexOf(c.status)>=0; if(!ordered || !c.reserveDate) return; var base=_pm(c.reserveDate)+(1+Math.floor(Math.random()*4))*86400000; if(c.returnDate){ var rm=_pm(c.returnDate); if(base>rm) base=rm; } c.orderedAt=base; }); })();
+    // 車検予定カレンダー用：shaken車の車検スケジュール（候補/決定/完了/再検）を後付け（v0.108.0）
+    (function(){
+      function _pm(x){ var p=String(x).split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime(); }
+      function isSh(c){ var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]); return ids.indexOf('shaken')>=0; }
+      function rikuOff(d){ var w=d.getDay(); if(w===0||w===6) return true; if(window.Holidays&&Holidays.is&&Holidays.is(ymd(d))) return true; return false; }
+      function fwd(startMs,n){ var out=[], d=new Date(startMs); d.setHours(0,0,0,0); var g=0; while(out.length<n&&g++<40){ if(!rikuOff(d)&&!isClosed(d)) out.push(ymd(d)); d.setDate(d.getDate()+1); } return out; }
+      cards.forEach(function(c){ if(!isSh(c)||c.status==='scrap') return;
+        var s=c.inspSchedule||(c.inspSchedule={mode:'manual',slots:{},cutBefore:''}); if(!s.slots)s.slots={}; if(!Array.isArray(s.history))s.history=[];
+        var r=Math.random();
+        if(r<0.28){ var off=1+Math.floor(Math.random()*3); var d=new Date(todayMs-off*86400000); var g=0; while((rikuOff(d)||isClosed(d))&&g++<10){ d.setDate(d.getDate()-1); } var dd=ymd(d); s.decided=dd; s.result='done'; s.resultDate=dd; if(Math.random()<0.25){ s.history.push({date:dd,result:'recheck'}); s.recheckCount=1; } }
+        else if(r<0.55){ var vd=fwd(todayMs+(1+Math.floor(Math.random()*10))*86400000,1); if(vd[0]){ s.decided=vd[0]; s.result=''; } }
+        else if(r<0.82){ var start=Math.max(todayMs, c.reserveDate?_pm(c.reserveDate):todayMs); fwd(start,2+Math.floor(Math.random()*2)).forEach(function(iso){ s.slots[iso]=['am','pm']; }); }
+      });
+    })();
     state.cards = (state.cards || []).filter(function(c){ return !c._sample; }).concat(cards);
     // 予約番号（resNo）を採番＝カードの「耳」が出るように（通常は起動時backfillだが、ボタン生成分はここで採番）。
     if (window.pitBackfillResNo) pitBackfillResNo();

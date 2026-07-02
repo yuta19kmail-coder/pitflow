@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.107.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.108.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -23,6 +23,7 @@
 <link rel="stylesheet" href="css/card-view.css?v=13">
 <link rel="stylesheet" href="css/card-hover.css?v=16">
 <link rel="stylesheet" href="css/sales.css?v=5">
+<link rel="stylesheet" href="css/shaken.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -73,7 +74,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.107.0</div>
+    <div class="pl-ver">PitFlow v0.108.0</div>
   </div>
 </div>
 
@@ -85,7 +86,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.107.0</span>
+      <span class="ver">v0.108.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -116,6 +117,7 @@
 
     <div class="si-section-title">整備</div>
     <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span></div>
+    <div class="si-item" data-view="shakencal" onclick="showView('shakencal')"><span class="icon">🔎</span><span>車検予定</span></div>
     <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span></div>
     <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span></div>
     <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🏭</span><span>Pitリスト</span></div>
@@ -133,10 +135,6 @@
     <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon">📣</span><span>お知らせ</span><span class="si-soon">準備中</span></div>
     <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon">❓</span><span>ヘルプ</span><span class="si-soon">準備中</span></div>
 
-    <div class="si-section-title">たたき台（今だけ）</div>
-    <div class="si-item" data-view="samplepat" onclick="showView('samplepat')">
-      <span class="icon">🧪</span><span>カード設計サンプル</span>
-    </div>
 
     <!-- CoreFlow アプリランチャー（共通） -->
     <div data-cf-launcher data-current="pitflow"></div>
@@ -275,6 +273,12 @@
     </section>
 
     <!-- ===== 実績ビュー ===== -->
+    <!-- ===== 車検予定カレンダー（整備） ===== -->
+    <section id="view-shakencal" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">🔎</span>車検予定 <span style="font-size:11px;color:var(--text3);font-weight:400">いつ行く／決定／完了・再検</span></div></div>
+      <div id="shakencal-body"></div>
+    </section>
+
     <section id="view-result" class="view">
       <div class="view-header">
         <div class="view-title"><span class="icon">✅</span>実績</div>
@@ -428,13 +432,6 @@
       <div class="soon-card"><div class="soon-emoji">❓</div><h3>ヘルプ（準備中）</h3><p>使い方ガイドとよくある質問をここにまとめます。</p></div>
     </section>
 
-    <!-- ===== カード設計サンプル（今だけ・たたき台） ===== -->
-    <section id="view-samplepat" class="view">
-      <div class="view-header">
-        <div class="view-title"><span class="icon">🧪</span>カード設計サンプル <span style="font-size:11px;color:var(--text3);font-weight:400">どこまで持たせるか・チームで見比べ用</span></div>
-      </div>
-      <div id="view-samplepat-body"></div>
-    </section>
 
     <!-- ===== 入庫カード（全画面・新規予約／編集 共通） ===== -->
     <section id="view-card" class="view">
@@ -681,8 +678,7 @@
 <script src="js/card-tabs.js?v=8"></script>
 <script src="js/customers.js?v=30"></script>
 <script src="js/sample-customers.js?v=7"></script>
-<script src="js/sample-reservations.js?v=20"></script>
-<script src="js/sample-patterns.js?v=2"></script>
+<script src="js/sample-reservations.js?v=21"></script>
 <script src="js/dashboard.js?v=14"></script>
 <script src="js/parking.js?v=3"></script>
 <script src="js/board-notes.js?v=1"></script>
@@ -702,6 +698,7 @@
 <script src="js/task.js?v=18"></script>
 <script src="js/work.js?v=13"></script>
 <script src="js/result.js?v=10"></script>
+<script src="js/shaken.js?v=1"></script>
 <script src="js/outsource.js?v=2"></script>
 <script src="js/loaner.js?v=50"></script>
 <script src="js/fleet.js?v=10"></script>
