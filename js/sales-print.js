@@ -1,7 +1,8 @@
 /* ========================================
-   sales-print.js  -  売上ビューの印刷 / PDF出力（PitFlow v0.105.0）
+   sales-print.js  -  売上ビューの印刷 / PDF出力（PitFlow v0.105.1）
    ・印刷＝別ウィンドウにライトテーマで組み直し、A4縦1枚に自動縮小(zoom)して window.print()
    ・PDF ＝ html2canvas + jsPDF（cdnjs・必要時のみ読込）でA4 1枚に収めてダウンロード。失敗時は印刷にフォールバック
+   ・読込済みの sales.css をインライン展開して外部読込のタイミング差を排除（印刷が空になる不具合の対策）
    ・対象＝いま表示中のタブ/期間（#view-sales-body の内容。操作用のタブ・トグルは除外）
    ======================================== */
 (function(){
@@ -24,6 +25,11 @@
     return clone.innerHTML;
   }
   function cssHref(){ try{ return new URL('css/sales.css', document.baseURI).href; }catch(e){ return 'css/sales.css'; } }
+  // 読込済みの sales.css をインライン展開（外部読込のタイミング差で印刷が空になる問題を回避）。取れなければ link にフォールバック
+  function salesCssText(){
+    try{ for(var i=0;i<document.styleSheets.length;i++){ var ss=document.styleSheets[i]; if(ss.href && ss.href.indexOf('sales.css')>=0){ var r=ss.cssRules||ss.rules; var t=''; for(var j=0;j<r.length;j++) t+=r[j].cssText+'\n'; if(t) return t; } } }catch(e){}
+    return '';
+  }
   var PRINT_CSS = ":root{--bg2:#fff;--bg3:#f5f7f9;--text:#111;--text2:#444;--text3:#767b83;--border:#c9ced6;--border2:#e5e8ec;--brand:#1f7a4d;--r:10px;--green:#1db97a;}"
     + "*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box;}"
     + "html,body{margin:0;background:#fff;color:#111;font-family:-apple-system,'Hiragino Kaku Gothic ProN',Meiryo,sans-serif;}"
@@ -35,11 +41,11 @@
     + "#view-sales-body{padding:0!important;}"
     + ".sv-card,.sv-hero,.sv-qcard,.sv-fcard,.sv-wgcard,.sv-tier,.sv-course{box-shadow:none!important;break-inside:avoid;}"
     + ".sv-fcards,.sv-wgcards,.sv-tiers,.sv-qcards,.sv-courses{break-inside:avoid;}";
+  function styleBlock(){ var css=salesCssText(); return (css? '<style>'+css+'</style>' : '<link rel="stylesheet" href="'+cssHref()+'">') + '<style>'+PRINT_CSS+'</style>'; }
   function docHtml(withAutoPrint){
     var t=titleInfo();
     var s='<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8"><title>'+t.tab+' '+t.period+'</title>';
-    s+='<link rel="stylesheet" href="'+cssHref()+'">';
-    s+='<style>'+PRINT_CSS+'</style></head><body>';
+    s+=styleBlock()+'</head><body>';
     s+='<div class="sheet" id="sheet"><div class="pr-head"><div class="pr-title">'+t.tab+'<small>'+t.period+'</small></div><div class="pr-sub">小林モータース ／ 出力 '+nowTxt()+'</div></div>';
     s+=sheetInner()+'</div>';
     if(withAutoPrint){ s+='<scr'+'ipt>(function(){function fit(){var el=document.getElementById("sheet");if(!el)return;el.style.zoom="1";var f=Math.min(1,1055/el.scrollHeight,735/el.scrollWidth);el.style.zoom=String(f);setTimeout(function(){window.focus();window.print();},80);}if(document.readyState==="complete")setTimeout(fit,150);else window.addEventListener("load",function(){setTimeout(fit,180);});})();<\/scr'+'ipt>'; }
