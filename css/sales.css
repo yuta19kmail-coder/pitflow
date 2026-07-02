@@ -189,3 +189,8 @@
 .sv-dowbar span{ font-size:10px; color:var(--text3); margin-top:2px; }
 .sv-dowbar span.wk{ color:#ef6a6a; }
 .sv-dowbar em{ font-style:normal; font-size:8.5px; color:var(--text3); }
+
+/* ===== v0.105 印刷/PDF ツールボタン ===== */
+.sv-tools{ margin-left:auto; display:flex; gap:6px; align-self:center; }
+.sv-toolbtn{ border:1px solid var(--border); background:var(--bg3); color:var(--text2); font-size:12px; font-weight:700; padding:6px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; }
+.sv-toolbtn:hover{ border-color:var(--brand,#1f7a4d); color:var(--text); }
