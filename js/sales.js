@@ -231,47 +231,51 @@
 
   // ===== 月間ビュー（通年・昨対） =====
   function renderYear(wrap){
-    var y = window._svYear;
+    var y = window._svYear;   // 会計年度の締め年（11月が属する暦年）＝12月(前年)〜11月(この年)
     var tg = target();
+    var SLOT = [12,1,2,3,4,5,6,7,8,9,10,11];   // スロット→表示月（0=12月）
     var monA = []; var monP = []; for (var i=0;i<12;i++){ monA[i]=0; monP[i]=0; }
     (state.cards||[]).forEach(function(c){
       if (c.status!=='returned') return;
       var d = c.returnDateFinal||c.returnDate||''; if (!d) return;
       var dd = pd(d); var amt = num(c.amountFinal)||num(c.amountOrder)||estA(c);
-      if (dd.getFullYear()===y) monA[dd.getMonth()] += amt;
-      else if (dd.getFullYear()===y-1) monP[dd.getMonth()] += amt;
+      var cm=dd.getMonth(), cy=dd.getFullYear();
+      var fy=(cm===11)?cy+1:cy, slot=(cm===11)?0:cm+1;   // 12月は翌年11月締めの年度・スロット0
+      if (fy===y) monA[slot] += amt; else if (fy===y-1) monP[slot] += amt;
     });
     var yTotal = monA.reduce(function(a,b){return a+b;},0);
     var pTotal = monP.reduce(function(a,b){return a+b;},0);
     var hasPrev = pTotal>0;
+    var rangeLbl = (y-1)+'年12月〜'+y+'年11月';
+    var prevRange = (y-2)+'/12〜'+(y-1)+'/11';
 
     var h = '';
     h += header('year', {y:y});
     h += '<div class="sv-hero"><div class="sv-hero-row">';
-    h += '<div class="sv-hero-main"><div class="sv-hero-lb">'+y+'年 実績合計（返車ベース）</div><div class="sv-hero-num" style="color:#1db97a">'+man(yTotal)+'<span>円</span></div><div class="sv-hero-sub">年目標 '+man(tg.min*12)+'〜'+man(tg.max*12)+'</div></div>';
-    if (hasPrev){ var diff=yTotal-pTotal; h += '<div class="sv-hero-main"><div class="sv-hero-lb">前年（'+(y-1)+'年）合計</div><div class="sv-hero-num" style="color:#9ca3af">'+man(pTotal)+'<span>円</span></div><div class="sv-hero-sub">昨対 <b style="color:'+(diff>=0?'#1db97a':'#ef4444')+'">'+(diff>=0?'+':'')+man(diff)+'</b></div></div>'; }
+    h += '<div class="sv-hero-main"><div class="sv-hero-lb">今年度 実績合計（'+rangeLbl+'・返車ベース）</div><div class="sv-hero-num" style="color:#1db97a">'+man(yTotal)+'<span>円</span></div><div class="sv-hero-sub">年目標 '+man(tg.min*12)+'〜'+man(tg.max*12)+'</div></div>';
+    if (hasPrev){ var diff=yTotal-pTotal; h += '<div class="sv-hero-main"><div class="sv-hero-lb">前年度（'+prevRange+'）</div><div class="sv-hero-num" style="color:#9ca3af">'+man(pTotal)+'<span>円</span></div><div class="sv-hero-sub">昨対 <b style="color:'+(diff>=0?'#1db97a':'#ef4444')+'">'+(diff>=0?'+':'')+man(diff)+'</b></div></div>'; }
     h += '</div></div>';
 
-    h += '<div class="sv-card"><div class="sv-card-h"><span>📊 月別 実績と目標</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>今年'+(hasPrev?' <i class="sv-lg sv-lg-prev"></i>前年':'')+' <i class="sv-lg sv-lg-min"></i>月目標(最低)</span></div>';
-    h += yearChartSvg(monA, monP, tg.min, hasPrev);
-    if (!hasPrev) h += '<div class="sv-note">前年（'+(y-1)+'年）の返車実績がまだ無いため、昨対は表示していません。データが貯まると自動で出ます。</div>';
+    h += '<div class="sv-card"><div class="sv-card-h"><span>📊 月別 実績と目標</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>今年度'+(hasPrev?' <i class="sv-lg sv-lg-prev"></i>前年度':'')+' <i class="sv-lg sv-lg-min"></i>月目標(最低)</span></div>';
+    h += yearChartSvg(monA, monP, tg.min, hasPrev, SLOT);
+    if (!hasPrev) h += '<div class="sv-note">前年度（'+prevRange+'）の返車実績がまだ無いため、昨対は表示していません。データが貯まると自動で出ます。</div>';
     h += '</div>';
 
     // 月別テーブル
-    h += '<div class="sv-card"><div class="sv-card-h"><span>月別内訳</span></div><table class="sv-table"><thead><tr><th>月</th><th>実績</th><th>目標(最低)</th><th>達成率</th>'+(hasPrev?'<th>前年</th><th>昨対</th>':'')+'</tr></thead><tbody>';
+    h += '<div class="sv-card"><div class="sv-card-h"><span>月別内訳</span></div><table class="sv-table"><thead><tr><th>月</th><th>実績</th><th>目標(最低)</th><th>達成率</th>'+(hasPrev?'<th>前年度</th><th>昨対</th>':'')+'</tr></thead><tbody>';
     for (var m=0;m<12;m++){ var a=monA[m]; var pct=tg.min>0?Math.round(a/tg.min*100):0; var pcc=pct>=100?'#1db97a':(pct>=85?'#eab308':'#ef4444');
-      h += '<tr><td class="sv-td-name">'+(m+1)+'月</td><td class="sv-num" style="color:#1db97a">'+man(a)+'</td><td class="sv-num">'+man(tg.min)+'</td><td class="sv-num" style="color:'+pcc+'">'+(a>0?pct+'%':'—')+'</td>';
+      h += '<tr><td class="sv-td-name">'+SLOT[m]+'月</td><td class="sv-num" style="color:#1db97a">'+man(a)+'</td><td class="sv-num">'+man(tg.min)+'</td><td class="sv-num" style="color:'+pcc+'">'+(a>0?pct+'%':'—')+'</td>';
       if (hasPrev){ var pv=monP[m]; var df=a-pv; h += '<td class="sv-num" style="color:#9ca3af">'+man(pv)+'</td><td class="sv-num" style="color:'+(df>=0?'#1db97a':'#ef4444')+'">'+(pv>0||a>0?(df>=0?'+':'')+man(df):'—')+'</td>'; }
       h += '</tr>';
     }
     h += '<tr class="sv-tr-total"><td class="sv-td-name">合計</td><td class="sv-num" style="color:#1db97a">'+man(yTotal)+'</td><td class="sv-num">'+man(tg.min*12)+'</td><td class="sv-num">'+(tg.min>0?Math.round(yTotal/(tg.min*12)*100):0)+'%</td>'+(hasPrev?'<td class="sv-num" style="color:#9ca3af">'+man(pTotal)+'</td><td class="sv-num" style="color:'+(yTotal-pTotal>=0?'#1db97a':'#ef4444')+'">'+((yTotal-pTotal>=0?'+':'')+man(yTotal-pTotal))+'</td>':'')+'</tr>';
     h += '</tbody></table></div>';
 
-    h += '<div class="sv-foot">月間ビューは返車済み（確定売上）の実績のみを月別に集計しています。当月の詳しい進捗は「当月」タブへ。</div>';
+    h += '<div class="sv-foot">月間ビューは会計年度（12月〜翌11月）の返車済み実績を月別に集計しています。当月の詳しい進捗は「当月」タブへ。</div>';
     wrap.innerHTML = h;
   }
 
-  function yearChartSvg(monA, monP, min, hasPrev){
+  function yearChartSvg(monA, monP, min, hasPrev, slot){
     var W=720, H=240, padL=52, padR=16, padT=16, padB=28;
     var pw=W-padL-padR, ph=H-padT-padB;
     var yMax = (Math.max(min, Math.max.apply(null, monA), hasPrev?Math.max.apply(null, monP):0) || 1) * 1.12;
@@ -281,10 +285,10 @@
     [0, min].forEach(function(v){ var y=Y(v); s+='<line class="sv-grid'+(v===min?' sv-grid-min':'')+'" x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'"/>'; s+='<text class="sv-ylab" x="'+(padL-6)+'" y="'+(y+3)+'" text-anchor="end">'+man(v)+'</text>'; });
     for (var m=0;m<12;m++){
       var cx = padL + bw*m + bw/2;
-      if (hasPrev){ var pvH=Y(0)-Y(monP[m]); s+='<rect class="sv-bar-prev" x="'+(cx-barW-1).toFixed(1)+'" y="'+Y(monP[m]).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+Math.max(0,pvH).toFixed(1)+'"><title>'+(m+1)+'月 前年 '+man(monP[m])+'</title></rect>'; }
+      if (hasPrev){ var pvH=Y(0)-Y(monP[m]); s+='<rect class="sv-bar-prev" x="'+(cx-barW-1).toFixed(1)+'" y="'+Y(monP[m]).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+Math.max(0,pvH).toFixed(1)+'"><title>'+slot[m]+'月 前年度 '+man(monP[m])+'</title></rect>'; }
       var aH=Y(0)-Y(monA[m]); var ax=hasPrev?(cx+1):(cx-barW/2);
-      s+='<rect class="sv-bar-act" x="'+ax.toFixed(1)+'" y="'+Y(monA[m]).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+Math.max(0,aH).toFixed(1)+'"><title>'+(m+1)+'月 '+man(monA[m])+'</title></rect>';
-      s+='<text class="sv-xlab" x="'+cx.toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle">'+(m+1)+'</text>';
+      s+='<rect class="sv-bar-act" x="'+ax.toFixed(1)+'" y="'+Y(monA[m]).toFixed(1)+'" width="'+barW.toFixed(1)+'" height="'+Math.max(0,aH).toFixed(1)+'"><title>'+slot[m]+'月 '+man(monA[m])+'</title></rect>';
+      s+='<text class="sv-xlab" x="'+cx.toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle">'+slot[m]+'</text>';
     }
     s+='</svg>';
     return s;
@@ -293,12 +297,12 @@
   // ===== 共通ヘッダ（当月/月間トグル＋期間ナビ） =====
   function header(mode, ctx){
     var h = '<div class="sv-head">';
-    h += '<div class="sv-tabs"><button class="sv-tab'+(mode==='month'?' on':'')+'" onclick="svSetMode(\'month\')">当月</button><button class="sv-tab'+(mode==='year'?' on':'')+'" onclick="svSetMode(\'year\')">月間（通年）</button></div>';
+    h += '<div class="sv-tabs"><button class="sv-tab'+(mode==='month'?' on':'')+'" onclick="svSetMode(\'month\')">当月</button><button class="sv-tab'+(mode==='year'?' on':'')+'" onclick="svSetMode(\'year\')">月間（年度）</button></div>';
     if (mode==='month'){
       var lbl = ctx.y+'年'+(ctx.m+1)+'月';
       h += '<div class="sv-nav"><button onclick="svShiftMonth(-1)" title="前の月">◀</button><b>'+lbl+'</b><button onclick="svShiftMonth(1)" title="次の月">▶</button><button class="sv-now" onclick="svShiftMonth(0)">今月</button></div>';
     } else {
-      h += '<div class="sv-nav"><button onclick="svShiftYear(-1)" title="前の年">◀</button><b>'+ctx.y+'年</b><button onclick="svShiftYear(1)" title="次の年">▶</button><button class="sv-now" onclick="svShiftYear(0)">今年</button></div>';
+      h += '<div class="sv-nav"><button onclick="svShiftYear(-1)" title="前の年度">◀</button><b>'+(ctx.y-1)+'/12〜'+ctx.y+'/11</b><button onclick="svShiftYear(1)" title="次の年度">▶</button><button class="sv-now" onclick="svShiftYear(0)">今年度</button></div>';
     }
     h += '</div>';
     return h;
@@ -311,12 +315,12 @@
     var now = new Date();
     if (!window._svMode) window._svMode = 'month';
     if (!window._svYM) window._svYM = { y: now.getFullYear(), m: now.getMonth() };
-    if (!window._svYear) window._svYear = now.getFullYear();
+    if (!window._svYear) window._svYear = (now.getMonth()===11) ? now.getFullYear()+1 : now.getFullYear();
     if (window._svMode==='year') renderYear(wrap); else renderMonth(wrap);
   }
 
   window.renderSales = renderSales;
   window.svSetMode = function(m){ window._svMode = m; renderSales(); };
   window.svShiftMonth = function(dir){ var now=new Date(); if (dir===0){ window._svYM={y:now.getFullYear(),m:now.getMonth()}; } else { var d=new Date(window._svYM.y, window._svYM.m+dir, 1); window._svYM={y:d.getFullYear(),m:d.getMonth()}; } renderSales(); };
-  window.svShiftYear = function(dir){ var now=new Date(); window._svYear = (dir===0)?now.getFullYear():(window._svYear+dir); renderSales(); };
+  window.svShiftYear = function(dir){ var now=new Date(); var cur=(now.getMonth()===11)?now.getFullYear()+1:now.getFullYear(); window._svYear = (dir===0)?cur:(window._svYear+dir); renderSales(); };
 })();
