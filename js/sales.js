@@ -31,15 +31,24 @@
   function estA(c){ return num(c.estAmount) || (window.pitEstAmount?num(pitEstAmount(c.workType)):0); }
   function holdOf(c){ if (c.estHoldDays!=null && c.estHoldDays!=='') return num(c.estHoldDays); return window.pitEstHold?num(pitEstHold(c.workType,c.dropType)):5; }
 
-  // カードがどの確度区分に入るか（当月[moS,moE]基準）。該当なしは null
-  function tierOf(c, moS, moE){
+  // カードがどの確度区分に入るか（当月[moS,moE]・本日todayStr基準）。該当なしは null
+  //  実績＝返車日がその月／予測＝その月に実績化する予約（当月・未来のみ）／確定・予定・見込＝進行中の車＝当月だけに計上（過去・未来の月には出さない）
+  function tierOf(c, moS, moE, todayStr){
     if (!c || c.status==='scrap') return null;
     var st = c.status;
     if (st==='returned'){ var d=c.returnDateFinal||c.returnDate||''; return (d>=moS && d<=moE) ? 'actual' : null; }
+    var isCurrent = (todayStr>=moS && todayStr<=moE);
+    var isFuture  = (moS > todayStr);
+    if (st==='reserved'){
+      if (!(isCurrent || isFuture)) return null;   // 過去月には予測を出さない
+      var rd=c.reserveDate||''; if(!rd || rd>moE) return null;
+      var doneBy=addStr(rd, Math.max(0, holdOf(c)));
+      return (doneBy>=moS && doneBy<=moE) ? 'forecast' : null;   // その月に実績化できる予約だけ
+    }
+    if (!isCurrent) return null;   // 進行中（確定/予定/見込）は当月のみ
     if (c.returnStage || ['parts','work','workDone','outsource'].indexOf(st)>=0) return 'confirmed';
     if (st==='contact') return 'planned';
     if (st==='check' || st==='estim') return 'prospect';
-    if (st==='reserved'){ var rd=c.reserveDate||''; if(!rd || rd>moE) return null; var doneBy=addStr(rd, Math.max(0, holdOf(c))); return (doneBy<=moE) ? 'forecast' : null; }
     return null;
   }
   function amtOf(c, tier){
@@ -53,6 +62,7 @@
 
   // ===== 当月の集計 =====
   function collectMonth(moS, moE){
+    var _td = new Date(); _td.setHours(0,0,0,0); var todayStr = ymdL(_td);
     var tiers = {}; TIERS.forEach(function(t){ tiers[t.id] = { sum:0, count:0 }; });
     var byCourse = { div1:{}, div2:{} };
     ['div1','div2'].forEach(function(k){ TIERS.forEach(function(t){ byCourse[k][t.id]={sum:0,count:0}; }); });
@@ -60,7 +70,7 @@
     var dayActual = []; for (var i=0;i<=lastDay;i++) dayActual[i]=0;   // 1..lastDay
     var fronts = {};   // frontStaff -> {actual,confirmed,planned,count}
     (state.cards||[]).forEach(function(c){
-      var tier = tierOf(c, moS, moE); if (!tier) return;
+      var tier = tierOf(c, moS, moE, todayStr); if (!tier) return;
       var amt = amtOf(c, tier);
       tiers[tier].sum += amt; tiers[tier].count++;
       var cs = course(c); byCourse[cs][tier].sum += amt; byCourse[cs][tier].count++;

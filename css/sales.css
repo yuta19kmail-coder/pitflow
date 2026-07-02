@@ -60,6 +60,8 @@
 .sv-actual-dot{ fill:#1db97a; stroke:var(--bg2); stroke-width:2; }
 .sv-proj{ stroke:#1db97a; stroke-width:2; stroke-dasharray:2 4; opacity:.8; }
 .sv-today{ stroke:var(--text3); stroke-width:1; stroke-dasharray:2 3; opacity:.7; }
+.sv-bar-act{ fill:#1db97a; }
+.sv-bar-prev{ fill:#9ca3af; }
 
 /* 積み上げ横バー（着地） */
 .sv-stack{ width:100%; height:auto; display:block; margin-top:4px; }
