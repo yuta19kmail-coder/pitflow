@@ -524,7 +524,7 @@
   function header(mode, ctx){
     var tab=window._svTab||'sales';
     var TABS=[['sales','売上'],['quarter','クォーター'],['work','作業内容'],['front','フロント']];
-    var h='<div class="sv-tabbar">'+TABS.map(function(t){ return '<button class="sv-topbtn'+(tab===t[0]?' on':'')+'" onclick="svSetTab(\''+t[0]+'\')">'+t[1]+'</button>'; }).join('')+'<div class="sv-tools"><button class="sv-toolbtn" onclick="svPrint()" title="A4一枚に収めて印刷">🖨 印刷</button><button class="sv-toolbtn" onclick="svExportPdf()" title="A4のPDFで保存">📄 PDF</button></div></div>';
+    var h='<div class="sv-tabbar">'+TABS.map(function(t){ return '<button class="sv-topbtn'+(tab===t[0]?' on':'')+'" onclick="svSetTab(\''+t[0]+'\')">'+t[1]+'</button>'; }).join('')+'<div class="sv-tools"><button class="sv-toolbtn" onclick="svExportPdf()" title="A4のPDFで保存（ベクター）">📄 PDF出力</button></div></div>';
     h+='<div class="sv-head"><div class="sv-tabs"><button class="sv-tab'+(mode==='month'?' on':'')+'" onclick="svSetMode(\'month\')">当月</button><button class="sv-tab'+(mode==='year'?' on':'')+'" onclick="svSetMode(\'year\')">月間（年度）</button></div>';
     if (mode==='month'){ h+='<div class="sv-nav"><button onclick="svShiftMonth(-1)" title="前の月">◀</button><b>'+ctx.y+'年'+(ctx.m+1)+'月</b><button onclick="svShiftMonth(1)" title="次の月">▶</button><button class="sv-now" onclick="svShiftMonth(0)">今月</button></div>'; }
     else { h+='<div class="sv-nav"><button onclick="svShiftYear(-1)" title="前の年度">◀</button><b>'+(ctx.y-1)+'/12〜'+ctx.y+'/11</b><button onclick="svShiftYear(1)" title="次の年度">▶</button><button class="sv-now" onclick="svShiftYear(0)">今年度</button></div>'; }
@@ -545,6 +545,78 @@
     else if(tab==='front') yr?renderFrontYear(wrap):renderFrontMonth(wrap);
     else yr?renderYear(wrap):renderMonth(wrap);
   }
+
+  // ===== PDF用：現ビューのデータモデル（sales-print.js が A4ベクターPDFに描画） =====
+  function _mAll(t){ return sumTiers(t,['actual','confirmed','planned','prospect','forecast']); }
+  function svReportModel(){
+    var tab=window._svTab||'sales', yr=(window._svMode==='year'); var tg=target();
+    var SLOT=[12,1,2,3,4,5,6,7,8,9,10,11];
+    if(tab==='sales' && !yr){
+      var ym=window._svYM; var d=collectMonth(ymdL(new Date(ym.y,ym.m,1)),ymdL(new Date(ym.y,ym.m+1,0))); var t=d.tiers;
+      var tierRows=[['目標',man(tg.min)+'〜'+man(tg.max),'']].concat(TIERS.map(function(x){return [x.label,man(t[x.id].sum),t[x.id].count+'台'];}));
+      var courseRows=[]; [['div1','1課(国産)'],['div2','2課(輸入)']].forEach(function(c){ var cc=d.byCourse[c[0]]; courseRows.push([c[1]].concat(TIERS.map(function(x){return man(cc[x.id].sum);})).concat([man(_mAll(cc))])); });
+      var frontRows=Object.keys(d.fronts).map(function(n){var f=d.fronts[n];return {n:n,a:f.actual,c:f.confirmed,p:f.planned};}).sort(function(a,b){return b.a-a.a;}).map(function(r){return [r.n,man(r.a),man(r.c),man(r.p)];});
+      return { title:'売上サマリー', period:ym.y+'年'+(ym.m+1)+'月',
+        kpis:[{label:'実績（返車済）',value:man(t.actual.sum)},{label:'着地見込み',value:man(_mAll(t))},{label:'月目標',value:man(tg.min)+'〜'+man(tg.max)}],
+        sections:[
+          {type:'table',title:'確度別',head:['区分','金額','台数'],rows:tierRows,align:['l','r','r']},
+          {type:'table',title:'課別（実績/確定/予定/見込/予測/着地）',head:['課','実績','確定','予定','見込','予測','着地'],rows:courseRows,align:['l','r','r','r','r','r','r']},
+          {type:'table',title:'フロント別（実績/確定/予定）',head:['フロント','実績','確定','予定'],rows:frontRows,align:['l','r','r','r']}
+        ]};
+    }
+    if(tab==='sales' && yr){
+      var Y=window._svYear; var monA=[],monP=[]; for(var i=0;i<12;i++){monA[i]=0;monP[i]=0;}
+      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var dd=pd(c.returnDateFinal||c.returnDate||''); if(isNaN(dd.getTime()))return; var cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; var slot=(cm===11)?0:cm+1; var amt=actAmt(c); if(fy===Y)monA[slot]+=amt; else if(fy===Y-1)monP[slot]+=amt; });
+      var yTot=monA.reduce(function(a,b){return a+b;},0), pTot=monP.reduce(function(a,b){return a+b;},0), hasP=pTot>0;
+      var head=['月','実績','目標','達成率']; if(hasP){head.push('前年度');head.push('昨対');}
+      var rows=[]; for(i=0;i<12;i++){ var r=[SLOT[i]+'月',man(monA[i]),man(tg.min),pct(monA[i],tg.min)+'%']; if(hasP){r.push(man(monP[i]));r.push((monA[i]-monP[i]>=0?'+':'')+man(monA[i]-monP[i]));} rows.push(r); }
+      var kpis=[{label:'年度実績',value:man(yTot)},{label:'年目標',value:man(tg.min*12)+'〜'+man(tg.max*12)}]; if(hasP)kpis.push({label:'昨対',value:(yTot-pTot>=0?'+':'')+man(yTot-pTot)});
+      return { title:'売上（年度）', period:(Y-1)+'/12〜'+Y+'/11', kpis:kpis, sections:[
+        {type:'bars',title:'月別 実績',items:monA.map(function(v,ix){return {label:''+SLOT[ix],value:v};}),max:Math.max.apply(null,monA.concat([tg.min]))},
+        {type:'table',title:'月別内訳',head:head,rows:rows,align:head.map(function(_,ix){return ix===0?'l':'r';})} ]};
+    }
+    if(tab==='quarter' && !yr){
+      var ym2=window._svYM,y2=ym2.y,m2=ym2.m; var moS=ymdL(new Date(y2,m2,1)),moE=ymdL(new Date(y2,m2+1,0));
+      var al=qAlloc(y2,m2+1); var qAct=[0,0,0,0],qCnt=[0,0,0,0],qMin=[0,0,0,0],qMax=[0,0,0,0];
+      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var dd=c.returnDateFinal||c.returnDate||''; if(dd<moS||dd>moE)return; var qi=qOfDay(pd(dd).getDate()); qAct[qi]+=actAmt(c); qCnt[qi]++; });
+      for(var i5=0;i5<4;i5++){ qMin[i5]=al?al.q[i5].min:Math.round(tg.min/4); qMax[i5]=al?al.q[i5].max:Math.round(tg.max/4); }
+      var today=new Date(); var isThis=(today.getFullYear()===y2&&today.getMonth()===m2); var tq=isThis?qOfDay(today.getDate()):(ymdL(today)>moE?3:0);
+      var qw=qWindow(y2,m2,tq), nqE=nextQEnd(y2,m2,tq); var _td=new Date();_td.setHours(0,0,0,0);var todayStr=ymdL(_td);
+      var qt={};TIERS.forEach(function(t){qt[t.id]={sum:0,count:0};}); (state.cards||[]).forEach(function(c){ var tr=qTierOf(c,qw.s,qw.e,nqE,todayStr); if(!tr)return; qt[tr].sum+=amtOf(c,tr); qt[tr].count++; });
+      var lbl=['1-7','8-15','16-23','24-末']; var qrows=[]; for(i5=0;i5<4;i5++) qrows.push(['Q'+(i5+1)+' '+lbl[i5], man(qMin[i5])+'〜'+man(qMax[i5]), man(qAct[i5]), pct(qAct[i5],qMin[i5])+'%', qCnt[i5]+'台']);
+      var tierRows2=[['目標',man(qMin[tq])+'〜'+man(qMax[tq]),'']].concat(TIERS.map(function(x){return [x.label,man(qt[x.id].sum),qt[x.id].count+'台'];}));
+      return { title:'クォーター進捗', period:y2+'年'+(m2+1)+'月',
+        kpis:[{label:'現Q実績 (Q'+(tq+1)+')',value:man(qt.actual.sum)},{label:'着地(翌Qまで)',value:man(_mAll(qt))},{label:'Q目標',value:man(qMin[tq])+'〜'+man(qMax[tq])}],
+        sections:[ {type:'table',title:'クォーター別（月4分割・営業日配分）',head:['Q','目標','実績','達成率','台数'],rows:qrows,align:['l','r','r','r','r']},
+          {type:'table',title:'現Qの確度別（翌Qリミット）',head:['区分','金額','台数'],rows:tierRows2,align:['l','r','r']} ]};
+    }
+    if(tab==='quarter' && yr){
+      var Y3=window._svYear; var grid=[];for(var i6=0;i6<12;i6++){grid[i6]=[{a:0,mn:0},{a:0,mn:0},{a:0,mn:0},{a:0,mn:0}];}
+      var s2ym=function(sl){var cm=(sl===0)?11:sl-1,cy=(sl===0)?Y3-1:Y3;return{y:cy,m:cm};};
+      for(i6=0;i6<12;i6++){var ymo=s2ym(i6);var al3=qAlloc(ymo.y,ymo.m+1);for(var q3=0;q3<4;q3++)grid[i6][q3].mn=al3?al3.q[q3].min:Math.round(tg.min/4);}
+      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d3=c.returnDateFinal||c.returnDate||'';if(!d3)return;var dd=pd(d3),cm=dd.getMonth(),cy=dd.getFullYear();var fy=(cm===11)?cy+1:cy;if(fy!==Y3)return;var slot=(cm===11)?0:cm+1;grid[slot][qOfDay(dd.getDate())].a+=actAmt(c); });
+      var rows3=[]; for(i6=0;i6<12;i6++){ var row=[SLOT[i6]+'月']; var ma=0,mm3=0; for(q3=0;q3<4;q3++){var cell=grid[i6][q3];ma+=cell.a;mm3+=cell.mn;row.push(cell.a>0?pct(cell.a,cell.mn)+'%':'—');} row.push(ma>0?pct(ma,mm3)+'%':'—'); rows3.push(row); }
+      return { title:'クォーター（年度・達成率）', period:(Y3-1)+'/12〜'+Y3+'/11', kpis:[], sections:[{type:'table',title:'月×Q 達成率（実績÷目標最低）',head:['月','Q1','Q2','Q3','Q4','月計'],rows:rows3,align:['l','r','r','r','r','r']}]};
+    }
+    if(tab==='work' && !yr){
+      var ym4=window._svYM; var w=collectWork(ymdL(new Date(ym4.y,ym4.m,1)),ymdL(new Date(ym4.y,ym4.m+1,0)));
+      var secs=[]; [['div1','国産'],['div2','輸入']].forEach(function(cs){ var cTot=WGROUPS.reduce(function(a,x){return a+w.g[x.id][cs[0]].sum;},0)||1;
+        var rows4=WGROUPS.map(function(x){var o=w.g[x.id][cs[0]];return [x.label,o.cnt+'',man(o.sum),man(o.cnt?o.sum/o.cnt:0),o.cnt?man(o.lo):'—',o.cnt?man(o.hi):'—',pct(o.sum,cTot)+'%'];});
+        secs.push({type:'table',title:cs[1]+'車',head:['作業','台数','売上','平均','最低','最高','構成比'],rows:rows4,align:['l','r','r','r','r','r','r']}); });
+      return { title:'作業内容', period:ym4.y+'年'+(ym4.m+1)+'月', kpis:[], sections:secs };
+    }
+    if(tab==='work' && yr){
+      var Y5=window._svYear; var mon=[];for(var i7=0;i7<12;i7++)mon[i7]={shaken:0,'12pt':0,general:0};
+      (state.cards||[]).forEach(function(c){if(c.status!=='returned')return;var d5=c.returnDateFinal||c.returnDate||'';if(!d5)return;var dd=pd(d5),cm=dd.getMonth(),cy=dd.getFullYear();var fy=(cm===11)?cy+1:cy;if(fy!==Y5)return;var slot=(cm===11)?0:cm+1;mon[slot][workGroupOf(c)]+=actAmt(c);});
+      var rows5=[];for(i7=0;i7<12;i7++){var mm5=mon[i7];rows5.push([SLOT[i7]+'月',man(mm5.shaken),man(mm5['12pt']),man(mm5.general),man(mm5.shaken+mm5['12pt']+mm5.general)]);}
+      return { title:'作業内容（年度）', period:(Y5-1)+'/12〜'+Y5+'/11', kpis:[], sections:[{type:'table',title:'月別グループ',head:['月','車検','12点','一般','計'],rows:rows5,align:['l','r','r','r','r']}]};
+    }
+    // front
+    var F, period; if(yr){var Yf=window._svYear;F=collectFront(ymdL(new Date(Yf-1,11,1)),ymdL(new Date(Yf,11,0)));period=(Yf-1)+'/12〜'+Yf+'/11';}else{var ymf=window._svYM;F=collectFront(ymdL(new Date(ymf.y,ymf.m,1)),ymdL(new Date(ymf.y,ymf.m+1,0)));period=ymf.y+'年'+(ymf.m+1)+'月';}
+    var frows=Object.keys(F).map(function(n){var f=F[n];var gt=f.grp.shaken+f.grp['12pt']+f.grp.general;return {n:n,f:f,gt:gt,sum:f.sum};}).sort(function(a,b){return b.sum-a.sum;}).map(function(r){var f=r.f;return [r.n,f.cnt+'',man(f.sum),man(f.cnt?f.sum/f.cnt:0),man(f.hi),(f.holdN?(f.hold/f.holdN).toFixed(1):'—'),(f.holdMax||'—')+'',(f.odN?(f.odDays/f.odN).toFixed(1):'—'),pct(f.grp.shaken,r.gt)+'%',pct(f.grp['12pt'],r.gt)+'%',pct(f.grp.general,r.gt)+'%'];});
+    return { title:'フロント別', period:period, kpis:[], sections:[{type:'table',title:'指標（実績＋受注）',head:['名','台','売上','平均','最高','預平','預長','受注','車検','12点','一般'],rows:frows,align:['l','r','r','r','r','r','r','r','r','r','r']}]};
+  }
+  window.svReportModel = svReportModel;
 
   window.renderSales = renderSales;
   window.svSetTab = function(t){ window._svTab=t; renderSales(); };
