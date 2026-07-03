@@ -189,11 +189,10 @@ function renderCardForm(c){
   /* 車検を選んだ時だけ：入庫時持ち物（概算の下・代車の上に出す・v0.35.4） */
   if (c.workType === 'shaken'){
     h += '<div class="cf-subhead">📋 入庫時持ち物（車検）</div>';
+    h += '<div class="cf-hint" style="margin-top:0">お客様にご持参いただくもの：<b>車検証 ・ 納税証明書 ・ 自賠責</b></div>';
     h += '<div class="cf-row" style="flex-wrap:wrap">';
-    h += field('車検証',     toggle(c, 'hasShakenSho', 'あり', 'なし'));
-    h += field('納税証明書', toggle(c, 'hasTaxSho',    '有',   '無'));
-    h += field('自賠責',     toggle(c, 'hasJibaiseki', 'あり', 'なし'));
     h += field('諸費用 ¥',   numIn(c, 'feeAmount'));
+    h += field('早期割',     toggle(c, 'earlyDiscount', '適用', 'なし'));
     h += '</div>';
   }
   /* 代車：スイッチ＋使用代車＋車種固定を1行（中央揃え＝スイッチが上下にブレない）。貸出/条件/メモは下に展開（v0.38.9） */

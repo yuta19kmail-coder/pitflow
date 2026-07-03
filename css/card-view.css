@@ -100,6 +100,7 @@
 .cv-bdg{ font-size:12px; font-weight:800; padding:3px 10px; border-radius:7px; border:1px solid; white-space:nowrap; }
 .cv-bdg.cv-drop{ background:rgba(38,162,105,.14); color:#5fcfa0; border-color:rgba(38,162,105,.45); }
 .cv-bdg.cv-consult{ background:rgba(245,158,11,.14); color:var(--orange); border-color:rgba(245,158,11,.45); }
+.cv-bdg.cv-early{ background:rgba(236,72,153,.14); color:#ec4899; border-color:rgba(236,72,153,.5); }
 .cv-bdg.cv-none{ background:rgba(29,185,122,.14); color:#5fcfa0; border-color:rgba(29,185,122,.45); }
 
 /* 代車メーター */

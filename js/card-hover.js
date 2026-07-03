@@ -163,6 +163,7 @@
       if (c.headlight)  bd.push('<span class="ph-b ph-b-hl'+(c.headlightDone?' ph-done':'')+'">ライト磨き</span>');
       if (c.coatingOK)  bd.push('<span class="ph-b ph-b-coat">コーティング受注</span>');
       if (c.salesReq)   bd.push('<span class="ph-b ph-b-sales'+(c.salesReqDone?' ph-done':'')+'">車販依頼</span>');
+      if (c.earlyDiscount) bd.push('<span class="ph-b ph-b-early">早期割</span>');
       // 車両注意（左/M/T/車高/土禁）＝耳と同じく左M/T合体・該当時のみ。他バッジと同じ行に並べる
       var _hdr = Array.isArray(c.drive) ? c.drive : [];
       if (_hdr.indexOf('leftHand')>=0 && _hdr.indexOf('mt')>=0) bd.push('<span class="ph-b ph-b-cau">左M/T</span>');

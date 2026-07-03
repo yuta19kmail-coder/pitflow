@@ -105,6 +105,7 @@
     let badges = '';
     if (dt) badges += (window.pitDropBadges ? pitDropBadges(c, function(o){ return '<span class="cv-bdg cv-drop">'+esc(o.label.length<=1?(o.desc||o.label):o.label)+'</span>'; }) : '<span class="cv-bdg cv-drop">'+esc(dt.label)+'</span>');
     if (c.consult) badges += '<span class="cv-bdg cv-consult">💬 相談</span>';
+    if (c.earlyDiscount) badges += '<span class="cv-bdg cv-early">🏷️ 早期割</span>';
     if (!c.needLoaner) badges += '<span class="cv-bdg cv-none">代車なし</span>';
     h += '<div class="cv-wframe" style="border-left-color:'+wtColor+'">'
        + '<div class="cv-wftop"><span class="cv-wftype" style="color:'+wtColor+'">🔧 '+esc(wtLabel)+'</span>'

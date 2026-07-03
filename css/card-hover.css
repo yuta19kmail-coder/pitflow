@@ -64,6 +64,7 @@
 .ph-b-hl{ background:rgba(139,92,246,.16); color:#8b5cf6; border-color:rgba(139,92,246,.55); }
 .ph-b-coat{ background:rgba(168,85,247,.16); color:#a855f7; border-color:rgba(168,85,247,.55); }
 .ph-b-sales{ background:rgba(37,99,235,.14); color:#2563eb; border-color:rgba(37,99,235,.5); }
+.ph-b-early{ background:rgba(236,72,153,.16); color:#ec4899; border-color:rgba(236,72,153,.55); }
 .ph-b-cau{ background:#f59e0b; color:#1c1300; border-color:#f59e0b; }   /* 車両注意（耳の土禁/左等と同じ塗りオレンジ） */
 /* 📞 完TEL/返車 のその場編集（ホバーパネル内） */
 .ph-rt-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
