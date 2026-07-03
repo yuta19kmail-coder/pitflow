@@ -21,10 +21,10 @@
 .shk-scroll{ overflow-x:auto; border:1px solid var(--border); border-radius:12px; background:var(--bg2); }
 .shk-tbl{ min-width:max-content; }
 .shk-row{ display:flex; align-items:stretch; }
-.shk-gut{ position:sticky; left:0; z-index:3; flex:0 0 var(--GUT); background:var(--bg3); border-right:1px solid var(--border); }
+.shk-gut{ position:sticky; left:0; z-index:3; flex:0 0 var(--GUT); min-width:0; overflow:hidden; background:var(--bg3); border-right:1px solid var(--border); }
 .shk-day{ flex:0 0 calc(var(--SUB)*2); border-right:1px solid var(--daybd); text-align:center; }
 .shk-day:last-child{ border-right:0; }
-.shk-sc{ flex:0 0 var(--SUB); border-right:1px solid var(--border2,#232c34); }
+.shk-sc{ flex:0 0 var(--SUB); min-width:0; overflow:hidden; border-right:1px solid var(--border2,#232c34); }
 .shk-sc.pm{ border-right:1px solid var(--daybd); }
 .shk-row .shk-sc:last-child{ border-right:0; }
 
@@ -39,16 +39,17 @@
 .hgut{ background:var(--bg3); }
 .hgut.bb{ border-bottom:1px solid var(--border); }
 
-.shk-band{ position:sticky; left:0; z-index:2; font-size:12px; font-weight:800; color:var(--text2); padding:7px 12px; background:var(--bg4,#26313b); border-top:1px solid var(--border); border-bottom:1px solid var(--border); flex:1 0 auto; }
-.shk-row > .shk-band + .shk-sc{ display:none; }
+.shk-bandrow{ background:var(--bg4,#26313b); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+.shk-band{ position:sticky; left:0; z-index:2; flex:0 0 var(--GUT); min-width:0; font-size:12px; font-weight:800; color:var(--text2); padding:7px 12px; background:var(--bg4,#26313b); }
+.shk-bandfill{ flex:1 0 auto; min-width:0; }
 
 .shk-glabel, .shk-gut.glabel{ display:flex; align-items:center; padding:8px 12px; font-size:12px; font-weight:800; color:var(--text2); }
 
 /* 決定セル */
-.shk-decell{ padding:5px 5px 6px; min-height:170px; }
+.shk-decell{ padding:4px 5px 5px; min-height:42px; }
 .shk-decell.off{ min-height:0; height:100%; background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,.02) 5px,rgba(255,255,255,.02) 10px); }
 .shk-decell.drop{ outline:2px dashed var(--brand,#1f7a4d); outline-offset:-3px; background:rgba(31,122,77,.14); }
-.shk-chip{ display:block; border:1px solid var(--border); border-left:3px solid var(--green); border-radius:6px; padding:3px 8px; background:var(--bg3); cursor:grab; margin-bottom:4px; line-height:1.28; }
+.shk-chip{ display:block; max-width:100%; border:1px solid var(--border); border-left:3px solid var(--green); border-radius:6px; padding:3px 8px; background:var(--bg3); cursor:grab; margin-bottom:4px; line-height:1.28; }
 .shk-chip.dragging{ opacity:.4; }
 .shk-chip .shk-nm{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .shk-chip .shk-car{ font-size:12px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -59,11 +60,11 @@
 
 /* 可能性ガント */
 .shk-gcar{ border-bottom:1px solid var(--border2,#232c34); }
-.shk-gut.gcar{ display:flex; flex-direction:column; justify-content:center; padding:6px 10px; }
-.shk-gcar-nm{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.shk-gcar-sub{ display:flex; gap:3px; margin-top:2px; flex-wrap:wrap; }
+.shk-gut.gcar{ display:flex; flex-direction:column; justify-content:center; padding:6px 10px; min-width:0; }
+.shk-gcar-nm{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.shk-gcar-sub{ display:flex; gap:3px; margin-top:2px; flex-wrap:nowrap; overflow:hidden; }
 .shk-ca{ font-size:8.5px; padding:0 4px; border-radius:4px; background:rgba(255,255,255,.06); color:var(--text3); }
-.shk-gsc{ flex:0 0 var(--SUB); border-right:1px solid var(--border2,#232c34); padding:8px 3px; display:flex; align-items:center; }
+.shk-gsc{ flex:0 0 var(--SUB); min-width:0; overflow:hidden; border-right:1px solid var(--border2,#232c34); padding:8px 3px; display:flex; align-items:center; }
 .shk-gsc.pm{ border-right:1px solid var(--daybd); }
 .shk-gcar .shk-gsc:last-child{ border-right:0; }
 .shk-gsc.off{ background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,.02) 5px,rgba(255,255,255,.02) 10px); }

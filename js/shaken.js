@@ -59,7 +59,7 @@
     var h='';
     // ヘッダ操作
     h+='<div class="shk-head"><div class="shk-nav"><button onclick="shkShift(-7)">◀ 前週</button><b>'+fmtMD(days[0].iso)+' 〜</b><button onclick="shkShift(7)">次週 ▶</button><button class="shk-now" onclick="shkShift(0)">今週</button></div>';
-    h+='<div class="shk-legend"><span class="shk-lg dc">決定</span><span class="shk-lg dn">完了</span><span class="shk-lg re">再検</span><span class="shk-lg cd">行ける帯</span></div>';
+    h+='<div class="shk-legend"><span class="shk-lg dc">決定</span><span class="shk-lg dn">完了</span><span class="shk-lg re">再検</span><span class="shk-lg cd">予定枠</span></div>';
     h+='<div class="shk-sum">決定'+cnt.decided+'／完了'+cnt.done+'／再検'+cnt.recheck+'／候補'+cnt.cand+'</div></div>';
     // 未予定
     if(data.unsched.length){
@@ -73,7 +73,7 @@
     // 午前午後
     h+='<div class="shk-row"><div class="shk-gut hgut bb"></div>'+subs.map(function(s){ return '<div class="shk-sc'+(s.slot==='pm'?' pm':'')+'"><div class="shk-ap '+s.slot+'">'+(s.slot==='am'?'🌅午前':'🌇午後')+'</div></div>'; }).join('')+'</div>';
     // 決定バンド
-    h+='<div class="shk-row"><div class="shk-band">📌 決定</div>'+subs.map(function(){return '<div class="shk-sc"></div>';}).join('')+'</div>';
+    h+='<div class="shk-row shk-bandrow"><div class="shk-band">📌 決定</div><div class="shk-bandfill"></div></div>';
     h+='<div class="shk-row"><div class="shk-gut glabel">行く車</div>'+subs.map(function(s){
       if(s.off) return '<div class="shk-sc'+(s.slot==='pm'?' pm':'')+'"><div class="shk-decell off"></div></div>';
       var arr=decCell[s.iso+'|'+s.slot]||[];
@@ -81,7 +81,7 @@
       return '<div class="shk-sc'+(s.slot==='pm'?' pm':'')+'"><div class="shk-decell" data-iso="'+s.iso+'" data-slot="'+s.slot+'" ondragover="shkOver(event)" ondragleave="shkLeave(event)" ondrop="shkDrop(event,\''+s.iso+'\',\''+s.slot+'\')">'+inner+'</div></div>';
     }).join('')+'</div>';
     // 可能性ガント
-    h+='<div class="shk-row"><div class="shk-band">🕘 可能性（行ける枠・ドラッグで上へ）</div>'+subs.map(function(){return '<div class="shk-sc"></div>';}).join('')+'</div>';
+    h+='<div class="shk-row shk-bandrow"><div class="shk-band">🕘 予定</div><div class="shk-bandfill"></div></div>';
     data.cands.forEach(function(c){ var s=ins(c);
       var attr=[]; var dr=Array.isArray(c.drive)?c.drive:[]; if(dr.indexOf('leftHand')>=0)attr.push('左'); if(dr.indexOf('mt')>=0)attr.push('MT');
       var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:[]; if(ids.indexOf('12pt')>=0)attr.push('12点');
