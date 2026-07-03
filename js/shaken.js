@@ -50,9 +50,12 @@
   }
 
   function decChip(c, kind){ var car=carLabel(c);
-    return '<div class="shk-chip shk-'+kind+'" draggable="true" data-card-id="'+c.id+'"'
-      + ' ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)"'
-      + ' onclick="shkChipMenu(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'
+    // 決定＝ドラッグ/メニューで編集可。済(done)・再検(recheck)＝ドラッグ抑制、クリックでカード詳細（編集は詳細から）。
+    var editable=(kind==='decided');
+    var dragAttr = editable ? ' draggable="true" ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)"' : ' draggable="false"';
+    var onclick = editable ? 'shkChipMenu(\''+c.id+'\')' : 'openDetail(\''+c.id+'\')';
+    return '<div class="shk-chip shk-'+kind+(editable?'':' locked')+'"'+dragAttr+' data-card-id="'+c.id+'"'
+      + ' onclick="'+onclick+'" style="border-left-color:'+team(c)+'">'
       + '<div class="shk-nm">'+esc(surname(c))+'様</div><div class="shk-car">'+(car?esc(car):'<span class="shk-nocar">車種未登録</span>')+'</div></div>';
   }
 

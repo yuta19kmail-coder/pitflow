@@ -106,3 +106,5 @@
 .shk-ures{ margin-left:6px; font-size:9.5px; color:var(--text3); background:rgba(255,255,255,.06); border-radius:4px; padding:0 4px; }
 .shk-plabel{ display:block; font-size:11px; color:var(--text3); font-weight:600; margin:2px 0 4px; }
 .shk-psel{ width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 10px; font-size:13px; margin-bottom:10px; }
+.shk-chip.locked{ cursor:pointer; }
+.shk-chip.locked:hover{ filter:brightness(1.1); }
