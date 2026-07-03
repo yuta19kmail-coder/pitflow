@@ -362,6 +362,7 @@
       + (c.tentative?'<span class="cv-karibadge">📝 仮予約</span>':'')
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
+      + '<button class="cv-iconbtn" title="表紙を印刷" onclick="pitPrintCover(\''+c.id+'\')">🖨</button>'
       + '<button class="cv-iconbtn" title="この車両に付箋を発行" onclick="cvToggleFusen(event)">🗒️</button>'
       + '<div class="cv-optwrap"><button class="cv-iconbtn" title="オプション" onclick="cvToggleOpt(event)">⋮</button>'
       + '<div class="cv-optmenu" id="cv-optmenu">'

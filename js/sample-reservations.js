@@ -351,9 +351,16 @@
       // 過去5営業日＝完了（一部再検）
       pastBizDays(5).forEach(function(day){ var iso=ymd(day); var n=per(); for(var k=0;k<n&&idx<shak.length;k++){ var s=ensure(shak[idx++]); var sl=(k%2?'pm':'am'); s.decided=iso; s.decidedSlot=sl; s.result='done'; s.resultDate=iso; s.resultSlot=sl; if(Math.random()<0.18){ s.history.push({date:iso,slot:sl,result:'recheck'}); s.recheckCount=1; } } });
       // 未来10営業日＝予定決定（5台前後/日）
-      bizDays(1,10).forEach(function(day){ var iso=ymd(day); var n=per(); for(var k=0;k<n&&idx<shak.length;k++){ var s=ensure(shak[idx++]); s.decided=iso; s.result=''; } });
+      bizDays(1,10).forEach(function(day){ var iso=ymd(day); var n=per(); for(var k=0;k<n&&idx<shak.length;k++){ var s=ensure(shak[idx++]); var sl=(k%2?'pm':'am'); s.decided=iso; s.decidedSlot=sl; s.result=''; } });
       // 残り＝候補（最短1日）または未予定
-      for(; idx<shak.length; idx++){ var s=ensure(shak[idx]); if(Math.random()<0.5){ var cd=bizDays(1+Math.floor(Math.random()*11),1); if(cd[0]){ var rr=Math.random(); s.slots[ymd(cd[0])]= rr<0.45?['am']:(rr<0.9?['pm']:['am','pm']); } } }
+      var thisWk=bizDays(0,5), nextWk=bizDays(0,10);
+      for(; idx<shak.length; idx++){ var s=ensure(shak[idx]); var r=Math.random();
+        if(r<0.30){ thisWk.forEach(function(d){ s.slots[ymd(d)]=['am','pm']; }); }          // 今週どこでも
+        else if(r<0.55){ nextWk.forEach(function(d){ s.slots[ymd(d)]=['am','pm']; }); }       // 2週どこでも
+        else if(r<0.78){ var sp=bizDays(1+Math.floor(Math.random()*6),2+Math.floor(Math.random()*2)); sp.forEach(function(d,i){ s.slots[ymd(d)]= i===0?['pm']:['am','pm']; }); } // 数日の帯
+        else if(r<0.90){ var cd=bizDays(1+Math.floor(Math.random()*9),1); if(cd[0]){ var rr=Math.random(); s.slots[ymd(cd[0])]= rr<0.5?['am']:(rr<0.85?['pm']:['am','pm']); } } // 1枠だけ
+        // 残り＝未予定
+      }
     })();
     state.cards = (state.cards || []).filter(function(c){ return !c._sample; }).concat(cards);
     // 予約番号（resNo）を採番＝カードの「耳」が出るように（通常は起動時backfillだが、ボタン生成分はここで採番）。
