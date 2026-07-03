@@ -1407,3 +1407,10 @@ th.cfs-lg-d{ z-index:3; }
 .ps-est2-name{ display:flex; align-items:center; gap:8px; font-size:13px; min-width:0; }
 .ps-est2-cell{ display:flex; align-items:center; justify-content:center; gap:4px; }
 .ps-est2-cell .ps-num{ width:66px; }
+
+/* 入庫時持ち物（車検）＝スタッフが案内する用に見やすく */
+.cf-mochi{ background:rgba(31,122,77,.08); border:1px solid rgba(31,122,77,.35); border-radius:10px; padding:10px 12px; margin:2px 0 10px; }
+.cf-mochi-lead{ font-size:12px; font-weight:700; color:var(--text2); margin-bottom:8px; }
+.cf-mochi-items{ display:flex; flex-wrap:wrap; gap:8px; }
+.cf-mochi-i{ font-size:14px; font-weight:800; color:var(--text); background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:6px 12px; }
+.cf-field.cf-field-narrow{ flex:0 0 auto; }

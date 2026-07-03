@@ -189,10 +189,11 @@ function renderCardForm(c){
   /* 車検を選んだ時だけ：入庫時持ち物（概算の下・代車の上に出す・v0.35.4） */
   if (c.workType === 'shaken'){
     h += '<div class="cf-subhead">📋 入庫時持ち物（車検）</div>';
-    h += '<div class="cf-hint" style="margin-top:0">お客様にご持参いただくもの：<b>車検証 ・ 納税証明書 ・ 自賠責</b></div>';
+    h += '<div class="cf-mochi"><div class="cf-mochi-lead">📢 お客様にご案内ください（当日ご持参いただくもの）</div>'
+       + '<div class="cf-mochi-items"><span class="cf-mochi-i">🚗 車検証</span><span class="cf-mochi-i">🧾 納税証明書</span><span class="cf-mochi-i">📄 自賠責</span></div></div>';
     h += '<div class="cf-row" style="flex-wrap:wrap">';
-    h += field('諸費用 ¥',   numIn(c, 'feeAmount'));
-    h += field('早期割',     toggle(c, 'earlyDiscount', '適用', 'なし'));
+    h += '<div class="cf-field cf-field-narrow"><div class="cf-label">諸費用 ¥</div>' + numIn(c, 'feeAmount', 'style="width:120px"') + '</div>';
+    h += '<div class="cf-field cf-field-narrow"><div class="cf-label">早期割</div>' + toggle(c, 'earlyDiscount', '適用', 'なし') + '</div>';
     h += '</div>';
   }
   /* 代車：スイッチ＋使用代車＋車種固定を1行（中央揃え＝スイッチが上下にブレない）。貸出/条件/メモは下に展開（v0.38.9） */
