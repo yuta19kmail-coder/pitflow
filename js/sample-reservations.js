@@ -336,31 +336,39 @@
     // フロント指標用：受注日(orderedAt)＝連絡中→パーツ待ちに移った想定日を後付け（入庫+1〜4日・返車を超えない）
     (function(){ function _pm(x){ var p=String(x).split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime(); }
       cards.forEach(function(c){ var ordered = c.returnStage || ['parts','work','workDone','outsource','returned'].indexOf(c.status)>=0; if(!ordered || !c.reserveDate) return; var base=_pm(c.reserveDate)+(1+Math.floor(Math.random()*4))*86400000; if(c.returnDate){ var rm=_pm(c.returnDate); if(base>rm) base=rm; } c.orderedAt=base; }); })();
-    // 車検予定カレンダー用：shaken車の車検スケジュールを後付け（1営業日あたり5台前後の決定・v0.108.1）
+    // 車検予定カレンダー用：車検作業タイプ × 入庫中の車だけが車検予定に乗る（ステータス駆動・v0.110.6）
+    //   入庫中(check〜work)＝これから陸運局へ → 決定/候補/未設定。完了・返車＝過去に済（担当・一部再検）。予約中＝まだ入庫前なので予定なし。
     (function(){
-      function _pm(x){ var p=String(x).split('-'); return new Date(+p[0],+p[1]-1,+p[2]).getTime(); }
       function isSh(c){ var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]); return ids.indexOf('shaken')>=0; }
       function rikuOff(d){ var w=d.getDay(); if(w===0||w===6) return true; if(window.Holidays&&Holidays.is&&Holidays.is(ymd(d))) return true; return false; }
       function ensure(c){ var s=c.inspSchedule||(c.inspSchedule={mode:'manual',slots:{},cutBefore:''}); if(!s.slots)s.slots={}; if(!Array.isArray(s.history))s.history=[]; return s; }
       function bizDays(fromOff, count){ var out=[], d=new Date(todayMs+fromOff*86400000); d.setHours(0,0,0,0); var g=0; while(out.length<count&&g++<80){ if(!rikuOff(d)&&!isClosed(d)) out.push(new Date(d)); d.setDate(d.getDate()+1); } return out; }
       function pastBizDays(count){ var out=[], d=new Date(todayMs); d.setDate(d.getDate()-1); var g=0; while(out.length<count&&g++<40){ if(!rikuOff(d)&&!isClosed(d)) out.push(new Date(d)); d.setDate(d.getDate()-1); } return out; }
-      var shak=cards.filter(function(c){ return isSh(c)&&c.status!=='scrap'; });
-      for(var i=shak.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=shak[i]; shak[i]=shak[j]; shak[j]=t; }
-      var idx=0;
-      var per=function(){ return 4+Math.floor(Math.random()*3); };  // 4〜6台/日
-      // 過去5営業日＝完了（一部再検）
-      pastBizDays(5).forEach(function(day){ var iso=ymd(day); var n=per(); for(var k=0;k<n&&idx<shak.length;k++){ var s=ensure(shak[idx++]); var sl=(k%2?'pm':'am'); s.decided=iso; s.decidedSlot=sl; s.result='done'; s.resultDate=iso; s.resultSlot=sl; if(Math.random()<0.18){ s.history.push({date:iso,slot:sl,result:'recheck'}); s.recheckCount=1; } } });
-      // 未来10営業日＝予定決定（5台前後/日）
-      bizDays(1,10).forEach(function(day){ var iso=ymd(day); var n=per(); for(var k=0;k<n&&idx<shak.length;k++){ var s=ensure(shak[idx++]); var sl=(k%2?'pm':'am'); s.decided=iso; s.decidedSlot=sl; s.result=''; } });
-      // 残り＝候補（最短1日）または未予定
-      var thisWk=bizDays(0,5), nextWk=bizDays(0,10);
-      for(; idx<shak.length; idx++){ var s=ensure(shak[idx]); var r=Math.random();
-        if(r<0.30){ thisWk.forEach(function(d){ s.slots[ymd(d)]=['am','pm']; }); }          // 今週どこでも
-        else if(r<0.55){ nextWk.forEach(function(d){ s.slots[ymd(d)]=['am','pm']; }); }       // 2週どこでも
-        else if(r<0.78){ var sp=bizDays(1+Math.floor(Math.random()*6),2+Math.floor(Math.random()*2)); sp.forEach(function(d,i){ s.slots[ymd(d)]= i===0?['pm']:['am','pm']; }); } // 数日の帯
-        else if(r<0.90){ var cd=bizDays(1+Math.floor(Math.random()*9),1); if(cd[0]){ var rr=Math.random(); s.slots[ymd(cd[0])]= rr<0.5?['am']:(rr<0.85?['pm']:['am','pm']); } } // 1枠だけ
-        // 残り＝未予定
-      }
+      function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } }
+      var STAFF=['社長','専務','椎名','チーフ','蓮沼','箱崎','菅谷']; function rstaff(){ return STAFF[Math.floor(Math.random()*STAFF.length)]; }
+      var IN_SHOP=['check','estim','contact','parts','work'];   // 入庫中
+      var GONE=['workDone','returned'];                          // 完了/返車＝車検は済んでいる
+      var live=cards.filter(function(c){ return isSh(c) && IN_SHOP.indexOf(c.status)>=0; });
+      var gone=cards.filter(function(c){ return isSh(c) && GONE.indexOf(c.status)>=0; });
+      shuffle(live); shuffle(gone);
+
+      // 完了/返車 → 直近営業日に車検済を分散（担当あり・一部再検）
+      var gi=0;
+      pastBizDays(6).forEach(function(day){ var iso=ymd(day); var n=3+Math.floor(Math.random()*3); for(var k=0;k<n&&gi<gone.length;k++){ var s=ensure(gone[gi++]); var sl=(k%2?'pm':'am'); s.decided=iso; s.decidedSlot=sl; s.result='done'; s.resultDate=iso; s.resultSlot=sl; s.resultStaff=rstaff(); if(Math.random()<0.15){ s.history.push({date:iso,slot:sl,result:'recheck',staff:rstaff()}); } } });
+      // 余りは古い日付で済（表示範囲外・履歴として保持）
+      for(; gi<gone.length; gi++){ var s=ensure(gone[gi]); var d=new Date(todayMs-(20+Math.floor(Math.random()*40))*86400000); s.result='done'; s.resultDate=ymd(d); s.resultSlot=(Math.random()<0.5?'am':'pm'); s.resultStaff=rstaff(); }
+
+      // 入庫中 → 未来の予定：決定 / 候補 / 未設定
+      var futB=bizDays(1,10), thisWk=bizDays(0,5), nextWk=bizDays(0,10);
+      live.forEach(function(c){ var s=ensure(c); var r=Math.random();
+        if(r<0.40){ var d=futB[Math.floor(Math.random()*futB.length)]; if(d){ s.decided=ymd(d); s.decidedSlot=(Math.random()<0.5?'am':'pm'); s.result=''; } }   // 決定
+        else if(r<0.75){ var rr=Math.random();                                                                                                            // 候補（行ける枠）
+          if(rr<0.35){ thisWk.forEach(function(d){ s.slots[ymd(d)]=['am','pm']; }); }
+          else if(rr<0.65){ nextWk.forEach(function(d){ s.slots[ymd(d)]=['am','pm']; }); }
+          else { var sp=bizDays(1+Math.floor(Math.random()*6),2+Math.floor(Math.random()*2)); sp.forEach(function(d,i){ s.slots[ymd(d)]= i===0?['pm']:['am','pm']; }); }
+        }
+        // 残り＝未設定（slots空・decidedなし → 予定欄に空行）
+      });
     })();
     state.cards = (state.cards || []).filter(function(c){ return !c._sample; }).concat(cards);
     // 予約番号（resNo）を採番＝カードの「耳」が出るように（通常は起動時backfillだが、ボタン生成分はここで採番）。
