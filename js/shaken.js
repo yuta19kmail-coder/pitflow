@@ -32,19 +32,21 @@
     return out;
   }
 
+  function isArrived(c){ return c.status!=='reserved' && c.status!=='returned' && c.status!=='scrap'; }
   function collect(){
     var decCell={};
     function push(iso,slot,c,kind){ var k=iso+'|'+(slot==='pm'?'pm':'am'); (decCell[k]=decCell[k]||[]).push({c:c,kind:kind}); }
-    var cands=[], unsched=[], cnt={decided:0,done:0,recheck:0,cand:0};
+    var cands=[], empties=[], unsched=[], cnt={decided:0,done:0,recheck:0,cand:0,unset:0};
     shakenCars().forEach(function(c){ var s=ins(c);
       (s.history||[]).forEach(function(h){ if(h&&h.result==='recheck'&&h.date){ push(h.date,h.slot,c,'recheck'); cnt.recheck++; } });
       if(s.result==='done'){ cnt.done++; var dd=s.resultDate||s.decided; if(dd) push(dd,(s.resultSlot||s.decidedSlot),c,'done'); return; }
       if(s.decided){ cnt.decided++; push(s.decided,s.decidedSlot,c,'decided'); return; }
       var slotDays=Object.keys(s.slots||{}).filter(function(k){ return (s.slots[k]||[]).length; });
       if(slotDays.length){ cnt.cand++; cands.push(c); return; }
-      unsched.push(c);
+      if(isArrived(c)){ cnt.unset++; empties.push(c); return; }   // 入庫済みで予定なし＝未設定→予定欄に空行
+      unsched.push(c);                                            // 未入庫（予約中）で予定なし→ストリップ
     });
-    return {decCell:decCell, cands:cands, unsched:unsched, cnt:cnt};
+    return {decCell:decCell, cands:cands, empties:empties, unsched:unsched, cnt:cnt};
   }
 
   function decChip(c, kind){ var car=carLabel(c);
@@ -63,10 +65,10 @@
     // ヘッダ操作
     h+='<div class="shk-head"><div class="shk-nav"><button onclick="shkShift(-7)">◀ 前週</button><b>'+fmtMD(days[0].iso)+' 〜</b><button onclick="shkShift(7)">次週 ▶</button><button class="shk-now" onclick="shkShift(0)">今週</button></div>';
     h+='<div class="shk-legend"><span class="shk-lg dc">決定</span><span class="shk-lg dn">完了</span><span class="shk-lg re">再検</span><span class="shk-lg cd">予定枠</span></div>';
-    h+='<div class="shk-sum">決定'+cnt.decided+'／完了'+cnt.done+'／再検'+cnt.recheck+'／候補'+cnt.cand+'</div></div>';
+    h+='<div class="shk-sum">決定'+cnt.decided+'／完了'+cnt.done+'／再検'+cnt.recheck+'／候補'+cnt.cand+'／未設定'+cnt.unset+'</div></div>';
     // 未予定
     if(data.unsched.length){
-      h+='<div class="shk-un">🕗 未予定（車検スケジュール未設定）：'+data.unsched.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+'</span>'; }).join('')+'</div>';
+      h+='<div class="shk-un">🕗 未入庫の予約（車検・予定は入庫後に）：'+data.unsched.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+'</span>'; }).join('')+'</div>';
     }
     // スクロール表
     h+='<div class="shk-scroll"><div class="shk-tbl">';
@@ -87,22 +89,25 @@
     }).join('')+'</div>';
     // 可能性ガント
     h+='<div class="shk-row shk-bandrow"><div class="shk-band">🕘 予定</div><div class="shk-bandfill"></div></div>';
-    data.cands.forEach(function(c){ var s=ins(c);
+    window._shkSubs = subs;
+    var ganttCars = data.cands.concat(data.empties);
+    ganttCars.forEach(function(c){ var s=ins(c); var isEmpty=data.empties.indexOf(c)>=0;
       function son(di,slot){ var day=days[di]; if(!day||day.off) return false; return (s.slots[day.iso]||[]).indexOf(slot)>=0; }
-      var attr=[]; var dr=Array.isArray(c.drive)?c.drive:[]; if(dr.indexOf('leftHand')>=0)attr.push('左'); if(dr.indexOf('mt')>=0)attr.push('MT');
+      var attr=[]; if(isEmpty)attr.push('未設定'); var dr=Array.isArray(c.drive)?c.drive:[]; if(dr.indexOf('leftHand')>=0)attr.push('左'); if(dr.indexOf('mt')>=0)attr.push('MT');
       var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:[]; if(ids.indexOf('12pt')>=0)attr.push('12点');
       var rc=(s.history||[]).filter(function(x){return x.result==='recheck';}).length; if(rc)attr.push('再'+rc);
-      h+='<div class="shk-row shk-gcar" data-card-id="'+c.id+'"><div class="shk-gut gcar"><div class="shk-gcar-nm">'+esc(surname(c))+'様 '+esc(carLabel(c))+'</div><div class="shk-gcar-sub">'+attr.map(function(x){return '<span class="shk-ca">'+x+'</span>';}).join('')+'</div></div>'
+      h+='<div class="shk-row shk-gcar'+(isEmpty?' unset':'')+'" data-card-id="'+c.id+'"><div class="shk-gut gcar"><div class="shk-gcar-nm">'+esc(surname(c))+'様 '+esc(carLabel(c))+'</div><div class="shk-gcar-sub">'+attr.map(function(x){return '<span class="shk-ca'+(x==='未設定'?' unset':'')+'">'+x+'</span>';}).join('')+'</div></div>'
         + days.map(function(x,di){ if(x.off) return '<div class="shk-off2"></div>';
             return ['am','pm'].map(function(slot){
-              var on=son(di,slot); if(!on) return '<div class="shk-gsc'+(slot==='pm'?' pm':'')+'"></div>';
+              var idx=di*2+(slot==='am'?0:1), on=son(di,slot);
+              if(!on) return '<div class="shk-gsc paintable'+(slot==='pm'?' pm':'')+'" data-car="'+c.id+'" data-idx="'+idx+'" onmousedown="shkPaintStart(event,\''+c.id+'\','+idx+')" onmouseenter="shkPaintMove(\''+c.id+'\','+idx+')" title="ドラッグで行ける枠を選択"></div>';
               var pOn = slot==='am'? son(di-1,'pm') : son(di,'am');
               var nOn = slot==='am'? son(di,'pm') : son(di+1,'am');
               return '<div class="shk-gsc'+(slot==='pm'?' pm':'')+'"><div class="shk-bar'+(c.boardId==='import'?' imp':'')+(pOn?'':' l')+(nOn?'':' r')+'" draggable="true" data-card-id="'+c.id+'" ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)" onclick="shkFix(\''+c.id+'\',\''+x.iso+'\',\''+slot+'\')" title="'+fmtMD(x.iso)+' '+(slot==='am'?'午前':'午後')+'で決定"></div></div>';
             }).join('');
           }).join('')+'</div>';
     });
-    if(!data.cands.length) h+='<div class="shk-row"><div class="shk-gut gcar"><span class="shk-empty">候補なし</span></div>'+days.map(function(x){ return x.off?'<div class="shk-off2"></div>':'<div class="shk-gsc"></div><div class="shk-gsc pm"></div>'; }).join('')+'</div>';
+    if(!ganttCars.length) h+='<div class="shk-row"><div class="shk-gut gcar"><span class="shk-empty">対象車なし</span></div>'+days.map(function(x){ return x.off?'<div class="shk-off2"></div>':'<div class="shk-gsc"></div><div class="shk-gsc pm"></div>'; }).join('')+'</div>';
     h+='</div></div>';
     host.innerHTML=h;
   }
@@ -116,6 +121,20 @@
   window.shkDrop=function(e,iso,slot){ e.preventDefault(); e.currentTarget.classList.remove('drop'); var id=(e.dataTransfer&&e.dataTransfer.getData('text'))||_drag; _drag=null; assign(id,iso,slot); };
   window.shkFix=function(id,iso,slot){ assign(id,iso,slot); };
   function assign(id,iso,slot){ var c=card(id); if(!c) return; var s=ins(c); s.decided=iso; s.decidedSlot=(slot==='pm'?'pm':'am'); s.result=''; s.resultDate=''; s.resultSlot=''; save(); renderShaken(); }
+
+  // ===== 範囲ドラッグで「行ける枠」を塗る（空セル→予定） =====
+  var _paint=null;
+  window.shkPaintStart=function(e,carId,idx){ if(e.button!==0) return; e.preventDefault(); _paint={car:carId,a:idx,b:idx}; paintHi(); };
+  window.shkPaintMove=function(carId,idx){ if(!_paint||_paint.car!==carId) return; _paint.b=idx; paintHi(); };
+  function paintHi(){ if(!_paint) return; var lo=Math.min(_paint.a,_paint.b),hi=Math.max(_paint.a,_paint.b);
+    var els=document.querySelectorAll('.shk-gsc.paintable[data-car="'+_paint.car+'"]');
+    Array.prototype.forEach.call(els,function(el){ var i=+el.getAttribute('data-idx'); el.classList.toggle('paintsel', i>=lo&&i<=hi); }); }
+  document.addEventListener('mouseup', function(){ if(!_paint) return; var p=_paint; _paint=null; paintCommit(p); });
+  function paintCommit(p){ var c=card(p.car); if(!c) return; var s=ins(c); var subs=window._shkSubs||[];
+    var lo=Math.min(p.a,p.b),hi=Math.max(p.a,p.b), any=false;
+    for(var i=lo;i<=hi;i++){ var sub=subs[i]; if(!sub||sub.off) continue; if(!s.slots[sub.iso]) s.slots[sub.iso]=[]; if(s.slots[sub.iso].indexOf(sub.slot)<0){ s.slots[sub.iso].push(sub.slot); any=true; } }
+    if(any) save(); renderShaken();
+  }
 
   // 決定チップのメニュー
   window.shkChipMenu=function(id){

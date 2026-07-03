@@ -95,3 +95,11 @@
 .shk-off2.apoff{ border-bottom:1px solid var(--border); }
 .shk-off2 .shk-ap.off{ border-bottom:0; color:var(--text3); font-weight:700; padding:3px 2px; }
 .shk-nocar{ color:var(--text3); opacity:.55; }
+
+/* 未設定行＋範囲塗り */
+.shk-gsc{ -webkit-user-select:none; user-select:none; }
+.shk-gsc.paintable{ cursor:cell; }
+.shk-gsc.paintable:hover{ background:rgba(31,122,77,.10); }
+.shk-gsc.paintsel{ background:rgba(31,122,77,.32); box-shadow:inset 0 0 0 1px #1f7a4d88; }
+.shk-gcar.unset .shk-gcar-nm{ color:var(--text2); }
+.shk-ca.unset{ background:rgba(249,115,22,.20); color:#f8a866; }
