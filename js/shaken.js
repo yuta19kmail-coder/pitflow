@@ -13,13 +13,16 @@
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
   function surname(c){ return (window.pitSurname?pitSurname(c.customer):(c.customer||''))||'（未入力）'; }
   function team(c){ return c.boardId==='import'?'#ec4899':'#1db97a'; }
+  function carLabel(c){ return (c.car||c.maker||c.plate||'').toString(); }
   function isShaken(c){ var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]); return ids.indexOf('shaken')>=0; }
   function ins(c){ if(!c.inspSchedule||typeof c.inspSchedule!=='object') c.inspSchedule={mode:'manual',slots:{},cutBefore:''}; if(!c.inspSchedule.slots) c.inspSchedule.slots={}; if(!Array.isArray(c.inspSchedule.history)) c.inspSchedule.history=[]; return c.inspSchedule; }
   function shakenCars(){ return (state.cards||[]).filter(function(c){ return c && isShaken(c) && c.status!=='scrap'; }); }
   function card(id){ return (state.cards||[]).find(function(c){ return c.id===id; }); }
   function save(){ if(window.PitDB) PitDB.save(); }
   function todayIso(){ var t=new Date(); t.setHours(0,0,0,0); return ymdL(t); }
-  function isOff(iso){ var d=new Date(iso+'T00:00:00'); var w=d.getDay(); if(w===0||w===6) return true; if(window.Holidays&&Holidays.is&&Holidays.is(iso)) return true; return false; }
+  function shopClosed(iso){ var arr=(window.state&&state.settings&&state.settings.closedDow)||[3]; return arr.indexOf(new Date(iso+'T00:00:00').getDay())>=0; }
+  function isOff(iso){ var w=new Date(iso+'T00:00:00').getDay(); if(w===0||w===6) return true; if(window.Holidays&&Holidays.is&&Holidays.is(iso)) return true; if(shopClosed(iso)) return true; return false; }
+  function offLabel(iso){ var w=new Date(iso+'T00:00:00').getDay(); if(w!==0&&w!==6&&!(window.Holidays&&Holidays.is&&Holidays.is(iso))&&shopClosed(iso)) return '定休'; return '休'; }
   function fmtMD(iso){ var d=new Date(iso+'T00:00:00'); return (d.getMonth()+1)+'/'+d.getDate(); }
 
   function rangeDays(){
@@ -44,11 +47,11 @@
     return {decCell:decCell, cands:cands, unsched:unsched, cnt:cnt};
   }
 
-  function decChip(c, kind){
-    return '<div class="shk-chip shk-'+kind+'" draggable="true" data-id="'+c.id+'"'
+  function decChip(c, kind){ var car=carLabel(c);
+    return '<div class="shk-chip shk-'+kind+'" draggable="true" data-card-id="'+c.id+'"'
       + ' ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)"'
-      + ' onclick="shkChipMenu(\''+c.id+'\')" title="'+esc(surname(c))+'様 '+esc(c.car||'')+'" style="border-left-color:'+team(c)+'">'
-      + '<div class="shk-nm">'+esc(surname(c))+'様</div><div class="shk-car">'+esc(c.car||'')+'</div></div>';
+      + ' onclick="shkChipMenu(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'
+      + '<div class="shk-nm">'+esc(surname(c))+'様</div><div class="shk-car">'+(car?esc(car):'<span class="shk-nocar">車種未登録</span>')+'</div></div>';
   }
 
   function renderShaken(){
@@ -63,7 +66,7 @@
     h+='<div class="shk-sum">決定'+cnt.decided+'／完了'+cnt.done+'／再検'+cnt.recheck+'／候補'+cnt.cand+'</div></div>';
     // 未予定
     if(data.unsched.length){
-      h+='<div class="shk-un">🕗 未予定（車検スケジュール未設定）：'+data.unsched.map(function(c){ return '<span class="shk-uchip" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(c.car||'')+'</span>'; }).join('')+'</div>';
+      h+='<div class="shk-un">🕗 未予定（車検スケジュール未設定）：'+data.unsched.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+'</span>'; }).join('')+'</div>';
     }
     // スクロール表
     h+='<div class="shk-scroll"><div class="shk-tbl">';
@@ -71,31 +74,35 @@
     h+='<div class="shk-row"><div class="shk-gut hgut"></div>'+days.map(function(x){ var isT=x.iso===tIso; var n=0; ['am','pm'].forEach(function(s){ n+=(decCell[x.iso+'|'+s]||[]).length; });
       return '<div class="shk-day"><div class="shk-dh'+(isT?' today':'')+(x.off?' off':'')+'"><span class="d">'+x.date.getDate()+'</span> <span class="w '+(x.w===0?'sun':x.w===6?'sat':'wd')+'">'+DOW[x.w]+'</span>'+(x.off?'<div class="cn">休</div>':'<div class="cn">決'+n+'</div>')+'</div></div>'; }).join('')+'</div>';
     // 午前午後
-    h+='<div class="shk-row"><div class="shk-gut hgut bb"></div>'+subs.map(function(s){ return '<div class="shk-sc'+(s.slot==='pm'?' pm':'')+'"><div class="shk-ap '+s.slot+'">'+(s.slot==='am'?'🌅午前':'🌇午後')+'</div></div>'; }).join('')+'</div>';
+    h+='<div class="shk-row"><div class="shk-gut hgut bb"></div>'+days.map(function(x){ if(x.off) return '<div class="shk-off2 apoff"><span class="shk-ap off">'+offLabel(x.iso)+'</span></div>'; return '<div class="shk-sc"><div class="shk-ap am">🌅午前</div></div><div class="shk-sc pm"><div class="shk-ap pm">🌇午後</div></div>'; }).join('')+'</div>';
     // 決定バンド
     h+='<div class="shk-row shk-bandrow"><div class="shk-band">📌 決定</div><div class="shk-bandfill"></div></div>';
-    h+='<div class="shk-row"><div class="shk-gut glabel">行く車</div>'+subs.map(function(s){
-      if(s.off) return '<div class="shk-sc'+(s.slot==='pm'?' pm':'')+'"><div class="shk-decell off"></div></div>';
-      var arr=decCell[s.iso+'|'+s.slot]||[];
-      var inner=arr.length?arr.map(function(o){ return decChip(o.c,o.kind); }).join(''):'<span class="shk-empty">－</span>';
-      return '<div class="shk-sc'+(s.slot==='pm'?' pm':'')+'"><div class="shk-decell" data-iso="'+s.iso+'" data-slot="'+s.slot+'" ondragover="shkOver(event)" ondragleave="shkLeave(event)" ondrop="shkDrop(event,\''+s.iso+'\',\''+s.slot+'\')">'+inner+'</div></div>';
+    h+='<div class="shk-row"><div class="shk-gut glabel">行く車</div>'+days.map(function(x){
+      if(x.off) return '<div class="shk-off2"></div>';
+      return ['am','pm'].map(function(slot){
+        var arr=decCell[x.iso+'|'+slot]||[];
+        var inner=arr.length?arr.map(function(o){ return decChip(o.c,o.kind); }).join(''):'<span class="shk-empty">－</span>';
+        return '<div class="shk-sc'+(slot==='pm'?' pm':'')+'"><div class="shk-decell" data-iso="'+x.iso+'" data-slot="'+slot+'" ondragover="shkOver(event)" ondragleave="shkLeave(event)" ondrop="shkDrop(event,\''+x.iso+'\',\''+slot+'\')">'+inner+'</div></div>';
+      }).join('');
     }).join('')+'</div>';
     // 可能性ガント
     h+='<div class="shk-row shk-bandrow"><div class="shk-band">🕘 予定</div><div class="shk-bandfill"></div></div>';
     data.cands.forEach(function(c){ var s=ins(c);
+      function son(di,slot){ var day=days[di]; if(!day||day.off) return false; return (s.slots[day.iso]||[]).indexOf(slot)>=0; }
       var attr=[]; var dr=Array.isArray(c.drive)?c.drive:[]; if(dr.indexOf('leftHand')>=0)attr.push('左'); if(dr.indexOf('mt')>=0)attr.push('MT');
       var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:[]; if(ids.indexOf('12pt')>=0)attr.push('12点');
       var rc=(s.history||[]).filter(function(x){return x.result==='recheck';}).length; if(rc)attr.push('再'+rc);
-      h+='<div class="shk-row shk-gcar"><div class="shk-gut gcar"><div class="shk-gcar-nm">'+esc(surname(c))+'様 '+esc(c.car||'')+'</div><div class="shk-gcar-sub">'+attr.map(function(x){return '<span class="shk-ca">'+x+'</span>';}).join('')+'</div></div>'
-        + subs.map(function(sub,idx){ if(sub.off) return '<div class="shk-gsc off'+(sub.slot==='pm'?' pm':'')+'"></div>';
-            var on=(s.slots[sub.iso]||[]).indexOf(sub.slot)>=0; if(!on) return '<div class="shk-gsc'+(sub.slot==='pm'?' pm':'')+'"></div>';
-            var prev=subs[idx-1], next=subs[idx+1];
-            var pOn=prev&&!prev.off&&(s.slots[prev.iso]||[]).indexOf(prev.slot)>=0;
-            var nOn=next&&!next.off&&(s.slots[next.iso]||[]).indexOf(next.slot)>=0;
-            return '<div class="shk-gsc'+(sub.slot==='pm'?' pm':'')+'"><div class="shk-bar'+(c.boardId==='import'?' imp':'')+(pOn?'':' l')+(nOn?'':' r')+'" draggable="true" ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)" onclick="shkFix(\''+c.id+'\',\''+sub.iso+'\',\''+sub.slot+'\')" title="'+fmtMD(sub.iso)+' '+(sub.slot==='am'?'午前':'午後')+'で決定"></div></div>';
+      h+='<div class="shk-row shk-gcar" data-card-id="'+c.id+'"><div class="shk-gut gcar"><div class="shk-gcar-nm">'+esc(surname(c))+'様 '+esc(carLabel(c))+'</div><div class="shk-gcar-sub">'+attr.map(function(x){return '<span class="shk-ca">'+x+'</span>';}).join('')+'</div></div>'
+        + days.map(function(x,di){ if(x.off) return '<div class="shk-off2"></div>';
+            return ['am','pm'].map(function(slot){
+              var on=son(di,slot); if(!on) return '<div class="shk-gsc'+(slot==='pm'?' pm':'')+'"></div>';
+              var pOn = slot==='am'? son(di-1,'pm') : son(di,'am');
+              var nOn = slot==='am'? son(di,'pm') : son(di+1,'am');
+              return '<div class="shk-gsc'+(slot==='pm'?' pm':'')+'"><div class="shk-bar'+(c.boardId==='import'?' imp':'')+(pOn?'':' l')+(nOn?'':' r')+'" draggable="true" data-card-id="'+c.id+'" ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)" onclick="shkFix(\''+c.id+'\',\''+x.iso+'\',\''+slot+'\')" title="'+fmtMD(x.iso)+' '+(slot==='am'?'午前':'午後')+'で決定"></div></div>';
+            }).join('');
           }).join('')+'</div>';
     });
-    if(!data.cands.length) h+='<div class="shk-row"><div class="shk-gut gcar"><span class="shk-empty">候補なし</span></div>'+subs.map(function(){return '<div class="shk-gsc"></div>';}).join('')+'</div>';
+    if(!data.cands.length) h+='<div class="shk-row"><div class="shk-gut gcar"><span class="shk-empty">候補なし</span></div>'+days.map(function(x){ return x.off?'<div class="shk-off2"></div>':'<div class="shk-gsc"></div><div class="shk-gsc pm"></div>'; }).join('')+'</div>';
     h+='</div></div>';
     host.innerHTML=h;
   }

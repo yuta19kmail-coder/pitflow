@@ -86,3 +86,11 @@
 .shk-pbtn.ok{ border-color:rgba(29,185,122,.5); color:#5fd3a6; }
 .shk-pbtn.re{ border-color:rgba(249,115,22,.5); color:#f8a866; }
 .shk-pbtn.ghost{ color:var(--text3); }
+
+/* 休日＝午前午後なしの1ブロック */
+.shk-off2{ flex:0 0 calc(var(--SUB)*2); min-width:0; overflow:hidden; border-right:1px solid var(--daybd); display:flex; align-items:center; justify-content:center;
+  background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,.02) 5px,rgba(255,255,255,.02) 10px); }
+.shk-row .shk-off2:last-child{ border-right:0; }
+.shk-off2.apoff{ border-bottom:1px solid var(--border); }
+.shk-off2 .shk-ap.off{ border-bottom:0; color:var(--text3); font-weight:700; padding:3px 2px; }
+.shk-nocar{ color:var(--text3); opacity:.55; }

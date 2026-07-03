@@ -325,7 +325,7 @@
   // 出す対象：タスクボードのコンパクト（.pit-card.pcm）／PITリスト枠内（.pfv-card）／
   //   予約・返車の 月リスト(.rml-ev)・2ヶ月チップ(.reserve-month-event)・週ミニ(.rwk-card)。
   //   予約(status:reserved)は fill() 側で「予約専用（予約日だけ）」表示になる。
-  var HOVER_SEL = '.pit-card.pcm, .pfv-card, .rml-ev, .reserve-month-event, .rwk-card, .lo-badge';
+  var HOVER_SEL = '.pit-card.pcm, .pfv-card, .rml-ev, .reserve-month-event, .rwk-card, .lo-badge, .shk-chip, .shk-bar, .shk-gcar, .shk-uchip';
   document.addEventListener('mouseover', function(e){
     var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card){ return; }
