@@ -103,3 +103,4 @@
 .shk-gsc.paintsel{ background:rgba(31,122,77,.32); box-shadow:inset 0 0 0 1px #1f7a4d88; }
 .shk-gcar.unset .shk-gcar-nm{ color:var(--text2); }
 .shk-ca.unset{ background:rgba(249,115,22,.20); color:#f8a866; }
+.shk-ures{ margin-left:6px; font-size:9.5px; color:var(--text3); background:rgba(255,255,255,.06); border-radius:4px; padding:0 4px; }

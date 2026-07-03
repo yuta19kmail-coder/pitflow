@@ -66,9 +66,11 @@
     h+='<div class="shk-head"><div class="shk-nav"><button onclick="shkShift(-7)">◀ 前週</button><b>'+fmtMD(days[0].iso)+' 〜</b><button onclick="shkShift(7)">次週 ▶</button><button class="shk-now" onclick="shkShift(0)">今週</button></div>';
     h+='<div class="shk-legend"><span class="shk-lg dc">決定</span><span class="shk-lg dn">完了</span><span class="shk-lg re">再検</span><span class="shk-lg cd">予定枠</span></div>';
     h+='<div class="shk-sum">決定'+cnt.decided+'／完了'+cnt.done+'／再検'+cnt.recheck+'／候補'+cnt.cand+'／未設定'+cnt.unset+'</div></div>';
-    // 未予定
-    if(data.unsched.length){
-      h+='<div class="shk-un">🕗 未入庫の予約（車検・予定は入庫後に）：'+data.unsched.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+'</span>'; }).join('')+'</div>';
+    // 未入庫の予約（翌週末＝表示範囲＋週末ぶんまで。それ以降の先の予約は出さない）
+    var _lim=new Date(window._shakenBase); _lim.setDate(_lim.getDate()+13); var _limIso=ymdL(_lim);
+    var _uns=data.unsched.filter(function(c){ return !c.reserveDate || c.reserveDate<=_limIso; });
+    if(_uns.length){
+      h+='<div class="shk-un">🕗 未入庫の予約（〜'+fmtMD(_limIso)+'・入庫後に予定）：'+_uns.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+(c.reserveDate?'<span class="shk-ures">'+fmtMD(c.reserveDate)+'入</span>':'')+'</span>'; }).join('')+'</div>';
     }
     // スクロール表
     h+='<div class="shk-scroll"><div class="shk-tbl">';
