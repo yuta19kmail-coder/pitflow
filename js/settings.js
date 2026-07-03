@@ -40,7 +40,9 @@
     if (!body) return;
     const s = state.settings || {};
     const rc = s.reserveCap || { default: 5, import: 3 };
-    const est = s.estHold || {};
+    if (window.pitNormalizeEst) pitNormalizeEst();
+    const estD = (s.estHold && s.estHold.default) || {};
+    const estI = (s.estHold && s.estHold.import) || {};
 
     let h = '';
 
@@ -135,39 +137,38 @@
 
     /* ===== 概算預かり日数の初期値 ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">⏳ 概算預かり日数の初期値（作業タイプ別）</div>';
-    h += '<div class="ps-desc">作業タイプを選んだ時にカードへ自動で入る「だいたい何日預かるか」。未来の混雑の<b>予想（不確定）</b>軸に使われます。カードごとに後から手で直せます。</div>';
-    h += '<div class="ps-est-grid">';
+    h += '<div class="ps-h">⏳ 概算預かり日数の初期値（作業タイプ別・国産／輸入）</div>';
+    h += '<div class="ps-desc">作業タイプを選んだ時にカードへ自動で入る「だいたい何日預かるか」。<b>国産車と輸入車で別々</b>に設定できます。カードごとに後から手で直せます。</div>';
+    h += '<div class="ps-est2">';
+    h += '<div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div>';
     (state.workTypes || []).forEach(function (w) {
-      h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:' + w.color + '"></span>'
-         + '<span class="ps-est-name">' + esc(w.label) + '</span>'
-         + numIn('ps-est-' + w.id, est[w.id] != null ? est[w.id] : (est._default != null ? est._default : 5), 0, 60)
-         + '<span class="ps-unit">日</span></label>';
+      h += '<div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:' + w.color + '"></span>' + esc(w.label) + '</span>'
+         + '<span class="ps-est2-cell">' + numIn('ps-est-' + w.id + '-def', estD[w.id] != null ? estD[w.id] : (estD._default != null ? estD._default : 5), 0, 60) + '<span class="ps-unit">日</span></span>'
+         + '<span class="ps-est2-cell">' + numIn('ps-est-' + w.id + '-imp', estI[w.id] != null ? estI[w.id] : (estI._default != null ? estI._default : 5), 0, 60) + '<span class="ps-unit">日</span></span></div>';
     });
-    h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:#64748b"></span>'
-       + '<span class="ps-est-name">その他（表にないタイプ）</span>'
-       + numIn('ps-est-default', est._default != null ? est._default : 5, 0, 60)
-       + '<span class="ps-unit">日</span></label>';
+    h += '<div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#64748b"></span>その他</span>'
+       + '<span class="ps-est2-cell">' + numIn('ps-est-default-def', estD._default != null ? estD._default : 5, 0, 60) + '<span class="ps-unit">日</span></span>'
+       + '<span class="ps-est2-cell">' + numIn('ps-est-default-imp', estI._default != null ? estI._default : 5, 0, 60) + '<span class="ps-unit">日</span></span></div>';
     h += '</div>';
     h += '<div class="ps-hint">※ 受付タイプが「待ち」「当日返車」のときは、この表に関係なく <b>0日（置き場を使わない）</b>になります。</div>';
     h += '</div>';
 
     /* ===== 概算金額の初期値（v0.27.0） ===== */
-    const eam = s.estAmount || {};
+    const eamD = (s.estAmount && s.estAmount.default) || {};
+    const eamI = (s.estAmount && s.estAmount.import) || {};
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">💴 概算金額の初期値（作業タイプ別・平均単価）</div>';
-    h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る平均単価。将来のクォーター集計（抱え高）とAI判定の材料になります。</div>';
-    h += '<div class="ps-est-grid">';
+    h += '<div class="ps-h">💴 概算金額の初期値（作業タイプ別・平均単価・国産／輸入）</div>';
+    h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る平均単価。<b>国産車と輸入車で別々</b>に設定できます。将来のクォーター集計（抱え高）とAI判定の材料になります。</div>';
+    h += '<div class="ps-est2">';
+    h += '<div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div>';
     (state.workTypes || []).forEach(function (w) {
-      h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:' + w.color + '"></span>'
-         + '<span class="ps-est-name">' + esc(w.label) + '</span>'
-         + numIn('ps-eam-' + w.id, eam[w.id] != null ? eam[w.id] : (eam._default != null ? eam._default : 100000), 0, 9999999)
-         + '<span class="ps-unit">円</span></label>';
+      h += '<div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:' + w.color + '"></span>' + esc(w.label) + '</span>'
+         + '<span class="ps-est2-cell">' + numIn('ps-eam-' + w.id + '-def', eamD[w.id] != null ? eamD[w.id] : (eamD._default != null ? eamD._default : 100000), 0, 9999999) + '<span class="ps-unit">円</span></span>'
+         + '<span class="ps-est2-cell">' + numIn('ps-eam-' + w.id + '-imp', eamI[w.id] != null ? eamI[w.id] : (eamI._default != null ? eamI._default : 100000), 0, 9999999) + '<span class="ps-unit">円</span></span></div>';
     });
-    h += '<label class="ps-est-item"><span class="ps-est-tag" style="background:#64748b"></span>'
-       + '<span class="ps-est-name">その他（表にないタイプ）</span>'
-       + numIn('ps-eam-default', eam._default != null ? eam._default : 100000, 0, 9999999)
-       + '<span class="ps-unit">円</span></label>';
+    h += '<div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#64748b"></span>その他</span>'
+       + '<span class="ps-est2-cell">' + numIn('ps-eam-default-def', eamD._default != null ? eamD._default : 100000, 0, 9999999) + '<span class="ps-unit">円</span></span>'
+       + '<span class="ps-est2-cell">' + numIn('ps-eam-default-imp', eamI._default != null ? eamI._default : 100000, 0, 9999999) + '<span class="ps-unit">円</span></span></div>';
     h += '</div>';
     h += '<div class="ps-hint">※ 初期値は売上表の実績（車検12.9万・12点5.6万・一般9.4万）＋仮置き。実態に合わせて調整してください。</div>';
     h += '</div>';
@@ -256,18 +257,22 @@
     if (la >= lg) { la = Math.max(1, lg - 1); const ella = document.getElementById('ps-loan-amber'); if (ella) ella.value = la; }
     s.loanerColors = { greenMin: lg, amberMin: la };
 
-    const est = {};
+    const est = { default:{}, import:{} };
     (state.workTypes || []).forEach(function (w) {
-      est[w.id] = readNum('ps-est-' + w.id, 5, 0, 60);
+      est.default[w.id] = readNum('ps-est-' + w.id + '-def', 5, 0, 60);
+      est.import[w.id]  = readNum('ps-est-' + w.id + '-imp', 5, 0, 60);
     });
-    est._default = readNum('ps-est-default', 5, 0, 60);
+    est.default._default = readNum('ps-est-default-def', 5, 0, 60);
+    est.import._default  = readNum('ps-est-default-imp', 5, 0, 60);
     s.estHold = est;
 
-    const eam = {};
+    const eam = { default:{}, import:{} };
     (state.workTypes || []).forEach(function (w) {
-      eam[w.id] = readNum('ps-eam-' + w.id, 100000, 0, 9999999);
+      eam.default[w.id] = readNum('ps-eam-' + w.id + '-def', 100000, 0, 9999999);
+      eam.import[w.id]  = readNum('ps-eam-' + w.id + '-imp', 100000, 0, 9999999);
     });
-    eam._default = readNum('ps-eam-default', 100000, 0, 9999999);
+    eam.default._default = readNum('ps-eam-default-def', 100000, 0, 9999999);
+    eam.import._default  = readNum('ps-eam-default-imp', 100000, 0, 9999999);
     s.estAmount = eam;
 
     const openEl = document.getElementById('ps-open');

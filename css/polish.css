@@ -1398,3 +1398,12 @@ th.cfs-lg-d{ z-index:3; }
 .rtbd-act{ font-size:11px; font-weight:700; padding:5px 8px; border-radius:7px;
   border:1px solid var(--border); background:var(--bg3); color:var(--text2); cursor:pointer; width:100%; }
 .rtbd-act:hover{ border-color:var(--brand); color:var(--text); }
+
+/* 概算初期値：国産／輸入の2列 */
+.ps-est2{ display:flex; flex-direction:column; gap:4px; max-width:520px; }
+.ps-est2-head{ display:grid; grid-template-columns:1fr 120px 120px; align-items:center; font-size:11px; color:var(--text3); font-weight:700; padding:0 0 2px; }
+.ps-est2-head .ps-est2-cell{ text-align:center; justify-content:center; }
+.ps-est2-row{ display:grid; grid-template-columns:1fr 120px 120px; align-items:center; gap:0; padding:3px 0; border-top:1px solid var(--border2,#232c34); }
+.ps-est2-name{ display:flex; align-items:center; gap:8px; font-size:13px; min-width:0; }
+.ps-est2-cell{ display:flex; align-items:center; justify-content:center; gap:4px; }
+.ps-est2-cell .ps-num{ width:66px; }

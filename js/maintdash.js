@@ -16,7 +16,7 @@ function _mdCourse(c){
 function _mdAmount(c){
   if (c.amountFinal != null) return c.amountFinal;
   if (c.estAmount   != null) return c.estAmount;
-  return window.pitEstAmount ? pitEstAmount(c.workType) : 0;
+  return window.pitEstAmount ? pitEstAmount(c.workType, window.pitTeamKey?pitTeamKey(c):'default') : 0;
 }
 function _mdDone(c){   return c.status === 'workDone' || c.status === 'returned'; }
 function _mdInShop(c){ return ['check','estim','contact','parts','work'].indexOf(c.status) >= 0; }

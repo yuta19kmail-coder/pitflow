@@ -141,6 +141,13 @@
     _mergeSettings: function (saved) {
       if (!saved || typeof saved !== 'object') return;
       const cur = state.settings || {};
+      // estHold/estAmount：旧フラット保存を team別ネストへ変換してから重ねる（移行・値の消失防止）
+      ['estHold','estAmount'].forEach(function (k) {
+        const sv = saved[k];
+        if (sv && typeof sv === 'object' && !(sv.default && typeof sv.default === 'object')) {
+          saved[k] = { default: Object.assign({}, sv), import: Object.assign({}, sv) };
+        }
+      });
       Object.keys(saved).forEach(function (k) {
         if (k === 'reserveCap' || k === 'estHold' || k === 'estAmount' || k === 'lotCap' || k === 'target' || k === 'unitPrice' || k === 'ruleDict' || k === 'lotOver') {
           cur[k] = Object.assign({}, cur[k] || {}, saved[k] || {});
@@ -149,6 +156,7 @@
         }
       });
       state.settings = cur;
+      if (window.pitNormalizeEst) pitNormalizeEst();
     },
 
     _bindAutosave: function () {

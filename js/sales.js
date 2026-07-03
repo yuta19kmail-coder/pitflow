@@ -28,7 +28,7 @@
   function ymdL(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
   function addStr(s, n){ var d=pd(s); d.setDate(d.getDate()+n); return ymdL(d); }
   function course(c){ if (c.division==='div1'||c.division==='div2') return c.division; return c.boardId==='import'?'div2':'div1'; }
-  function estA(c){ return num(c.estAmount) || (window.pitEstAmount?num(pitEstAmount(c.workType)):0); }
+  function estA(c){ return num(c.estAmount) || (window.pitEstAmount?num(pitEstAmount(c.workType, window.pitTeamKey?pitTeamKey(c):'default')):0); }
   function holdOf(c){ if (c.estHoldDays!=null && c.estHoldDays!=='') return num(c.estHoldDays); return window.pitEstHold?num(pitEstHold(c.workType,c.dropType)):5; }
 
   // カードがどの確度区分に入るか（当月[moS,moE]・本日todayStr基準）。該当なしは null

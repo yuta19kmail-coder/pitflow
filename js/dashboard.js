@@ -18,7 +18,7 @@ function _pd(s){ const p = String(s).split('-'); return new Date(+p[0], (+p[1]) 
 // 占有の終了日：返車日が確定していればそれ／無ければ概算預かり日数での「見込み」
 function _dashEnd(c){
   if (c.returnDate) return c.returnDate;
-  const est = (c.estHoldDays != null) ? c.estHoldDays : (window.pitEstHold ? pitEstHold(c.workType, c.dropType) : 3);
+  const est = (c.estHoldDays != null) ? c.estHoldDays : (window.pitEstHold ? pitEstHold(c.workType, c.dropType, window.pitTeamKey?pitTeamKey(c):'default') : 3);
   return ymd(addDays(_pd(c.reserveDate), est));
 }
 // 指定日(YYYY-MM-DD)の預かり台数（未来は概算日数での見込み＝予想）

@@ -177,10 +177,14 @@ window.state = {
     longHoldDays: 7,      // 整備ダッシュボードの「預かりが長い」アラートしきい値（入庫からの日数）
     reserveCap: { default: 5, import: 3 },   // 1日の予約上限（default＝国産 / import＝輸入・人が別なのでチーム別）
     // 概算預かり日数の既定（作業タイプ別・入庫予約時の初期値。_default＝表にないタイプ用）
-    estHold: { shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 },
+    // 概算預かり日数の既定（team別＝default:国産 / import:輸入。作業タイプ別・_default＝表にないタイプ用）
+    estHold: { default:{ shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 },
+               import:{ shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 } },
     // 💴 概算金額の既定（作業タイプ別・円）。カードの「概算金額」の初期値＝メニュー平均単価
     // 初期値は売上表Excelの実績（車検12.9万・点検5.6万・一般9.4万）＋仮置き。設定画面で調整可
-    estAmount: { shaken:129000, '12pt':56000, general:94000, oil:8000, bp:120000, coat1y:35000, coat3m:20000, _default:100000 },
+    // 概算金額の既定（team別＝default:国産 / import:輸入・円）
+    estAmount: { default:{ shaken:129000, '12pt':56000, general:94000, oil:8000, bp:120000, coat1y:35000, coat3m:20000, _default:100000 },
+                 import:{ shaken:159000, '12pt':66000, general:110000, oil:12000, bp:150000, coat1y:45000, coat3m:26000, _default:130000 } },
     // 売上目標（円/月）＝最低目標〜最高目標(天井)。クォーター換算は÷4（売上表Excel 4年分の実績から）
     target: { monthMin: 15000000, monthMax: 20000000 },
     // 平均単価の初期値（円・チーム別）。実績が貯まれば pitUnitPrice() が直近3ヶ月平均に自動切替
@@ -230,21 +234,46 @@ window.state = {
 
 /* 概算預かり日数の既定（入庫予約時の初期値・後で手で調整できる）
    ※ 表は state.settings.estHold ＝ 設定画面から変更できる（v0.14.0〜） */
-function pitEstHold(workType, dropType){
+function pitEstHold(workType, dropType, team){
   if (dropType === 'wait' || dropType === 'sameDay') return 0;   // 待ち・当日仕上げ＝置き場を使わない
-  const map = (state.settings && state.settings.estHold) || {};
+  const map = _estTeamMap(state.settings && state.settings.estHold, team);
   if (map[workType] != null) return map[workType];
   return (map._default != null) ? map._default : 5;
 }
 window.pitEstHold = pitEstHold;
 
 /* 概算金額の初期値（作業タイプ別・円）＝カードの「概算金額」に自動で入る。後で手で直せる */
-function pitEstAmount(workType){
-  const map = (state.settings && state.settings.estAmount) || {};
+function pitEstAmount(workType, team){
+  const map = _estTeamMap(state.settings && state.settings.estAmount, team);
   if (map[workType] != null) return map[workType];
   return (map._default != null) ? map._default : 100000;
 }
 window.pitEstAmount = pitEstAmount;
+
+/* team別ネスト（default:国産 / import:輸入）を読む。旧フラット（数値直下）にも互換。 */
+function _estTeamMap(root, team){
+  if (!root || typeof root !== 'object') return {};
+  const t = (team === 'import') ? 'import' : 'default';
+  if (root.default && typeof root.default === 'object') return root[t] || root.default || {};
+  return root;   // 旧フラット＝両teamで同じ
+}
+/* カード→team（国産=default / 輸入=import） */
+function pitTeamKey(c){ return (c && c.boardId === 'import') ? 'import' : 'default'; }
+window.pitTeamKey = pitTeamKey;
+/* estHold/estAmount を team別ネストに正規化（旧フラット保存の移行・import欠けの補完） */
+function pitNormalizeEst(){
+  const s = state.settings; if (!s) return;
+  ['estHold','estAmount'].forEach(function(key){
+    let root = s[key];
+    if (!root || typeof root !== 'object'){ s[key] = { default:{}, import:{} }; return; }
+    if (root.default && typeof root.default === 'object'){
+      if (!root.import || typeof root.import !== 'object') root.import = Object.assign({}, root.default);
+      return;
+    }
+    s[key] = { default: Object.assign({}, root), import: Object.assign({}, root) };   // 旧フラット→両teamへ
+  });
+}
+window.pitNormalizeEst = pitNormalizeEst;
 
 /* チーム別の平均単価（円）＝直近3ヶ月（92日）の返車完了カードに確定金額(amountFinal)が
    10台以上あれば実績平均を自動計算。足りないうちは設定の初期単価を使う */

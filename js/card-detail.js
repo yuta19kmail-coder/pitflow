@@ -1430,7 +1430,7 @@ function bindCardFormEvents(root){
         c.dropType  = cur[0] || null;
         c.dropType2 = cur[1] || null;
         // 概算（預かり日数）は主の受付タイプで計算（従来どおり）
-        if (window.pitEstHold) c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType) : '';
+        if (window.pitEstHold) c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType, pitTeamKey(c)) : '';
         renderCardForm(c);
       });
     });
@@ -1457,8 +1457,8 @@ function bindCardFormEvents(root){
         // 作業タイプ・受付タイプを選んだら概算（日数・金額）を自動セット（後から手で直せる）
         if (key === 'workType' || key === 'dropType'){
           // 作業タイプ未選択のうちは概算 預かり日数は空欄（選んだら自動で入る）
-          if (window.pitEstHold)   c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType) : '';
-          if (window.pitEstAmount && key === 'workType' && c.workType) c.estAmount = pitEstAmount(c.workType);
+          if (window.pitEstHold)   c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType, pitTeamKey(c)) : '';
+          if (window.pitEstAmount && (key === 'workType' || key === 'boardId') && c.workType) c.estAmount = pitEstAmount(c.workType, pitTeamKey(c));
           if (key === 'workType') _syncWorkTypes(c);   // 表示用バッジ列を同期（基本＋併用）
         }
         renderCardForm(c);
@@ -1480,8 +1480,8 @@ function bindCardFormEvents(root){
         // v0.94.1 併用可は単独利用も可：主作業(workType)が無く併用可だけの時は、その先頭で概算を自動入力
         if (!c.workType){
           const eff = (c.workAddons || [])[0] || '';
-          if (window.pitEstHold)   c.estHoldDays = eff ? pitEstHold(eff, c.dropType) : '';
-          if (window.pitEstAmount) c.estAmount   = eff ? pitEstAmount(eff) : c.estAmount;
+          if (window.pitEstHold)   c.estHoldDays = eff ? pitEstHold(eff, c.dropType, pitTeamKey(c)) : '';
+          if (window.pitEstAmount) c.estAmount   = eff ? pitEstAmount(eff, pitTeamKey(c)) : c.estAmount;
         }
         renderCardForm(c);
       });

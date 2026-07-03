@@ -45,7 +45,7 @@
   function eff(c){ return (window.pitDropEffective ? pitDropEffective(c) : (c && c.dropType)); }
   function occEnd(c){
     if(c.returnDate) return c.returnDate;
-    const est=(c.estHoldDays!=null&&c.estHoldDays!=='')?c.estHoldDays:(window.pitEstHold?pitEstHold(c.workType,eff(c)):3);
+    const est=(c.estHoldDays!=null&&c.estHoldDays!=='')?c.estHoldDays:(window.pitEstHold?pitEstHold(c.workType,eff(c),window.pitTeamKey?pitTeamKey(c):'default'):3);
     return ymd(addDays(pd(c.reserveDate), est));
   }
   // 預かり(占有)＝実効受付タイプが drop・廃車除く・予約日あり（「待or預」「当or預」など預かり入りも含む）
