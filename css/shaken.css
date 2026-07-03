@@ -1,7 +1,7 @@
 /* ========================================
    shaken.css  -  車検予定（決定カレンダー＋可能性ガント）/ PitFlow v0.110.0
    ======================================== */
-#shakencal-body{ padding:2px 2px 40px; --GUT:168px; --SUB:118px;
+#shakencal-body{ padding:2px 2px 40px; --GUT:168px; --SUB:118px; --OFF:60px;
   --dc:#3b82f6; --dn:#1db97a; --re:#f97316; --daybd:#39434d; }
 
 .shk-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:2px 2px 10px; }
@@ -24,6 +24,7 @@
 .shk-gut{ position:sticky; left:0; z-index:3; flex:0 0 var(--GUT); min-width:0; overflow:hidden; background:var(--bg3); border-right:1px solid var(--border); }
 .shk-day{ flex:0 0 calc(var(--SUB)*2); border-right:1px solid var(--daybd); text-align:center; }
 .shk-day:last-child{ border-right:0; }
+.shk-day.dayoff{ flex:0 0 var(--OFF); }
 .shk-sc{ flex:0 0 var(--SUB); min-width:0; overflow:hidden; border-right:1px solid var(--border2,#232c34); }
 .shk-sc.pm{ border-right:1px solid var(--daybd); }
 .shk-row .shk-sc:last-child{ border-right:0; }
@@ -52,7 +53,7 @@
 .shk-chip{ display:block; max-width:100%; border:1px solid var(--border); border-left:3px solid var(--green); border-radius:6px; padding:3px 8px; background:var(--bg3); cursor:grab; margin-bottom:4px; line-height:1.28; }
 .shk-chip.dragging{ opacity:.4; }
 .shk-chip .shk-nm{ font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.shk-chip .shk-car{ font-size:12px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.shk-chip .shk-car{ font-size:12px; font-weight:700; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .shk-chip.shk-decided{ background:rgba(59,130,246,.12); }
 .shk-chip.shk-done{ background:rgba(29,185,122,.14); }
 .shk-chip.shk-recheck{ background:rgba(249,115,22,.14); }
@@ -88,7 +89,7 @@
 .shk-pbtn.ghost{ color:var(--text3); }
 
 /* 休日＝午前午後なしの1ブロック */
-.shk-off2{ flex:0 0 calc(var(--SUB)*2); min-width:0; overflow:hidden; border-right:1px solid var(--daybd); display:flex; align-items:center; justify-content:center;
+.shk-off2{ flex:0 0 var(--OFF); min-width:0; overflow:hidden; border-right:1px solid var(--daybd); display:flex; align-items:center; justify-content:center;
   background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(255,255,255,.02) 5px,rgba(255,255,255,.02) 10px); }
 .shk-row .shk-off2:last-child{ border-right:0; }
 .shk-off2.apoff{ border-bottom:1px solid var(--border); }
