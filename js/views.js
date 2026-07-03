@@ -40,6 +40,7 @@ function showView(viewId){
   if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
   if (viewId === 'maintdash' && window.renderMaintDash) renderMaintDash();
   if (viewId === 'shakencal' && window.renderShaken) renderShaken();
+  if (viewId === 'shakenlog' && window.renderShakenLog) renderShakenLog();
   if (viewId === 'sales' && window.renderSales) renderSales();
   if (viewId === 'parking' && window.renderParking) renderParking();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();

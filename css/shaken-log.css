@@ -1,0 +1,45 @@
+/* ========================================
+   shaken-log.css  -  車検履歴カレンダー / PitFlow v0.111.0
+   ======================================== */
+#shakenlog-body{ padding:2px 2px 40px; }
+.skl-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:2px 2px 10px; }
+.skl-nav{ display:inline-flex; align-items:center; gap:6px; }
+.skl-nav b{ min-width:104px; text-align:center; font-size:15px; }
+.skl-nav button{ border:1px solid var(--border); background:var(--bg3); color:var(--text); padding:6px 12px; border-radius:8px; font-size:12px; cursor:pointer; }
+.skl-nav button:hover{ border-color:var(--brand,#1f7a4d); }
+.skl-sum{ margin-left:auto; display:inline-flex; gap:6px; }
+.skl-lg{ padding:3px 11px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:700; }
+.skl-lg.done{ color:#5fd3a6; border-color:rgba(29,185,122,.4); }
+.skl-lg.re{ color:#f8a866; border-color:rgba(249,115,22,.4); }
+.skl-lg.all{ color:var(--text2); }
+.skl-staff{ font-size:12px; color:var(--text3); margin:0 2px 12px; line-height:1.9; }
+.skl-sc{ display:inline-block; background:var(--bg3); border:1px solid var(--border); border-radius:999px; padding:2px 10px; margin:0 6px 4px 0; color:var(--text2); }
+.skl-sc b{ color:var(--text); }
+.skl-empty2{ color:var(--text3); }
+
+.skl-cal{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--bg2); }
+.skl-dows{ display:grid; grid-template-columns:repeat(7,1fr); background:var(--bg3); border-bottom:1px solid var(--border); }
+.skl-dow{ text-align:center; font-size:11px; font-weight:700; color:var(--text3); padding:6px 0; }
+.skl-dow.sun{ color:#ef6a6a; } .skl-dow.sat{ color:#6db0ec; }
+.skl-grid{ display:grid; grid-template-columns:repeat(7,1fr); }
+.skl-day{ min-height:104px; border-right:1px solid var(--border2,#232c34); border-bottom:1px solid var(--border2,#232c34); padding:4px 4px 6px; display:flex; flex-direction:column; gap:3px; }
+.skl-day:nth-child(7n){ border-right:0; }
+.skl-day.out{ background:rgba(0,0,0,.14); }
+.skl-day.out .skl-d{ opacity:.4; }
+.skl-day.today{ background:rgba(31,122,77,.12); }
+.skl-dh{ display:flex; align-items:center; justify-content:space-between; }
+.skl-d{ font-size:12px; font-weight:800; color:var(--text2); }
+.skl-d.sun{ color:#ef6a6a; } .skl-d.sat{ color:#6db0ec; }
+.skl-cnt{ font-size:9px; color:var(--text3); background:var(--bg3); border-radius:999px; padding:0 6px; }
+.skl-chip{ display:flex; align-items:center; gap:4px; border:1px solid var(--border); border-left:3px solid var(--green); border-radius:5px; padding:2px 5px; background:var(--bg3); cursor:pointer; overflow:hidden; }
+.skl-chip:hover{ filter:brightness(1.12); }
+.skl-chip.recheck{ background:rgba(249,115,22,.12); }
+.skl-ap{ font-size:8.5px; font-weight:700; border-radius:3px; padding:0 3px; flex:0 0 auto; }
+.skl-ap.am{ color:#e6c34d; background:rgba(230,195,77,.14); } .skl-ap.pm{ color:#8bb4f7; background:rgba(139,180,247,.14); }
+.skl-nm{ font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1 1 auto; min-width:0; }
+.skl-rt{ font-size:9px; font-weight:800; border-radius:3px; padding:0 4px; flex:0 0 auto; }
+.skl-chip.done .skl-rt{ color:#5fd3a6; background:rgba(29,185,122,.16); }
+.skl-chip.recheck .skl-rt{ color:#f8a866; background:rgba(249,115,22,.18); }
+.skl-stf{ font-size:9.5px; color:var(--text3); white-space:nowrap; flex:0 0 auto; }
+.skl-note{ font-size:11.5px; color:var(--text3); margin-top:12px; line-height:1.6; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+@media (max-width:720px){ .skl-day{ min-height:78px; } .skl-stf{ display:none; } }

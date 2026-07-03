@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.110.9"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.111.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -24,6 +24,7 @@
 <link rel="stylesheet" href="css/card-hover.css?v=16">
 <link rel="stylesheet" href="css/sales.css?v=5">
 <link rel="stylesheet" href="css/shaken.css?v=11">
+<link rel="stylesheet" href="css/shaken-log.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -74,7 +75,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.110.9</div>
+    <div class="pl-ver">PitFlow v0.111.0</div>
   </div>
 </div>
 
@@ -86,7 +87,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.110.9</span>
+      <span class="ver">v0.111.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -118,6 +119,7 @@
     <div class="si-section-title">整備</div>
     <div class="si-item" data-view="maintdash" onclick="showView('maintdash')"><span class="icon">📊</span><span>ダッシュボード</span></div>
     <div class="si-item" data-view="shakencal" onclick="showView('shakencal')"><span class="icon">🔎</span><span>車検予定</span></div>
+    <div class="si-item" data-view="shakenlog" onclick="showView('shakenlog')"><span class="icon">📇</span><span>車検履歴</span></div>
     <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span></div>
     <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span></div>
     <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🏭</span><span>Pitリスト</span></div>
@@ -277,6 +279,12 @@
     <section id="view-shakencal" class="view">
       <div class="view-header"><div class="view-title"><span class="icon">🔎</span>車検予定 <span style="font-size:11px;color:var(--text3);font-weight:400">いつ行く／決定／完了・再検</span></div></div>
       <div id="shakencal-body"></div>
+    </section>
+
+    <!-- ===== 車検履歴カレンダー（アーカイブ・実績のみ） ===== -->
+    <section id="view-shakenlog" class="view">
+      <div class="view-header"><div class="view-title"><span class="icon">📇</span>車検履歴 <span style="font-size:11px;color:var(--text3);font-weight:400">実績アーカイブ／誰が・いつ行ったか</span></div></div>
+      <div id="shakenlog-body"></div>
     </section>
 
     <section id="view-result" class="view">
@@ -669,7 +677,7 @@
 <script src="js/sample-fleet.js?v=8"></script>
 <script src="js/firebase-init.js?v=8"></script>
 <script src="js/db-pit.js?v=34"></script>
-<script src="js/views.js?v=37"></script>
+<script src="js/views.js?v=38"></script>
 <script src="js/work-content.js?v=8"></script>
 <script src="js/card-detail.js?v=90"></script>
 <script src="js/card-view.js?v=26"></script>
@@ -699,6 +707,7 @@
 <script src="js/work.js?v=13"></script>
 <script src="js/result.js?v=10"></script>
 <script src="js/shaken.js?v=11"></script>
+<script src="js/shaken-log.js?v=1"></script>
 <script src="js/outsource.js?v=2"></script>
 <script src="js/loaner.js?v=50"></script>
 <script src="js/fleet.js?v=10"></script>
@@ -707,7 +716,7 @@
 <script src="js/holidays.js?v=1"></script>
 <script src="js/dnd.js?v=13"></script>
 <script src="js/pit-pip.js?v=8"></script>
-<script src="js/card-hover.js?v=23"></script>
+<script src="js/card-hover.js?v=24"></script>
 <script src="js/phase-popup.js?v=10"></script>
 <script src="js/return-popup.js?v=3"></script>
 <script src="js/main.js?v=11"></script>
