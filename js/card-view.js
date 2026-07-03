@@ -268,19 +268,36 @@
        + '<input class="cv-fixinput" type="text" value="'+esc(c.salesReqMemo||'')+'" placeholder="車販への依頼（1行・任意）" onchange="cvSalesMemo(this.value)" style="flex:1;min-width:180px"></div></div>';
     h += '</div>';
 
-    // 車検スケジュール（車検タイプのみ表示）
-    if (c.workType==='shaken') h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
-      + '<div class="cv-csched"><div class="cv-cspick"><label>いつ行く？</label>'
-      + '<select id="cv-csmode" onchange="cvCsMode(this.value)">'
-      + opt('manual','日程を指定（手動）',c) + opt('asap','理由があって最短で行きたい',c)
-      + opt('thisweek','今週中ならどこでも',c) + opt('nextweek','来週中ならどこでも',c)
-      + opt('ask','可能かどうか聞いてください',c) + opt('undecided','未定',c)
-      + '</select></div>'
-      + '<div class="cv-csbanner" id="cv-csbanner"></div>'
-      + '<div class="cv-cstrack" id="cv-cstrack"></div>'
-      + '<div class="cv-cslegend"><i><span class="cv-sw" style="background:#6db0ec"></span>土＝陸運局休</i><i><span class="cv-sw" style="background:#ff8c8c"></span>日祝＝陸運局休</i><i><span class="cv-sw" style="background:var(--bg4)"></span>自社定休</i><i><span class="cv-sw" style="background:var(--brand)"></span>選択中</i></div>'
-      + '<div class="cv-cshelp">AM/PM を押して行ける枠を選択。土日祝・自社定休は選べません。プルダウンで一括指定も可。</div>'
-      + '</div></div>';
+    // 車検スケジュール / 実施記録（車検タイプのみ表示）
+    if (_csShaken){
+      const _si = c.inspSchedule || {};
+      const _rcH = (Array.isArray(_si.history)?_si.history:[]).filter(function(x){return x&&x.result==='recheck';});
+      const _slT = function(sl){ return sl==='pm'?'PM':'AM'; };
+      const _rcTxt = _rcH.map(function(r){ return (window.fmtMD?fmtMD(r.date):r.date)+' '+_slT(r.slot)+(r.staff?'・'+esc(r.staff):''); }).join('　');
+      if (_si.result==='done'){
+        // 済＝「いつ行く？」は非表示。実施サマリのみ。
+        h += '<div class="cv-sec"><div class="cv-sect">🔎 車検</div>'
+          + '<div class="cv-shdone"><div class="cv-shdone-main">✅ 車検済　'+ (_si.resultDate&&window.fmtMD?fmtMD(_si.resultDate):(_si.resultDate||'')) +'　'+ _slT(_si.resultSlot) +'　<span class="cv-shstaff">担当：'+ esc(_si.resultStaff||'—') +'</span></div>'
+          + (_rcH.length? '<div class="cv-shrc">再検 '+_rcH.length+'回：'+_rcTxt+'</div>':'')
+          + '<button class="cv-shbtn ghost" onclick="cvShakenReopen()">↩ 済を取り消す</button></div></div>';
+      } else {
+        h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
+          + '<div class="cv-csched"><div class="cv-cspick"><label>いつ行く？</label>'
+          + '<select id="cv-csmode" onchange="cvCsMode(this.value)">'
+          + opt('manual','日程を指定（手動）',c) + opt('asap','理由があって最短で行きたい',c)
+          + opt('thisweek','今週中ならどこでも',c) + opt('nextweek','来週中ならどこでも',c)
+          + opt('ask','可能かどうか聞いてください',c) + opt('undecided','未定',c)
+          + '</select></div>'
+          + '<div class="cv-csbanner" id="cv-csbanner"></div>'
+          + '<div class="cv-cstrack" id="cv-cstrack"></div>'
+          + '<div class="cv-cslegend"><i><span class="cv-sw" style="background:#6db0ec"></span>土＝陸運局休</i><i><span class="cv-sw" style="background:#ff8c8c"></span>日祝＝陸運局休</i><i><span class="cv-sw" style="background:var(--bg4)"></span>自社定休</i><i><span class="cv-sw" style="background:var(--brand)"></span>選択中</i></div>'
+          + '<div class="cv-cshelp">AM/PM を押して行ける枠を選択。土日祝・自社定休は選べません。プルダウンで一括指定も可。</div>'
+          + (_rcH.length? '<div class="cv-shrc">↺ 再検履歴 '+_rcH.length+'回：'+_rcTxt+'</div>':'')
+          + '<div class="cv-shact"><button class="cv-shbtn ok" onclick="cvShakenGo(\'done\')">✅ 車検済にする</button>'
+          + '<button class="cv-shbtn re" onclick="cvShakenGo(\'recheck\')">↺ 再検を記録</button></div>'
+          + '</div></div>';
+      }
+    }
 
     // 表紙チェック
     const pm = payMethods();
@@ -684,6 +701,54 @@
     const iso=cell.dataset.iso; _c.inspSchedule.cutBefore = iso;
     const s={}; validEls().forEach(function(v){ if(v.dataset.iso>iso) s[v.dataset.iso]=['am','pm']; });
     _c.inspSchedule.slots=s; save(); cvBuildCal();
+  };
+
+  // ===== 車検 実施記録（済／再検・担当者入力・フローへ記録） =====
+  function _isoToday(){ const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function _mdOf(iso){ if(window.fmtMD) return fmtMD(iso); const p=String(iso).split('-'); return (+p[1])+'/'+(+p[2]); }
+  window.cvShakenGo = function(kind){
+    if(!_c) return; const s=_c.inspSchedule||{};
+    window._cvShSlot = (s.decidedSlot==='pm')?'pm':'am';
+    const defDate = s.decided || _isoToday();
+    const cur = (s.resultStaff||window.bnMe||'');
+    const staffOpts = (state.staff||[]).map(function(m){ return '<option value="'+esc(m.name)+'"'+(cur===m.name?' selected':'')+'>'+esc(m.name)+'</option>'; }).join('');
+    const isDone = (kind==='done');
+    const title = isDone ? '✅ 車検済を記録' : '↺ 再検を記録';
+    const body = '<div class="cv-shpb">'
+      + '<label>行った日</label><input type="date" id="cv-shdate" value="'+defDate+'">'
+      + '<label>時間帯</label><div class="cv-shslot" id="cv-shslot"><button type="button" data-s="am" class="'+(window._cvShSlot==='am'?'on':'')+'" onclick="cvShSlot(this)">AM</button><button type="button" data-s="pm" class="'+(window._cvShSlot==='pm'?'on':'')+'" onclick="cvShSlot(this)">PM</button></div>'
+      + '<label>担当（車検に行った人）</label><select id="cv-shstaff">'+staffOpts+'</select>'
+      + '<div class="cv-shpb-act"><button class="cv-shbtn '+(isDone?'ok':'re')+'" onclick="cvShConfirm(\''+kind+'\')">記録する</button><button class="cv-shbtn ghost" onclick="cvShClose()">やめる</button></div>'
+      + '</div>';
+    let back=document.getElementById('cv-shpop');
+    if(!back){ back=document.createElement('div'); back.id='cv-shpop'; back.className='modal-backdrop'; back.addEventListener('click',function(e){ if(e.target.id==='cv-shpop') cvShClose(); }); document.body.appendChild(back); }
+    back.innerHTML='<div class="pdp-box cv-shbox"><div class="pdp-head"><span>'+title+'</span><button class="pdp-x" onclick="cvShClose()">✕</button></div>'+body+'</div>';
+    back.classList.add('show');
+  };
+  window.cvShSlot = function(btn){ window._cvShSlot = btn.getAttribute('data-s'); const w=document.getElementById('cv-shslot'); if(w) w.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b===btn); }); };
+  window.cvShClose = function(){ const b=document.getElementById('cv-shpop'); if(b) b.classList.remove('show'); };
+  window.cvShConfirm = function(kind){
+    if(!_c) return; const s=_c.inspSchedule||(_c.inspSchedule={mode:'manual',slots:{}});
+    const dEl=document.getElementById('cv-shdate'); const stEl=document.getElementById('cv-shstaff');
+    const iso=(dEl&&dEl.value)||_isoToday(); const slot=(window._cvShSlot==='pm')?'pm':'am'; const staff=(stEl&&stEl.value)||'';
+    if(!Array.isArray(s.history)) s.history=[];
+    if(kind==='done'){
+      s.result='done'; s.resultDate=iso; s.resultSlot=slot; s.resultStaff=staff; s.decided=iso; s.decidedSlot=slot;
+      if(window.logFlow) logFlow(_c, '車検 済 '+_mdOf(iso)+' '+(slot==='pm'?'PM':'AM')+'（担当:'+(staff||'—')+'）');
+    } else {
+      s.history.push({date:iso, slot:slot, result:'recheck', staff:staff});
+      s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; s.resultStaff='';
+      if(window.logFlow) logFlow(_c, '車検 再検 '+_mdOf(iso)+' '+(slot==='pm'?'PM':'AM')+'（担当:'+(staff||'—')+'）');
+    }
+    save(); cvShClose(); renderCardView(_c,'md-body-modal');
+    if(window.renderShaken && window.state && state.currentView==='shakencal') renderShaken();
+  };
+  window.cvShakenReopen = function(){
+    if(!_c) return; const s=_c.inspSchedule||{};
+    s.result=''; s.resultDate=''; s.resultSlot=''; s.resultStaff='';
+    if(window.logFlow) logFlow(_c, '車検 済を取消');
+    save(); renderCardView(_c,'md-body-modal');
+    if(window.renderShaken && window.state && state.currentView==='shakencal') renderShaken();
   };
 
 })();
