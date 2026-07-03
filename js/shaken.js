@@ -144,9 +144,12 @@
     var slName=s.decidedSlot==='pm'?'午後':'午前';
     var body='<div class="shk-pinfo">'+esc(surname(c))+'様 / '+esc(c.car||'')+(c.plate?' / '+esc(c.plate):'')+'</div>';
     if(s.result==='done'){
-      body+='<div class="shk-pnote">完了：'+(s.resultDate?fmtMD(s.resultDate):'')+' '+slName+'</div><button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'reopen\')">予定に戻す</button>';
+      body+='<div class="shk-pnote">完了：'+(s.resultDate?fmtMD(s.resultDate):'')+' '+slName+(s.resultStaff?'・担当 '+esc(s.resultStaff):'')+'</div><button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'reopen\')">予定に戻す</button>';
     } else if(s.decided){
+      var _cur=(s.resultStaff||window.bnMe||'');
+      var _opts=(window.state&&Array.isArray(state.staff)?state.staff:[]).map(function(m){ return '<option value="'+esc(m.name)+'"'+(_cur===m.name?' selected':'')+'>'+esc(m.name)+'</option>'; }).join('');
       body+='<div class="shk-pnote">予定決定：'+fmtMD(s.decided)+' '+slName+'</div>'
+        + '<label class="shk-plabel">担当（車検に行った人）</label><select id="shk-staff" class="shk-psel">'+_opts+'</select>'
         + '<button class="shk-pbtn ok" onclick="shkAct(\''+id+'\',\'done\')">✓ 完了（受かった）</button>'
         + '<button class="shk-pbtn re" onclick="shkAct(\''+id+'\',\'recheck\')">↺ 再検（落ちた・候補へ戻す）</button>'
         + '<button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'flip\')">'+(s.decidedSlot==='pm'?'午前':'午後')+'に変更</button>'
@@ -157,11 +160,15 @@
     body+='<button class="shk-pbtn ghost" onclick="openDetail(\''+id+'\');shkClosePop()">カードを開く</button>';
     pop('車検の予定', body);
   };
+  function _slT(sl){ return sl==='pm'?'PM':'AM'; }
   window.shkAct=function(id,act){ var c=card(id); if(!c) return; var s=ins(c);
-    if(act==='done'){ s.result='done'; s.resultDate=s.decided||todayIso(); s.resultSlot=s.decidedSlot||'am'; }
-    else if(act==='recheck'){ s.history.push({date:s.decided||todayIso(), slot:s.decidedSlot||'am', result:'recheck'}); s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; }
+    var stEl=document.getElementById('shk-staff'); var staff=stEl?stEl.value:'';
+    if(act==='done'){ var d=s.decided||todayIso(), sl=s.decidedSlot||'am'; s.result='done'; s.resultDate=d; s.resultSlot=sl; s.resultStaff=staff;
+      if(window.logFlow) logFlow(c, '車検 済 '+fmtMD(d)+' '+_slT(sl)+'（担当:'+(staff||'—')+'）'); }
+    else if(act==='recheck'){ var d2=s.decided||todayIso(), sl2=s.decidedSlot||'am'; s.history.push({date:d2, slot:sl2, result:'recheck', staff:staff}); s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; s.resultStaff='';
+      if(window.logFlow) logFlow(c, '車検 再検 '+fmtMD(d2)+' '+_slT(sl2)+'（担当:'+(staff||'—')+'）'); }
     else if(act==='cancel'){ s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; }
-    else if(act==='reopen'){ s.result=''; s.resultDate=''; s.resultSlot=''; }
+    else if(act==='reopen'){ s.result=''; s.resultDate=''; s.resultSlot=''; s.resultStaff=''; }
     else if(act==='flip'){ s.decidedSlot=(s.decidedSlot==='pm'?'am':'pm'); }
     save(); closePop(); renderShaken();
   };
