@@ -180,11 +180,13 @@ window.state = {
     // 概算預かり日数の既定（team別＝default:国産 / import:輸入。作業タイプ別・_default＝表にないタイプ用）
     estHold: { default:{ shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 },
                import:{ shaken:5, general:6, bp:12, oil:0, '12pt':0, coat1y:3, coat3m:2, _default:5 } },
-    // 💴 概算金額の既定（作業タイプ別・円）。カードの「概算金額」の初期値＝メニュー平均単価
-    // 初期値は売上表Excelの実績（車検12.9万・点検5.6万・一般9.4万）＋仮置き。設定画面で調整可
+    // 💴 概算金額の既定（作業タイプ別・円・税抜）。カードの「概算金額」の初期値＝台単価
+    // 初期値＝令和8年1〜6月の実売上6か月(全999伝票)から算出した「税抜・法定費用除く・中央値」。国産/輸入別。
+    //   板金は保険案件で幅が大きく参考値（輸入はGクラス550万の異常値を除外して算出・サンプル少）。設定画面で調整可。
+    //   詳細＝D:\アプリ開発\PitFlow\台単価分析_国産輸入_2026上期.xlsx（2026-07-05）
     // 概算金額の既定（team別＝default:国産 / import:輸入・円）
-    estAmount: { default:{ shaken:129000, '12pt':56000, general:94000, oil:8000, bp:120000, coat1y:35000, coat3m:20000, _default:100000 },
-                 import:{ shaken:159000, '12pt':66000, general:110000, oil:12000, bp:150000, coat1y:45000, coat3m:26000, _default:130000 } },
+    estAmount: { default:{ shaken:70100, '12pt':21200, general:26800, oil:8900, bp:400000, coat1y:35000, coat3m:20000, _default:40000 },
+                 import:{ shaken:140800, '12pt':43200, general:62000, oil:19200, bp:760800, coat1y:45000, coat3m:26000, _default:80000 } },
     // 売上目標（円/月）＝最低目標〜最高目標(天井)。クォーター換算は÷4（売上表Excel 4年分の実績から）
     target: { monthMin: 15000000, monthMax: 20000000 },
     // 平均単価の初期値（円・チーム別）。実績が貯まれば pitUnitPrice() が直近3ヶ月平均に自動切替

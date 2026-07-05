@@ -138,6 +138,7 @@ body.cf-open .cf-lo-item{transform:translate(var(--dx,0), var(--dy,0)) scale(1);
 .cf-lo-ball.cf-coretools{background:#64748b}
 .cf-lo-ball.cf-coremembers{background:#ea580c}
 .cf-lo-ball.cf-moneyflow{background:#e0a92b}
+.cf-lo-ball.cf-coretemplate{background:#6366f1}
 
 body.cf-open .cf-lo-item.cf-current{opacity:.55}
 .cf-lo-ball[aria-disabled="true"]{cursor:default}
