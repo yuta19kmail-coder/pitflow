@@ -36,7 +36,10 @@
   const FRONT = { div1:['社長','専務','椎名'], div2:['チーフ','蓮沼','箱崎','菅谷'] };
   const MECH  = { div1:['山田','椎名','専務'], div2:['山根','蓮沼','箱崎','菅谷'] };
   const MENU  = { shaken:'車検', '12pt':'12ヶ月点検', general:'一般整備', oil:'オイル交換', bp:'板金塗装' };
-  const WORK_WEIGHT = ['shaken','shaken','shaken','12pt','12pt','general','general','general','oil','oil','bp']; // 出現比
+  // 作業タイプ出現比＝実売上6か月(令和8年1〜6月・948件)の実績比。車検30/一般41/12ヶ月点検16/オイル11/板金2（%）
+  const WORK_WEIGHT = [].concat(
+    Array(30).fill('shaken'), Array(41).fill('general'),
+    Array(16).fill('12pt'),   Array(11).fill('oil'), Array(2).fill('bp')); // 出現比（実績準拠）
   const PHASES = ['check','estim','contact','parts','work'];   // 預かり中フロー
 
   const estAmt  = (wt) => (window.pitEstAmount ? pitEstAmount(wt) : 100000);
@@ -96,12 +99,14 @@
       _sample: true,   // ★サンプル生成カード印＝カード開閉時に顧客控えへ書き戻さない（重複追加防止）
     };
     // 併用：車検/12点/一般 の一部にコーティング（3M/1Y）を追加＝バッジ2個。
-    // 月あたり 5〜10台に収まるよう低確率に（入庫 約170台/月 × 対象7割 × 0.06 ≒ 月7台）。
-    if (['shaken','12pt','general'].indexOf(wt) >= 0 && Math.random() < 0.06){
+    // 実績＝コーティング付帯は全体の約3.7%。対象(車検/12点/一般≒87%)に 0.045 で ≒3.9%。
+    if (['shaken','12pt','general'].indexOf(wt) >= 0 && Math.random() < 0.045){
       const add = rnd(['coat3m','coat1y']);
       c.workAddons = [add];
       c.workTypes = [wt, add];
     }
+    // 早期割：車検の約半数がDM早期予約割引（実績 141/287車検 ≒ 49%）。ON=概算から割引・バッジ表示。
+    if (wt === 'shaken' && Math.random() < 0.49) c.earlyDiscount = true;
     return c;
   }
 
@@ -187,7 +192,7 @@
             if (ph === 'contact') c.amountQuote = c.estAmount;
             if (ph === 'parts'){ c.amountQuote = c.estAmount; c.amountOrder = c.estAmount; }
             if (bays.length && (ph === 'work' || ph === 'parts' || Math.random() < 0.4)) c.bayId = bays[cards.length % bays.length];
-            if (Math.random() < 0.12) c.testDrive = true;
+            if (Math.random() < 0.04) c.testDrive = true;   // 試運転（実績 全体1.6%相当に抑制）
           }
         }
 
