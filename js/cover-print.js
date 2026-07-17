@@ -30,7 +30,9 @@
   var NUM_C  = { cx: 334.8, maxW: 150, gap: 6 };
   /* ---- 左の記入罫線（この上に カルテNo→連絡先→LINE→空行→予約内容 を自動記載） ---- */
   var LEFT_LINES = [164.3,189.8,215.3,240.7,266.2,291.6,317.1,342.5,367.9,393.4,418.8,444.3,469.7,495.1,520.6];
-  var MEMO_X = 16, MEMO_FS = 13;
+  var MEMO_X = 28, MEMO_FS = 13;   // 書き始めを全角スペース1個ぶん右へ
+  /* ---- フロント／予約担当：セルからはみ出す長い苗字はフォント縮小（中央そろえ維持） ---- */
+  var FIT_BOX = { 'pcv-front': 48, 'pcv-resStaff': 48 };
 
   /* ================= ヘルパー ================= */
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -180,6 +182,8 @@
     s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{car\}\})/,   function(m,rest){ return '<text id="pcv-car"'+rest; });
     s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{plateA\}\})/,function(m,rest){ return '<text id="pcv-plateA"'+rest; });
     s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{plateB\}\})/,function(m,rest){ return '<text id="pcv-plateB"'+rest; });
+    s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{front\}\})/,  function(m,rest){ return '<text id="pcv-front"'+rest; });
+    s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{resStaff\}\})/,function(m,rest){ return '<text id="pcv-resStaff"'+rest; });
     return s;
   }
 
@@ -240,6 +244,9 @@
         + 'var t=tot();if(t>maxW&&t>0){var sc=maxW/t;if(mk)mk.style.fontSize=(mkFs*sc)+"px";cr.style.fontSize=(crFs*sc)+"px";t=tot();}'
         + 'var sx=cx-t/2;if(mk)mk.setAttribute("transform","translate("+sx+" "+mkY+")");'
         + 'cr.setAttribute("transform","translate("+(sx+mw()+g2())+" "+crY+")");}'
+      + 'function fitBox(id,maxW){var el=document.getElementById(id);if(!el||!el.getComputedTextLength)return;'
+        + 'var f=parseFloat(getComputedStyle(el).fontSize)||13;el.style.fontSize=f+"px";var g=0;'
+        + 'while(el.getComputedTextLength()>maxW&&f>6&&g<120){f-=0.5;el.style.fontSize=f+"px";g++;}}'
       + 'function centerPlate(cx,maxW,gap){var a=document.getElementById("pcv-plateA"),b=document.getElementById("pcv-plateB");'
         + 'if(!b||!b.getComputedTextLength)return;var aY=a?ty(a):0,bY=ty(b);'
         + 'if(a)a.setAttribute("text-anchor","start");b.setAttribute("text-anchor","start");'
@@ -284,11 +291,10 @@
           + 'var t=document.createElementNS(NS,"text");t.setAttribute("x",mx);t.setAttribute("y",lines[li]-3);'
           + 't.setAttribute("font-size",fs);t.setAttribute("font-weight","700");t.setAttribute("fill","#111");'
           + 't.textContent=txt;g.appendChild(t);li++;});}'
-      + 'function run(){try{centerName('+NAME_C.cx+','+NAME_C.maxW+','+NAME_C.fs+');centerVeh('+VEH_C.cx+','+VEH_C.maxW+','+VEH_C.makerFs+','+VEH_C.carFs+','+VEH_C.gap+');centerPlate('+NUM_C.cx+','+NUM_C.maxW+','+NUM_C.gap+');badges();memo();}catch(e){}'
+      + 'function run(){try{centerName('+NAME_C.cx+','+NAME_C.maxW+','+NAME_C.fs+');centerVeh('+VEH_C.cx+','+VEH_C.maxW+','+VEH_C.makerFs+','+VEH_C.carFs+','+VEH_C.gap+');centerPlate('+NUM_C.cx+','+NUM_C.maxW+','+NUM_C.gap+');fitBox("pcv-front",'+FIT_BOX['pcv-front']+');fitBox("pcv-resStaff",'+FIT_BOX['pcv-resStaff']+');badges();memo();}catch(e){}'
         + (noPrint?'' : 'setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);')
         + '}'
       + 'if(document.readyState==="complete")run();else window.addEventListener("load",run);'
-      + (noPrint?'' : 'window.onafterprint=function(){try{window.close();}catch(e){}};')
       + '})();';
   }
 
@@ -324,20 +330,20 @@
     ]).then(function(a){ _cache = { formSvg:a[0], stampUri:toDataUri(a[1]) }; return _cache; });
   }
 
+  /* 中間の表示タブは開かず、非表示iframeに描いてブラウザの印刷ダイアログだけを直接出す。
+     印刷後（またはキャンセル後）にiframeを片付ける。 */
   function openAndPrint(doc){
-    var w = window.open('', '_blank');
-    if (!w){
-      var f = document.getElementById('pit-cover-iframe');
-      if (f) f.remove();
-      f = document.createElement('iframe');
-      f.id = 'pit-cover-iframe';
-      f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
-      document.body.appendChild(f);
-      var d = f.contentWindow.document;
-      d.open(); d.write(doc); d.close();
-      return;
-    }
-    w.document.open(); w.document.write(doc); w.document.close();
+    var old = document.getElementById('pit-cover-iframe');
+    if (old) old.remove();
+    var f = document.createElement('iframe');
+    f.id = 'pit-cover-iframe';
+    f.setAttribute('aria-hidden','true');
+    f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(f);
+    var d = f.contentWindow.document;
+    d.open(); d.write(doc); d.close();
+    // 印刷ダイアログを閉じた後にiframeを撤去（doc側onloadがprintを呼ぶ）
+    try { f.contentWindow.onafterprint = function(){ setTimeout(function(){ try{ f.remove(); }catch(e){} }, 100); }; } catch(e){}
   }
 
   window.pitPrintCover = function(cardId){
