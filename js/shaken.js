@@ -52,9 +52,10 @@
   function decChip(c, kind){ var car=carLabel(c);
     // 決定＝ドラッグ/メニューで編集可。済(done)・再検(recheck)＝ドラッグ抑制、クリックでカード詳細（編集は詳細から）。
     var editable=(kind==='decided');
-    var dragAttr = editable ? ' draggable="true" ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)"' : ' draggable="false"';
+    // v0.124.1 ドラッグはポインタ方式（下の shkPointer…）で行う＝ネイティブdraggableは使わない。タップ(onclick)は従来どおり。
+    var cls = 'shk-chip shk-'+kind+(editable?' shk-drag':' locked');
     var onclick = editable ? 'shkChipMenu(\''+c.id+'\')' : 'openDetail(\''+c.id+'\')';
-    return '<div class="shk-chip shk-'+kind+(editable?'':' locked')+'"'+dragAttr+' data-card-id="'+c.id+'"'
+    return '<div class="'+cls+'" draggable="false" data-card-id="'+c.id+'"'
       + ' onclick="'+onclick+'" style="border-left-color:'+team(c)+'">'
       + '<div class="shk-nm">'+esc(surname(c))+'様</div><div class="shk-car">'+(car?esc(car):'<span class="shk-nocar">車種未登録</span>')+'</div></div>';
   }
@@ -108,7 +109,7 @@
               if(!on) return '<div class="shk-gsc paintable'+(slot==='pm'?' pm':'')+'" data-car="'+c.id+'" data-idx="'+idx+'" onmousedown="shkPaintStart(event,\''+c.id+'\','+idx+')" onmouseenter="shkPaintMove(\''+c.id+'\','+idx+')" title="ドラッグで行ける枠を選択"></div>';
               var pOn = slot==='am'? son(di-1,'pm') : son(di,'am');
               var nOn = slot==='am'? son(di,'pm') : son(di+1,'am');
-              return '<div class="shk-gsc'+(slot==='pm'?' pm':'')+'"><div class="shk-bar'+(c.boardId==='import'?' imp':'')+(pOn?'':' l')+(nOn?'':' r')+'" draggable="true" data-card-id="'+c.id+'" ondragstart="shkDragStart(event,\''+c.id+'\')" ondragend="shkDragEnd(event)" onclick="shkFix(\''+c.id+'\',\''+x.iso+'\',\''+slot+'\')" title="'+fmtMD(x.iso)+' '+(slot==='am'?'午前':'午後')+'で決定"></div></div>';
+              return '<div class="shk-gsc'+(slot==='pm'?' pm':'')+'"><div class="shk-bar'+(c.boardId==='import'?' imp':'')+(pOn?'':' l')+(nOn?'':' r')+'" draggable="false" data-card-id="'+c.id+'" data-iso="'+x.iso+'" data-slot="'+slot+'" onclick="shkFix(\''+c.id+'\',\''+x.iso+'\',\''+slot+'\')" title="'+fmtMD(x.iso)+' '+(slot==='am'?'午前':'午後')+'で決定・ドラッグで別の枠へ"></div></div>';
             }).join('');
           }).join('')+'</div>';
     });
@@ -134,6 +135,51 @@
   function unassign(id){ var c=card(id); if(!c) return; var s=ins(c); if(!s.decided) return;   // 決定中の車だけ候補へ戻す
     s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; save(); renderShaken();
     if(window.pitToast) pitToast('↩ 候補（行ける日）に戻しました'); }
+
+  // ===== ポインタ方式のドラッグ（マウス＋タッチ両対応。ネイティブHTML5 DnDが効かない環境の確実版）v0.124.1 =====
+  //   決定チップ／候補バーを長押し移動→「📌決定」枠にドロップで決定/別日移動、「🕘予定」エリアにドロップで候補へ戻す。
+  //   動かさず離した時（タップ）は従来の onclick（メニュー/その枠で決定）に任せる。
+  var _pdrag=null, _ghost=null, _lastHi=null, _suppressClick=false;
+  function _clearHi(){ if(_lastHi){ _lastHi.classList.remove('drop'); _lastHi=null; } }
+  function _endGhost(){ if(_ghost){ _ghost.parentNode&&_ghost.parentNode.removeChild(_ghost); _ghost=null; } }
+  function _hideHover(){ var hv=document.getElementById('pit-hovercard'); if(hv) hv.classList.remove('show'); }
+  document.addEventListener('pointerdown', function(e){
+    if(e.pointerType==='mouse' && e.button!==0) return;
+    var host=document.getElementById('shakencal-body'); if(!host||!host.contains(e.target)) return;
+    var chip=e.target.closest && e.target.closest('.shk-chip.shk-drag[data-card-id]');
+    var bar =e.target.closest && e.target.closest('.shk-bar[data-card-id]');
+    var el=chip||bar; if(!el) return;
+    var lbl = chip ? ((chip.querySelector('.shk-nm')||{}).textContent||'車検') : '車検';
+    _pdrag={ id:el.getAttribute('data-card-id'), x:e.clientX, y:e.clientY, moved:false, label:lbl };
+  });
+  document.addEventListener('pointermove', function(e){
+    if(!_pdrag) return;
+    if(!_pdrag.moved){
+      if(Math.abs(e.clientX-_pdrag.x)+Math.abs(e.clientY-_pdrag.y) < 6) return;
+      _pdrag.moved=true; _hideHover();
+      _ghost=document.createElement('div'); _ghost.className='shk-dragghost'; _ghost.textContent=_pdrag.label; document.body.appendChild(_ghost);
+    }
+    e.preventDefault();
+    _ghost.style.left=(e.clientX+12)+'px'; _ghost.style.top=(e.clientY+12)+'px';
+    var t=document.elementFromPoint(e.clientX,e.clientY);
+    var zone = t && t.closest && (t.closest('.shk-decell:not(.off)') || t.closest('.shk-gantt-drop'));
+    if(zone!==_lastHi){ _clearHi(); if(zone){ zone.classList.add('drop'); _lastHi=zone; } }
+  }, {passive:false});
+  document.addEventListener('pointerup', function(e){
+    if(!_pdrag) return;
+    var p=_pdrag; _pdrag=null; _endGhost();
+    var zone=_lastHi; _clearHi();
+    if(!p.moved) return;   // タップ＝onclick（メニュー/その枠で決定）に任せる
+    _suppressClick=true; setTimeout(function(){ _suppressClick=false; }, 80);   // ドラッグ直後の誤クリック抑制
+    if(!zone) return;
+    if(zone.classList.contains('shk-decell')){ assign(p.id, zone.getAttribute('data-iso'), zone.getAttribute('data-slot')); }
+    else { unassign(p.id); }   // shk-gantt-drop（予定エリア）＝候補に戻す
+  });
+  document.addEventListener('click', function(e){
+    if(!_suppressClick) return;
+    var host=document.getElementById('shakencal-body');
+    if(host&&host.contains(e.target)){ e.stopPropagation(); e.preventDefault(); }
+  }, true);
 
   // ===== 範囲ドラッグで「行ける枠」を塗る（空セル→予定） =====
   var _paint=null;
@@ -164,6 +210,7 @@
         + '<button class="shk-pbtn ok" onclick="shkAct(\''+id+'\',\'done\')">✓ 完了（受かった）</button>'
         + '<button class="shk-pbtn re" onclick="shkAct(\''+id+'\',\'recheck\')">↺ 再検（落ちた・候補へ戻す）</button>'
         + '<button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'flip\')">'+(s.decidedSlot==='pm'?'午前':'午後')+'に変更</button>'
+        + '<button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'tocand\')">↩ 候補（行ける日）に戻す</button>'
         + '<button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'cancel\')">予定を取り消す</button>';
     } else {
       body+='<div class="shk-pnote">この車の再検記録です。</div><button class="shk-pbtn" onclick="shkClosePop()">閉じる</button>';
@@ -178,6 +225,7 @@
       if(window.logFlow) logFlow(c, '車検 済 '+fmtMD(d)+' '+_slT(sl)+'（担当:'+(staff||'—')+'）'); }
     else if(act==='recheck'){ var d2=s.decided||todayIso(), sl2=s.decidedSlot||'am'; s.history.push({date:d2, slot:sl2, result:'recheck', staff:staff}); s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; s.resultStaff='';
       if(window.logFlow) logFlow(c, '車検 再検 '+fmtMD(d2)+' '+_slT(sl2)+'（担当:'+(staff||'—')+'）'); }
+    else if(act==='tocand'){ closePop(); unassign(id); return; }   // 候補（行ける日）に戻す＝slotsは残す v0.124.1
     else if(act==='cancel'){ s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; }
     else if(act==='reopen'){ s.result=''; s.resultDate=''; s.resultSlot=''; s.resultStaff=''; }
     else if(act==='flip'){ s.decidedSlot=(s.decidedSlot==='pm'?'am':'pm'); }

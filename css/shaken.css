@@ -47,6 +47,9 @@
 .shk-drophint{ font-size:10px; color:var(--text3); font-weight:600; padding-left:10px; }
 .shk-gantt-drop.drop{ background:rgba(38,162,105,.12); outline:2px dashed var(--brand); outline-offset:-2px; }
 .shk-gantt-drop.drop .shk-drophint{ color:var(--brand); }
+/* ポインタ方式ドラッグ（マウス＋タッチ）v0.124.1：掴める要素はタッチでスクロールに取られない＋掴めるカーソル */
+.shk-chip.shk-drag, .shk-bar{ touch-action:none; }
+.shk-dragghost{ position:fixed; z-index:99999; pointer-events:none; background:var(--brand); color:#fff; font-size:11px; font-weight:800; padding:4px 9px; border-radius:7px; box-shadow:0 6px 18px rgba(0,0,0,.5); white-space:nowrap; opacity:.92; }
 
 .shk-glabel, .shk-gut.glabel{ display:flex; align-items:center; padding:8px 12px; font-size:12px; font-weight:800; color:var(--text2); }
 
