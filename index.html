@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.114.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.115.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -75,7 +75,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.114.0</div>
+    <div class="pl-ver">PitFlow v0.115.0</div>
   </div>
 </div>
 
@@ -87,7 +87,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.114.0</span>
+      <span class="ver">v0.115.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -446,7 +446,8 @@
       <div class="view-header card-page-head">
         <button class="vh-btn" onclick="closeDetail()">← 戻る</button>
         <div class="view-title" id="card-title" style="flex:1;min-width:0">入庫カード</div>
-        <button class="vh-btn" onclick="pitCheckAndSave()">🔎 入力チェックして保存</button>
+        <button class="vh-btn" onclick="pitCardCheck()">🔎 入力チェック</button>
+        <button class="vh-btn" onclick="closeDetail()">💾 保存する</button>
         <button class="vh-btn vh-kari" onclick="pitSaveTentative()">📝 仮予約で登録</button>
         <button class="vh-btn primary" onclick="pitSaveAndPrint()">🖨 印刷して保存</button>
       </div>
@@ -681,7 +682,7 @@
 <script src="js/db-pit.js?v=35"></script>
 <script src="js/views.js?v=38"></script>
 <script src="js/work-content.js?v=8"></script>
-<script src="js/card-detail.js?v=94"></script>
+<script src="js/card-detail.js?v=95"></script>
 <script src="js/card-view.js?v=27"></script>
 <script src="js/cover-print.js?v=6"></script>
 <script src="js/avail.js?v=5"></script>

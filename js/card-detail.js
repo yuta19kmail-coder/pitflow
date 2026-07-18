@@ -91,27 +91,6 @@ function pitSaveAndPrint(){
 }
 window.pitSaveAndPrint = pitSaveAndPrint;
 
-/* 🔎 入力チェックして保存（新規予約画面の3軍・印刷なし）＝未入力を洗い出してから保存。
-   漏れがあれば赤ハイライト＋トーストで知らせ、この画面に留まる（強制はしない＝直せるように）。
-   漏れが無ければ通常どおり保存して戻る。※入力自体は常時自動保存されているので、留まっても内容は消えない。 */
-function pitCheckAndSave(){
-  const c = state.cards.find(x => x.id === _editingCardId);
-  if (!c){ closeDetail(); return; }
-  const body = document.getElementById(_cardBodyId || 'md-body');
-  const misses = body ? _cardMarkMisses(c, body) : [];
-  _cardCheckOn = misses.length > 0;   // 以降の再描画・入力でも未入力だけ赤を保つ
-  if (window.PitDB) PitDB.save();     // 留まる場合でも保存しておく（自動保存の取りこぼし対策）
-  if (misses.length){
-    if (window.pitToast) pitToast('⚠ 未入力 ' + misses.length + '件：' + misses.join('・') + '（保存はしました）');
-    const first = body && body.querySelector('.cf-miss');
-    if (first) first.scrollIntoView({ block:'center', behavior:'smooth' });
-    return;   // 漏れがある間はこの画面に留まる（赤を見ながら直せる）。← 戻る で抜けることも可
-  }
-  if (window.pitToast) pitToast('✅ 入力OK！保存しました');
-  closeDetail();
-}
-window.pitCheckAndSave = pitCheckAndSave;
-
 function renderCardForm(c){
   const body = document.getElementById(_cardBodyId || 'md-body');
   if (!body) return;
