@@ -107,6 +107,15 @@
     }
     // 早期割：車検の約半数がDM早期予約割引（実績 141/287車検 ≒ 49%）。ON=概算から割引・バッジ表示。
     if (wt === 'shaken' && Math.random() < 0.49) c.earlyDiscount = true;
+    // 車両注意（左ハンドル/MT/車高低い/土足禁止）を数%の車に付与。輸入車は左ハンドル・車高低いが出やすい v0.120.0
+    (function(){
+      var dr = [], imp = (board === 'import');
+      if (Math.random() < (imp ? 0.12 : 0.03)) dr.push('leftHand');
+      if (Math.random() < 0.06) dr.push('mt');
+      if (Math.random() < (imp ? 0.09 : 0.03)) dr.push('lowCar');
+      if (Math.random() < 0.03) dr.push('noShoes');
+      if (dr.length) c.drive = dr;
+    })();
     return c;
   }
 
@@ -149,6 +158,8 @@
 
     const bays = (state.bays || []).map(b => b.id);
     const cards = [];
+    // 確認用：実績（返車済み）の一部に代車を付けるための代車ID一覧（引退/緊急を除く）v0.120.0
+    const availLoanerIds = (state.loaners || []).filter(l => !l.retired && !l.emergency).map(l => l.id);
 
     for (let off = -PAST_DAYS; off <= FUTURE_DAYS; off++){
       const day = new Date(todayMs + off * 86400000);
@@ -172,6 +183,11 @@
           c.status = 'returned'; c.returnDate = retStr; c.returnTime = rndTime();
           c.completedAt = retStr; c.returnDateFinal = retStr;
           c.amountQuote = c.amountOrder = c.amountFinal = c.estAmount;
+          // 実績の約30%に代車を付ける（新しい実績ホバー「代車 期間」の確認用）v0.120.0
+          if (availLoanerIds.length && Math.random() < 0.30){
+            c.needLoaner = true; c.loanerId = rnd(availLoanerIds);
+            c.loanerFrom = dStr; c.loanerTo = retStr;
+          }
         } else if (dayMs === todayMs){
           // ── 今日の入庫＝これから（当日ビュー/予約当日）──
           c.status = 'reserved';
@@ -200,7 +216,7 @@
         var _isCoatCard = Array.isArray(c.workTypes) && (c.workTypes.indexOf('coat1y') >= 0 || c.workTypes.indexOf('coat3m') >= 0);
         if (_isCoatCard && ['parts','work','workDone'].indexOf(c.status) >= 0) c.coatingOK = true;
 
-        // 代車は別途「代車ごとのリアルなスケジュール」で生成するため、入庫カードには付けない。
+        // 代車は原則、別途「代車ごとのリアルなスケジュール」で生成（入庫カードには付けない）。※実績の一部だけは確認用に上で付与済み。
         // ちょい足し
         if (Math.random() < 0.10) c.consult = true;
         if (Math.random() < 0.05) c.codeRed = true;
