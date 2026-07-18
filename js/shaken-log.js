@@ -56,38 +56,30 @@
     });
     return h+'</div>';
   }
-  window.sklSearch=function(v){ window._sklQuery=v; renderShakenLog(); };
+  window.sklSearch=function(v){
+    window._sklQuery=v;
+    var m=document.getElementById('skl-main'); if(m){ m.innerHTML=sklMainHtml(); } else { renderShakenLog(); }
+    var cb=document.getElementById('skl-clear'); if(cb) cb.style.display=(v&&v.trim())?'':'none';
+    if(!(v&&v.trim())){ var se=document.getElementById('skl-search'); if(se&&se.value!=='') se.value=''; }
+  };
 
-  window.renderShakenLog=function(){
-    var host=document.getElementById('shakenlog-body'); if(!host) return;
-    var base=monthBase(), y=base.getFullYear(), mo=base.getMonth();
+  // メイン部（検索結果 or 月カレンダー）だけを返す＝検索欄は据え置きにして入力中はここだけ更新（IME変換の途切れ防止）v0.124.6
+  function sklMainHtml(){
+    var query=(window._sklQuery||'').trim();
     var recs=records();
+    if(query) return sklResultsHtml(recs, query);
+    var base=monthBase(), y=base.getFullYear(), mo=base.getMonth();
     var byDay={}; recs.forEach(function(r){ (byDay[r.iso]=byDay[r.iso]||[]).push(r); });
-    // 当月フィルタ（サマリ用）
     var mPrefix=y+'-'+pad(mo+1)+'-';
     var mRecs=recs.filter(function(r){ return r.iso.indexOf(mPrefix)===0; });
     var doneN=mRecs.filter(function(r){return r.result==='done';}).length;
     var reN=mRecs.filter(function(r){return r.result==='recheck';}).length;
-    // 担当別（当月・実際に行った回数＝done+recheck）
     var byStaff={}; mRecs.forEach(function(r){ var k=r.staff||'（未記録）'; byStaff[k]=(byStaff[k]||0)+1; });
     var staffArr=Object.keys(byStaff).map(function(k){return {name:k,n:byStaff[k]};}).sort(function(a,b){return b.n-a.n;});
-
     var h='';
-    // 🔍 過去の車検を検索（日付・車種・お客様名・担当）。入力があればカレンダーの代わりに結果リストを出す v0.124.5
-    var query=(window._sklQuery||'').trim();
-    h+='<div class="skl-searchbar"><input id="skl-search" class="skl-search" type="text" value="'+esc(query)+'" oninput="sklSearch(this.value)" placeholder="🔍 過去の車検を検索（日付・車種・お客様名・担当）">'+(query?'<button class="skl-clear" onclick="sklSearch(\'\')">✕ クリア</button>':'')+'</div>';
-    if(query){
-      h+=sklResultsHtml(recs, query);
-      host.innerHTML=h;
-      var _se=document.getElementById('skl-search'); if(_se){ _se.focus(); try{ _se.setSelectionRange(_se.value.length,_se.value.length); }catch(e){} }
-      return;
-    }
     h+='<div class="skl-head"><div class="skl-nav"><button onclick="sklShift(-1)">◀ 前月</button><b>'+y+'年'+(mo+1)+'月</b><button onclick="sklShift(1)">次月 ▶</button><button class="skl-now" onclick="sklShift(0)">今月</button></div>';
     h+='<div class="skl-sum"><span class="skl-lg done">済 '+doneN+'</span><span class="skl-lg re">再検 '+reN+'</span><span class="skl-lg all">計 '+(doneN+reN)+'</span></div></div>';
-    // 担当別
     h+='<div class="skl-staff">'+(staffArr.length?('担当別： '+staffArr.map(function(s){return '<span class="skl-sc">'+esc(s.name)+' <b>'+s.n+'</b></span>';}).join('')):'<span class="skl-empty2">この月の実績はまだありません</span>')+'</div>';
-
-    // 月グリッド（日曜始まり・6週）
     h+='<div class="skl-cal"><div class="skl-dows">'+DOW.split('').map(function(d,i){return '<div class="skl-dow '+(i===0?'sun':i===6?'sat':'')+'">'+d+'</div>';}).join('')+'</div><div class="skl-grid">';
     var first=new Date(y,mo,1); var start=new Date(first); start.setDate(1-first.getDay());
     var tIso=todayIso();
@@ -108,6 +100,14 @@
     }
     h+='</div></div>';
     h+='<div class="skl-note">※ 事実ベースの記録のみ（予定は含みません）。済＝受かって陸運局へ行った実績、再＝再検で行った実績。誰が行ったか（担当）も記録。月送りで過去すべてを振り返れます。</div>';
+    return h;
+  }
+
+  window.renderShakenLog=function(){
+    var host=document.getElementById('shakenlog-body'); if(!host) return;
+    var query=(window._sklQuery||'').trim();
+    var h='<div class="skl-searchbar"><input id="skl-search" class="skl-search" type="text" value="'+esc(query)+'" oninput="if(!event.isComposing)sklSearch(this.value)" oncompositionend="sklSearch(this.value)" placeholder="🔍 過去の車検を検索（日付・車種・お客様名・担当）"><button id="skl-clear" class="skl-clear" onclick="sklSearch(\'\')" style="'+(query?'':'display:none')+'">✕ クリア</button></div>';
+    h+='<div id="skl-main">'+sklMainHtml()+'</div>';
     host.innerHTML=h;
   };
   window.sklShift=function(dir){ var b; if(dir===0){ var t=new Date(); b=new Date(t.getFullYear(),t.getMonth(),1); } else { b=monthBase(); b.setMonth(b.getMonth()+dir); } window._shakenLogM=b; renderShakenLog(); };
