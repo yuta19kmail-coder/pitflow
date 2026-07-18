@@ -32,6 +32,13 @@
     var d=new Date(ms); d.setHours(0,0,0,0);
     return Math.round((t - d)/86400000);
   }
+  /* 2つのISO日付(YYYY-MM-DD)の期間日数（両端含む）。実績の預かり期間・代車期間に使う v0.119.0 */
+  function _periodDays(aISO, bISO){
+    if (!aISO || !bISO) return null;
+    var a=new Date(aISO+'T00:00:00'), b=new Date(bISO+'T00:00:00');
+    if (isNaN(a) || isNaN(b)) return null;
+    return Math.round((b - a)/86400000) + 1;
+  }
 
   function ensureEl(){
     if (el) return el;
@@ -202,6 +209,36 @@
            + '<div class="ph-stat-num" style="font-size:14px">'+esc(_loMain)+'</div>'
            + '<div class="ph-stat-sub">'+esc(_loSub)+'</div></div>';
       }
+    } else if (c.status === 'returned'){
+      // 実績＝完了済み。最終的な返車日・代車スケジュールから「期間」で表示（日目ではなく 〇/〇〜〇/〇・〇日間）＋確定金額 v0.119.0
+      var retF = c.returnDateFinal || c.returnDate || '';
+      // ① 預かり期間（入庫日〜最終返車日）
+      var hStart = c.reserveDate || '';
+      var hd = _periodDays(hStart, retF);
+      var hsub = (hStart && retF && window.fmtMD) ? (fmtMD(hStart)+'〜'+fmtMD(retF)) : (hStart && window.fmtMD ? fmtMD(hStart)+'〜' : '—');
+      h += '<div class="ph-stat s-hold"><div class="ph-stat-lb">預かり期間</div>'
+         + '<div class="ph-stat-num">'+(hd!=null?hd:'—')+'<span class="u">日間</span></div>'
+         + '<div class="ph-stat-sub">'+esc(hsub)+'</div></div>';
+      // ② 代車（代車スケジュールから 期間）
+      if (!c.needLoaner){
+        h += '<div class="ph-stat s-loaner lv-none"><div class="ph-stat-lb">代車</div>'
+           + '<div class="ph-stat-num">なし</div><div class="ph-stat-sub">&nbsp;</div></div>';
+      } else {
+        var _lo2 = (window.state && Array.isArray(state.loaners)) ? state.loaners.find(function(x){ return x.id === c.loanerId; }) : null;
+        var _loNm = _lo2 ? (_lo2.model || _lo2.name || '') : (c.loanerId || '');
+        var lStart = c.loanerFrom || '';
+        var lEnd = c.loanerTo || retF || '';
+        var ld = _periodDays(lStart, lEnd);
+        var lsub = (lStart && lEnd && window.fmtMD) ? (fmtMD(lStart)+'〜'+fmtMD(lEnd)) : '期間未定';
+        h += '<div class="ph-stat s-ldone"><div class="ph-stat-lb">代車</div>'
+           + '<div class="ph-stat-num">'+(ld!=null?ld:'—')+'<span class="u">日間</span></div>'
+           + '<div class="ph-stat-sub">'+(_loNm?esc(_loNm)+'　':'')+esc(lsub)+'</div></div>';
+      }
+      // ③ 確定金額
+      var _fa = c.amountFinal;
+      var _faStr = (_fa!=null && _fa!=='') ? ('¥'+Number(_fa).toLocaleString()) : '—';
+      h += '<div class="ph-stat s-amt"><div class="ph-stat-lb">確定金額</div>'
+         + '<div class="ph-stat-num" style="font-size:16px">'+_faStr+'</div><div class="ph-stat-sub">請求額</div></div>';
     } else {
 
     // ① 預かり

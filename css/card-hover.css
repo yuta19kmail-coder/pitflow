@@ -113,6 +113,9 @@
 .s-loaner.lv-red{ border-top-color:var(--red); } .s-loaner.lv-red .ph-stat-num{ color:var(--red); } .s-loaner.lv-red .ph-meter i{ background:var(--red); }
 .s-loaner.lv-dead{ border-top-color:var(--red); background:rgba(239,68,68,.12); } .s-loaner.lv-dead .ph-stat-num{ color:var(--red); } .s-loaner.lv-dead .ph-meter i{ background:var(--red); }
 .s-loaner.lv-none{ opacity:.5; } .s-loaner.lv-none .ph-stat-num{ color:var(--text3); font-size:13px; }
+/* 実績ホバー：預かり期間(緑)＝s-hold流用／代車(完了)＝橙／確定金額＝ブランド色 v0.119.0 */
+.ph-stat.s-ldone{ border-top-color:var(--orange); }
+.ph-stat.s-amt{ border-top-color:var(--brand); } .ph-stat.s-amt .ph-stat-num{ color:var(--brand); }
 
 .ph-note{ font-size:11px; color:var(--text3); margin-top:10px; line-height:1.5; border-top:1px dashed var(--border); padding-top:8px; }
 
