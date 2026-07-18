@@ -290,6 +290,8 @@
       h += '<div class="cv-fixrow"><div class="cv-frt">返車時間（例 900 / 9時半 / 9:00-10:00）</div><div class="cv-frb">'
         + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px"></div></div></div>';
     }
+    // 💳 入金（売掛）＝実績カードは確定売上金額・返車日と同じロック行テイストで表示（入金済＝🔒確定・入金待ち＝オレンジ）v0.122.0
+    if (c.status === 'returned') h += paymentLockRow(c);
 
     // 🛒 車販部門への依頼（車販依頼/ヘッドライト磨き/コーティング受注OK）＝車販作業ビューのトリガー
     const _csIds = (Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]);
@@ -376,18 +378,26 @@
     if (c.salesReq)             sales.push('車販依頼'+(c.salesReqDone?'（済）':''));
     rows += row('車販への依頼', sales.length ? esc(sales.join(' ／ ')) : '<span class="cv-amuted">なし</span>');
     if ((c.salesReqMemo||'').trim()) rows += row('依頼メモ', esc(c.salesReqMemo));
-    // 入金（売掛）＝分けている時は入金日 or 入金待ち、分けていない時は返車時。ここから編集も可 v0.121.0
-    var payVal;
-    if (c.paymentSeparate){
-      payVal = (c.paymentDate ? '<b class="cv-aok">'+fmtMD(c.paymentDate)+'</b> 入金済' : '<span class="cv-paywait">入金待ち</span>')
-             + ' <button type="button" class="cv-unlockbtn" onclick="cvUnlockPay()">✏️ 編集</button>'
-             + '<span class="cv-unlockwrap" id="cv-payedit" style="display:none">'+paymentControlHtml(c)+'</span>';
-    } else {
-      payVal = '<span class="cv-amuted">返車時に入金</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockPay()">✏️ 売掛にする</button>'
-             + '<span class="cv-unlockwrap" id="cv-payedit" style="display:none">'+paymentControlHtml(c)+'</span>';
-    }
-    rows += row('入金', payVal);
     return '<div class="cv-sec"><div class="cv-sect">📦 完了アーカイブ <span class="cv-asect-note">（返車済み・記録）</span></div><div class="cv-arch">'+rows+'</div></div>';
+  }
+  /* 💳 入金（売掛）のロック行＝確定売上金額・返車日と同じテイスト。入金済＝🔒確定＋日付／入金待ち＝オレンジ／分けない＝返車時。✏️で編集 v0.122.0 */
+  function paymentLockRow(c){
+    var tag='', val, btn;
+    if (c.paymentSeparate && c.paymentDate){
+      tag = '<span class="cv-locktag">🔒 確定</span>';
+      val = '<span class="cv-fixval" id="cv-paylock">'+fmtMD(c.paymentDate)+'</span>';
+      btn = '✏️ 編集';
+    } else if (c.paymentSeparate){
+      val = '<span class="cv-fixval" id="cv-paylock"><span class="cv-paywait">⏳ 入金待ち</span></span>';
+      btn = '✏️ 編集';
+    } else {
+      val = '<span class="cv-fixval" id="cv-paylock"><span class="cv-amuted">返車時に入金</span></span>';
+      btn = '✏️ 売掛にする';
+    }
+    var label = (c.paymentSeparate && c.paymentDate) ? '入金日' : '入金';
+    return '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">'+label+' '+tag+' <button type="button" class="cv-unlockbtn" onclick="cvUnlockPay()">'+btn+'</button></div><div class="cv-frb">'
+      + val
+      + '<span class="cv-unlockwrap" id="cv-payedit" style="display:none">'+paymentControlHtml(c)+'</span></div></div>';
   }
   /* 💳 入金日を分ける（売掛）コントロール＝チェック＋（ON時）入金日ピッカー。金額欄と完了アーカイブで共用 v0.121.0 */
   function paymentControlHtml(c){
