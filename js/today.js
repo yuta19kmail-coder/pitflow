@@ -28,6 +28,33 @@ function _todMin(t){
 }
 function _hm(min){ return String(Math.floor(min/60)).padStart(2,'0') + ':' + String(min%60).padStart(2,'0'); }
 
+/* 当日メモ（クイック引継ぎ）＝当日ビューのナンバー横に1行。c.todayNote に保持（当日中の共有用に保存はするが、フェーズが変わった後は気にしない）v0.123.0 */
+function _todEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function _todNoteSpan(c){
+  var v = c.todayNote || '';
+  return '<span class="tr-note' + (v ? '' : ' empty') + '" data-id="' + c.id + '" onclick="event.stopPropagation();pitTodayNoteEdit(this)" title="クリックで当日メモ（例：間に合わないかも）">'
+       + (v ? _todEsc(v) : '＋当日メモ') + '</span>';
+}
+/* クリックで直入力→Enter/フォーカスアウトで確定（Escで取消）。当日ビュー内だけの簡単メモ v0.123.0 */
+window.pitTodayNoteEdit = function(el){
+  var id = el.getAttribute('data-id');
+  var c = (state.cards || []).find(function(x){ return x.id === id; });
+  if (!c) return;
+  var inp = document.createElement('input');
+  inp.type = 'text'; inp.className = 'tr-note-input'; inp.value = c.todayNote || '';
+  inp.setAttribute('placeholder', '当日の引継ぎ（例：間に合わないかも）');
+  inp.setAttribute('maxlength', '60');
+  inp.addEventListener('click', function(e){ e.stopPropagation(); });
+  inp.addEventListener('keydown', function(e){ e.stopPropagation(); if (e.key === 'Enter'){ inp.blur(); } else if (e.key === 'Escape'){ inp._cancel = true; inp.blur(); } });
+  inp.addEventListener('blur', function(){
+    if (!inp._cancel){ c.todayNote = inp.value.trim(); if (window.PitDB) PitDB.save(); }
+    var tmp = document.createElement('div'); tmp.innerHTML = _todNoteSpan(c);
+    inp.replaceWith(tmp.firstChild);
+  });
+  el.replaceWith(inp);
+  inp.focus(); inp.select();
+};
+
 function renderToday(){
   const wrap = document.getElementById('view-today-body');
   if (!wrap) return;
@@ -338,8 +365,9 @@ function todayRow(c, isReturn, inBreak){
   h += '<div class="tr-main">';
   h += '<div class="tr-headline"><span class="tr-customer">' + ((window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）') + ' 様</span>'
      + (c.car ? '<span class="tr-carname">' + c.car + '</span>' : '') + '</div>';
-  if (c.plate) h += '<div class="tr-plate">' + c.plate + '</div>';
-  h += '</div>';   // メモは行高さを崩すので当日ビューでは出さない（詳細はカードで）
+  // ナンバー＋当日メモ（クイック引継ぎ）を1行で。メモはクリックで直入力＝当日ビュー内だけの簡単メモ v0.123.0
+  h += '<div class="tr-plateline">' + (c.plate ? '<span class="tr-plate">' + c.plate + '</span>' : '') + _todNoteSpan(c) + '</div>';
+  h += '</div>';
 
   // 右側タグ：固定3スロット（添え物｜受付タイプ｜作業タイプ）で全幅揃え
   let side = '';
