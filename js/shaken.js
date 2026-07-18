@@ -93,7 +93,7 @@
       }).join('');
     }).join('')+'</div>';
     // 可能性ガント
-    h+='<div class="shk-row shk-bandrow"><div class="shk-band">🕘 予定</div><div class="shk-bandfill"></div></div>';
+    h+='<div class="shk-row shk-bandrow shk-gantt-drop" ondragover="shkGanttOver(event)" ondragleave="shkGanttLeave(event)" ondrop="shkGanttDrop(event)"><div class="shk-band">🕘 予定</div><div class="shk-bandfill"><span class="shk-drophint">↩ 決定チップをこの「予定」エリアにドロップ＝候補（行ける日）に戻す</span></div></div>';
     window._shkSubs = subs;
     var ganttCars = data.cands.concat(data.empties);
     ganttCars.forEach(function(c){ var s=ins(c); var isEmpty=data.empties.indexOf(c)>=0;
@@ -101,7 +101,7 @@
       var attr=[]; if(isEmpty)attr.push('未設定'); var dr=Array.isArray(c.drive)?c.drive:[]; if(dr.indexOf('leftHand')>=0)attr.push('左'); if(dr.indexOf('mt')>=0)attr.push('MT');
       var ids=(Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:[]; if(ids.indexOf('12pt')>=0)attr.push('12点');
       var rc=(s.history||[]).filter(function(x){return x.result==='recheck';}).length; if(rc)attr.push('再'+rc);
-      h+='<div class="shk-row shk-gcar'+(isEmpty?' unset':'')+'" data-card-id="'+c.id+'"><div class="shk-gut gcar"><div class="shk-gcar-nm">'+esc(surname(c))+'様 '+esc(carLabel(c))+'</div><div class="shk-gcar-sub">'+attr.map(function(x){return '<span class="shk-ca'+(x==='未設定'?' unset':'')+'">'+x+'</span>';}).join('')+'</div></div>'
+      h+='<div class="shk-row shk-gcar shk-gantt-drop'+(isEmpty?' unset':'')+'" data-card-id="'+c.id+'" ondragover="shkGanttOver(event)" ondragleave="shkGanttLeave(event)" ondrop="shkGanttDrop(event)"><div class="shk-gut gcar"><div class="shk-gcar-nm">'+esc(surname(c))+'様 '+esc(carLabel(c))+'</div><div class="shk-gcar-sub">'+attr.map(function(x){return '<span class="shk-ca'+(x==='未設定'?' unset':'')+'">'+x+'</span>';}).join('')+'</div></div>'
         + days.map(function(x,di){ if(x.off) return '<div class="shk-off2"></div>';
             return ['am','pm'].map(function(slot){
               var idx=di*2+(slot==='am'?0:1), on=son(di,slot);
@@ -126,6 +126,14 @@
   window.shkDrop=function(e,iso,slot){ e.preventDefault(); e.currentTarget.classList.remove('drop'); var id=(e.dataTransfer&&e.dataTransfer.getData('text'))||_drag; _drag=null; assign(id,iso,slot); };
   window.shkFix=function(id,iso,slot){ assign(id,iso,slot); };
   function assign(id,iso,slot){ var c=card(id); if(!c) return; var s=ins(c); s.decided=iso; s.decidedSlot=(slot==='pm'?'pm':'am'); s.result=''; s.resultDate=''; s.resultSlot=''; save(); renderShaken(); }
+
+  // 決定チップを「予定」エリアにドロップ＝決定を解除して候補（行ける日）表示に戻す（候補slotsは残す）v0.124.0
+  window.shkGanttOver=function(e){ e.preventDefault(); try{ e.dataTransfer.dropEffect='move'; }catch(_){}; var t=e.currentTarget; if(t&&t.classList) t.classList.add('drop'); };
+  window.shkGanttLeave=function(e){ var t=e.currentTarget; if(t&&t.classList) t.classList.remove('drop'); };
+  window.shkGanttDrop=function(e){ e.preventDefault(); e.stopPropagation(); var t=e.currentTarget; if(t&&t.classList) t.classList.remove('drop'); var id=(e.dataTransfer&&e.dataTransfer.getData('text'))||_drag; _drag=null; unassign(id); };
+  function unassign(id){ var c=card(id); if(!c) return; var s=ins(c); if(!s.decided) return;   // 決定中の車だけ候補へ戻す
+    s.decided=''; s.decidedSlot=''; s.result=''; s.resultDate=''; s.resultSlot=''; save(); renderShaken();
+    if(window.pitToast) pitToast('↩ 候補（行ける日）に戻しました'); }
 
   // ===== 範囲ドラッグで「行ける枠」を塗る（空セル→予定） =====
   var _paint=null;

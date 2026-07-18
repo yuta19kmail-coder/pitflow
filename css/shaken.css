@@ -43,6 +43,10 @@
 .shk-bandrow{ background:var(--bg4,#26313b); border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
 .shk-band{ position:sticky; left:0; z-index:2; flex:0 0 var(--GUT); min-width:0; font-size:12px; font-weight:800; color:var(--text2); padding:7px 12px; background:var(--bg4,#26313b); }
 .shk-bandfill{ flex:1 0 auto; min-width:0; }
+/* 決定チップを「予定」エリアにドロップ＝候補（行ける日）に戻す（v0.124.0） */
+.shk-drophint{ font-size:10px; color:var(--text3); font-weight:600; padding-left:10px; }
+.shk-gantt-drop.drop{ background:rgba(38,162,105,.12); outline:2px dashed var(--brand); outline-offset:-2px; }
+.shk-gantt-drop.drop .shk-drophint{ color:var(--brand); }
 
 .shk-glabel, .shk-gut.glabel{ display:flex; align-items:center; padding:8px 12px; font-size:12px; font-weight:800; color:var(--text2); }
 
