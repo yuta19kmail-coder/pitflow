@@ -373,7 +373,7 @@ function todayRow(c, isReturn, inBreak){
   let side = '';
   if (c.consult)              side += '<span class="tag-side consult">相談</span>';
   if (c.needLoaner)           side += '<span class="tag-side loaner">代車</span>';
-  if (isReturn && c.needWash) side += '<span class="tag-side wash">洗車</span>';   // 入庫に洗車は出さない
+  if (isReturn && c.needWash) side += '<span class="tag-side wash'+(c.washSalesDone?' done':'')+'">洗車</span>';   // 入庫に洗車は出さない・済＝他ビューと同じ赤スタンプ v0.123.3
   const dropTag = dt ? (window.pitDropBadges ? pitDropBadges(c, function(o){ return '<span class="tag-drop tag-drop-' + o.id + '" title="' + o.desc + '">' + o.label + '</span>'; }) : '<span class="tag-drop tag-drop-' + dt.id + '" title="' + dt.desc + '">' + dt.label + '</span>') : '';
   // 作業バッジ＝基本＋併用を並べて表示（設定の色のまま）。当日ビューは枠固定なので最大2個・2個時は余白を詰めて1個ぶん幅に横並び。
   const _wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
