@@ -59,6 +59,8 @@
     if(c.washNote == null) c.washNote = '';
     if(c.noThanksLine == null) c.noThanksLine = false;
     if(c.returnStage == null) c.returnStage = '';
+    if(c.paymentSeparate == null) c.paymentSeparate = false;   // 入金日を分ける（売掛）v0.121.0
+    if(c.paymentDate === undefined) c.paymentDate = null;       // 入金日（未入金は null）
     if(c.salesReq == null) c.salesReq = false;
     if(c.salesReqMemo == null) c.salesReqMemo = '';
     if(c.headlight == null) c.headlight = false;
@@ -255,6 +257,8 @@
         + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+curKind+'" type="text" inputmode="numeric" value="'+esc(cvstr)+'" data-prev="'+esc(cvstr)+'" oninput="cvAmtChange(\''+curKind+'\')"></div>'
         + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div></div>';
     }
+    // 💳 入金日を分ける（売掛）＝金額欄の下に。ON で入金日欄が出る。実績前はここで、実績後は完了アーカイブで操作 v0.121.0
+    if (c.status !== 'returned') h += paymentControlHtml(c);
     // 実績（返車完了）に移行したら、上のフロー（チェーン）はそのままに、確定売上金額を返車日と同じロックスタイルで表示。✏️編集でその場で直せる v0.118.0
     if (c.status === 'returned'){
       const fa = c.amountFinal;
@@ -372,7 +376,27 @@
     if (c.salesReq)             sales.push('車販依頼'+(c.salesReqDone?'（済）':''));
     rows += row('車販への依頼', sales.length ? esc(sales.join(' ／ ')) : '<span class="cv-amuted">なし</span>');
     if ((c.salesReqMemo||'').trim()) rows += row('依頼メモ', esc(c.salesReqMemo));
+    // 入金（売掛）＝分けている時は入金日 or 入金待ち、分けていない時は返車時。ここから編集も可 v0.121.0
+    var payVal;
+    if (c.paymentSeparate){
+      payVal = (c.paymentDate ? '<b class="cv-aok">'+fmtMD(c.paymentDate)+'</b> 入金済' : '<span class="cv-paywait">入金待ち</span>')
+             + ' <button type="button" class="cv-unlockbtn" onclick="cvUnlockPay()">✏️ 編集</button>'
+             + '<span class="cv-unlockwrap" id="cv-payedit" style="display:none">'+paymentControlHtml(c)+'</span>';
+    } else {
+      payVal = '<span class="cv-amuted">返車時に入金</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockPay()">✏️ 売掛にする</button>'
+             + '<span class="cv-unlockwrap" id="cv-payedit" style="display:none">'+paymentControlHtml(c)+'</span>';
+    }
+    rows += row('入金', payVal);
     return '<div class="cv-sec"><div class="cv-sect">📦 完了アーカイブ <span class="cv-asect-note">（返車済み・記録）</span></div><div class="cv-arch">'+rows+'</div></div>';
+  }
+  /* 💳 入金日を分ける（売掛）コントロール＝チェック＋（ON時）入金日ピッカー。金額欄と完了アーカイブで共用 v0.121.0 */
+  function paymentControlHtml(c){
+    var h = '<div class="cv-payctl"><label class="cv-paychk"><input type="checkbox" '+(c.paymentSeparate?'checked':'')+' onchange="cvTogglePaySeparate(this.checked)"> 入金日を分ける（売掛）</label>';
+    if (c.paymentSeparate){
+      h += '<span class="cv-payin">入金日 <input class="cv-fixinput" type="date" value="'+esc(c.paymentDate||'')+'" onchange="cvSetPaymentDate(this.value)">'
+         + (c.paymentDate ? '' : ' <span class="cv-paywait">入金待ち</span>') + '</span>';
+    }
+    return h + '</div>';
   }
   function opt(v,label,c){ return '<option value="'+v+'"'+(c.inspSchedule.mode===v?' selected':'')+'>'+label+'</option>'; }
   function pickRow(label, opts, cur, group){
@@ -545,6 +569,22 @@
   // 実績移行後のロック表示を、✏️編集で入力欄に切り替える（DOM切替のみ・保存は各入力のonchange/OKで）v0.118.0
   window.cvUnlockReturn = function(){ var v=document.getElementById('cv-retlock'), e=document.getElementById('cv-retedit'); if(v)v.style.display='none'; if(e)e.style.display=''; };
   window.cvUnlockFinal = function(){ var v=document.getElementById('cv-finlock'), e=document.getElementById('cv-finedit'); if(v)v.style.display='none'; if(e)e.style.display=''; };
+  window.cvUnlockPay = function(){ var e=document.getElementById('cv-payedit'); if(e) e.style.display=(e.style.display==='none'?'':'none'); };
+  // 💳 入金日を分ける（売掛）ON/OFF。OFFで入金日クリア。表示切替のため再描画 v0.121.0
+  window.cvTogglePaySeparate = function(on){
+    _c.paymentSeparate = !!on;
+    if(!on) _c.paymentDate = null;
+    save(); cvRefreshBg();
+    if(window.renderCardView) renderCardView(_c,'md-body-modal');
+  };
+  // 入金日をセット（予約詳細側）。実績側の入金待ちにも即反映 v0.121.0
+  window.cvSetPaymentDate = function(v){
+    _c.paymentDate = v || null;
+    if(v && !_c.paymentSeparate) _c.paymentSeparate = true;
+    if(v && window.logFlow) logFlow(_c, '入金日を記録（'+v+'）');
+    save(); cvRefreshBg();
+    if(window.renderCardView) renderCardView(_c,'md-body-modal');
+  };
   // 返車時間（スマート入力で正規化）／洗車備考／お礼LINE不要＝完TELポップアップと同じ項目（相互反映）
   window.cvReturnTime = function(input){
     var v = (input && typeof input === 'object') ? input.value : input;

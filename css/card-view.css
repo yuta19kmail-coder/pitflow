@@ -121,6 +121,17 @@
 .cv-asub{ color:var(--text3); font-size:12px; font-weight:500; }
 .cv-amuted{ color:var(--text3); font-weight:500; }
 .cv-asect-note{ font-size:10px; color:var(--text3); font-weight:600; }
+/* 💳 入金日を分ける（売掛）コントロール v0.121.0 */
+.cv-payctl{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:8px; padding:8px 10px; background:var(--bg3); border:1px solid var(--border); border-radius:9px; }
+.cv-paychk{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:var(--text2); cursor:pointer; }
+.cv-paychk input{ width:16px; height:16px; accent-color:var(--brand); }
+.cv-payin{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; }
+.cv-paywait{ font-size:11px; font-weight:800; color:var(--orange); background:rgba(245,158,11,.14); border:1px solid rgba(245,158,11,.5); border-radius:6px; padding:1px 8px; }
+/* 💰 入金待ちカードの日付入力（返車ビュー未定タブ） v0.121.0 */
+.rtbd-pay{ display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:6px; padding:6px 8px; background:var(--bg3); border:1px solid var(--border); border-radius:8px; }
+.rtbd-payinfo{ font-size:11px; color:var(--text2); font-weight:700; }
+.rtbd-paylb{ font-size:11px; font-weight:700; color:var(--text2); display:inline-flex; align-items:center; gap:5px; }
+.rtbd-paydate{ background:var(--bg2); color:var(--text); border:1px solid var(--border2); border-radius:6px; padding:3px 6px; font-size:12px; }
 
 /* 代車メーター */
 .cv-lo{ margin-top:11px; display:flex; flex-direction:column; background:var(--bg1); border:1px solid var(--border); border-radius:13px; padding:12px 14px; }

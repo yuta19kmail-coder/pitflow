@@ -102,10 +102,35 @@ function renderReturnTbd(){
   h += '<div class="ret-tbd-col"><div class="ret-tbd-h">🚗 返車未定 <small>（完TEL済・日付待ち）</small><span class="und-cnt">' + noDate.length + '</span></div>';
   h += '<div class="ret-tbd-body">' + (noDate.length ? noDate.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
   h += '<div class="und-note">カードを押して返車日を入れると、当日／週／月へ移ります。</div></div>';
+
+  // 💰 入金待ち（売掛）＝返車済みで「入金日を分ける」ON・入金日まだ の車。日付を入れると消えて実績に入金日が埋まる v0.121.0
+  const payWait = state.cards.filter(c => c.status === 'returned' && c.paymentSeparate && !c.paymentDate);
+  const _fmd = d => d ? (window.fmtMD ? fmtMD(d) : d) : '—';
+  const _yen = n => (n != null && n !== '') ? '¥' + Number(n).toLocaleString() : '—';
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h">💰 入金待ち <small>（売掛・返車済）</small><span class="und-cnt">' + payWait.length + '</span></div>';
+  h += '<div class="ret-tbd-body">' + (payWait.length ? payWait.map(c =>
+        '<div class="rtbd-item">' + card(c)
+        + '<div class="rtbd-pay"><span class="rtbd-payinfo">返車 ' + _fmd(c.returnDateFinal || c.returnDate) + ' ・ ' + _yen(c.amountFinal) + '</span>'
+        + '<label class="rtbd-paylb">入金日 <input type="date" class="rtbd-paydate" value="" onclick="event.stopPropagation()" onchange="pitSetPaymentDate(\'' + c.id + '\',this.value)"></label></div>'
+        + '</div>'
+      ).join('') : '<div class="today-empty">なし</div>') + '</div>';
+  h += '<div class="und-note">入金日を入れると、入金待ちから消え、実績カードに入金日が記録されます。</div></div>';
+
   h += '</div>';
   wrap.innerHTML = h;
 }
 window.renderReturnTbd = renderReturnTbd;
+
+/* 💰 入金待ち → 入金日を確定（実績カードの入金日も同時に埋まる）v0.121.0 */
+window.pitSetPaymentDate = function(id, v){
+  const c = state.cards.find(x => x.id === id);
+  if (!c || !v) return;
+  c.paymentDate = v;
+  if (window.logFlow) logFlow(c, '入金日を記録（' + v + '）');
+  if (window.PitDB) PitDB.save();
+  renderReturnTbd();
+  if (window.pitToast) pitToast('💰 入金日 ' + v + ' を記録しました');
+};
 
 function _undRow(c, kind){
   const wt = (state.workTypes || []).find(w => w.id === c.workType);
