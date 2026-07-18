@@ -234,6 +234,19 @@ window.state = {
   ],
 };
 
+/* 作業タイプ「特殊」＝保証／保険（v0.116.0）。
+   ・単体では選べず、作業タイプ（基本 or 併用可）が1つ以上ある時だけ付けられる。
+   ・保持は c.workSpecials[]（基本/併用可の c.workTypes とは別枠＝予約カード自体には出さない）。
+   ・表示は予約詳細・ホバー詳細・印刷表紙のみ。画面はグレー、印刷は黒字・黒枠（アウトライン）。 */
+window.PIT_WORK_SPECIALS = [
+  { id: 'warranty',  label: '保証' },
+  { id: 'insurance', label: '保険' },
+];
+window.pitSpecialLabel = function (id) {
+  var m = (window.PIT_WORK_SPECIALS || []).find(function (x) { return x.id === id; });
+  return m ? m.label : '';
+};
+
 /* 概算預かり日数の既定（入庫予約時の初期値・後で手で調整できる）
    ※ 表は state.settings.estHold ＝ 設定画面から変更できる（v0.14.0〜） */
 function pitEstHold(workType, dropType, team){

@@ -246,7 +246,8 @@ function openNewReserve(){
     estAmount: null,   // 概算金額＝作業タイプ選択で自動セット
     menu: '', workType: null, dropType: null, consult: false,
     needLoaner: false, needWash: false, urgent: false, memo: '',
-    tentative: false   // 仮予約フラグ（仮予約で登録ボタン／詳細の切替でON）v0.100.0
+    tentative: false,   // 仮予約フラグ（仮予約で登録ボタン／詳細の切替でON）v0.100.0
+    workSpecials: []   // 特殊（保証/保険）＝作業タイプとセットの時だけ付く。予約詳細/ホバー/印刷にのみ表示 v0.116.0
   };
   state.cards.push(card);
   if (window.PitDB) PitDB.save(true);   // v0.87.1 作成した瞬間に即保存（デバウンス待ちで取りこぼさない）

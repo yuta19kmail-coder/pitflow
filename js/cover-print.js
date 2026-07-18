@@ -63,6 +63,11 @@
     if (c.consult) labels.push('見積相談');
     return labels;
   }
+  /* 特殊バッジ（保証/保険）＝印刷にも出す。既存バッジと同じ扱いだが、色は反転＝黒字・黒枠のアウトライン（v0.116.0） */
+  function specialBadges(c){
+    var ids = Array.isArray(c.workSpecials) ? c.workSpecials : [];
+    return ids.map(function(id){ return (window.pitSpecialLabel ? pitSpecialLabel(id) : ''); }).filter(Boolean);
+  }
   /* バッジは全部「車検バッジと同じ大きさ」で固定（scale 0.64 と合わせて実効 ≒21.8px）。
      入りきらなければレイアウト側で2段目に自動折り返し。 */
   function badgeFs(n){ return 34; }
@@ -262,20 +267,21 @@
         + 'var full=+g.getAttribute("data-full"),min=+g.getAttribute("data-min"),X0=+g.getAttribute("data-x0"),X1=+g.getAttribute("data-x1"),'
         + 'yTop=+g.getAttribute("data-ytop"),gap=+g.getAttribute("data-gap"),lineGap=+g.getAttribute("data-linegap");'
         + 'var FONT="\'Yu Gothic\',\'Hiragino Kaku Gothic ProN\',\'Meiryo\',sans-serif",AW=X1-X0;'
-        + 'function mk(lb,fs){var t=document.createElementNS(NS,"text");t.setAttribute("font-size",fs);t.setAttribute("font-weight","700");t.setAttribute("font-family",FONT);t.setAttribute("fill","#fff");t.textContent=lb;return t;}'
+        + 'function mk(lb,fs,ol){var t=document.createElementNS(NS,"text");t.setAttribute("font-size",fs);t.setAttribute("font-weight","700");t.setAttribute("font-family",FONT);t.setAttribute("fill",ol?"#111":"#fff");t.textContent=lb;return t;}'
         /* フルサイズで各バッジ幅を計測 */
-        + 'var meas=labels.map(function(lb){var t=mk(lb,full);g.appendChild(t);var w=t.getComputedTextLength();g.removeChild(t);return w;});'
+        + 'var meas=labels.map(function(it){var t=mk(it.t,full,it.o);g.appendChild(t);var w=t.getComputedTextLength();g.removeChild(t);return w;});'
         /* 1段に収まる最大フォント（full→min）。min でも収まらなければ min で折り返し */
         + 'var fs=min;for(var s=full;s>=min;s-=0.5){var total=0;for(var i=0;i<meas.length;i++){if(i)total+=gap;total+=meas[i]*(s/full)+s;}if(total<=AW){fs=s;break;}}'
         + 'var padX=fs*0.5,padY=fs*0.32,rowH=fs+padY*2,rx=fs*0.28;'
         + 'var x=X0,y=yTop;'
-        + 'labels.forEach(function(lb){'
-          + 'var t=mk(lb,fs);g.appendChild(t);'
+        + 'labels.forEach(function(it){'
+          + 'var t=mk(it.t,fs,it.o);g.appendChild(t);'
           + 'var w=t.getComputedTextLength(),bw=w+padX*2;'
           + 'if(x>X0&&x+bw>X1){x=X0;y+=rowH+lineGap;}'
           + 'var r=document.createElementNS(NS,"rect");'
           + 'r.setAttribute("x",x);r.setAttribute("y",y);r.setAttribute("width",bw);r.setAttribute("height",rowH);'
-          + 'r.setAttribute("rx",rx);r.setAttribute("ry",rx);r.setAttribute("fill","#111");'
+          + 'r.setAttribute("rx",rx);r.setAttribute("ry",rx);'
+          + 'if(it.o){r.setAttribute("fill","none");r.setAttribute("stroke","#111");r.setAttribute("stroke-width",Math.max(1,fs*0.08));}else{r.setAttribute("fill","#111");}'
           + 'g.insertBefore(r,t);'
           + 't.setAttribute("x",x+padX);t.setAttribute("y",y+rowH/2);'
           + 't.setAttribute("dominant-baseline","central");t.setAttribute("text-anchor","start");'
@@ -304,7 +310,9 @@
     raw = ensureFont(raw);
     raw = tagCenterEls(raw);
     var svg = fillTokens(raw, tokenMap(c));
-    var badges = workBadges(c);
+    // 既存バッジ（黒塗り・白抜き）＋特殊バッジ（保証/保険＝黒字・黒枠のアウトライン）を1列に流し込む v0.116.0
+    var badges = workBadges(c).map(function(t){ return {t:t,o:0}; })
+                 .concat(specialBadges(c).map(function(t){ return {t:t,o:1}; }));
     svg = injectBadgePlaceholder(svg, badges);
     svg = injectMemoPlaceholder(svg, c);
     if (c.earlyDiscount && opts.stampUri) svg = injectStamp(svg, opts.stampUri);

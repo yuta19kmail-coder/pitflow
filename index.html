@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.115.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.116.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -20,8 +20,8 @@
 <link rel="stylesheet" href="css/work-content.css?v=6">
 <link rel="stylesheet" href="css/parking.css?v=3">
 <link rel="stylesheet" href="css/launcher.css?v=7">
-<link rel="stylesheet" href="css/card-view.css?v=15">
-<link rel="stylesheet" href="css/card-hover.css?v=17">
+<link rel="stylesheet" href="css/card-view.css?v=16">
+<link rel="stylesheet" href="css/card-hover.css?v=18">
 <link rel="stylesheet" href="css/sales.css?v=5">
 <link rel="stylesheet" href="css/shaken.css?v=11">
 <link rel="stylesheet" href="css/shaken-log.css?v=1">
@@ -75,7 +75,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.115.0</div>
+    <div class="pl-ver">PitFlow v0.116.0</div>
   </div>
 </div>
 
@@ -87,7 +87,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.115.0</span>
+      <span class="ver">v0.116.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -673,18 +673,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/state.js?v=50"></script>
+<script src="js/state.js?v=51"></script>
 <script src="js/sample-data.js?v=17"></script>
 <script src="js/sample-fleet.js?v=8"></script>
 <meta name="app-key" content="pitflow">
 <script src="js/firebase-init.js?v=8"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
 <script src="js/db-pit.js?v=35"></script>
-<script src="js/views.js?v=38"></script>
+<script src="js/views.js?v=39"></script>
 <script src="js/work-content.js?v=8"></script>
-<script src="js/card-detail.js?v=95"></script>
-<script src="js/card-view.js?v=27"></script>
-<script src="js/cover-print.js?v=6"></script>
+<script src="js/card-detail.js?v=96"></script>
+<script src="js/card-view.js?v=28"></script>
+<script src="js/cover-print.js?v=7"></script>
 <script src="js/avail.js?v=5"></script>
 <script src="js/card-tabs.js?v=8"></script>
 <script src="js/customers.js?v=30"></script>
@@ -719,7 +719,7 @@
 <script src="js/holidays.js?v=1"></script>
 <script src="js/dnd.js?v=13"></script>
 <script src="js/pit-pip.js?v=8"></script>
-<script src="js/card-hover.js?v=25"></script>
+<script src="js/card-hover.js?v=26"></script>
 <script src="js/phase-popup.js?v=10"></script>
 <script src="js/return-popup.js?v=3"></script>
 <script src="js/main.js?v=11"></script>

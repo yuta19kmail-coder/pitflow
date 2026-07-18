@@ -102,6 +102,7 @@
 .cv-bdg.cv-consult{ background:rgba(245,158,11,.14); color:var(--orange); border-color:rgba(245,158,11,.45); }
 .cv-bdg.cv-early{ background:rgba(236,72,153,.14); color:#ec4899; border-color:rgba(236,72,153,.5); }
 .cv-bdg.cv-none{ background:rgba(29,185,122,.14); color:#5fcfa0; border-color:rgba(29,185,122,.45); }
+.cv-bdg.cv-special{ background:rgba(148,163,184,.12); color:#94a3b8; border-color:rgba(148,163,184,.5); }/* 特殊（保証/保険）＝グレーのアウトライン v0.116.0 */
 
 /* 代車メーター */
 .cv-lo{ margin-top:11px; display:flex; flex-direction:column; background:var(--bg1); border:1px solid var(--border); border-radius:13px; padding:12px 14px; }

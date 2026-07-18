@@ -181,6 +181,7 @@ function renderCardForm(c){
   h += '<div class="cf-row" style="flex-wrap:nowrap;align-items:flex-start">';
   h += '<div class="cf-field" style="flex:0 1 auto;min-width:0"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">併用可</div>' + workTypeComboChips(c) + '</div>';
+  h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">特殊</div>' + workTypeSpecialChips(c) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 auto;margin-left:auto"><div class="cf-label">課</div>' + chips(c, 'division', state.divisions, true) + '</div>';
   h += '</div>';
   /* 2行目：受付タイプ（待/当/預）の右隣に「相談」を□っぽい別ボタンで配置（区切り線で違いを演出）＋担当を1行に詰める */
@@ -952,6 +953,30 @@ function workTypeComboChips(c){
   h += '</div>';
   return h;
 }
+// v0.116.0 特殊チップ（保証/保険）＝複数選択＝c.workSpecials。単体では選べず、作業タイプ（基本 or 併用可）がある時だけ有効。
+//   色はグレー。作業タイプ未選択のうちは薄く（押しても弾く）。予約カード自体には出さず、予約詳細/ホバー/印刷にのみ表示。
+function workTypeSpecialChips(c){
+  const specials = window.PIT_WORK_SPECIALS || [];
+  const arr = Array.isArray(c.workSpecials) ? c.workSpecials : [];
+  const hasWork = !!c.workType || (Array.isArray(c.workAddons) && c.workAddons.length > 0);
+  const GREY = '#6b7280';
+  let h = '<div class="cf-chips" data-key="workSpecials" data-special="1">';
+  specials.forEach(it => {
+    const active = arr.indexOf(it.id) >= 0;
+    let style = active ? ('background:' + GREY + ';color:#fff;border-color:' + GREY + ';')
+                       : ('border-color:' + GREY + ';color:' + GREY + ';');
+    if (!hasWork) style += 'opacity:.4;';
+    const title = hasWork ? '' : ' title="作業タイプを選ぶと押せます（単体では選べません）"';
+    h += '<button type="button" class="cf-chip' + (active ? ' active' : '') + '" data-val="' + it.id + '"' + title + ' style="' + style + '">' + it.label + '</button>';
+  });
+  h += '</div>';
+  return h;
+}
+/* 作業タイプ（基本 or 併用可）が1つも無くなったら、特殊（保証/保険）は自動で外す＝単体で残さない。 */
+function _clearSpecialsIfNoWork(c){
+  const hasWork = !!c.workType || (Array.isArray(c.workAddons) && c.workAddons.length > 0);
+  if (!hasWork && Array.isArray(c.workSpecials) && c.workSpecials.length) c.workSpecials = [];
+}
 /* 表示用 c.workTypes（基本＋併用の順）を同期。週/当日/PITカードの作業バッジはこれを見る。 */
 function _syncWorkTypes(c){
   const ids = [];
@@ -1450,7 +1475,7 @@ function bindCardFormEvents(root){
   });
 
   // チップ（単一選択）
-  root.querySelectorAll('.cf-chips:not([data-multi]):not([data-combo]):not(.cf-dual)').forEach(group => {
+  root.querySelectorAll('.cf-chips:not([data-multi]):not([data-combo]):not([data-special]):not(.cf-dual)').forEach(group => {
     const key = group.dataset.key;
     group.querySelectorAll('.cf-chip').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1472,7 +1497,7 @@ function bindCardFormEvents(root){
           // 作業タイプ未選択のうちは概算 預かり日数は空欄（選んだら自動で入る）
           if (window.pitEstHold)   c.estHoldDays = c.workType ? pitEstHold(c.workType, c.dropType, pitTeamKey(c)) : '';
           if (window.pitEstAmount && (key === 'workType' || key === 'boardId') && c.workType) c.estAmount = pitEstAmount(c.workType, pitTeamKey(c));
-          if (key === 'workType') _syncWorkTypes(c);   // 表示用バッジ列を同期（基本＋併用）
+          if (key === 'workType'){ _syncWorkTypes(c); _clearSpecialsIfNoWork(c); }   // 表示用バッジ列を同期＋特殊の整合（v0.116.0）
         }
         renderCardForm(c);
       });
@@ -1490,12 +1515,37 @@ function bindCardFormEvents(root){
         if (idx >= 0) c[key].splice(idx, 1);
         else c[key].push(v);
         _syncWorkTypes(c);
+        _clearSpecialsIfNoWork(c);   // v0.116.0 併用可も無く基本も無ければ特殊を外す
         // v0.94.1 併用可は単独利用も可：主作業(workType)が無く併用可だけの時は、その先頭で概算を自動入力
         if (!c.workType){
           const eff = (c.workAddons || [])[0] || '';
           if (window.pitEstHold)   c.estHoldDays = eff ? pitEstHold(eff, c.dropType, pitTeamKey(c)) : '';
           if (window.pitEstAmount) c.estAmount   = eff ? pitEstAmount(eff, pitTeamKey(c)) : c.estAmount;
         }
+        renderCardForm(c);
+      });
+    });
+  });
+
+  // v0.116.0 作業タイプ「特殊」チップ（保証/保険）＝c.workSpecials[]。作業タイプ（基本 or 併用可）がある時だけ付けられる（単体では選べない）。
+  root.querySelectorAll('.cf-chips[data-special]').forEach(group => {
+    const key = group.dataset.key;   // workSpecials
+    if (!Array.isArray(c[key])) c[key] = [];
+    group.querySelectorAll('.cf-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.val;
+        const idx = c[key].indexOf(v);
+        if (idx >= 0){
+          c[key].splice(idx, 1);   // 解除はいつでも可
+        } else {
+          const hasWork = !!c.workType || (Array.isArray(c.workAddons) && c.workAddons.length > 0);
+          if (!hasWork){
+            if (window.pitToast) pitToast('保証・保険は作業タイプとセットで選んでください');
+            return;   // 単体では付けない
+          }
+          c[key].push(v);
+        }
+        if (window.PitDB) PitDB.save();
         renderCardForm(c);
       });
     });

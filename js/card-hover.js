@@ -149,6 +149,11 @@
           bd.push('<span class="ph-b'+_cd+'" style="background:'+w.color+'22;color:'+w.color+';border-color:'+w.color+'88">'+esc(w.label)+'</span>');
         }
       });
+      // 特殊（保証/保険）＝作業タイプの直後にグレーで（v0.116.0）
+      (Array.isArray(c.workSpecials)?c.workSpecials:[]).forEach(function(id){
+        var lb = window.pitSpecialLabel ? pitSpecialLabel(id) : '';
+        if (lb) bd.push('<span class="ph-b ph-b-special">'+esc(lb)+'</span>');
+      });
       if (c.dropType){
         bd.push(window.pitDropBadges
           ? pitDropBadges(c, function(o){ return '<span class="ph-b ph-b-drop" title="'+esc(o.desc||'')+'">'+esc(o.label)+'</span>'; })
