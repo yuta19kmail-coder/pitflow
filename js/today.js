@@ -33,7 +33,7 @@ function _todEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 function _todNoteSpan(c){
   var v = c.todayNote || '';
   return '<span class="tr-note' + (v ? '' : ' empty') + '" data-id="' + c.id + '" onclick="event.stopPropagation();pitTodayNoteEdit(this)" title="クリックで当日メモ（例：間に合わないかも）">'
-       + (v ? _todEsc(v) : '＋当日メモ') + '</span>';
+       + (v ? _todEsc(v) : '&nbsp;') + '</span>';
 }
 /* クリックで直入力→Enter/フォーカスアウトで確定（Escで取消）。当日ビュー内だけの簡単メモ v0.123.0 */
 window.pitTodayNoteEdit = function(el){
