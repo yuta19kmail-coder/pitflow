@@ -32,6 +32,32 @@
     return new Date(window._shakenLogM);
   }
 
+  // 🔍 検索結果リスト（日付・車種・お客様名・担当。スペース区切りは全て含むAND） v0.124.5
+  function sklResultsHtml(recs, query){
+    var terms=query.toLowerCase().split(/\s+/).filter(Boolean);
+    var res=recs.filter(function(r){
+      var d=new Date(r.iso+'T00:00:00');
+      var dstr=r.iso+' '+(d.getMonth()+1)+'/'+d.getDate()+' '+(d.getMonth()+1)+'月'+d.getDate()+'日 '+d.getFullYear();
+      var hay=[surname(r.c), r.c.customer||'', r.c.kana||'', carLabel(r.c), r.c.car||'', r.c.maker||'', r.c.plate||'', r.staff||'', dstr, (r.result==='done'?'済 done':'再検 recheck')].join(' ').toLowerCase();
+      return terms.every(function(t){ return hay.indexOf(t)>=0; });
+    }).sort(function(a,b){ return a.iso<b.iso?1:(a.iso>b.iso?-1:(a.slot<b.slot?-1:1)); });
+    var h='<div class="skl-res-head">検索結果 <b>'+res.length+'</b>件</div>';
+    if(!res.length) return h+'<div class="skl-note">該当する記録はありません。日付（例 7/16 や 2026-07）・車種・お客様名・担当者などで検索できます。</div>';
+    h+='<div class="skl-results">';
+    res.forEach(function(r){ var d=new Date(r.iso+'T00:00:00'); var _car=carLabel(r.c);
+      h+='<div class="skl-res-row '+r.result+'" data-card-id="'+r.c.id+'" onclick="openDetail(\''+r.c.id+'\')" style="border-left-color:'+team(r.c)+'">'
+        +'<span class="skl-res-date">'+d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+'<small>('+DOW[d.getDay()]+')</small></span>'
+        +'<span class="skl-ap '+r.slot+'">'+(r.slot==='pm'?'PM':'AM')+'</span>'
+        +'<span class="skl-res-nm">'+esc(surname(r.c))+'様</span>'
+        +'<span class="skl-res-car">'+(_car?esc(_car):'—')+'</span>'
+        +'<span class="skl-rt">'+(r.result==='done'?'済':'再')+'</span>'
+        +'<span class="skl-res-stf">'+(r.staff?esc(r.staff):'—')+'</span>'
+        +'</div>';
+    });
+    return h+'</div>';
+  }
+  window.sklSearch=function(v){ window._sklQuery=v; renderShakenLog(); };
+
   window.renderShakenLog=function(){
     var host=document.getElementById('shakenlog-body'); if(!host) return;
     var base=monthBase(), y=base.getFullYear(), mo=base.getMonth();
@@ -47,6 +73,15 @@
     var staffArr=Object.keys(byStaff).map(function(k){return {name:k,n:byStaff[k]};}).sort(function(a,b){return b.n-a.n;});
 
     var h='';
+    // 🔍 過去の車検を検索（日付・車種・お客様名・担当）。入力があればカレンダーの代わりに結果リストを出す v0.124.5
+    var query=(window._sklQuery||'').trim();
+    h+='<div class="skl-searchbar"><input id="skl-search" class="skl-search" type="text" value="'+esc(query)+'" oninput="sklSearch(this.value)" placeholder="🔍 過去の車検を検索（日付・車種・お客様名・担当）">'+(query?'<button class="skl-clear" onclick="sklSearch(\'\')">✕ クリア</button>':'')+'</div>';
+    if(query){
+      h+=sklResultsHtml(recs, query);
+      host.innerHTML=h;
+      var _se=document.getElementById('skl-search'); if(_se){ _se.focus(); try{ _se.setSelectionRange(_se.value.length,_se.value.length); }catch(e){} }
+      return;
+    }
     h+='<div class="skl-head"><div class="skl-nav"><button onclick="sklShift(-1)">◀ 前月</button><b>'+y+'年'+(mo+1)+'月</b><button onclick="sklShift(1)">次月 ▶</button><button class="skl-now" onclick="sklShift(0)">今月</button></div>';
     h+='<div class="skl-sum"><span class="skl-lg done">済 '+doneN+'</span><span class="skl-lg re">再検 '+reN+'</span><span class="skl-lg all">計 '+(doneN+reN)+'</span></div></div>';
     // 担当別
