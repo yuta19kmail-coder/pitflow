@@ -139,9 +139,10 @@
   // ===== ポインタ方式のドラッグ（マウス＋タッチ両対応。ネイティブHTML5 DnDが効かない環境の確実版）v0.124.1 =====
   //   決定チップ／候補バーを長押し移動→「📌決定」枠にドロップで決定/別日移動、「🕘予定」エリアにドロップで候補へ戻す。
   //   動かさず離した時（タップ）は従来の onclick（メニュー/その枠で決定）に任せる。
-  var _pdrag=null, _ghost=null, _lastHi=null, _suppressClick=false;
-  function _clearHi(){ if(_lastHi){ _lastHi.classList.remove('drop'); _lastHi=null; } }
-  function _endGhost(){ if(_ghost){ _ghost.parentNode&&_ghost.parentNode.removeChild(_ghost); _ghost=null; } }
+  //   ゴーストは「ドロップ先の枠」に反映する＝決定枠に入れると、その枠にプレビュー用チップが出る。元チップは薄くする。
+  var _pdrag=null, _ghostEl=null, _lastZone=null, _srcEl=null, _suppressClick=false;
+  function _clearZone(){ if(_lastZone){ _lastZone.classList.remove('drop'); _lastZone=null; } }
+  function _detachGhost(){ if(_ghostEl && _ghostEl.parentNode) _ghostEl.parentNode.removeChild(_ghostEl); }
   function _hideHover(){ var hv=document.getElementById('pit-hovercard'); if(hv) hv.classList.remove('show'); }
   document.addEventListener('pointerdown', function(e){
     if(e.pointerType==='mouse' && e.button!==0) return;
@@ -151,24 +152,31 @@
     var el=chip||bar; if(!el) return;
     var lbl = chip ? ((chip.querySelector('.shk-nm')||{}).textContent||'車検') : '車検';
     _pdrag={ id:el.getAttribute('data-card-id'), x:e.clientX, y:e.clientY, moved:false, label:lbl };
+    _srcEl = el;
   });
   document.addEventListener('pointermove', function(e){
     if(!_pdrag) return;
     if(!_pdrag.moved){
       if(Math.abs(e.clientX-_pdrag.x)+Math.abs(e.clientY-_pdrag.y) < 6) return;
       _pdrag.moved=true; _hideHover();
-      _ghost=document.createElement('div'); _ghost.className='shk-dragghost'; _ghost.textContent=_pdrag.label; document.body.appendChild(_ghost);
+      if(_srcEl && _srcEl.classList) _srcEl.classList.add('shk-dragsrc');   // 元チップを薄く
+      _ghostEl=document.createElement('div'); _ghostEl.className='shk-chip shk-ghostchip'; _ghostEl.textContent=_pdrag.label;
     }
     e.preventDefault();
-    _ghost.style.left=(e.clientX+12)+'px'; _ghost.style.top=(e.clientY+12)+'px';
     var t=document.elementFromPoint(e.clientX,e.clientY);
-    var zone = t && t.closest && (t.closest('.shk-decell:not(.off)') || t.closest('.shk-gantt-drop'));
-    if(zone!==_lastHi){ _clearHi(); if(zone){ zone.classList.add('drop'); _lastHi=zone; } }
+    var decell = t && t.closest && t.closest('.shk-decell:not(.off)');
+    var gantt  = decell ? null : (t && t.closest && t.closest('.shk-gantt-drop'));
+    var zone = decell || gantt;
+    if(zone!==_lastZone){ _clearZone(); if(zone){ zone.classList.add('drop'); _lastZone=zone; } }
+    // ゴースト＝決定枠に入れた時だけ、その枠に「ここに入る」プレビューを出す
+    if(decell){ if(_ghostEl.parentNode!==decell) decell.appendChild(_ghostEl); }
+    else { _detachGhost(); }
   }, {passive:false});
   document.addEventListener('pointerup', function(e){
     if(!_pdrag) return;
-    var p=_pdrag; _pdrag=null; _endGhost();
-    var zone=_lastHi; _clearHi();
+    var p=_pdrag, zone=_lastZone; _pdrag=null;
+    _detachGhost(); _ghostEl=null; _clearZone();
+    if(_srcEl && _srcEl.classList) _srcEl.classList.remove('shk-dragsrc'); _srcEl=null;
     if(!p.moved) return;   // タップ＝onclick（メニュー/その枠で決定）に任せる
     _suppressClick=true; setTimeout(function(){ _suppressClick=false; }, 80);   // ドラッグ直後の誤クリック抑制
     if(!zone) return;
