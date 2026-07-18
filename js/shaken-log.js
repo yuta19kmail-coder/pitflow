@@ -62,11 +62,12 @@
       var w=d.getDay();
       h+='<div class="skl-day'+(inM?'':' out')+(iso===tIso?' today':'')+'">'
         + '<div class="skl-dh"><span class="skl-d '+(w===0?'sun':w===6?'sat':'')+'">'+d.getDate()+'</span>'+(arr.length?'<span class="skl-cnt">'+arr.length+'</span>':'')+'</div>'
-        + arr.map(function(r){ return '<div class="skl-chip '+r.result+'" data-card-id="'+r.c.id+'" onclick="openDetail(\''+r.c.id+'\')" style="border-left-color:'+team(r.c)+'" title="'+esc(surname(r.c))+'様 '+esc(carLabel(r.c))+' / '+(r.result==='done'?'済':'再検')+' '+(r.slot==='pm'?'PM':'AM')+(r.staff?' / '+esc(r.staff):'')+'">'
-            + '<span class="skl-ap '+r.slot+'">'+(r.slot==='pm'?'PM':'AM')+'</span>'
+        + arr.map(function(r){ var _car=carLabel(r.c); return '<div class="skl-chip '+r.result+'" data-card-id="'+r.c.id+'" onclick="openDetail(\''+r.c.id+'\')" style="border-left-color:'+team(r.c)+'" title="'+esc(surname(r.c))+'様 '+esc(_car)+' / '+(r.result==='done'?'済':'再検')+' '+(r.slot==='pm'?'PM':'AM')+(r.staff?' / '+esc(r.staff):'')+'">'
+            + '<div class="skl-r1"><span class="skl-ap '+r.slot+'">'+(r.slot==='pm'?'PM':'AM')+'</span>'
             + '<span class="skl-nm">'+esc(surname(r.c))+'様</span>'
-            + '<span class="skl-rt">'+(r.result==='done'?'済':'再')+'</span>'
-            + (r.staff?'<span class="skl-stf">'+esc(r.staff)+'</span>':'')
+            + '<span class="skl-rt">'+(r.result==='done'?'済':'再')+'</span></div>'
+            + '<div class="skl-r2"><span class="skl-car">'+(_car?esc(_car):'—')+'</span>'
+            + (r.staff?'<span class="skl-stf">'+esc(r.staff)+'</span>':'')+'</div>'
             + '</div>'; }).join('')
         + '</div>';
     }
