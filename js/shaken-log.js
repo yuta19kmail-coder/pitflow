@@ -106,7 +106,7 @@
   window.renderShakenLog=function(){
     var host=document.getElementById('shakenlog-body'); if(!host) return;
     var query=(window._sklQuery||'').trim();
-    var h='<div class="skl-searchbar"><input id="skl-search" class="skl-search" type="text" value="'+esc(query)+'" oninput="if(!event.isComposing)sklSearch(this.value)" oncompositionend="sklSearch(this.value)" placeholder="🔍 過去の車検を検索（日付・車種・お客様名・担当）"><button id="skl-clear" class="skl-clear" onclick="sklSearch(\'\')" style="'+(query?'':'display:none')+'">✕ クリア</button></div>';
+    var h='<div class="skl-searchbar"><input id="skl-search" class="skl-search" type="text" value="'+esc(query)+'" oninput="sklSearch(this.value)" placeholder="🔍 過去の車検を検索（日付・車種・お客様名・担当）"><button id="skl-clear" class="skl-clear" onclick="sklSearch(\'\')" style="'+(query?'':'display:none')+'">✕ クリア</button></div>';
     h+='<div id="skl-main">'+sklMainHtml()+'</div>';
     host.innerHTML=h;
   };
