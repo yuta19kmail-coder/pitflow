@@ -291,13 +291,18 @@
     const _csIds = (Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]);
     const _csShaken = (c.workType==='shaken' || _csIds.indexOf('shaken')>=0);
     const _csCoat = (_csIds.indexOf('coat1y')>=0 || _csIds.indexOf('coat3m')>=0);
-    h += '<div class="cv-sec"><div class="cv-sect">🛒 車販部門への依頼</div>';
-    if (_csShaken) h += pickRow('車検ライト磨き', [['1','する'],['0','しない']], c.headlight?'1':'0', 'headlight');
-    if (_csCoat)   h += pickRow('コーティング受注', [['1','OK'],['0','—']], c.coatingOK?'1':'0', 'coatingok');
-    h += pickRow('車販依頼', [['1','あり'],['0','なし']], c.salesReq?'1':'0', 'salesreq');
-    h += '<div class="cv-pickrow"><span class="cv-pk">依頼メモ</span><div class="cv-chips" style="flex:1">'
-       + '<input class="cv-fixinput" type="text" value="'+esc(c.salesReqMemo||'')+'" placeholder="車販への依頼（1行・任意）" onchange="cvSalesMemo(this.value)" style="flex:1;min-width:180px"></div></div>';
-    h += '</div>';
+    if (c.status === 'returned'){
+      // 実績＝完TEL・支払い・洗車・お礼LINE・車販依頼などをまとめて読み取り専用のアーカイブ表示 v0.120.0
+      h += archiveHtml(c, _csShaken, _csCoat);
+    } else {
+      h += '<div class="cv-sec"><div class="cv-sect">🛒 車販部門への依頼</div>';
+      if (_csShaken) h += pickRow('車検ライト磨き', [['1','する'],['0','しない']], c.headlight?'1':'0', 'headlight');
+      if (_csCoat)   h += pickRow('コーティング受注', [['1','OK'],['0','—']], c.coatingOK?'1':'0', 'coatingok');
+      h += pickRow('車販依頼', [['1','あり'],['0','なし']], c.salesReq?'1':'0', 'salesreq');
+      h += '<div class="cv-pickrow"><span class="cv-pk">依頼メモ</span><div class="cv-chips" style="flex:1">'
+         + '<input class="cv-fixinput" type="text" value="'+esc(c.salesReqMemo||'')+'" placeholder="車販への依頼（1行・任意）" onchange="cvSalesMemo(this.value)" style="flex:1;min-width:180px"></div></div>';
+      h += '</div>';
+    }
 
     // 車検スケジュール / 実施記録（車検タイプのみ表示）
     if (_csShaken){
@@ -330,18 +335,44 @@
       }
     }
 
-    // 表紙チェック
-    const pm = payMethods();
-    h += '<div class="cv-sec"><div class="cv-sect">📞 表紙チェック（手書き表紙のデジタル版）</div>';
-    h += pickRow('完TEL', [['done','済'],['ng','未']], c.coverCall.done?'done':'ng', 'call')
-       + (c.coverCall.done && c.coverCall.at ? '<div class="cv-callat">'+esc(c.coverCall.at)+(c.coverCall.staff?'・'+esc(c.coverCall.staff):'')+'</div>' : '');
-    h += pickRow('支払い', pm.map(function(p){return [p.id,p.label];}), c.payment, 'pay');
-    h += pickRow('洗車', [['1','要'],['0','不要']], c.needWash?'1':'0', 'wash');
-    h += '<div class="cv-pickrow"><span class="cv-pk">洗車備考</span><div class="cv-chips" style="flex:1">'
-       + '<input class="cv-fixinput" type="text" value="'+esc(c.washNote||'')+'" placeholder="洗車の備考（1行・任意）" onchange="cvWashNote(this.value)" style="flex:1;min-width:180px"></div></div>';
-    h += pickRow('お礼LINE', [['1','要'],['0','不要']], c.noThanksLine?'0':'1', 'line');
-    h += '<div class="cv-hint">※ パターン（型）で選ぶ方式。選択肢は将来 ⚙設定で増減できる想定。</div></div>';
+    // 表紙チェック（編集式）＝実績（returned）では上の「完了アーカイブ」に集約済みなので出さない v0.120.0
+    if (c.status !== 'returned'){
+      const pm = payMethods();
+      h += '<div class="cv-sec"><div class="cv-sect">📞 表紙チェック（手書き表紙のデジタル版）</div>';
+      h += pickRow('完TEL', [['done','済'],['ng','未']], c.coverCall.done?'done':'ng', 'call')
+         + (c.coverCall.done && c.coverCall.at ? '<div class="cv-callat">'+esc(c.coverCall.at)+(c.coverCall.staff?'・'+esc(c.coverCall.staff):'')+'</div>' : '');
+      h += pickRow('支払い', pm.map(function(p){return [p.id,p.label];}), c.payment, 'pay');
+      h += pickRow('洗車', [['1','要'],['0','不要']], c.needWash?'1':'0', 'wash');
+      h += '<div class="cv-pickrow"><span class="cv-pk">洗車備考</span><div class="cv-chips" style="flex:1">'
+         + '<input class="cv-fixinput" type="text" value="'+esc(c.washNote||'')+'" placeholder="洗車の備考（1行・任意）" onchange="cvWashNote(this.value)" style="flex:1;min-width:180px"></div></div>';
+      h += pickRow('お礼LINE', [['1','要'],['0','不要']], c.noThanksLine?'0':'1', 'line');
+      h += '<div class="cv-hint">※ パターン（型）で選ぶ方式。選択肢は将来 ⚙設定で増減できる想定。</div></div>';
+    }
     return h;
+  }
+  /* 実績（返車済み）カード用：完TEL・支払い・洗車・お礼LINE・車販依頼などを読み取り専用でまとめて表示 v0.120.0 */
+  function archiveHtml(c, csShaken, csCoat){
+    function row(label, valueHtml){ return '<div class="cv-arow"><span class="cv-ak">'+esc(label)+'</span><span class="cv-av">'+valueHtml+'</span></div>'; }
+    function done(on){ return on ? '<span class="cv-adone">済</span>' : ''; }
+    var pm = payMethods();
+    var pobj = pm.find(function(x){ return x.id === c.payment; });
+    var rows = '';
+    var cc = c.coverCall || {};
+    rows += row('完TEL', cc.done
+      ? '<b class="cv-aok">済</b>'+(cc.at?' <span class="cv-asub">'+esc(cc.at)+(cc.staff?'・'+esc(cc.staff):'')+'</span>':'')
+      : '<span class="cv-amuted">未</span>');
+    if (pobj) rows += row('支払い', esc(pobj.label));
+    rows += row('洗車', c.needWash
+      ? '要 '+done(c.washSalesDone)+(c.washNote?' <span class="cv-asub">'+esc(c.washNote)+'</span>':'')
+      : '<span class="cv-amuted">不要</span>');
+    rows += row('お礼LINE', c.noThanksLine ? '<span class="cv-amuted">不要</span>' : '要');
+    var sales = [];
+    if (csShaken && c.headlight) sales.push('ヘッドライト磨き'+(c.headlightDone?'（済）':''));
+    if (csCoat && c.coatingOK)  sales.push('コーティング受注'+(c.coatingDone?'（済）':''));
+    if (c.salesReq)             sales.push('車販依頼'+(c.salesReqDone?'（済）':''));
+    rows += row('車販への依頼', sales.length ? esc(sales.join(' ／ ')) : '<span class="cv-amuted">なし</span>');
+    if ((c.salesReqMemo||'').trim()) rows += row('依頼メモ', esc(c.salesReqMemo));
+    return '<div class="cv-sec"><div class="cv-sect">📦 完了アーカイブ <span class="cv-asect-note">（返車済み・記録）</span></div><div class="cv-arch">'+rows+'</div></div>';
   }
   function opt(v,label,c){ return '<option value="'+v+'"'+(c.inspSchedule.mode===v?' selected':'')+'>'+label+'</option>'; }
   function pickRow(label, opts, cur, group){

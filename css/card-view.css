@@ -110,6 +110,17 @@
 .cv-unlockbtn{ font-size:11px; font-weight:700; color:var(--brand); background:transparent; border:1px solid var(--brand); border-radius:6px; padding:1px 8px; margin-left:6px; cursor:pointer; }
 .cv-unlockbtn:hover{ background:var(--brand); color:#fff; }
 .cv-unlockwrap{ display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap; }
+/* 実績カードの「完了アーカイブ」＝読み取り専用の記録リスト v0.120.0 */
+.cv-arch{ display:flex; flex-direction:column; }
+.cv-arow{ display:flex; gap:12px; align-items:baseline; padding:7px 2px; border-bottom:1px solid var(--border); font-size:13px; }
+.cv-arow:last-child{ border-bottom:none; }
+.cv-ak{ width:98px; flex:none; color:var(--text2); font-weight:700; font-size:12px; }
+.cv-av{ flex:1; color:var(--text); font-weight:600; }
+.cv-aok{ color:var(--green); }
+.cv-adone{ display:inline-block; font-size:10px; font-weight:800; color:var(--green); background:rgba(29,185,122,.16); border:1px solid rgba(29,185,122,.5); border-radius:5px; padding:0 6px; margin-left:2px; }
+.cv-asub{ color:var(--text3); font-size:12px; font-weight:500; }
+.cv-amuted{ color:var(--text3); font-weight:500; }
+.cv-asect-note{ font-size:10px; color:var(--text3); font-weight:600; }
 
 /* 代車メーター */
 .cv-lo{ margin-top:11px; display:flex; flex-direction:column; background:var(--bg1); border:1px solid var(--border); border-radius:13px; padding:12px 14px; }
