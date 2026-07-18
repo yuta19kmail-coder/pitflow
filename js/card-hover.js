@@ -371,6 +371,7 @@
   //   予約(status:reserved)は fill() 側で「予約専用（予約日だけ）」表示になる。
   var HOVER_SEL = '.pit-card.pcm, .pfv-card, .rml-ev, .reserve-month-event, .rwk-card, .lo-badge, .shk-chip, .shk-bar, .shk-gcar, .shk-uchip, .skl-chip';
   document.addEventListener('mouseover', function(e){
+    if (window.pitDragging){ hide(); return; }   // ドラッグ中は他カードのホバー詳細を出さない v0.124.3
     var card = e.target.closest && e.target.closest(HOVER_SEL);
     if (!card){ return; }
     if (!card.dataset || !card.dataset.cardId) return;   // 拡大カード等 id無しは無視

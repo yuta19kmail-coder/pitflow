@@ -158,7 +158,7 @@
     if(!_pdrag) return;
     if(!_pdrag.moved){
       if(Math.abs(e.clientX-_pdrag.x)+Math.abs(e.clientY-_pdrag.y) < 6) return;
-      _pdrag.moved=true; _hideHover();
+      _pdrag.moved=true; window.pitDragging=true; _hideHover();   // ドラッグ中フラグ＝card-hoverが他カードのホバーを抑制 v0.124.3
       if(_srcEl && _srcEl.classList) _srcEl.classList.add('shk-dragsrc');   // 元チップを薄く
       _ghostEl=document.createElement('div'); _ghostEl.className='shk-chip shk-ghostchip'; _ghostEl.textContent=_pdrag.label;
     }
@@ -174,7 +174,7 @@
   }, {passive:false});
   document.addEventListener('pointerup', function(e){
     if(!_pdrag) return;
-    var p=_pdrag, zone=_lastZone; _pdrag=null;
+    var p=_pdrag, zone=_lastZone; _pdrag=null; window.pitDragging=false;   // ドラッグ終了＝ホバー抑制を解除 v0.124.3
     _detachGhost(); _ghostEl=null; _clearZone();
     if(_srcEl && _srcEl.classList) _srcEl.classList.remove('shk-dragsrc'); _srcEl=null;
     if(!p.moved) return;   // タップ＝onclick（メニュー/その枠で決定）に任せる
