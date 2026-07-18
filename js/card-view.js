@@ -15,6 +15,8 @@
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function save(){ try { if (window.PitDB) PitDB.save(); } catch(e){} }
+  // 返車日/時間・金額などを直したら、背後で開いている実績ボード等も描き直して反映する（モーダルは別レイヤーなので閉じない）v0.118.1
+  function cvRefreshBg(){ try { if (window.showView && window.state && state.currentView) showView(state.currentView); } catch(e){} }
   function yen(n){ return (n==null||n==='') ? '' : '¥' + Number(n).toLocaleString(); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function isoToday(){ const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
@@ -502,7 +504,13 @@
     const el=document.getElementById('cv-amt-'+kind); el.value=el.dataset.prev;
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
-  window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; if(v && !_c.returnDate) _c.returnDate = v; save(); };
+  window.cvSetReturn = function(v){
+    _c.returnDateFinal = v || null;
+    if(v && !_c.returnDate) _c.returnDate = v;
+    // 実績（返車完了）カードで返車日を直したら、確定返車日＝実績カレンダーの表示日(completedAt)も合わせて動かす v0.118.1
+    if(v && _c.status === 'returned'){ _c.returnDate = v; _c.completedAt = v; }
+    save(); cvRefreshBg();
+  };
   // 実績移行後のロック表示を、✏️編集で入力欄に切り替える（DOM切替のみ・保存は各入力のonchange/OKで）v0.118.0
   window.cvUnlockReturn = function(){ var v=document.getElementById('cv-retlock'), e=document.getElementById('cv-retedit'); if(v)v.style.display='none'; if(e)e.style.display=''; };
   window.cvUnlockFinal = function(){ var v=document.getElementById('cv-finlock'), e=document.getElementById('cv-finedit'); if(v)v.style.display='none'; if(e)e.style.display=''; };
@@ -511,7 +519,7 @@
     var v = (input && typeof input === 'object') ? input.value : input;
     v = (window._normTime ? _normTime(v) : v) || '';
     if (input && typeof input === 'object') input.value = v;
-    _c.returnTime = v; save();
+    _c.returnTime = v; save(); cvRefreshBg();
   };
   window.cvWashNote = function(v){ _c.washNote = (v||'').trim(); save(); };
   window.cvNoThanks = function(on){ _c.noThanksLine = !!on; save(); };
