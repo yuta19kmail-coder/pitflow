@@ -271,7 +271,8 @@
        + '</div>';
 
     // 完TEL / 返車の入力（returnStage カード＝完TEL待ち/返車待ちのみ）＝最下部。ここで直接編集できる。クリックは予約詳細へ。
-    if (c.returnStage){
+    // ※実績（返車完了＝returned）に移行したら確定情報なので編集欄は出さない v0.117.0
+    if (c.returnStage && c.status !== 'returned'){
       var _amtStr = (c.amountFinal!=null && c.amountFinal!=='') ? Number(c.amountFinal).toLocaleString() : '';
       var _washOn = (c.needWash !== false);
       var _lineOn = !c.noThanksLine;

@@ -254,12 +254,19 @@
         + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div></div>';
     }
     const finRet = c.returnDateFinal || '';
-    h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
-      + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
-      + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div>';
-    // 返車時間（新規予約と同じスマート入力＝900/9時半/9:00-10:00 など）
-    h += '<div class="cv-fixrow"><div class="cv-frt">返車時間（例 900 / 9時半 / 9:00-10:00）</div><div class="cv-frb">'
-      + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px"></div></div></div>';
+    if (c.status === 'returned'){
+      // 実績（返車完了）に移行したら、確定情報としてロック＝編集欄を出さず表示のみ（金額チェーンと同じ扱い）v0.117.0
+      const shownRet = c.returnDateFinal || c.returnDate || '';
+      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag">🔒 確定</span></div><div class="cv-frb">'
+        + '<span class="cv-fixval">'+(shownRet?fmtMD(shownRet):'—')+(c.returnTime?('　'+esc(c.returnTime)):'')+'</span></div></div></div>';
+    } else {
+      h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
+        + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
+        + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div>';
+      // 返車時間（新規予約と同じスマート入力＝900/9時半/9:00-10:00 など）
+      h += '<div class="cv-fixrow"><div class="cv-frt">返車時間（例 900 / 9時半 / 9:00-10:00）</div><div class="cv-frb">'
+        + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px"></div></div></div>';
+    }
 
     // 🛒 車販部門への依頼（車販依頼/ヘッドライト磨き/コーティング受注OK）＝車販作業ビューのトリガー
     const _csIds = (Array.isArray(c.workTypes)&&c.workTypes.length)?c.workTypes:(c.workType?[c.workType]:[]);
