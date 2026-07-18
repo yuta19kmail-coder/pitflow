@@ -253,12 +253,29 @@
         + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+curKind+'" type="text" inputmode="numeric" value="'+esc(cvstr)+'" data-prev="'+esc(cvstr)+'" oninput="cvAmtChange(\''+curKind+'\')"></div>'
         + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div></div>';
     }
+    // 実績（返車完了）に移行したら、上のフロー（チェーン）はそのままに、確定売上金額を返車日と同じロックスタイルで表示。✏️編集でその場で直せる v0.118.0
+    if (c.status === 'returned'){
+      const fa = c.amountFinal;
+      const faStr = (fa!=null&&fa!=='') ? Number(fa).toLocaleString() : '';
+      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定売上金額（請求額） <span class="cv-locktag">🔒 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockFinal()">✏️ 編集</button></div><div class="cv-frb">'
+        + '<span class="cv-fixval" id="cv-finlock">'+(faStr?('¥'+faStr):'—')+'</span>'
+        + '<span class="cv-unlockwrap" id="cv-finedit" style="display:none">'
+          + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-final" type="text" inputmode="numeric" value="'+esc(faStr)+'" data-prev="'+esc(faStr)+'" oninput="cvAmtChange(\'final\')">'
+          + '<div class="cv-fixconfirm" id="cv-amtconfirm-final">金額を <b id="cv-amtnew-final"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\'final\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\'final\')">取消</button></div>'
+        + '</span></div></div>';
+    }
     const finRet = c.returnDateFinal || '';
     if (c.status === 'returned'){
-      // 実績（返車完了）に移行したら、確定情報としてロック＝編集欄を出さず表示のみ（金額チェーンと同じ扱い）v0.117.0
+      // 実績移行後の返車日も確定情報としてロック（表示のみ）。✏️編集でその場で直せる v0.117.0/0.118.0
       const shownRet = c.returnDateFinal || c.returnDate || '';
-      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag">🔒 確定</span></div><div class="cv-frb">'
-        + '<span class="cv-fixval">'+(shownRet?fmtMD(shownRet):'—')+(c.returnTime?('　'+esc(c.returnTime)):'')+'</span></div></div></div>';
+      const retStr = (shownRet?fmtMD(shownRet):'—')+(c.returnTime?('　'+esc(c.returnTime)):'');
+      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag">🔒 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockReturn()">✏️ 編集</button></div><div class="cv-frb">'
+        + '<span class="cv-fixval" id="cv-retlock">'+retStr+'</span>'
+        + '<span class="cv-unlockwrap" id="cv-retedit" style="display:none">'
+          + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
+          + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)">'
+          + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="時間 未定" onchange="cvReturnTime(this)" style="width:150px;margin-left:8px">'
+        + '</span></div></div></div>';
     } else {
       h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
         + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
@@ -486,6 +503,9 @@
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
   window.cvSetReturn = function(v){ _c.returnDateFinal = v || null; if(v && !_c.returnDate) _c.returnDate = v; save(); };
+  // 実績移行後のロック表示を、✏️編集で入力欄に切り替える（DOM切替のみ・保存は各入力のonchange/OKで）v0.118.0
+  window.cvUnlockReturn = function(){ var v=document.getElementById('cv-retlock'), e=document.getElementById('cv-retedit'); if(v)v.style.display='none'; if(e)e.style.display=''; };
+  window.cvUnlockFinal = function(){ var v=document.getElementById('cv-finlock'), e=document.getElementById('cv-finedit'); if(v)v.style.display='none'; if(e)e.style.display=''; };
   // 返車時間（スマート入力で正規化）／洗車備考／お礼LINE不要＝完TELポップアップと同じ項目（相互反映）
   window.cvReturnTime = function(input){
     var v = (input && typeof input === 'object') ? input.value : input;

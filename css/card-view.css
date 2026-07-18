@@ -107,6 +107,9 @@
 .cv-fixrow.cv-fixlocked{ opacity:1; }
 .cv-fixlocked .cv-fixval{ font-weight:800; font-size:15px; color:var(--text); }
 .cv-locktag{ font-size:11px; font-weight:700; color:#10b981; background:rgba(16,185,129,.14); border:1px solid rgba(16,185,129,.5); border-radius:6px; padding:1px 7px; margin-left:6px; }
+.cv-unlockbtn{ font-size:11px; font-weight:700; color:var(--brand); background:transparent; border:1px solid var(--brand); border-radius:6px; padding:1px 8px; margin-left:6px; cursor:pointer; }
+.cv-unlockbtn:hover{ background:var(--brand); color:#fff; }
+.cv-unlockwrap{ display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap; }
 
 /* 代車メーター */
 .cv-lo{ margin-top:11px; display:flex; flex-direction:column; background:var(--bg1); border:1px solid var(--border); border-radius:13px; padding:12px 14px; }
