@@ -3,7 +3,7 @@
    車販作業ビュー（v0.99.42）
    1Y/3Mのコーティング作業・完TEL時のサービス洗車・ヘッドライト磨き等＝車販部門の仕事を別枠でまとめる。
    セクション：
-     ① 明日の洗車      ＝洗車対象(needWash)で返車予定日が「翌営業日」のもの
+     ① 洗車            ＝洗車対象(needWash)。枠内を「今日（返車日=今日）」「明日（返車日=翌営業日）」の2グループに分割 v0.123.4
      ② 今週の洗車予定  ＝翌営業日より後〜今週末(日曜)の洗車（日付決定）／別グループ：洗車で返車日未定
      ③ 車検ヘッドライト磨き ＝headlight フラグ（受注時に車検車へ設定）
      ④ コーティング依頼 ＝1Y/3Mバッジ＋coatingOK（受注OK）＝返車予定日も表示
@@ -113,12 +113,17 @@ function renderCarSales(){
 
   let h = '<div class="cs-cols">';
 
-  // ① 明日の洗車
+  // ① 洗車（今日・明日）＝枠は1つ。中を「今日」「明日」の2グループに分ける v0.123.4
   {
-    const s = split(washTomorrow.sort(sortTime), 'washSalesDone');
-    h += _csSec('🧽 明日の洗車', '翌営業日 ' + nextBiz.slice(5).replace('-','/') + ' 返車ぶん',
-      s.open.map(c=>_csCard(c,'wash')).join(''),
-      s.done.map(c=>_csDoneCard(c,'wash')).join(''));
+    const washToday = washAll.filter(c => c.returnStage==='returnWait' && c.returnDate === todayStr);
+    const st = split(washToday.sort(sortTime), 'washSalesDone');
+    const sm = split(washTomorrow.sort(sortTime), 'washSalesDone');
+    const bodyHtml = '<div class="cs-subh">☀️ 今日</div>'
+      + (st.open.length ? st.open.map(c=>_csCard(c,'wash')).join('') : '<div class="cs-empty">なし</div>')
+      + '<div class="cs-subh">🌙 明日 <small>（翌営業日 ' + nextBiz.slice(5).replace('-','/') + '）</small></div>'
+      + (sm.open.length ? sm.open.map(c=>_csCard(c,'wash')).join('') : '<div class="cs-empty">なし</div>');
+    const doneHtml = st.done.concat(sm.done).map(c=>_csDoneCard(c,'wash')).join('');
+    h += _csSec('🧽 洗車', '今日・明日ぶん', bodyHtml, doneHtml);
   }
   // ② 今週の洗車予定（日付決定 ＋ 返車日未定）
   {
