@@ -202,7 +202,6 @@
           <div class="bn-label-chips">${labelChipsHtml}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span class="bn-me">自分：<select onchange="bnSetMe(this.value)">${meOpts}</select></span>
           <button class="bn-add-btn" onclick="openBoardNoteModal(null)">＋ 付箋を追加</button>
         </div>
       </div>

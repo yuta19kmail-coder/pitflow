@@ -154,13 +154,15 @@ body.md-edit .md-box { outline: 1px dashed var(--border2, var(--border)); }
 .md-open { margin-top: 10px; font-size: 11px; color: var(--brand); font-weight: 700; text-align: center; border: 1px dashed var(--brand); border-radius: 8px; padding: 6px; cursor: pointer; }
 .md-open:hover { background: rgba(38, 162, 105, .12); }
 
-/* 下部固定コントロール */
-.myd-fabbar { position: fixed; right: 22px; bottom: 22px; z-index: 40; display: flex; gap: 8px; }
-.myd-fab { padding: 9px 15px; border-radius: 10px; border: 1px solid var(--border2, var(--border)); background: var(--bg3); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(0, 0, 0, .35); white-space: nowrap; }
+/* コントロール（＋ボックス/カスタマイズ/プリセット）
+   通常＝ページ最下部に静的配置。編集(カスタマイズ)中だけ画面下に固定で追従。 */
+.myd-fabbar { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin: 22px 2px 8px; }
+.myd-fab { padding: 9px 15px; border-radius: 10px; border: 1px solid var(--border2, var(--border)); background: var(--bg3); color: var(--text); font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .myd-fab:hover { border-color: var(--brand); }
 .myd-fab.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
 .myd-fab.on { background: var(--orange); color: #1c1300; border-color: var(--orange); }
-@media (max-width: 560px) { .myd-fabbar { right: 12px; bottom: 12px; } .myd-fab { padding: 8px 11px; font-size: 12px; } }
+body.md-edit .myd-fabbar { position: fixed; right: 22px; bottom: 22px; margin: 0; z-index: 40; background: var(--bg2); border: 1px solid var(--border2, var(--border)); border-radius: 12px; padding: 8px; box-shadow: 0 8px 28px rgba(0, 0, 0, .45); }
+@media (max-width: 560px) { body.md-edit .myd-fabbar { right: 10px; bottom: 10px; left: 10px; justify-content: center; } .myd-fab { padding: 8px 11px; font-size: 12px; } }
 
 /* モーダル共通 */
 .myd-modal { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; }

@@ -606,22 +606,18 @@
     var host = $('view-mydash-body'); if (!host) return;
     buildCtx();
     if (!$('mydash-pinned')) {
-      var selOpts = (state.staff || []).map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === meId() ? ' selected' : '') + '>' + esc(s.name) + '</option>'; }).join('');
       host.innerHTML =
         '<div id="mydash-pinned">' +
-        '  <div class="md-selfbar">👤 自分：<select id="md-self" onchange="mydSetMe(this.value)">' + selOpts + '</select><span class="md-selfhint">個人BOXの対象</span></div>' +
         '  <div id="mydash-search-wrap" class="md-search"><input id="mydash-search-input" type="search" autocomplete="off" placeholder="🔍 検索（顧客・名前・車・ナンバー・予約番号・代車・日付…）" onfocus="pitSearchBind(\'mydash-search-wrap\',\'mydash-search-input\',\'mydash-search-results\')" oninput="pitSearchInput(this.value)"><div id="mydash-search-results" class="pit-search-results"></div></div>' +
         '  <div id="mydash-notes-area"></div>' +
         '</div>' +
         '<div class="md-flow" id="mydash-flow"></div>' +
         '<div class="myd-fabbar">' +
         '  <button class="myd-fab primary" onclick="mydOpenPalette()">＋ ボックス</button>' +
-        '  <button class="myd-fab" id="myd-edit-fab" onclick="mydToggleEdit()">🔧 編集</button>' +
+        '  <button class="myd-fab" id="myd-edit-fab" onclick="mydToggleEdit()">🎛 カスタマイズ</button>' +
         '  <button class="myd-fab" onclick="mydOpenPresets()">⚙️ プリセット</button>' +
         '</div>';
       bindFlow();
-    } else {
-      var sel = $('md-self'); if (sel) sel.value = meId();
     }
     window.PIT_BN_TARGET = 'mydash-notes-area';
     if (window.renderBoardNotes) renderBoardNotes();
