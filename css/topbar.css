@@ -100,8 +100,8 @@
 
 /* 右：新規予約＋ユーザー群（margin-left:auto で右寄せ・CarFlow .topbar-user 準拠） */
 .topbar-user { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
-/* ＋新規予約はアバターの左隣。少し間隔を開ける */
-.topbar-user .tb-newres { margin-right: 12px; }
+/* ＋新規予約はアバターの左隣。間隔を開ける（50px） */
+.topbar-user .tb-newres { margin-right: 50px; }
 .av {
   width: 30px; height: 30px; border-radius: 50%;
   background: linear-gradient(135deg, var(--green), var(--blue));
