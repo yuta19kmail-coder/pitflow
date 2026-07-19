@@ -513,6 +513,19 @@
         if (!list.length) return empty('予約担当の履歴はありません');
         return '<div class="md-list">' + list.map(function (c) { return rowCard(c.id, esc((window.fmtMD ? fmtMD(c.bookedAt) : c.bookedAt)) + '受付　' + esc(nm(c)) + ' ' + esc(carOf(c)), wtChip(c)); }).join('') + '</div>';
       }, more: function () { return openFoot('reserve', '予約'); }
+    },
+    p_sales: {
+      title: '売上', icon: '💴', person: true, sizes: ['s', 'm', 'l'],
+      body: function (sz, item) {
+        var ns = targetNames(item);
+        var list = C.cards.filter(function (c) { if (c.status !== 'returned') return false; var rd = c.returnDateFinal || c.returnDate || ''; return rd >= C.moS && rd <= C.moE && inTarget(taskStaff(c), ns); });
+        var sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
+        if (sz === 's') return kpi(man(sum), manUnit(sum), '当月 ' + list.length + '台', 'g');
+        var head = '<div class="md-inline">' + kpi(man(sum), manUnit(sum), '当月実績', 'g') + kpi(list.length, '台', '担当台数', 'b') + '</div>';
+        if (sz === 'm') return head;
+        var rec = list.slice().sort(function (a, b) { return amt(b) - amt(a); });
+        return head + '<div class="md-list" style="margin-top:8px">' + (rec.length ? rec.slice(0, 10).map(function (c) { return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), yen(amt(c)), 'amt'); }).join('') : empty('当月の担当実績はありません')) + '</div>';
+      }, more: function () { return openFoot('sales', '売上'); }
     }
   };
   function teamHintView(item) { return 'course1'; }
@@ -704,21 +717,32 @@
     var b = $('myd-pal-body');
     var dataEls = Object.keys(EL).filter(function (k) { return !EL[k].person; });
     var personEls = Object.keys(EL).filter(function (k) { return EL[k].person; });
-    var sec = function (title, keys) {
-      return '<div class="md-pal-sec">' + title + '</div>' + keys.map(function (k) {
-        var d = EL[k];
-        var chips = ['s', 'm', 'l', 'xl'].map(function (sz) { var ok = d.sizes.indexOf(sz) >= 0; return '<span class="md-szchip' + (ok ? '' : ' na') + '"' + (ok ? ' onclick="mydAdd(\'' + k + '\',\'' + sz + '\')"' : '') + '>' + SZL[sz] + '</span>'; }).join('');
-        return '<div class="md-pe"><span class="md-pe-ic">' + d.icon + '</span><span class="md-pe-n">' + esc(d.title) + (d.person ? '<small>（対象は追加後に選択）</small>' : '') + '</span><span class="md-pe-sz">' + chips + '</span></div>';
-      }).join('');
-    };
+    var dataSec = '<div class="md-pal-sec">📊 状況・数値</div>' + dataEls.map(function (k) {
+      var d = EL[k];
+      var chips = ['s', 'm', 'l', 'xl'].map(function (sz) { var ok = d.sizes.indexOf(sz) >= 0; return '<span class="md-szchip' + (ok ? '' : ' na') + '"' + (ok ? ' onclick="mydAdd(\'' + k + '\',\'' + sz + '\')"' : '') + '>' + SZL[sz] + '</span>'; }).join('');
+      return '<div class="md-pe"><span class="md-pe-ic">' + d.icon + '</span><span class="md-pe-n">' + esc(d.title) + '</span><span class="md-pe-sz">' + chips + '</span></div>';
+    }).join('');
+    // 個人BOX＝「誰のBOXを作るか」をここで選んでから追加（例：自分の売上／斎藤の売上）
+    var opts = '<option value="__me__">自分</option>' + assignableStaff().map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; }).join('');
+    var personSec = '<div class="md-pal-sec">👤 個人（担当者）＝誰のBOXを作るか選んで追加</div>' + personEls.map(function (k) {
+      var d = EL[k];
+      var chips = ['s', 'm', 'l', 'xl'].map(function (sz) { var ok = d.sizes.indexOf(sz) >= 0; return '<span class="md-szchip' + (ok ? '' : ' na') + '"' + (ok ? ' onclick="mydAddPerson(\'' + k + '\',\'' + sz + '\')"' : '') + '>' + SZL[sz] + '</span>'; }).join('');
+      return '<div class="md-pe"><span class="md-pe-ic">' + d.icon + '</span><span class="md-pe-n">' + esc(d.title) + '</span><select class="md-pe-person" id="md-pers-' + k + '">' + opts + '</select><span class="md-pe-sz">' + chips + '</span></div>';
+    }).join('') + '<div class="md-tiny">複数人（自分＋部下など）にしたい時は、追加後にBOXの 👤 から選び直せます。</div>';
     var scSec = '<div class="md-pal-sec">🔗 ショートカット（ビュー/アンカーへ飛ぶ）</div>' +
       '<div class="md-scgrid">' + SHORTCUTS.map(function (s, i) { return '<span class="md-scadd" onclick="mydAddSc(' + i + ')">' + s.icon + ' ' + esc(s.label) + '</span>'; }).join('') + '</div>';
-    b.innerHTML = sec('📊 状況・数値', dataEls) + sec('👤 個人（担当者）', personEls) + scSec +
+    b.innerHTML = dataSec + personSec + scSec +
       '<div class="md-pal-all"><button class="myd-fab primary" onclick="mydAddAll()">📥 全部のせ（まず全部見る）</button><span class="md-tiny">初めての人向け：一旦すべて表示して、要らないBOXを消していけます</span></div>';
     $('myd-pal').classList.add('show');
   };
   window.mydClosePalette = function () { $('myd-pal').classList.remove('show'); };
   window.mydAdd = function (e, s) { var l = curLayout(); var it = { e: e, s: s }; if (EL[e] && EL[e].person) it.p = 'me'; l.push(it); setCurLayout(l); renderFlow(); save(); toast(EL[e].title + '（' + SZL[s] + '）を追加'); };
+  window.mydAddPerson = function (e, s) {
+    var sel = $('md-pers-' + e); var v = sel ? sel.value : '__me__';
+    var it = { e: e, s: s, p: (v === '__me__' ? 'me' : [v]) };
+    var l = curLayout(); l.push(it); setCurLayout(l); renderFlow(); save();
+    toast((v === '__me__' ? '自分' : v) + 'の' + EL[e].title + '（' + SZL[s] + '）を追加');
+  };
   window.mydAddSc = function (i) { var s = SHORTCUTS[i]; var l = curLayout(); l.push({ e: 'sc', s: 's', view: s.view, range: s.range, label: s.label, icon: s.icon }); setCurLayout(l); renderFlow(); save(); toast('ショートカット「' + s.label + '」を追加'); };
   window.mydAddAll = function () {
     var l = curLayout();

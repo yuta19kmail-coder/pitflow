@@ -172,11 +172,12 @@ body.md-edit .md-box { outline: 1px dashed var(--border2, var(--border)); }
 
 /* パレット中身 */
 .md-pal-sec { font-size: 12px; font-weight: 800; color: var(--text2); margin: 14px 0 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
-.md-pe { padding: 8px 0; display: flex; align-items: center; gap: 10px; }
+.md-pe { padding: 8px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .md-pe-ic { font-size: 15px; }
-.md-pe-n { font-size: 13px; font-weight: 700; flex: 1; }
+.md-pe-n { font-size: 13px; font-weight: 700; flex: 1; min-width: 90px; }
 .md-pe-n small { font-weight: 500; color: var(--text3); font-size: 10px; margin-left: 4px; }
 .md-pe-sz { display: flex; gap: 6px; }
+.md-pe-person { background: var(--bg2); border: 1px solid var(--border2, var(--border)); border-radius: 8px; padding: 4px 8px; color: var(--text); font-size: 12px; font-family: inherit; font-weight: 700; }
 .md-scgrid { display: flex; flex-wrap: wrap; gap: 8px; }
 .md-scadd { font-size: 12px; font-weight: 700; border: 1px solid var(--border2, var(--border)); background: var(--bg3); color: var(--text2); border-radius: 8px; padding: 6px 11px; cursor: pointer; }
 .md-scadd:hover { border-color: var(--brand); color: #fff; background: var(--brand); }
