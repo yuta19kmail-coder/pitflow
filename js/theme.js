@@ -90,7 +90,7 @@
     var id = null; try { id = localStorage.getItem('pitflow_bn_me'); } catch (e) {}
     var m = staff.find(function (s) { return s.id === id; }) || staff.find(function (s) { return s.front; }) || staff[0];
     var name = (window.pitCurrentStaffName && pitCurrentStaffName()) || (m && m.name) || 'ゲスト';
-    return { name: name, initial: (name || '？').trim().charAt(0) || '？' };
+    return { name: name, initial: (name || '？').trim().slice(0, 2) || '？' };
   }
   window.pitRenderTopUser = function () {
     var u = currentUser();
