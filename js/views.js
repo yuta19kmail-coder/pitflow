@@ -6,6 +6,8 @@
 
 function showView(viewId){
   state.currentView = viewId;
+  // 付箋の表示先を既定（ダッシュボード）へ戻す。マイダッシュボードは renderMyDash 内で自分の器へ切替。
+  window.PIT_BN_TARGET = 'board-notes-area';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.si-item').forEach(i => i.classList.remove('active'));
 
@@ -38,6 +40,7 @@ function showView(viewId){
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
   if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
+  if (viewId === 'mydash' && window.renderMyDash) renderMyDash();
   if (viewId === 'maintdash' && window.renderMaintDash) renderMaintDash();
   if (viewId === 'shakencal' && window.renderShaken) renderShaken();
   if (viewId === 'shakenlog' && window.renderShakenLog) renderShakenLog();

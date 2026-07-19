@@ -163,7 +163,9 @@
   // メイン：ダッシュボードに描画
   // =========================================
   function renderBoardNotes() {
-    const target = document.getElementById('board-notes-area');
+    // 表示先はビューごとに切替可能（マイダッシュボードは 'mydash-notes-area'）。既定は従来のダッシュボード。
+    const target = document.getElementById(window.PIT_BN_TARGET || 'board-notes-area')
+      || document.getElementById('board-notes-area');
     if (!target) return;
 
     _ensureLabels();

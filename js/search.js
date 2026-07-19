@@ -11,6 +11,13 @@
 (function () {
   'use strict';
 
+  // 表示先（ダッシュボード / マイダッシュボード で入力欄・結果欄が別idのため差替え可能に）。
+  // 既定は従来のダッシュボード。各入力欄の onfocus で pitSearchBind() を呼んで切り替える。
+  var ST = { wrap: 'pit-search-wrap', input: 'pit-search-input', results: 'pit-search-results' };
+  window.pitSearchBind = function (wrap, input, results) {
+    ST = { wrap: wrap || ST.wrap, input: input || ST.input, results: results || ST.results };
+  };
+
   // 正規化：空白除去・全角英数→半角・カタカナ→ひらがな・小文字化
   function norm(s) {
     return (s == null ? '' : String(s))
@@ -194,7 +201,7 @@
 
   // 入力ハンドラ
   window.pitSearchInput = function (q) {
-    const box = document.getElementById('pit-search-results');
+    const box = document.getElementById(ST.results);
     if (!box) return;
     const raw = String(q || '').trim();
     if (!raw) { box.classList.remove('open'); box.innerHTML = ''; return; }
@@ -245,35 +252,35 @@
   };
 
   window.pitSearchClose = function () {
-    const box = document.getElementById('pit-search-results');
-    const inp = document.getElementById('pit-search-input');
+    const box = document.getElementById(ST.results);
+    const inp = document.getElementById(ST.input);
     if (box) { box.classList.remove('open'); box.innerHTML = ''; }
     if (inp) inp.value = '';
   };
   // パネルだけ隠す（入力ワードは残す＝あとで戻れる）
   window.pitSearchHide = function () {
-    const box = document.getElementById('pit-search-results');
+    const box = document.getElementById(ST.results);
     if (box) box.classList.remove('open');
   };
   // 直前の検索ワードで結果を出し直す（顧客情報を見て戻る用）
   // ※クリックで閉じた直後の「枠外クリックで閉じる」処理に巻き込まれないよう、次の周期で復元
   window.pitSearchReopen = function () {
     setTimeout(function () {
-      const inp = document.getElementById('pit-search-input');
+      const inp = document.getElementById(ST.input);
       if (inp && inp.value.trim()) window.pitSearchInput(inp.value);
     }, 0);
   };
 
   // 外側クリックで結果を閉じる（入力は残す）
   document.addEventListener('click', function (e) {
-    const wrap = document.getElementById('pit-search-wrap');
-    const box = document.getElementById('pit-search-results');
+    const wrap = document.getElementById(ST.wrap);
+    const box = document.getElementById(ST.results);
     if (!wrap || !box) return;
     if (!wrap.contains(e.target)) box.classList.remove('open');
   });
-  // 入力にフォーカスが戻ったら、語があれば再表示
+  // 入力にフォーカスが戻ったら、語があれば再表示（どちらの検索欄でも）
   document.addEventListener('focusin', function (e) {
-    if (e.target && e.target.id === 'pit-search-input' && e.target.value.trim()) {
+    if (e.target && (e.target.id === 'pit-search-input' || e.target.id === 'mydash-search-input') && e.target.value.trim()) {
       window.pitSearchInput(e.target.value);
     }
   });

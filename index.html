@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.124.7"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.125.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -25,6 +25,7 @@
 <link rel="stylesheet" href="css/sales.css?v=5">
 <link rel="stylesheet" href="css/shaken.css?v=14">
 <link rel="stylesheet" href="css/shaken-log.css?v=3">
+<link rel="stylesheet" href="css/mydash.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -75,7 +76,7 @@
     <button class="pl-btn" onclick="pitSampleLogin()">サンプルとして入る（開発用）</button>
     <button class="pl-btn ghost" disabled title="後日対応します">Google でログイン（後日対応）</button>
     <div class="pl-note">これは開発用のサンプルログインです。データはこの端末のブラウザ内に保存され、リロードしても残ります。本物の Google ログインとクラウド保存（CarFlow / StockFlow と同じ会社の Firebase）は後日つなぎます。</div>
-    <div class="pl-ver">PitFlow v0.124.7</div>
+    <div class="pl-ver">PitFlow v0.125.0</div>
   </div>
 </div>
 
@@ -87,7 +88,7 @@
     <div class="logo">
       <span><img src="images/app-icon.png" alt="" style="width:24px;height:24px;border-radius:6px;display:block"></span>
       <span><span class="pit">Pit</span>Flow</span>
-      <span class="ver">v0.124.7</span>
+      <span class="ver">v0.125.0</span>
       <span class="pit-dev-badge">🚧 開発中サンプル</span>
     </div>
     <div class="spacer"></div>
@@ -101,6 +102,11 @@
     <!-- ダッシュボード（単独） -->
     <div class="si-item active" data-view="dashboard" onclick="showView('dashboard')">
       <span class="icon">🏠</span><span>ダッシュボード</span>
+    </div>
+
+    <!-- マイダッシュボード（自分で組めるビルダー） -->
+    <div class="si-item" data-view="mydash" onclick="showView('mydash')">
+      <span class="icon">🧩</span><span>マイダッシュボード</span>
     </div>
 
     <!-- ▼ 一旦フラット表示（フライアウトのたたみは保留・section titleで区切り）。フライアウトに戻す時はこの範囲を si-flyout 版へ -->
@@ -156,11 +162,35 @@
       <div id="pit-search-wrap">
         <input id="pit-search-input" type="search" autocomplete="off"
                placeholder="🔍 検索（顧客・名前・車・ナンバー・予約番号・代車・日付…）"
+               onfocus="pitSearchBind('pit-search-wrap','pit-search-input','pit-search-results')"
                oninput="pitSearchInput(this.value)">
         <div id="pit-search-results" class="pit-search-results"></div>
       </div>
       <div id="view-dashboard-body"></div>
     </section>
+
+    <!-- ===== マイダッシュボード（ビルダー） ===== -->
+    <section id="view-mydash" class="view">
+      <div class="view-header">
+        <div class="view-title"><span class="icon">🧩</span>マイダッシュボード <span style="font-size:11px;color:var(--text3);font-weight:400">自分専用に組める・配置はアカウントに保存</span></div>
+        <div class="view-actions">
+          <button class="vh-btn primary" onclick="mydOpenPalette()">＋ ボックス追加</button>
+          <button class="vh-btn" id="myd-edit-btn" onclick="mydToggleEdit()">🔧 編集モード</button>
+          <button class="vh-btn" onclick="mydRefresh()">🔄 更新</button>
+        </div>
+      </div>
+      <div id="view-mydash-body"></div>
+    </section>
+
+    <!-- マイダッシュボード：ボックス追加パレット -->
+    <div class="md-pal-bk" id="myd-pal" onclick="if(event.target.id==='myd-pal')mydClosePalette()">
+      <div class="md-pal">
+        <span class="md-pal-x" onclick="mydClosePalette()">閉じる</span>
+        <h2>ボックスを追加</h2>
+        <div class="md-pal-note">要素を選び、サイズをクリックで追加。灰色のサイズはその要素には不向きなので選べません。</div>
+        <div id="myd-pal-body"></div>
+      </div>
+    </div>
 
     <!-- ===== 当日ビュー ===== -->
     <section id="view-today" class="view">
@@ -680,7 +710,7 @@
 <script src="js/firebase-init.js?v=8"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
 <script src="js/db-pit.js?v=35"></script>
-<script src="js/views.js?v=39"></script>
+<script src="js/views.js?v=40"></script>
 <script src="js/work-content.js?v=8"></script>
 <script src="js/card-detail.js?v=96"></script>
 <script src="js/card-view.js?v=34"></script>
@@ -692,8 +722,8 @@
 <script src="js/sample-reservations.js?v=27"></script>
 <script src="js/dashboard.js?v=15"></script>
 <script src="js/parking.js?v=4"></script>
-<script src="js/board-notes.js?v=1"></script>
-<script src="js/search.js?v=8"></script>
+<script src="js/board-notes.js?v=2"></script>
+<script src="js/search.js?v=9"></script>
 <script src="js/maintdash.js?v=2"></script>
 <script src="js/sales.js?v=8"></script>
 <script src="js/sales-print.js?v=3"></script>
@@ -722,6 +752,7 @@
 <script src="js/card-hover.js?v=29"></script>
 <script src="js/phase-popup.js?v=10"></script>
 <script src="js/return-popup.js?v=3"></script>
+<script src="js/mydash.js?v=1"></script>
 <script src="js/main.js?v=11"></script>
 <script src="js/auto-update.js?v=1"></script>
 
