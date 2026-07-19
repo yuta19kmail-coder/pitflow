@@ -26,7 +26,7 @@
 <link rel="stylesheet" href="css/shaken.css?v=14">
 <link rel="stylesheet" href="css/shaken-log.css?v=3">
 <link rel="stylesheet" href="css/mydash.css?v=4">
-<link rel="stylesheet" href="css/topbar.css?v=2">
+<link rel="stylesheet" href="css/topbar.css?v=3">
 <link rel="stylesheet" href="css/help.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
@@ -91,7 +91,6 @@
       <span><span class="pit">Pit</span>Flow</span>
     </div>
     <span class="ver">v0.128.0</span>
-    <button class="tb-btn primary" onclick="openNewReserve()">＋ 新規予約</button>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -100,8 +99,9 @@
     </div>
     <!-- テーマ4パターン循環（ダーク→ライト→ダーク・リキッド→ライト・リキッド） -->
     <button class="tb-theme-cycle" id="tb-theme-cycle" onclick="cycleTheme()" title="テーマ切替" aria-label="テーマ切替">🌙</button>
-    <!-- 右：ユーザー群（アバター/名前/同期/ヘルプ/ログアウト） -->
+    <!-- 右：新規予約＋ユーザー群（アバター/名前/同期/ヘルプ/ログアウト） -->
     <div class="topbar-user">
+      <button class="tb-btn primary tb-newres" onclick="openNewReserve()">＋ 新規予約</button>
       <span class="av" id="tb-avatar">?</span>
       <span class="tb-username" id="tb-username">ゲスト</span>
       <div class="sync-indicator sync-online" onclick="pitSyncSample()" title="同期（今はサンプル）"><span class="sync-dot"></span><span class="sync-text">同期</span></div>

@@ -98,8 +98,10 @@
 }
 .tb-theme-cycle:hover { background: var(--bg4); border-color: var(--border2); }
 
-/* 右：ユーザー群（margin-left:auto で右寄せ・CarFlow .topbar-user 準拠） */
+/* 右：新規予約＋ユーザー群（margin-left:auto で右寄せ・CarFlow .topbar-user 準拠） */
 .topbar-user { display: flex; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+/* ＋新規予約はアバターの左隣。少し間隔を開ける */
+.topbar-user .tb-newres { margin-right: 12px; }
 .av {
   width: 30px; height: 30px; border-radius: 50%;
   background: linear-gradient(135deg, var(--green), var(--blue));
