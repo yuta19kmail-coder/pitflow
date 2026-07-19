@@ -39,9 +39,7 @@ function showView(viewId){
   if (viewId === 'result')  renderResult();
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
-  if (viewId === 'dashboard' && window.renderDashboard) renderDashboard();
-  if (viewId === 'mydash' && window.renderMyDash) renderMyDash();
-  if (viewId === 'maintdash' && window.renderMaintDash) renderMaintDash();
+  if (viewId === 'dashboard' && window.renderMyDash) renderMyDash();   // ダッシュボード＝ビルダー（旧ダッシュ/整備ダッシュを統合）
   if (viewId === 'shakencal' && window.renderShaken) renderShaken();
   if (viewId === 'shakenlog' && window.renderShakenLog) renderShakenLog();
   if (viewId === 'sales' && window.renderSales) renderSales();
