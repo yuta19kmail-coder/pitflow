@@ -11,9 +11,11 @@
 .md-search input { width: 100%; background: var(--bg2); border: 1px solid var(--border2, var(--border)); border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 14px; font-family: inherit; }
 .md-search input:focus { outline: none; border-color: var(--brand); }
 
-/* 自由フロー（小=3〜5自動／中=2／大・特大=全幅） */
-.md-flow { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
-.md-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2, 14px); padding: 12px 14px; position: relative; min-width: 0; transition: box-shadow .12s, border-color .12s; }
+/* 自由フロー（小=3〜5自動／中=2／大・特大=全幅）。同じ行のBOXは高さを揃える（align-items:stretch） */
+.md-flow { display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch; }
+.md-box { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r2, 14px); padding: 12px 14px; position: relative; min-width: 0; transition: box-shadow .12s, border-color .12s; display: flex; flex-direction: column; }
+/* 本文が縦に伸びて余白を埋める＝行内で高さが揃う */
+.md-box > .md-body { flex: 1 1 auto; }
 .md-box.md-s { flex: 1 1 195px; max-width: 320px; }
 .md-box.md-m { flex: 1 1 calc(50% - 7px); }
 .md-box.md-l { flex: 1 1 100%; }
