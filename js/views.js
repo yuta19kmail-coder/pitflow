@@ -40,6 +40,7 @@ function showView(viewId){
   if (viewId === 'loaner')  renderLoaner();
   if (viewId === 'customers' && window.renderCustomers) renderCustomers();
   if (viewId === 'dashboard' && window.renderMyDash) renderMyDash();   // ダッシュボード＝ビルダー（旧ダッシュ/整備ダッシュを統合）
+  if (viewId === 'help' && window.renderHelp) renderHelp();
   if (viewId === 'shakencal' && window.renderShaken) renderShaken();
   if (viewId === 'shakenlog' && window.renderShakenLog) renderShakenLog();
   if (viewId === 'sales' && window.renderSales) renderSales();
