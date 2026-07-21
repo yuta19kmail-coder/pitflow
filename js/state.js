@@ -187,6 +187,10 @@ window.state = {
     // 概算金額の既定（team別＝default:国産 / import:輸入・円）
     estAmount: { default:{ shaken:70100, '12pt':21200, general:26800, oil:8900, bp:400000, coat1y:35000, coat3m:20000, _default:40000 },
                  import:{ shaken:140800, '12pt':43200, general:62000, oil:19200, bp:760800, coat1y:45000, coat3m:26000, _default:80000 } },
+    // 🔍 点検料（作業タイプ別・円・税抜）＝メカニック実績の配分で「点検者ぶん」として先に抜く額。
+    //   車検1.5万／12点・一般1万／オイル・板金・コーティングは純作業で0。確定売上が点検料未満なら点検/作業50:50。
+    //   詳細＝mech-summary.js の配分エンジン。設定画面から調整できる（未設定はここの初期値）。
+    inspectFee: { shaken:15000, '12pt':10000, general:10000, oil:0, bp:0, coat1y:0, coat3m:0, _default:0 },
     // 売上目標（円/月）＝最低目標〜最高目標(天井)。クォーター換算は÷4（売上表Excel 4年分の実績から）
     target: { monthMin: 15000000, monthMax: 20000000 },
     // 平均単価の初期値（円・チーム別）。実績が貯まれば pitUnitPrice() が直近3ヶ月平均に自動切替

@@ -39,6 +39,7 @@
     const workType = rnd(WORK);
     const dropType = rnd(DROP);
     const yn = imp ? rnd(YUNYU) : null;
+    const MP = imp ? ['山根','蓮沼','箱崎','菅谷'] : ['山田','椎名','専務'];   // メカニックプール（課別）v0.129.0
     return {
       id: 'f' + id,
       boardId: imp ? 'import' : 'default',
@@ -57,7 +58,10 @@
       returnTime: timeSlot(),
       estHoldDays: (window.pitEstHold ? pitEstHold(workType, dropType) : 5),  // 概算預かり日数
       estAmount: (window.pitEstAmount ? pitEstAmount(workType) : 100000),     // 概算金額（タイプ別平均）
-      needLoaner: false, needWash: Math.random() < 0.4, urgent: Math.random() < 0.06, memo: ''
+      needLoaner: false, needWash: Math.random() < 0.4, urgent: Math.random() < 0.06, memo: '',
+      // 🧑‍🔧 メカニック実績のサンプル割当（点検＝車検/12点/一般のみ1人／整備＝1〜3人・重複あり）v0.129.0
+      inspectors: (['shaken','12pt','general'].indexOf(workType) >= 0) ? [ rnd(MP) ] : [],
+      mechanics: (function(){ var n = (workType==='oil') ? (Math.random()<0.8?1:2) : (workType==='bp') ? ri(1,2) : ri(1,3); var a=[]; for (var i=0;i<n;i++) a.push(rnd(MP)); return a; })()
     };
   }
 

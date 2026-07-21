@@ -98,6 +98,15 @@
       phaseAt: Date.now(), workTypes: [wt],
       _sample: true,   // ★サンプル生成カード印＝カード開閉時に顧客控えへ書き戻さない（重複追加防止）
     };
+    // 🧑‍🔧 メカニック実績のサンプル割当（点検担当者/整備担当者）v0.129.0。
+    //   点検＝車検/12点/一般は1人（オイル/板金は点検なし）。整備＝1〜3人、たまに重複＝手伝い比率。
+    var _mpool = MECH[div] || ['山田'];
+    c.inspectors = (['shaken','12pt','general'].indexOf(wt) >= 0) ? [ rnd(_mpool) ] : [];
+    var _mn = (wt === 'oil') ? (Math.random() < 0.8 ? 1 : 2)
+            : (wt === 'bp')  ? (1 + Math.floor(Math.random() * 2))
+            :                  (1 + Math.floor(Math.random() * 3));
+    c.mechanics = [];
+    for (var _mi = 0; _mi < _mn; _mi++) c.mechanics.push(rnd(_mpool));
     // 併用：車検/12点/一般 の一部にコーティング（3M/1Y）を追加＝バッジ2個。
     // 実績＝コーティング付帯は全体の約3.7%。対象(車検/12点/一般≒87%)に 0.045 で ≒3.9%。
     if (['shaken','12pt','general'].indexOf(wt) >= 0 && Math.random() < 0.045){

@@ -11,6 +11,7 @@
   'use strict';
 
   let _c = null;            // 現在開いているカード
+  let _mechEditOpen = {};   // 🧑‍🔧 返車後カードで担当を「編集」表示にしているか（id→true）v0.129.0
   const DOW = ['日','月','火','水','木','金','土'];
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -449,9 +450,71 @@
       const on = !!done[i]; if(on) n++;
       return '<div class="cv-chk'+(on?' on':'')+'" onclick="cvMaint('+i+',this)"><span class="cv-box">'+(on?'✓':'')+'</span>'+esc(it)+'</div>';
     }).join('');
-    return '<div class="cv-sec"><div class="cv-sect">🔧 作業チェック（'+esc(wt?wt.label:'作業')+'）</div>'
+    return mechSectionHtml(c)
+      + '<div class="cv-sec"><div class="cv-sect">🔧 作業チェック（'+esc(wt?wt.label:'作業')+'）</div>'
       + '<div class="cv-prog">'+n+' / '+items.length+' 完了</div><div class="cv-checks">'+h2+'</div></div>';
   }
+
+  /* ===== 🧑‍🔧 作業担当（点検担当者／整備担当者）＝メンバー欄から選ぶ・重複OK・最大10人（v0.129.0） =====
+     ・1人選ぶと次の空欄が出る。同じ人を複数回でもOK＝作業割合になる。保持＝c.inspectors[]/c.mechanics[]。
+     ・返車済み（実績化後）は「割合表示」に切替（✎で編集に戻せる）。配分計算は mech-summary.js。 */
+  const MECH_MAX = 10;
+  function mechOpts(){ return (state.staff||[]).map(function(s){ return s.name; }).filter(Boolean); }
+  function mechSel(role, idx, val, opts, no){
+    let h = '<div class="cf-mech-row"><span class="cf-mech-no" title="'+no+'人目">'+no+'</span>';
+    h += '<select class="cf-input cf-mech-sel" onchange="cvMechPick(\''+role+'\','+idx+',this.value)">';
+    h += '<option value="">―</option>';
+    opts.forEach(function(n){ h += '<option value="'+esc(n)+'"'+(n===val?' selected':'')+'>'+esc(n)+'</option>'; });
+    h += '</select></div>';
+    return h;
+  }
+  function mechPicker(c, role, title, icon){
+    const arr = Array.isArray(c[role]) ? c[role] : [];
+    const opts = mechOpts();
+    const boxes = arr.slice(0, MECH_MAX);
+    let h = '<div class="cf-mech-block"><div class="cf-label">'+icon+' '+title+'</div><div class="cf-mech-rows">';
+    boxes.forEach(function(nm, i){ h += mechSel(role, i, nm, opts, i+1); });
+    if (boxes.length < MECH_MAX) h += mechSel(role, boxes.length, '', opts, boxes.length+1);
+    h += '</div></div>';
+    return h;
+  }
+  function mechSectionHtml(c){
+    const returned = (c.status === 'returned');
+    const showAlloc = returned && !_mechEditOpen[c.id];
+    let h = '<div class="cv-sec"><div class="cv-sect">🧑‍🔧 作業担当（点検・整備）</div>';
+    if (showAlloc){
+      h += (window.pitMechAllocText ? pitMechAllocText(c) : '');
+      h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')">✎ 割り当てを編集</button></div>';
+    } else {
+      h += mechPicker(c, 'inspectors', '点検担当者', '🔍');
+      h += mechPicker(c, 'mechanics',  '整備担当者', '🔧');
+      h += '<div class="cf-mech-note">1人選ぶと次の欄が出ます（最大'+MECH_MAX+'人・同じ人を複数回でもOK＝作業割合になります）。整備者が居なければ点検者が全額、点検者が居なければ整備者が全額。</div>';
+      if (returned){
+        h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')">割合表示に戻す</button></div>';
+        h += '<div class="cf-mech-preview">' + (window.pitMechAllocText ? pitMechAllocText(c) : '') + '</div>';
+      }
+    }
+    h += '</div>';
+    return h;
+  }
+  function _mechRerender(){ const el = document.getElementById('cv-p-maint'); if (el && _c) el.innerHTML = maintTab(_c); }
+  window.cvMechPick = function(role, idx, val){
+    if (!_c) return;
+    if (!Array.isArray(_c[role])) _c[role] = [];
+    const arr = _c[role];
+    if (idx >= arr.length){
+      if (val && arr.length < MECH_MAX) arr.push(val);   // 末尾の空欄＝追加
+    } else {
+      if (val === '') arr.splice(idx, 1);                // ―＝削除（順に詰まる）
+      else arr[idx] = val;                                // 差し替え
+    }
+    save();
+    _mechRerender();
+  };
+  window.cvMechToggleEdit = function(id){
+    _mechEditOpen[id] = !_mechEditOpen[id];
+    _mechRerender();
+  };
 
   function officeTab(c){
     const items = ['入金処理','原価チェック','ファイルバラシ'];

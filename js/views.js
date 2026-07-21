@@ -44,6 +44,7 @@ function showView(viewId){
   if (viewId === 'shakencal' && window.renderShaken) renderShaken();
   if (viewId === 'shakenlog' && window.renderShakenLog) renderShakenLog();
   if (viewId === 'sales' && window.renderSales) renderSales();
+  if (viewId === 'worksum' && window.renderWorkSummary) renderWorkSummary();   // 🧑‍🔧 作業サマリー（v0.129.0）
   if (viewId === 'parking' && window.renderParking) renderParking();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();
   if (viewId === 'settings' && window.renderSettings) renderSettings();
