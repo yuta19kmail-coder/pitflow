@@ -15,7 +15,7 @@
    保存キー：localStorage 'pitflow_data_v1'
    ======================================== */
 (function () {
-  const LS_KEY = 'pitflow_data_v11';   // v11: サンプル全面刷新（現行スキーマ＋付箋サンプル）で再シード
+  const LS_KEY = 'pitflow_data_v12';   // v12: メカニック実績（点検/整備担当＋確定売上）をサンプルに追加で再シード（v11=サンプル全面刷新）
 
   const PitDB = {
     mode: 'local',      // 'local' | 'cloud'

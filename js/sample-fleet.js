@@ -80,6 +80,9 @@
       const c = baseCard(id, imp);
       c.status = 'returned';
       c.reserveDate = ymdL(inD); c.returnDate = ymdL(out); c.completedAt = ymdL(out);
+      c.returnDateFinal = ymdL(out);
+      // 💴 確定売上（実額感＝概算±で分散・税抜・100円丸め）＝メカニック実績/売上ビューの実績金額のもと v0.129.1
+      c.amountFinal = Math.round(c.estAmount * (0.85 + Math.random() * 0.4) / 100) * 100;
       cards.push(c);
     }
 
