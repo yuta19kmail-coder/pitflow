@@ -14,7 +14,7 @@
     { key:'carflow',    url:'https://carflow.kobayashi-motors.com',           icon:'🚙', name:'CarFlow',    color:'#378ADD', dx:121, dy:-88  },
     { key:'stockflow',  url:'https://stockflow.kobayashi-motors.com',         icon:'📦', name:'StockFlow',  color:'#7c3aed', dx:148, dy:-23  },
     { key:'coreboard',  url:'https://coreboard.kobayashi-motors.com', icon:'📋', name:'CoreBoard',  color:'#06b6d4', dx:8,   dy:-235 },
-    { key:'corenote',   url:'https://yuta19kmail-coder.github.io/CoreNote/',  icon:'📝', name:'CoreNote',   color:'#ec4899', dx:74,  dy:-223 },
+    { key:'corenote',   url:'https://corenote.kobayashi-motors.com',          icon:'📝', name:'CoreNote',   color:'#ec4899', dx:74,  dy:-223 },
     { key:'coretools',  url:'https://coretools.kobayashi-motors.com', icon:'🧰', name:'CoreTools',  color:'#64748b', dx:134, dy:-193 },
     { key:'coremembers',url:'https://coremembers.kobayashi-motors.com',                                               icon:'👥', name:'CoreMembers',color:'#ea580c', dx:183, dy:-147 },
     { key:'coretemplate',url:'https://coretemplate.kobayashi-motors.com',                                             icon:'💬', name:'CoreTemplate',color:'#6366f1', dx:217, dy:-90  },
