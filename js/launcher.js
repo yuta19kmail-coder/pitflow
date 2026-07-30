@@ -1,5 +1,9 @@
 /* ============================================
    CoreFlow アプリランチャー（共通：全アプリで同一）
+   v2.3（2026-07-30）：球のアイコンを絵文字→正式の丸ロゴ画像に差し替え。
+     画像は CoreFlow の /icons/ に置いた1組を全アプリで共有（＝直すのはCoreFlowの1箇所だけ）。
+     読めなかった時は今までどおり絵文字にフォールバックする。CSS(launcher.css)は無改修
+     ＝必要な指定はこのファイルが <style> を注入する。
    v2.2（2026-07-04）：中心＝CoreFlow（太陽・クリックでCoreFlowへ）＋公転2周。
      内周(Flow系)：MHS / PitFlow / CarFlow / StockFlow
      外周(Core系＋Money)：CoreBoard / CoreNote / CoreTools / CoreMembers / CoreTemplate / MoneyFlow
@@ -7,6 +11,10 @@
    ============================================ */
 (function(){
   const COREFLOW_URL = 'https://coreflow.kobayashi-motors.com';
+  // 丸アイコンの置き場（CoreFlow中央配信）。差し替えたら ICON_V を上げれば全アプリに伝わる。
+  const ICON_BASE = COREFLOW_URL + '/icons/';
+  const ICON_V    = '1';
+  const iconURL = (key)=> ICON_BASE + key + '.png?v=' + ICON_V;
 
   const APPS = [
     { key:'mhs',        url:'https://mhs.kobayashi-motors.com',       icon:'📅', name:'MHS',        color:'#dc2626', dx:0,   dy:-150 },
@@ -22,6 +30,28 @@
   ];
 
   function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+  /* v2.3：画像用の指定だけをここで注入（launcher.css は各アプリ配布物なので触らない） */
+  function injectCSS(){
+    if(document.getElementById('cf-launcher-img-css')) return;
+    const st = document.createElement('style');
+    st.id = 'cf-launcher-img-css';
+    st.textContent =
+      '.cf-lo-ball>img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover;pointer-events:none;-webkit-user-drag:none;user-select:none}' +
+      '.cf-lo-sun>img{width:88%;height:88%;display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none}';
+    (document.head || document.documentElement).appendChild(st);
+  }
+
+  /* 画像が読めなかった球だけ、そっと絵文字に戻す */
+  function fallback(overlay){
+    overlay.querySelectorAll('img[data-cf-emoji]').forEach(function(img){
+      img.addEventListener('error', function(){
+        const em = img.getAttribute('data-cf-emoji') || '';
+        const host = img.parentNode;
+        if(host){ img.remove(); host.textContent = em; }
+      });
+    });
+  }
 
   function init(){
     const mount = document.querySelector('[data-cf-launcher]');
@@ -55,7 +85,7 @@
             'data-color="'+escAttr(a.color)+'" ' +
             'data-url="'+escAttr(a.url||'')+'" ' +
             (disabled ? 'aria-disabled="true" ' : '') +
-            '>'+a.icon+'</a>' +
+            '><img src="'+escAttr(iconURL(a.key))+'" alt="'+escAttr(a.name)+'" data-cf-emoji="'+escAttr(a.icon)+'" draggable="false"></a>' +
           '<span class="cf-lo-label">'+escAttr(a.name)+'</span>' +
         '</div>'
       );
@@ -66,12 +96,16 @@
       '<div class="cf-lo-catcher"></div>' +
       '<div class="cf-lo-hotzone">' +
         '<div class="cf-lo-stage" aria-hidden="true">' +
-          '<a class="cf-lo-sun" ' + (currentApp === 'coreflow' ? '' : 'href="'+COREFLOW_URL+'" ') + 'data-app="coreflow" title="CoreFlow（玄関へ）">🏠</a>' +
+          '<a class="cf-lo-sun" ' + (currentApp === 'coreflow' ? '' : 'href="'+COREFLOW_URL+'" ') + 'data-app="coreflow" title="CoreFlow（玄関へ）">' +
+          '<img src="'+escAttr(iconURL('coreflow'))+'" alt="CoreFlow" data-cf-emoji="🏠" draggable="false">' +
+        '</a>' +
           '<span class="cf-lo-sunlabel">CoreFlow</span>' +
           ballsHTML +
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
+    injectCSS();
+    fallback(overlay);
 
     const root    = document.body;
     const trigger = document.getElementById('cf-trigger');
