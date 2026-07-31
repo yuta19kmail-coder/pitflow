@@ -2,7 +2,7 @@
    card-view.js  -  予約確定後カード詳細（読み取り主体・2カラム・タブ）
    ----------------------------------------
    設計＝モック「構成案11」。openCard(modal) から renderCardView() を呼ぶ。
-   既存フォーム（renderCardForm）は新規予約(page)＋「✏ 予約を編集」で温存。
+   既存フォーム（renderCardForm）は新規予約(page)＋「<i data-ic=pencil data-ics=16></i> 予約を編集」で温存。
    クラス名は衝突回避のため全て cv- 接頭辞。state/db は既存の保存に乗る
    （新フィールドは sample-data.js の card() 既定＋ここで || フォールバック）。
    公開：window.renderCardView / openCardEditForm / cv*（各操作）
@@ -11,7 +11,7 @@
   'use strict';
 
   let _c = null;            // 現在開いているカード
-  let _mechEditOpen = {};   // 🧑‍🔧 返車後カードで担当を「編集」表示にしているか（id→true）v0.129.0
+  let _mechEditOpen = {};   // <i data-ic=user data-ics=16></i> 返車後カードで担当を「編集」表示にしているか（id→true）v0.129.0
   const DOW = ['日','月','火','水','木','金','土'];
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -93,7 +93,7 @@
 
     // 1行目：名前＋予約を編集
     h += '<div class="cv-id1"><span class="cv-nm">'+esc(c.customer||'（未入力）')+' <small>様</small></span>'
-       + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')">✏️ 予約を編集</span></div>';
+       + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')"><i data-ic=pencil data-ics=16></i> 予約を編集</span></div>';
     // 2行目：車種＋ナンバー＋カルテNo
     h += '<div class="cv-id2"><span class="cv-car">'+esc(c.car||'（車種未入力）')+'</span>'
        + (c.plate?'<span class="cv-plate">'+esc(c.plate)+'</span>':'')
@@ -109,15 +109,15 @@
     // 車検枠（作業内容コンテナ）
     let badges = '';
     if (dt) badges += (window.pitDropBadges ? pitDropBadges(c, function(o){ return '<span class="cv-bdg cv-drop">'+esc(o.label.length<=1?(o.desc||o.label):o.label)+'</span>'; }) : '<span class="cv-bdg cv-drop">'+esc(dt.label)+'</span>');
-    if (c.consult) badges += '<span class="cv-bdg cv-consult">💬 相談</span>';
+    if (c.consult) badges += '<span class="cv-bdg cv-consult"><i data-ic=comment data-ics=16></i> 相談</span>';
     // 特殊（保証/保険）＝作業タイプとセットの時だけ付く。グレーのアウトライン表示 v0.116.0
     if (Array.isArray(c.workSpecials) && c.workSpecials.length){
       c.workSpecials.forEach(function(id){ var lb = window.pitSpecialLabel ? pitSpecialLabel(id) : ''; if (lb) badges += '<span class="cv-bdg cv-special">'+esc(lb)+'</span>'; });
     }
-    if (c.earlyDiscount) badges += '<span class="cv-bdg cv-early">🏷️ 早期割</span>';
+    if (c.earlyDiscount) badges += '<span class="cv-bdg cv-early"><i data-ic=tag data-ics=16></i> 早期割</span>';
     if (!c.needLoaner) badges += '<span class="cv-bdg cv-none">代車なし</span>';
     h += '<div class="cv-wframe" style="border-left-color:'+wtColor+'">'
-       + '<div class="cv-wftop"><span class="cv-wftype" style="color:'+wtColor+'">🔧 '+esc(wtLabel)+'</span>'
+       + '<div class="cv-wftop"><span class="cv-wftype" style="color:'+wtColor+'"><i data-ic=wrench data-ics=16></i> '+esc(wtLabel)+'</span>'
        + '<span class="cv-wfbadges">'+badges+'</span></div></div>';
 
     // 代車メーター
@@ -136,7 +136,7 @@
     const arr = Array.isArray(c.drive) ? c.drive : [];
     const tags = ['leftHand','mt','lowCar','noShoes'].filter(function(k){ return arr.indexOf(k)>=0; });
     if (!tags.length) return '';
-    return '<div class="cv-drvbox"><div class="cv-drvh">⚠️ 車両注意</div><div class="cv-drvrow">'
+    return '<div class="cv-drvbox"><div class="cv-drvh"><i data-ic=warn data-ics=16></i> 車両注意</div><div class="cv-drvrow">'
       + tags.map(function(k){ return '<span class="cv-drv">'+DRIVE_LABELS[k]+'</span>'; }).join('')
       + '</div></div>';
   }
@@ -161,7 +161,7 @@
     let pop = '<span class="cv-telpop"><b>連絡先</b>';
     list.forEach(function(t){ pop += '<span class="cv-tl"><i>'+esc(t.label||'')+(t.primary?'・代表':'')+'</i>'+esc(t.tel||'')+'</span>'; });
     pop += '</span>';
-    return '<span class="cv-telwrap"><span class="cv-tel">☎ '+esc(primary.tel||'')+extra+'</span>'+(list.length?pop:'')+'</span>';
+    return '<span class="cv-telwrap"><span class="cv-tel"><i data-ic=phone data-ics=16></i> '+esc(primary.tel||'')+extra+'</span>'+(list.length?pop:'')+'</span>';
   }
 
   function loanerHtml(c){
@@ -202,10 +202,10 @@
   function rightHtml(c){
     let h = pbarHtml(c);
     h += '<div class="cv-tabs">'
-      + '<button class="cv-tab on" data-p="cover" onclick="cvTab(this)">📝 表紙</button>'
-      + '<button class="cv-tab" data-p="flow" onclick="cvTab(this)">🕒 フロー</button>'
-      + '<button class="cv-tab" data-p="maint" onclick="cvTab(this)">🔧 整備</button>'
-      + '<button class="cv-tab" data-p="office" onclick="cvTab(this)">🗂 バックオフィス</button></div>';
+      + '<button class="cv-tab on" data-p="cover" onclick="cvTab(this)"><i data-ic=pencil data-ics=16></i> 表紙</button>'
+      + '<button class="cv-tab" data-p="flow" onclick="cvTab(this)"><i data-ic=clock data-ics=16></i> フロー</button>'
+      + '<button class="cv-tab" data-p="maint" onclick="cvTab(this)"><i data-ic=wrench data-ics=16></i> 整備</button>'
+      + '<button class="cv-tab" data-p="office" onclick="cvTab(this)"><i data-ic=folder data-ics=16></i> バックオフィス</button></div>';
     h += '<div class="cv-body">'
       + '<div class="cv-panel on" id="cv-p-cover">'+coverTab(c)+'</div>'
       + '<div class="cv-panel" id="cv-p-flow">'+flowTab(c)+'</div>'
@@ -238,7 +238,7 @@
         const n = window.daysFromToday ? daysFromToday(c.outsourceDue) : null;
         dueInfo = '完了予定 '+fmtMD(c.outsourceDue)+(n!=null ? '（'+(n>0?'あと'+n+'日':(n===0?'本日':Math.abs(n)+'日超過'))+'）' : '');
       }
-      osSec = '<div class="cv-sec"><div class="cv-sect">🤝 外注</div>';
+      osSec = '<div class="cv-sec"><div class="cv-sect"><i data-ic=external data-ics=16></i> 外注</div>';
       osSec += '<div class="cv-fixrow"><div class="cv-frt">外注先（どこに出しているか）</div><div class="cv-frb">'
         + '<select class="cv-fixinput" onchange="cvOutPartner(this.value)">'+opts+'</select>'
         + (inN!=null ? '<span class="cv-plan">外注 '+inN+'日目</span>' : '') + '</div></div>';
@@ -264,7 +264,7 @@
     if (c.status === 'returned'){
       const fa = c.amountFinal;
       const faStr = (fa!=null&&fa!=='') ? Number(fa).toLocaleString() : '';
-      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定売上金額（請求額） <span class="cv-locktag">🔒 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockFinal()">✏️ 編集</button></div><div class="cv-frb">'
+      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定売上金額（請求額） <span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockFinal()"><i data-ic=pencil data-ics=16></i> 編集</button></div><div class="cv-frb">'
         + '<span class="cv-fixval" id="cv-finlock">'+(faStr?('¥'+faStr):'—')+'</span>'
         + '<span class="cv-unlockwrap" id="cv-finedit" style="display:none">'
           + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-final" type="text" inputmode="numeric" value="'+esc(faStr)+'" data-prev="'+esc(faStr)+'" oninput="cvAmtChange(\'final\')">'
@@ -276,7 +276,7 @@
       // 実績移行後の返車日も確定情報としてロック（表示のみ）。✏️編集でその場で直せる v0.117.0/0.118.0
       const shownRet = c.returnDateFinal || c.returnDate || '';
       const retStr = (shownRet?fmtMD(shownRet):'—')+(c.returnTime?('　'+esc(c.returnTime)):'');
-      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag">🔒 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockReturn()">✏️ 編集</button></div><div class="cv-frb">'
+      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockReturn()"><i data-ic=pencil data-ics=16></i> 編集</button></div><div class="cv-frb">'
         + '<span class="cv-fixval" id="cv-retlock">'+retStr+'</span>'
         + '<span class="cv-unlockwrap" id="cv-retedit" style="display:none">'
           + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
@@ -302,7 +302,7 @@
       // 実績＝完TEL・支払い・洗車・お礼LINE・車販依頼などをまとめて読み取り専用のアーカイブ表示 v0.120.0
       h += archiveHtml(c, _csShaken, _csCoat);
     } else {
-      h += '<div class="cv-sec"><div class="cv-sect">🛒 車販部門への依頼</div>';
+      h += '<div class="cv-sec"><div class="cv-sect"><i data-ic=cart data-ics=16></i> 車販部門への依頼</div>';
       if (_csShaken) h += pickRow('車検ライト磨き', [['1','する'],['0','しない']], c.headlight?'1':'0', 'headlight');
       if (_csCoat)   h += pickRow('コーティング受注', [['1','OK'],['0','—']], c.coatingOK?'1':'0', 'coatingok');
       h += pickRow('車販依頼', [['1','あり'],['0','なし']], c.salesReq?'1':'0', 'salesreq');
@@ -319,12 +319,12 @@
       const _rcTxt = _rcH.map(function(r){ return (window.fmtMD?fmtMD(r.date):r.date)+' '+_slT(r.slot)+(r.staff?'・'+esc(r.staff):''); }).join('　');
       if (_si.result==='done'){
         // 済＝「いつ行く？」は非表示。実施サマリのみ。
-        h += '<div class="cv-sec"><div class="cv-sect">🔎 車検</div>'
-          + '<div class="cv-shdone"><div class="cv-shdone-main">✅ 車検済　'+ (_si.resultDate&&window.fmtMD?fmtMD(_si.resultDate):(_si.resultDate||'')) +'　'+ _slT(_si.resultSlot) +'　<span class="cv-shstaff">担当：'+ esc(_si.resultStaff||'—') +'</span></div>'
+        h += '<div class="cv-sec"><div class="cv-sect"><i data-ic=search data-ics=16></i> 車検</div>'
+          + '<div class="cv-shdone"><div class="cv-shdone-main"><i data-ic=check data-ics=16></i> 車検済　'+ (_si.resultDate&&window.fmtMD?fmtMD(_si.resultDate):(_si.resultDate||'')) +'　'+ _slT(_si.resultSlot) +'　<span class="cv-shstaff">担当：'+ esc(_si.resultStaff||'—') +'</span></div>'
           + (_rcH.length? '<div class="cv-shrc">再検 '+_rcH.length+'回：'+_rcTxt+'</div>':'')
           + '<button class="cv-shbtn ghost" onclick="cvShakenReopen()">↩ 済を取り消す</button></div></div>';
       } else {
-        h += '<div class="cv-sec"><div class="cv-sect">📅 車検スケジュール（AI配車の材料・MHSへ）</div>'
+        h += '<div class="cv-sec"><div class="cv-sect"><i data-ic=calendar data-ics=16></i> 車検スケジュール（AI配車の材料・MHSへ）</div>'
           + '<div class="cv-csched"><div class="cv-cspick"><label>いつ行く？</label>'
           + '<select id="cv-csmode" onchange="cvCsMode(this.value)">'
           + opt('manual','日程を指定（手動）',c) + opt('asap','理由があって最短で行きたい',c)
@@ -336,7 +336,7 @@
           + '<div class="cv-cslegend"><i><span class="cv-sw" style="background:#6db0ec"></span>土＝陸運局休</i><i><span class="cv-sw" style="background:#ff8c8c"></span>日祝＝陸運局休</i><i><span class="cv-sw" style="background:var(--bg4)"></span>自社定休</i><i><span class="cv-sw" style="background:var(--brand)"></span>選択中</i></div>'
           + '<div class="cv-cshelp">AM/PM を押して行ける枠を選択。土日祝・自社定休は選べません。プルダウンで一括指定も可。</div>'
           + (_rcH.length? '<div class="cv-shrc">↺ 再検履歴 '+_rcH.length+'回：'+_rcTxt+'</div>':'')
-          + '<div class="cv-shact"><button class="cv-shbtn ok" onclick="cvShakenGo(\'done\')">✅ 車検済にする</button>'
+          + '<div class="cv-shact"><button class="cv-shbtn ok" onclick="cvShakenGo(\'done\')"><i data-ic=check data-ics=16></i> 車検済にする</button>'
           + '<button class="cv-shbtn re" onclick="cvShakenGo(\'recheck\')">↺ 再検を記録</button></div>'
           + '</div></div>';
       }
@@ -345,7 +345,7 @@
     // 表紙チェック（編集式）＝実績（returned）では上の「完了アーカイブ」に集約済みなので出さない v0.120.0
     if (c.status !== 'returned'){
       const pm = payMethods();
-      h += '<div class="cv-sec"><div class="cv-sect">📞 表紙チェック（手書き表紙のデジタル版）</div>';
+      h += '<div class="cv-sec"><div class="cv-sect"><i data-ic=phone data-ics=16></i> 表紙チェック（手書き表紙のデジタル版）</div>';
       h += pickRow('完TEL', [['done','済'],['ng','未']], c.coverCall.done?'done':'ng', 'call')
          + (c.coverCall.done && c.coverCall.at ? '<div class="cv-callat">'+esc(c.coverCall.at)+(c.coverCall.staff?'・'+esc(c.coverCall.staff):'')+'</div>' : '');
       h += pickRow('支払い', pm.map(function(p){return [p.id,p.label];}), c.payment, 'pay');
@@ -353,7 +353,7 @@
       h += '<div class="cv-pickrow"><span class="cv-pk">洗車備考</span><div class="cv-chips" style="flex:1">'
          + '<input class="cv-fixinput" type="text" value="'+esc(c.washNote||'')+'" placeholder="洗車の備考（1行・任意）" onchange="cvWashNote(this.value)" style="flex:1;min-width:180px"></div></div>';
       h += pickRow('お礼LINE', [['1','要'],['0','不要']], c.noThanksLine?'0':'1', 'line');
-      h += '<div class="cv-hint">※ パターン（型）で選ぶ方式。選択肢は将来 ⚙設定で増減できる想定。</div></div>';
+      h += '<div class="cv-hint">※ パターン（型）で選ぶ方式。選択肢は将来 <i data-ic=settings data-ics=16></i>設定で増減できる想定。</div></div>';
     }
     return h;
   }
@@ -379,21 +379,21 @@
     if (c.salesReq)             sales.push('車販依頼'+(c.salesReqDone?'（済）':''));
     rows += row('車販への依頼', sales.length ? esc(sales.join(' ／ ')) : '<span class="cv-amuted">なし</span>');
     if ((c.salesReqMemo||'').trim()) rows += row('依頼メモ', esc(c.salesReqMemo));
-    return '<div class="cv-sec"><div class="cv-sect">📦 完了アーカイブ <span class="cv-asect-note">（返車済み・記録）</span></div><div class="cv-arch">'+rows+'</div></div>';
+    return '<div class="cv-sec"><div class="cv-sect"><i data-ic=box data-ics=16></i> 完了アーカイブ <span class="cv-asect-note">（返車済み・記録）</span></div><div class="cv-arch">'+rows+'</div></div>';
   }
   /* 💳 入金（売掛）のロック行＝確定売上金額・返車日と同じテイスト。入金済＝🔒確定＋日付／入金待ち＝オレンジ／分けない＝返車時。✏️で編集 v0.122.0 */
   function paymentLockRow(c){
     var tag='', val, btn;
     if (c.paymentSeparate && c.paymentDate){
-      tag = '<span class="cv-locktag">🔒 確定</span>';
+      tag = '<span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span>';
       val = '<span class="cv-fixval" id="cv-paylock">'+fmtMD(c.paymentDate)+'</span>';
-      btn = '✏️ 編集';
+      btn = '<i data-ic=pencil data-ics=16></i> 編集';
     } else if (c.paymentSeparate){
-      val = '<span class="cv-fixval" id="cv-paylock"><span class="cv-paywait">⏳ 入金待ち</span></span>';
-      btn = '✏️ 編集';
+      val = '<span class="cv-fixval" id="cv-paylock"><span class="cv-paywait"><i data-ic=hourglass data-ics=15></i> 入金待ち</span></span>';
+      btn = '<i data-ic=pencil data-ics=16></i> 編集';
     } else {
       val = '<span class="cv-fixval" id="cv-paylock"><span class="cv-amuted">返車時に入金</span></span>';
-      btn = '✏️ 売掛にする';
+      btn = '<i data-ic=pencil data-ics=16></i> 売掛にする';
     }
     var label = (c.paymentSeparate && c.paymentDate) ? '入金日' : '入金';
     return '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">'+label+' '+tag+' <button type="button" class="cv-unlockbtn" onclick="cvUnlockPay()">'+btn+'</button></div><div class="cv-frb">'
@@ -419,7 +419,7 @@
 
   function flowTab(c){
     const log = c.log || [];
-    let h = '<div class="cv-sec"><div class="cv-sect">🕒 フロー（進捗ログ）</div><div class="cv-flow">';
+    let h = '<div class="cv-sec"><div class="cv-sect"><i data-ic=clock data-ics=16></i> フロー（進捗ログ）</div><div class="cv-flow">';
     if (!log.length){ h += '<div class="cv-wl cv-muted">記録はまだありません。</div>'; }
     else log.slice().reverse().forEach(function(e){
       var pad=function(n){return(n<10?'0':'')+n;};
@@ -451,13 +451,13 @@
       return '<div class="cv-chk'+(on?' on':'')+'" onclick="cvMaint('+i+',this)"><span class="cv-box">'+(on?'✓':'')+'</span>'+esc(it)+'</div>';
     }).join('');
     return mechSectionHtml(c)
-      + '<div class="cv-sec"><div class="cv-sect">🔧 作業チェック（'+esc(wt?wt.label:'作業')+'）</div>'
+      + '<div class="cv-sec"><div class="cv-sect"><i data-ic=wrench data-ics=16></i> 作業チェック（'+esc(wt?wt.label:'作業')+'）</div>'
       + '<div class="cv-prog">'+n+' / '+items.length+' 完了</div><div class="cv-checks">'+h2+'</div></div>';
   }
 
   /* ===== 🧑‍🔧 作業担当（点検担当者／整備担当者）＝メンバー欄から選ぶ・重複OK・最大10人（v0.129.0） =====
      ・1人選ぶと次の空欄が出る。同じ人を複数回でもOK＝作業割合になる。保持＝c.inspectors[]/c.mechanics[]。
-     ・返車済み（実績化後）は「割合表示」に切替（✎で編集に戻せる）。配分計算は mech-summary.js。 */
+     ・返車済み（実績化後）は「割合表示」に切替（<i data-ic=pencil data-ics=15></i>で編集に戻せる）。配分計算は mech-summary.js。 */
   const MECH_MAX = 10;
   function mechOpts(){ return (state.staff||[]).map(function(s){ return s.name; }).filter(Boolean); }
   function mechSel(role, idx, val, opts, no){
@@ -481,13 +481,13 @@
   function mechSectionHtml(c){
     const returned = (c.status === 'returned');
     const showAlloc = returned && !_mechEditOpen[c.id];
-    let h = '<div class="cv-sec"><div class="cv-sect">🧑‍🔧 作業担当（点検・整備）</div>';
+    let h = '<div class="cv-sec"><div class="cv-sect"><i data-ic=user data-ics=16></i> 作業担当（点検・整備）</div>';
     if (showAlloc){
       h += (window.pitMechAllocText ? pitMechAllocText(c) : '');
-      h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')">✎ 割り当てを編集</button></div>';
+      h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')"><i data-ic=pencil data-ics=15></i> 割り当てを編集</button></div>';
     } else {
-      h += mechPicker(c, 'inspectors', '点検担当者', '🔍');
-      h += mechPicker(c, 'mechanics',  '整備担当者', '🔧');
+      h += mechPicker(c, 'inspectors', '点検担当者', '<i data-ic=search data-ics=16></i>');
+      h += mechPicker(c, 'mechanics',  '整備担当者', '<i data-ic=wrench data-ics=16></i>');
       h += '<div class="cf-mech-note">1人選ぶと次の欄が出ます（最大'+MECH_MAX+'人・同じ人を複数回でもOK＝作業割合になります）。整備者が居なければ点検者が全額、点検者が居なければ整備者が全額。</div>';
       if (returned){
         h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')">割合表示に戻す</button></div>';
@@ -523,7 +523,7 @@
       const on = !!done[i]; if(on) n++;
       return '<div class="cv-chk'+(on?' on':'')+'" onclick="cvOffice('+i+',this)"><span class="cv-box">'+(on?'✓':'')+'</span>'+esc(it)+'</div>';
     }).join('');
-    return '<div class="cv-sec"><div class="cv-sect">🗂 バックオフィス（事務の締め）</div>'
+    return '<div class="cv-sec"><div class="cv-sect"><i data-ic=folder data-ics=16></i> バックオフィス（事務の締め）</div>'
       + '<div class="cv-prog">'+n+' / '+items.length+' 完了</div><div class="cv-checks">'+h2+'</div></div>';
   }
 
@@ -535,31 +535,31 @@
     let h = '<div class="cv-top">'
       + (c.resNo?'<span class="cv-resno">'+esc(c.resNo)+'</span>':'')
       + '<span class="cv-status" style="color:'+sc+';border-color:'+sc+'66;background:'+sc+'1f">'+esc(sl)+'</span>'
-      + (c.tentative?'<span class="cv-karibadge">📝 仮予約</span>':'')
+      + (c.tentative?'<span class="cv-karibadge"><i data-ic=pencil data-ics=16></i> 仮予約</span>':'')
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
-      + '<button class="cv-iconbtn" title="表紙を印刷" onclick="pitPrintCover(\''+c.id+'\')">🖨</button>'
-      + '<button class="cv-iconbtn" title="この車両に付箋を発行" onclick="cvToggleFusen(event)">🗒️</button>'
+      + '<button class="cv-iconbtn" title="表紙を印刷" onclick="pitPrintCover(\''+c.id+'\')"><i data-ic=printer data-ics=16></i></button>'
+      + '<button class="cv-iconbtn" title="この車両に付箋を発行" onclick="cvToggleFusen(event)"><i data-ic=sticky data-ics=16></i></button>'
       + '<div class="cv-optwrap"><button class="cv-iconbtn" title="オプション" onclick="cvToggleOpt(event)">⋮</button>'
       + '<div class="cv-optmenu" id="cv-optmenu">'
       + (c.tentative
           ? '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">✓ 本予約に確定する</button>'
-          : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">📝 仮予約にする</button>')
+          : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()"><i data-ic=pencil data-ics=16></i> 仮予約にする</button>')
       + '<div class="cv-optdiv"></div><div class="cv-opth">フェーズ移動</div>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'estim\')">→ 見積もり中に移動</button>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'work\')">→ 作業中に移動</button>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'workDone\')">→ 完了にする</button>'
       + '<button class="cv-opti" onclick="cvMovePhase(\'returned\')">→ 返車・実績化</button>'
-      + '<div class="cv-optdiv"></div><button class="cv-opti cv-danger" onclick="cvAskDelete()">🗑 削除する…</button></div></div>'
-      + '<button class="cv-iconbtn" title="閉じる" onclick="closeDetail()">✕</button>'
+      + '<div class="cv-optdiv"></div><button class="cv-opti cv-danger" onclick="cvAskDelete()"><i data-ic=trash data-ics=16></i> 削除する…</button></div></div>'
+      + '<button class="cv-iconbtn" title="閉じる" onclick="closeDetail()"><i data-ic=close data-ics=16></i></button>'
       + '</div></div>';
     return h;
   }
 
   function popsHtml(c){
     const link = (c.resNo?c.resNo+' ・ ':'') + (c.customer||'') + '様 ' + (c.car||'');
-    return '<div class="cv-fusenpop" id="cv-fusenpop"><div class="cv-fph">🗒️ 付箋を発行（この車両にリンク）</div>'
-      + '<div class="cv-fplink">🔗 '+esc(link)+'</div>'
+    return '<div class="cv-fusenpop" id="cv-fusenpop"><div class="cv-fph"><i data-ic=sticky data-ics=16></i> 付箋を発行（この車両にリンク）</div>'
+      + '<div class="cv-fplink"><i data-ic=link data-ics=16></i> '+esc(link)+'</div>'
       + '<textarea class="cv-fpbody" id="cv-fpbody" placeholder="付箋の内容（例：部品が入荷したら連絡）"></textarea>'
       + '<div class="cv-fpcolors"><span class="cv-fpc on" data-col="yellow" style="background:#fde68a" onclick="cvFpColor(this)"></span><span class="cv-fpc" data-col="red" style="background:#fca5a5" onclick="cvFpColor(this)"></span><span class="cv-fpc" data-col="green" style="background:#a7f3d0" onclick="cvFpColor(this)"></span><span class="cv-fpc" data-col="blue" style="background:#bfdbfe" onclick="cvFpColor(this)"></span></div>'
       + '<div class="cv-fpacts"><button class="cv-ng" onclick="cvCloseFusen()">取消</button><button class="cv-ok" onclick="cvFusenIssue()">付箋を発行</button></div></div>'
@@ -585,7 +585,7 @@
     host.innerHTML =
       '<div class="cv-root">'
       + topHtml(card)
-      + (card.codeRed?'<div class="cv-claimbanner">🚨 Ⓕ案件・各部署慎重に対応 🚨</div>':'')
+      + (card.codeRed?'<div class="cv-claimbanner"><i data-ic=warn data-ics=16></i> Ⓕ案件・各部署慎重に対応 <i data-ic=warn data-ics=16></i></div>':'')
       + '<div class="cv-twocol"><div class="cv-left">'+leftHtml(card)+'</div><div class="cv-right">'+rightHtml(card)+'</div></div>'
       + popsHtml(card)
       + '</div>';
@@ -757,7 +757,7 @@
     });
     save(); if(window.renderBoardNotes) try{ renderBoardNotes(); }catch(e){}
     cvCloseFusen();
-    if(window.toast) toast('🗒️ 付箋を発行しました');
+    if(window.toast) toast('付箋を発行しました');
   };
 
   /* 仮予約 ⇄ 本予約 の切替（⋮メニュー）v0.100.0 */
@@ -768,7 +768,7 @@
     const d=new Date();
     _c.log.push({ text:(_c.tentative?'仮予約にした':'本予約に確定した'), at:(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()), by:(window.bnMe||'') });
     save(); closeAllPop();
-    if(window.pitToast) pitToast(_c.tentative?'📝 仮予約にしました':'✓ 本予約に確定しました');
+    if(window.pitToast) pitToast(_c.tentative?'仮予約にしました':'✓ 本予約に確定しました');
     renderCardView(_c, 'md-body-modal');
   };
 
@@ -835,18 +835,18 @@
   function applyModeVisual(){
     const m=_c.inspSchedule.mode; const vds=validEls();
     vds.forEach(function(v){ v.classList.remove('cv-soon','cv-ask','cv-cut'); });
-    if(m==='asap'){ if(vds[0]) vds[0].classList.add('cv-soon'); csBanner('amber','⚡ 最短で行きたい：手動オフ。最短日を狙う（前日までに点検完了が条件）。AIが空きに合わせて確定。'); }
+    if(m==='asap'){ if(vds[0]) vds[0].classList.add('cv-soon'); csBanner('amber','<i data-ic=bolt data-ics=15></i> 最短で行きたい：手動オフ。最短日を狙う（前日までに点検完了が条件）。AIが空きに合わせて確定。'); }
     else if(m==='ask'){ const cut=_c.inspSchedule.cutBefore||''; vds.forEach(function(v){ v.classList.add('cv-ask'); if(cut && v.dataset.iso<=cut) v.classList.add('cv-cut'); }); askBanner(); }
-    else if(m==='thisweek'){ csBanner('blue','📅 今週中ならどこでも：今週の行ける日に一括チェック。AIが最適な1枠を選ぶ。'); }
-    else if(m==='nextweek'){ csBanner('blue','📅 来週中ならどこでも：来週の行ける日に一括チェック。AIが最適な1枠を選ぶ。'); }
-    else if(m==='undecided'){ csBanner('gray','📌 未定：いずれ行くが基本は考えない。でも忘れないように一覧には残す。'); }
+    else if(m==='thisweek'){ csBanner('blue','<i data-ic=calendar data-ics=16></i> 今週中ならどこでも：今週の行ける日に一括チェック。AIが最適な1枠を選ぶ。'); }
+    else if(m==='nextweek'){ csBanner('blue','<i data-ic=calendar data-ics=16></i> 来週中ならどこでも：来週の行ける日に一括チェック。AIが最適な1枠を選ぶ。'); }
+    else if(m==='undecided'){ csBanner('gray','<i data-ic=pin data-ics=16></i> 未定：いずれ行くが基本は考えない。でも忘れないように一覧には残す。'); }
     else clearBanner();
   }
   function askBanner(){
     const vds=validEls(); const cut=_c.inspSchedule.cutBefore||'';
     const kept=vds.filter(function(v){ return !cut || v.dataset.iso>cut; });
     const first=kept[0];
-    let msg='❓ 可能か聞いて：青枠＝行く前提で全チェック。';
+    let msg='<i data-ic=help data-ics=16></i> 可能か聞いて：青枠＝行く前提で全チェック。';
     if(cut) msg+=' 「'+fmtMD(cut)+'まで無理」で除外 →';
     msg+=' 残り <b>'+kept.length+'枠の日</b>'+(first?'（'+fmtMD(first.dataset.iso)+'〜）':'')+' をAIに渡し、後でメカ確認。';
     msg+=' <span class="cv-rst" onclick="cvCsMode(\'ask\')">↺ 戻す</span>';
@@ -897,7 +897,7 @@
     const cur = (s.resultStaff||window.bnMe||'');
     const staffOpts = (state.staff||[]).map(function(m){ return '<option value="'+esc(m.name)+'"'+(cur===m.name?' selected':'')+'>'+esc(m.name)+'</option>'; }).join('');
     const isDone = (kind==='done');
-    const title = isDone ? '✅ 車検済を記録' : '↺ 再検を記録';
+    const title = isDone ? '<i data-ic=check data-ics=16></i> 車検済を記録' : '↺ 再検を記録';
     const body = '<div class="cv-shpb">'
       + '<label>行った日</label><input type="date" id="cv-shdate" value="'+defDate+'">'
       + '<label>時間帯</label><div class="cv-shslot" id="cv-shslot"><button type="button" data-s="am" class="'+(window._cvShSlot==='am'?'on':'')+'" onclick="cvShSlot(this)">AM</button><button type="button" data-s="pm" class="'+(window._cvShSlot==='pm'?'on':'')+'" onclick="cvShSlot(this)">PM</button></div>'
@@ -906,7 +906,7 @@
       + '</div>';
     let back=document.getElementById('cv-shpop');
     if(!back){ back=document.createElement('div'); back.id='cv-shpop'; back.className='modal-backdrop'; back.addEventListener('click',function(e){ if(e.target.id==='cv-shpop') cvShClose(); }); document.body.appendChild(back); }
-    back.innerHTML='<div class="pdp-box cv-shbox"><div class="pdp-head"><span>'+title+'</span><button class="pdp-x" onclick="cvShClose()">✕</button></div>'+body+'</div>';
+    back.innerHTML='<div class="pdp-box cv-shbox"><div class="pdp-head"><span>'+title+'</span><button class="pdp-x" onclick="cvShClose()"><i data-ic=close data-ics=16></i></button></div>'+body+'</div>';
     back.classList.add('show');
   };
   window.cvShSlot = function(btn){ window._cvShSlot = btn.getAttribute('data-s'); const w=document.getElementById('cv-shslot'); if(w) w.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b===btn); }); };

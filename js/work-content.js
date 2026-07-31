@@ -38,11 +38,11 @@
       { name: '凹み/ヒビ/割れ/傷', parts: ['ボディ/外装'], sub: ['凹み', 'ヒビ', '割れ', '傷'] }
     ],
     chipGroups: [
-      { label: '🛠 作業・依頼', fill: false, items: ['点検', '車検も一緒に', 'テスター診断', '予防整備', 'トルコン太郎（ATF交換）', 'タイベル交換', 'コーティング', '板金'] },
-      { label: '💬 来店・見積・連絡', fill: false, items: ['概算伝え済み', '点検料伝え済み', '他店見積あり', 'ディーラー見積あり', '現車見せに来店', 'ディーラー保証あり', '連絡は別の人へ'] },
-      { label: '📦 部品 / 🚩 条件', fill: false, items: ['中古パーツ', 'リビルト品', '社外品', '持ち込み', 'もしかしたら無理かも', 'パーツ無いかも', '長期休み中の預かりOK', '直るなら依頼'] },
-      { label: '⏳ 預かり期間', fill: false, items: ['当日仕上げ', '1week', '2week', '直り次第'] },
-      { label: '🚗 車両情報（押すと「：」が入る→数値）', fill: true, items: ['車検満了日：', '年式：', '走行距離：', '購入時期：'] }
+      { label: '<i data-ic=wrench data-ics=16></i> 作業・依頼', fill: false, items: ['点検', '車検も一緒に', 'テスター診断', '予防整備', 'トルコン太郎（ATF交換）', 'タイベル交換', 'コーティング', '板金'] },
+      { label: '<i data-ic=comment data-ics=16></i> 来店・見積・連絡', fill: false, items: ['概算伝え済み', '点検料伝え済み', '他店見積あり', 'ディーラー見積あり', '現車見せに来店', 'ディーラー保証あり', '連絡は別の人へ'] },
+      { label: '<i data-ic=box data-ics=16></i> 部品 / <i data-ic=flag data-ics=16></i> 条件', fill: false, items: ['中古パーツ', 'リビルト品', '社外品', '持ち込み', 'もしかしたら無理かも', 'パーツ無いかも', '長期休み中の預かりOK', '直るなら依頼'] },
+      { label: '<i data-ic=hourglass data-ics=15></i> 預かり期間', fill: false, items: ['当日仕上げ', '1week', '2week', '直り次第'] },
+      { label: '<i data-ic=car data-ics=16></i> 車両情報（押すと「：」が入る→数値）', fill: true, items: ['車検満了日：', '年式：', '走行距離：', '購入時期：'] }
     ]
   };
 
@@ -95,9 +95,9 @@
     const c = cfg();
     let h = '<div class="wc-tpl">';
     // v0.90.0 内容テンプレ＝ボタンクリックで右カラムに大きく開く（クリックで開閉・固定）。3列一覧（部位→症状→補足）。
-    h += '<div class="wc-trigrow"><button type="button" class="wc-trigger" onclick="WorkContent.togglePanel(this)">🧰 内容テンプレを選ぶ<span class="wc-arr">クリックで右に開く ▸</span></button></div>';
+    h += '<div class="wc-trigrow"><button type="button" class="wc-trigger" onclick="WorkContent.togglePanel(this)"><i data-ic=briefcase data-ics=16></i> 内容テンプレを選ぶ<span class="wc-arr">クリックで右に開く <i data-ic=chevRight data-ics=15></i></span></button></div>';
     h += '<div class="wc-panel" id="wc-panel">';
-    h += '<div class="wc-panel-h"><span>🧰 内容テンプレ（部位 → 症状 → 補足）</span><button type="button" class="wc-x" onclick="WorkContent.closePanel()" title="閉じる">✕</button></div>';
+    h += '<div class="wc-panel-h"><span><i data-ic=briefcase data-ics=16></i> 内容テンプレ（部位 → 症状 → 補足）</span><button type="button" class="wc-x" onclick="WorkContent.closePanel()" title="閉じる"><i data-ic=close data-ics=16></i></button></div>';
     h += '<div class="wc-cols">'
        + '<div class="wc-listcol"><div class="wc-lh">部位</div><div class="wc-list" id="wc-c1"></div></div>'
        + '<div class="wc-listcol"><div class="wc-lh">症状</div><div class="wc-list" id="wc-c2"></div></div>'
@@ -212,7 +212,7 @@
   // 設定画面側：編集UI
   // =========================================
   function settingsCardHtml() {
-    return '<div class="ps-card"><div class="ps-h">🧰 作業内容テンプレート（症状ホイール）</div>'
+    return '<div class="ps-card"><div class="ps-h"><i data-ic=briefcase data-ics=16></i> 作業内容テンプレート（症状ホイール）</div>'
       + '<div class="ps-desc">新規予約の「内容」で使う <b>部位・症状・補足</b>（時計式ホイール）と <b>各チップ</b> を編集します。症状は「対象部位」を限定でき、変な組み合わせ（例：エンジンに冷風が出ない）を自動で出さなくできます。</div>'
       + '<div id="wc-settings"></div></div>';
   }
@@ -225,15 +225,15 @@
     let h = '';
 
     // 部位
-    h += '<div class="wc-s-h">🔧 部位<button class="wc-s-add" onclick="WorkContent.wcAddPart()">＋ 追加</button></div>';
+    h += '<div class="wc-s-h"><i data-ic=wrench data-ics=16></i> 部位<button class="wc-s-add" onclick="WorkContent.wcAddPart()">＋ 追加</button></div>';
     h += '<div class="wc-s-chips">';
     c.parts.forEach(function (p, i) {
-      h += '<span class="wc-s-chip">' + esc(p) + '<button onclick="WorkContent.wcDelPart(' + i + ')">✕</button></span>';
+      h += '<span class="wc-s-chip">' + esc(p) + '<button onclick="WorkContent.wcDelPart(' + i + ')"><i data-ic=close data-ics=16></i></button></span>';
     });
     h += '</div>';
 
     // 症状
-    h += '<div class="wc-s-h" style="margin-top:14px">⚠ 症状（対象部位・補足）<button class="wc-s-add" onclick="WorkContent.wcAddSym()">＋ 追加</button></div>';
+    h += '<div class="wc-s-h" style="margin-top:14px"><i data-ic=warn data-ics=16></i> 症状（対象部位・補足）<button class="wc-s-add" onclick="WorkContent.wcAddSym()">＋ 追加</button></div>';
     h += '<div class="wc-s-syms">';
     c.symptoms.forEach(function (s, i) {
       const all = (s.parts === 'all');
@@ -241,7 +241,7 @@
       h += '<div class="wc-s-row">' + inp(s.name, '症状名', 'onchange="WorkContent.wcSymName(' + i + ',this.value)"', 'name', '8em');
       h += '<select class="wc-i" onchange="WorkContent.wcSymScope(' + i + ',this.value)"><option value="all"' + (all ? ' selected' : '') + '>全部位</option><option value="some"' + (all ? '' : ' selected') + '>限定</option></select>';
       if (!all) h += inp((s.parts || []).join('、'), '対象部位（、区切り）', 'onchange="WorkContent.wcSymParts(' + i + ',this.value)"', 'parts', '14em');
-      h += '<button class="wc-s-del" onclick="WorkContent.wcDelSym(' + i + ')">✕ 削除</button></div>';
+      h += '<button class="wc-s-del" onclick="WorkContent.wcDelSym(' + i + ')"><i data-ic=close data-ics=16></i> 削除</button></div>';
       h += '<div class="wc-s-row"><span class="wc-s-lab">補足</span>' + inp((s.sub || []).join('、'), '補足（、区切り・任意）', 'onchange="WorkContent.wcSymSub(' + i + ',this.value)"', 'sub', '100%') + '</div>';
       h += '</div>';
     });
@@ -252,7 +252,7 @@
       h += '<div class="wc-s-h" style="margin-top:14px">' + esc(g.label) + '<button class="wc-s-add" onclick="WorkContent.wcAddChip(' + gi + ')">＋ 追加</button></div>';
       h += '<div class="wc-s-chips">';
       g.items.forEach(function (it, ii) {
-        h += '<span class="wc-s-chip">' + esc(it) + '<button onclick="WorkContent.wcDelChip(' + gi + ',' + ii + ')">✕</button></span>';
+        h += '<span class="wc-s-chip">' + esc(it) + '<button onclick="WorkContent.wcDelChip(' + gi + ',' + ii + ')"><i data-ic=close data-ics=16></i></button></span>';
       });
       h += '</div>';
     });

@@ -3,7 +3,7 @@
    ----------------------------------------
    ・月次カレンダー：1列1ヶ月。右へスクロールすると**未来永劫**列が増える。
    ・**月ヘッダをクリック → その月の日別（1〜31日）表示**に切替（← 月表示で戻る）。
-   ・車検🔴・12点🟠に加えて**自由イベント**（車検入庫・リースアップ/切替・その他）を登録できる。
+   ・車検<i data-ic=dot data-ics=12 style=color:#ef4444></i>・12点<i data-ic=dot data-ics=12 style=color:#f97316></i>に加えて**自由イベント**（車検入庫・リースアップ/切替・その他）を登録できる。
      → 代車利用カレンダー（代車ビュー）にも重ねて表示される。
    ・セルをクリック＝その車両・その日付でイベント追加。イベントチップをクリック＝編集。
    ======================================== */
@@ -43,19 +43,19 @@ function renderFleet(){
   /* ===== ① カレンダー（最上部） ===== */
   h += '<div class="fl-card">';
   if (_flMode === 'month'){
-    h += '<div class="fl-h">📅 車両カレンダー（月をクリック＝日別表示／右へ無限）<span class="fl-note">🔴車検 🟠12点 ＋ イベント（セルをクリックで追加）</span></div>';
+    h += '<div class="fl-h"><i data-ic=calendar data-ics=16></i> 車両カレンダー（月をクリック＝日別表示／右へ無限）<span class="fl-note"><i data-ic=dot data-ics=12 style=color:#ef4444></i>車検 <i data-ic=dot data-ics=12 style=color:#f97316></i>12点 ＋ イベント（セルをクリックで追加）</span></div>';
     h += flMonthCalHtml();
   } else {
     const y = _flDay.getFullYear(), m = _flDay.getMonth();
-    h += '<div class="fl-h"><span><button class="vh-btn" onclick="flBackMonth()">← 月表示</button>　📅 ' + y + '年' + (m+1) + '月（日別）</span><span class="fl-note">セルをクリック＝イベント追加／チップ＝編集</span></div>';
+    h += '<div class="fl-h"><span><button class="vh-btn" onclick="flBackMonth()">← 月表示</button>　<i data-ic=calendar data-ics=16></i> ' + y + '年' + (m+1) + '月（日別）</span><span class="fl-note">セルをクリック＝イベント追加／チップ＝編集</span></div>';
     h += flDayCalHtml(y, m);
   }
   h += '</div>';
 
   /* ===== ② 車両リスト ===== */
   const groups = [
-    { name: '🚙 代車', arr: state.loaners || [] },
-    { name: '🚐 社用車', arr: state.companyCars || [] }
+    { name: '<i data-ic=van data-ics=16></i> 代車', arr: state.loaners || [] },
+    { name: '<i data-ic=van data-ics=16></i> 社用車', arr: state.companyCars || [] }
   ];
   groups.forEach(function(g, gi){
     h += '<div class="fl-card"><div class="fl-h">' + g.name + '（' + g.arr.length + '台）'
@@ -75,8 +75,8 @@ function renderFleet(){
              + (v.length != null ? '<span class="fl-opttag h">長' + _fleetEsc(v.length) + '</span>' : '')
            : '')
          + (v.shakenDate ? '<br>車検 ' + _fleetEsc(v.shakenDate) : '') + (v.tenkenDate ? ' ・ 12点 ' + _fleetEsc(v.tenkenDate) : '') + '</div></div>'
-         + '<button class="fl-btn" onclick="fleetOpenModal(\'' + v.id + '\')">✏️</button>'
-         + '<button class="fl-btn del" onclick="fleetDelete(\'' + v.id + '\')">🗑</button>'
+         + '<button class="fl-btn" onclick="fleetOpenModal(\'' + v.id + '\')"><i data-ic=pencil data-ics=16></i></button>'
+         + '<button class="fl-btn del" onclick="fleetDelete(\'' + v.id + '\')"><i data-ic=trash data-ics=16></i></button>'
          + '</div>';
     });
     h += '</div></div>';
@@ -197,7 +197,7 @@ function flOpenEventModal(vehicleId, dateStr, eventId){
   document.getElementById('flev-label').value = ev ? (ev.label || '') : '';
   document.getElementById('flev-from').value  = ev ? ev.fromDate : (dateStr || '');
   document.getElementById('flev-to').value    = ev ? ev.toDate : (dateStr || '');
-  document.getElementById('flev-title').textContent = ev ? '✏️ イベントを編集' : '＋ イベントを追加';
+  document.getElementById('flev-title').textContent = ev ? 'イベントを編集': '＋ イベントを追加';
   document.getElementById('flev-del').style.display = ev ? '' : 'none';
   document.getElementById('fleet-event-modal').classList.add('show');
 }
@@ -264,7 +264,7 @@ function fleetOpenModal(id){
   _fleetEditId = id || null;
   const f = id ? _fleetFind(id) : null;
   const v = f ? f.v : {};
-  document.getElementById('fl-modal-title').textContent = f ? '✏️ 車両を編集' : '＋ 車両を追加';
+  document.getElementById('fl-modal-title').textContent = f ? '車両を編集': '＋ 車両を追加';
   document.getElementById('fl-kind').value  = f ? f.kind : 'loaner';
   document.getElementById('fl-number').value = f ? _flLoanerNum(v) : _flNextNum();   // 自動末番
   document.getElementById('fl-model').value = v.model || '';                          // 車種名

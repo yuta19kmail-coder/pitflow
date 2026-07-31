@@ -50,7 +50,7 @@ function _availRow(c){
 /* 指定チーム・指定日の入庫一覧カード */
 function _availList(team, ds){
   const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
-  const teamName  = (team === 'import') ? '🌍 輸入車の入庫' : '🚗 国産車の入庫';
+  const teamName  = (team === 'import') ? '<i data-ic=globe data-ics=16></i> 輸入車の入庫' : '<i data-ic=car data-ics=16></i> 国産車の入庫';
   // 入庫＝その日に入庫予定（廃車・返車済みは除く）。時間順。
   const cards = (state.cards || []).filter(function (c) {
     return c.boardId === team && c.reserveDate === ds && c.status !== 'scrap' && c.status !== 'returned';
@@ -65,7 +65,7 @@ function _availList(team, ds){
   }
 
   let h = '<div class="cfs-card av-list-card">';
-  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">📥 ' + teamName + '</span>'
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '"><i data-ic=download data-ics=16></i> ' + teamName + '</span>'
      + '<span class="av-list-date">' + dlabel + (ds ? '　<b>' + cards.length + '</b>台' : '') + '</span></div>';
   h += '<div class="av-list-body">';
   if (!ds){

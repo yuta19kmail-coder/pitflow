@@ -28,14 +28,14 @@ function fmtFlowTime(ms){
 }
 /* フローでワンタップ追加できる「よくあるアクション」。現場の言葉で。 */
 const FLOW_QUICK = [
-  '📞 こちらから電話 → 留守（折り返し待ち）',
-  '📞 こちらから電話 → つながった',
-  '📞 お客様から入電',
-  '🚗 来店・相談',
-  '💬 見積りを連絡',
-  '✅ 承認 OK',
-  '⏳ 部品待ち',
-  '📅 日程を調整'
+  '<i data-ic=phone data-ics=16></i> こちらから電話 → 留守（折り返し待ち）',
+  '<i data-ic=phone data-ics=16></i> こちらから電話 → つながった',
+  '<i data-ic=phone data-ics=16></i> お客様から入電',
+  '<i data-ic=car data-ics=16></i> 来店・相談',
+  '<i data-ic=comment data-ics=16></i> 見積りを連絡',
+  '<i data-ic=check data-ics=16></i> 承認 OK',
+  '<i data-ic=hourglass data-ics=15></i> 部品待ち',
+  '<i data-ic=calendar data-ics=16></i> 日程を調整'
 ];
 function _flowEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 /* タイムライン1行。delIdx を渡すと ✕（手動記録の削除）が付く。 */
@@ -44,12 +44,12 @@ function _flowRow(title, detail, delIdx){
   if (detail) r += '<div class="cf-flowd">' + _flowEsc(detail) + '</div>';
   r += '</div>';
   if (delIdx !== null && delIdx !== undefined){
-    r += '<button type="button" class="cf-flowdel" title="この記録を消す" onclick="cfFlowDel(' + delIdx + ')">✕</button>';
+    r += '<button type="button" class="cf-flowdel" title="この記録を消す" onclick="cfFlowDel(' + delIdx + ')"><i data-ic=close data-ics=16></i></button>';
   }
   return r + '</div>';
 }
 function cfFlowHtml(c){
-  let h = sec('フロー（進捗ログ）', '🕒');
+  let h = sec('フロー（進捗ログ）', '<i data-ic=clock data-ics=16></i>');
 
   /* === タイムライン === */
   h += '<div class="cf-flow">';
@@ -87,7 +87,7 @@ function cfFlowHtml(c){
   h += '</div>';
   h += '</div>';
 
-  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。担当・時刻は触らなければ「前回の担当＋今」で入り、手動メモは ✕ で消せます。</div>';
+  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。担当・時刻は触らなければ「前回の担当＋今」で入り、手動メモは <i data-ic=close data-ics=16></i> で消せます。</div>';
   h += secEnd();
   return h;
 }
@@ -158,7 +158,7 @@ function cfMaintHtml(c){
   c.maint = c.maint || {};
   const wtLabel = (state.workTypes.find(function(w){ return w.id === c.workType; }) || {}).label || '';
   const items = cfMaintItems(c);
-  let h = sec('作業チェック' + (wtLabel ? '（' + wtLabel + '）' : ''), '🔧');
+  let h = sec('作業チェック' + (wtLabel ? '（' + wtLabel + '）' : ''), '<i data-ic=wrench data-ics=16></i>');
   h += '<div class="cf-checks">';
   items.forEach(function(it, i){
     const on = !!c.maint[i];
@@ -182,7 +182,7 @@ function cfMaintToggle(i){
 const CF_OFFICE_STEPS = ['カルテ（点検結果）最終確認','原価チェック（部品・外注）','請求発行','入金確認','後処理 完了（締め）'];
 function cfOfficeHtml(c){
   c.office = c.office || {};
-  let h = sec('バックオフィス（返車後の後処理）', '🗂');
+  let h = sec('バックオフィス（返車後の後処理）', '<i data-ic=folder data-ics=16></i>');
   h += '<div class="cf-checks">';
   CF_OFFICE_STEPS.forEach(function(s, i){
     const on = !!c.office[i];
@@ -210,7 +210,7 @@ window.logFlow = function(card, label){
 };
 
 /* ===== フェーズ移動ログ（誰が・いつ・どこから→どこへ）＋ phaseAt 更新 =====
-   dnd.js（ドラッグ）／task.js（◀▶）から status を変える時に呼ぶ。
+   dnd.js（ドラッグ）／task.js（<i data-ic=chevLeft data-ics=16></i><i data-ic=chevRight data-ics=16></i>）から status を変える時に呼ぶ。
    card.phaseAt ＝ 今のフェーズに入った時刻（「このフェーズ何日目」のカウント起点）。 */
 window.logPhaseMove = function(card, fromStatus, toStatus){
   if (!card) return;

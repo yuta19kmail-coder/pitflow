@@ -60,9 +60,9 @@ function renderReturnDay(){
   let html = '';
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html += '<div style="font-size:13px;color:var(--text2);">';
-  if (isClosed) html += '<span style="color:var(--red);">🔴 定休日</span>　';
+  if (isClosed) html += '<span style="color:var(--red);"><i data-ic=dot data-ics=12 style=color:#ef4444></i> 定休日</span>　';
   const holDay = (window.Holidays && Holidays.name(dateStr)) || null;
-  if (holDay) html += '<span class="hol-badge">🎌 ' + holDay + '</span>　';
+  if (holDay) html += '<span class="hol-badge"><i data-ic=flag data-ics=16></i> ' + holDay + '</span>　';
   html += '本日の返車予定 ' + todays.length + ' 件';
   html += '</div></div>';
 
@@ -198,7 +198,7 @@ function _rmlRowsReturn(from, to){
 
     html += '<div class="rml-row' + (isClosed ? ' closed' : '') + '">';
     html += '<div class="rml-date' + dCls + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + (ds === todayStr ? '・今日' : '') + '</span>'
-         + (hol ? '<span class="rml-hol">🎌' + hol + '</span>' : '')
+         + (hol ? '<span class="rml-hol"><i data-ic=flag data-ics=16></i>' + hol + '</span>' : '')
          + (isClosed ? '<span class="rml-hol">定休</span>' : '') + '</div>';
     html += '<div class="rml-cards" data-drop="returnDate" data-drop-val="' + ds + '">';
     if (!cardsOfDay.length){

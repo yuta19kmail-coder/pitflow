@@ -17,11 +17,11 @@
   const DEFAULT = {
     tiers: [
       { key:'home', name:'① 自社内', note:'ピット＋自社置き場。一番使いたいエリア。',
-        lots:[ {id:'pit', name:'🔧 ピット内', theo:4, reasons:[]}, {id:'jisha', name:'🏠 自社置き場（福田P含む）', theo:14, reasons:[]} ] },
+        lots:[ {id:'pit', name:'<i data-ic=wrench data-ics=16></i> ピット内', theo:4, reasons:[]}, {id:'jisha', name:'<i data-ic=home data-ics=16></i> 自社置き場（福田P含む）', theo:14, reasons:[]} ] },
       { key:'akai', name:'② 歩いて行ける', note:'赤井・斉藤P。徒歩圏だが敷地外。移動はまずここが優先。',
-        lots:[ {id:'akai', name:'🚶 赤井・斉藤P', theo:6, reasons:[]} ] },
+        lots:[ {id:'akai', name:'<i data-ic=user data-ics=16></i> 赤井・斉藤P', theo:6, reasons:[]} ] },
       { key:'coin', name:'③ コインパ（最後）', note:'第二P。①②で収まらない時だけ。ここを最小にしたい。',
-        lots:[ {id:'coin', name:'🅿️ 第二P（コインパ）', theo:10, reasons:[]} ] }
+        lots:[ {id:'coin', name:'<i data-ic=parking data-ics=16></i> 第二P（コインパ）', theo:10, reasons:[]} ] }
     ],
     buffer: { weekday:1, weekend:2, afterHoliday:3 },
     dayMemos: {}
@@ -99,7 +99,7 @@
     const big = D.over>0 ? ('超過+'+D.over) : (D.coin>0 ? ('コインパ+'+D.coin) : (D.akai>0 ? ('赤井斉+'+D.akai) : 'OK'));
     const col = D.over>0 ? '#ef4444' : (D.coin>0 ? '#f97316' : (D.akai>0 ? '#f59e0b' : '#1db97a'));
     return '<div class="dash-park-sum" onclick="showView(\'parking\')">'
-      + '<span class="dps-ic">🅿️</span>'
+      + '<span class="dps-ic"><i data-ic=parking data-ics=16></i></span>'
       + '<div class="dps-m"><div class="dps-t">次の営業日 '+md+' までに空けておく</div><div class="dps-v">'+need+'台必要 ／ 赤井斉へ '+D.akai+' ・ コインパへ '+D.coin+(D.over>0?' ・ <b style="color:#ff7a7a">超過'+D.over+'</b>':'')+'</div></div>'
       + '<span class="dps-big" style="color:'+col+'">'+big+'</span>'
       + '<span class="dps-go">駐車場 →</span></div>';
@@ -125,23 +125,23 @@
       +'<div class="pk-hero-calc">'
       +'<div class="pk-cr">'+heroMd+'の<b>預かり入庫 '+intakeN(tms)+'台</b> ＋ <b>バッファ '+bufferOf(tm)+'台</b> ＝ <b>'+need+'台</b></div>'
       +'<div class="pk-cr" style="font-size:12px;color:var(--text3)">※ 将来の返車は当てにしない／待ち・当日仕上げは数えない（当日返車だけ空き候補）</div>'
-      +'<div class="pk-cr">完全自社で入りきらない分は <span class="pk-verdict">🚶赤井・斉藤へ '+Dh.akai+'台 ／ 🅿️コインパへ '+Dh.coin+'台'+(Dh.over>0?' ／ ⚠超過 '+Dh.over+'台':'')+'</span></div>'
+      +'<div class="pk-cr">完全自社で入りきらない分は <span class="pk-verdict"><i data-ic=user data-ics=16></i>赤井・斉藤へ '+Dh.akai+'台 ／ <i data-ic=parking data-ics=16></i>コインパへ '+Dh.coin+'台'+(Dh.over>0?' ／ <i data-ic=warn data-ics=16></i>超過 '+Dh.over+'台':'')+'</span></div>'
       +'</div></div>';
 
     // グラフ
-    h+='<div class="pk-card"><div class="pk-cardh">📊 これから2週間（停まる場所を色で）<span class="pk-sub">日をクリックで内訳＆メモ</span></div>';
+    h+='<div class="pk-card"><div class="pk-cardh"><i data-ic=chart data-ics=16></i> これから2週間（停まる場所を色で）<span class="pk-sub">日をクリックで内訳＆メモ</span></div>';
     h+='<div class="pk-legend"><span><i class="sw-home"></i>自社内</span><span><i class="sw-akai"></i>赤井・斉藤</span><span><i class="sw-coin"></i>コインパ</span><span><i class="sw-over"></i>超過</span><span class="mini">┈ 線＝各ティア上限</span></div>';
     h+='<div class="pk-gscroll"><div class="pk-ginner">'+graphBars(list,c)+graphX(list)+'</div></div>';
     h+='<div class="pk-detail" id="pk-detail">'+detailHtml()+'</div>';
-    h+='<div class="pk-hint">バッファ（平日+1／土日+2／休み明け+3）と各置き場の理論値は <a href="javascript:showView(\'settings\')" style="color:var(--brand);font-weight:700">⚙ 設定</a>。予想は概算（預かり想定日数ベース）。</div>';
+    h+='<div class="pk-hint">バッファ（平日+1／土日+2／休み明け+3）と各置き場の理論値は <a href="javascript:showView(\'settings\')" style="color:var(--brand);font-weight:700"><i data-ic=settings data-ics=16></i> 設定</a>。予想は概算（預かり想定日数ベース）。</div>';
     h+='</div>';
 
     // 実効キャパ（3ティア・±理由）
-    h+='<div class="pk-card"><div class="pk-cardh">🅿️ 今の置き場（実効キャパ・3ティア）<span class="pk-sub">①'+c.C1+' → ②+'+caps().C2+'='+c.F12+' → ③+'+c.C3+'=<b>'+c.FULL+'</b>台。理論値は⚙設定、理由はここで</span></div>';
+    h+='<div class="pk-card"><div class="pk-cardh"><i data-ic=parking data-ics=16></i> 今の置き場（実効キャパ・3ティア）<span class="pk-sub">①'+c.C1+' → ②+'+caps().C2+'='+c.F12+' → ③+'+c.C3+'=<b>'+c.FULL+'</b>台。理論値は<i data-ic=settings data-ics=16></i>設定、理由はここで</span></div>';
     h+='<div class="pk-tiers">'+tiersHtml()+'</div></div>';
 
     // 明日入庫の内訳
-    h+='<div class="pk-card"><div class="pk-cardh">📋 '+heroMd+' の「預かり入庫」内訳<span class="pk-sub">この台数が数字の理由（クリックでカード）</span></div>'+intakeBrkHtml(tms)+'</div>';
+    h+='<div class="pk-card"><div class="pk-cardh"><i data-ic=clipboard data-ics=16></i> '+heroMd+' の「預かり入庫」内訳<span class="pk-sub">この台数が数字の理由（クリックでカード）</span></div>'+intakeBrkHtml(tms)+'</div>';
 
     // 解説
     h+=explHtml();
@@ -162,9 +162,9 @@
       if(x.closed){ h+='<div class="pk-bar"></div>'; return; }
       const total=totalOf(x.ds,x.date), D=dist(total), totalPx=px(total);
       let tc, tt;
-      if(D.over>0){ tc='over'; tt='⚠超過<br>'+D.over+'台'; }
-      else if(D.coin>0){ tc='coin'; tt='🅿️コインパ<br>'+D.coin+'台'; }
-      else if(D.akai>0){ tc='akai'; tt='🚶赤井斉<br>'+D.akai+'台'; }
+      if(D.over>0){ tc='over'; tt='<i data-ic=warn data-ics=16></i>超過<br>'+D.over+'台'; }
+      else if(D.coin>0){ tc='coin'; tt='<i data-ic=parking data-ics=16></i>コインパ<br>'+D.coin+'台'; }
+      else if(D.akai>0){ tc='akai'; tt='<i data-ic=user data-ics=16></i>赤井斉<br>'+D.akai+'台'; }
       else { tc='ok'; tt='自社OK<br>空'+(c.F1-total); }
       const segs=[['over',D.over],['coin',D.coin],['akai',D.akai],['home',D.home]];
       let stack='<div class="pk-stack">'; let first=true;
@@ -180,7 +180,7 @@
     list.forEach(function(x){
       const wcls=x.date.getDay()===6?'sat':(x.date.getDay()===0?'sun':'');
       const memo=(cfg().dayMemos[x.ds]||'').trim();
-      const dot=memo?' <span class="pk-memodot">📝</span>':'';
+      const dot=memo?' <span class="pk-memodot"><i data-ic=pencil data-ics=16></i></span>':'';
       h+='<div class="pk-px'+(x.today?' today':'')+(x.ds===_sel?' sel':'')+(x.closed?' off':'')+'" onclick="pkSel(\''+x.ds+'\')">'
         +'<div class="pk-d">'+(x.date.getMonth()+1)+'/'+x.date.getDate()+dot+'</div>'
         +'<div class="pk-w '+wcls+'">'+'日月火水木金土'[x.date.getDay()]+'</div></div>';
@@ -190,17 +190,17 @@
   }
   function detailHtml(){
     const ds=_sel; const d=pd(ds);
-    if(isClosed(d)) return '<h4>📌 '+(d.getMonth()+1)+'/'+d.getDate()+' は定休</h4>';
+    if(isClosed(d)) return '<h4><i data-ic=pin data-ics=16></i> '+(d.getMonth()+1)+'/'+d.getDate()+' は定休</h4>';
     const total=totalOf(ds,d), D=dist(total);
-    let pills='<span class="pk-dpill home">🟩自社 '+D.home+'</span>';
-    if(D.akai>0) pills+='<span class="pk-dpill akai">🟧赤井・斉藤 '+D.akai+'</span>';
-    if(D.coin>0) pills+='<span class="pk-dpill coin">🟧コインパ '+D.coin+'</span>';
-    if(D.over>0) pills+='<span class="pk-dpill over">🟥超過 '+D.over+'</span>';
+    let pills='<span class="pk-dpill home"><i data-ic=dot data-ics=12 style=color:#22c55e></i>自社 '+D.home+'</span>';
+    if(D.akai>0) pills+='<span class="pk-dpill akai"><i data-ic=dot data-ics=12 style=color:#f97316></i>赤井・斉藤 '+D.akai+'</span>';
+    if(D.coin>0) pills+='<span class="pk-dpill coin"><i data-ic=dot data-ics=12 style=color:#f97316></i>コインパ '+D.coin+'</span>';
+    if(D.over>0) pills+='<span class="pk-dpill over"><i data-ic=dot data-ics=12 style=color:#ef4444></i>超過 '+D.over+'</span>';
     const memo=cfg().dayMemos[ds]||'';
-    return '<h4>📌 '+(d.getMonth()+1)+'/'+d.getDate()+'('+'日月火水木金土'[d.getDay()]+') の内訳</h4>'
+    return '<h4><i data-ic=pin data-ics=16></i> '+(d.getMonth()+1)+'/'+d.getDate()+'('+'日月火水木金土'[d.getDay()]+') の内訳</h4>'
       +'<div class="pk-eq">前日まで預かり <b>'+carryN(ds)+'</b> ＋ 当日入庫 <b>'+intakeN(ds)+'</b> ＋ バッファ <b>'+bufferOf(d)+'</b> − 当日返車 <b>'+retN(ds)+'</b> ＝ <b style="font-size:17px">総 '+total+'台</b></div>'
       +'<div class="pk-dist">'+pills+'</div>'
-      +'<div class="pk-memo"><label>📝 この日のメモ（イレギュラー・特記）</label><textarea onchange="pkMemo(\''+ds+'\',this.value)" placeholder="例）車販2台仕入れ／飛び込み多め／第二Pに1台移動">'+esc(memo)+'</textarea></div>';
+      +'<div class="pk-memo"><label><i data-ic=pencil data-ics=16></i> この日のメモ（イレギュラー・特記）</label><textarea onchange="pkMemo(\''+ds+'\',this.value)" placeholder="例）車販2台仕入れ／飛び込み多め／第二Pに1台移動">'+esc(memo)+'</textarea></div>';
   }
   function tiersHtml(){
     let h='';
@@ -231,14 +231,14 @@
     cards.forEach(function(c){
       const wt=(state.workTypes||[]).find(function(w){return w.id===c.workType;});
       const wl=wt?wt.label:(c.workType||'—'); const wc=wt?wt.color:'#64748b';
-      const loa=c.needLoaner?'<span class="pk-lo">🚙代車</span>':'';
+      const loa=c.needLoaner?'<span class="pk-lo"><i data-ic=van data-ics=16></i>代車</span>':'';
       h+='<div class="pk-brkrow" onclick="openDetail(\''+c.id+'\')"><span class="pk-wt" style="background:'+wc+'">'+esc(wl)+'</span><span class="pk-nm">'+esc(c.customer||'（未入力）')+' 様</span><span class="pk-meta">'+esc(c.car||'')+(c.plate?' ・ '+esc(c.plate):'')+'</span>'+loa+'</div>';
     });
     h+='</div>';
     return h;
   }
   function explHtml(){
-    return '<div class="pk-card pk-expl"><div class="pk-cardh">🧮 この画面の数字の出し方</div>'
+    return '<div class="pk-card pk-expl"><div class="pk-cardh"><i data-ic=calculator data-ics=16></i> この画面の数字の出し方</div>'
       +'<div class="pk-er"><span class="pk-tag">置ける台数（3ティア）</span>＝ ①自社内→②赤井・斉藤→③コインパ。各ティアは「理論値 ＋ 理由（−1／+1）」。</div>'
       +'<div class="pk-er"><span class="pk-tag">その日の総台数</span>＝ 前日までの預かり ＋ 当日入庫 ＋ バッファ − 当日返車（空き候補）。棒はこれを下から自社→赤井斉→コインパで色積み。</div>'
       +'<div class="pk-er" style="font-size:12px;color:var(--text3)">・待ち／当日仕上げは数えない。将来の返車は当てにしない（当日返車だけ空き候補）。バッファ＝平日+1／土日+2／休み明け+3。</div>'
@@ -257,7 +257,7 @@
   // 設定（理論値＋バッファ）
   // =========================================
   function settingsCardHtml(){
-    return '<div class="ps-card"><div class="ps-h">🅿️ 駐車場（置き場の理論値・バッファ）</div>'
+    return '<div class="ps-card"><div class="ps-h"><i data-ic=parking data-ics=16></i> 駐車場（置き場の理論値・バッファ）</div>'
       +'<div class="ps-desc">駐車場ビューの基準。各置き場の<b>理論値（普段停められる台数）</b>と、空けておく<b>バッファ</b>を設定します。日々の増減（エンジン置場・車販在庫など）は駐車場ビューで入力します。</div>'
       +'<div id="pk-settings"></div></div>';
   }

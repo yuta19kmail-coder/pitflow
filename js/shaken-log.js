@@ -77,7 +77,7 @@
     var byStaff={}; mRecs.forEach(function(r){ var k=r.staff||'（未記録）'; byStaff[k]=(byStaff[k]||0)+1; });
     var staffArr=Object.keys(byStaff).map(function(k){return {name:k,n:byStaff[k]};}).sort(function(a,b){return b.n-a.n;});
     var h='';
-    h+='<div class="skl-head"><div class="skl-nav"><button onclick="sklShift(-1)">◀ 前月</button><b>'+y+'年'+(mo+1)+'月</b><button onclick="sklShift(1)">次月 ▶</button><button class="skl-now" onclick="sklShift(0)">今月</button></div>';
+    h+='<div class="skl-head"><div class="skl-nav"><button onclick="sklShift(-1)"><i data-ic=chevLeft data-ics=16></i> 前月</button><b>'+y+'年'+(mo+1)+'月</b><button onclick="sklShift(1)">次月 <i data-ic=chevRight data-ics=16></i></button><button class="skl-now" onclick="sklShift(0)">今月</button></div>';
     h+='<div class="skl-sum"><span class="skl-lg done">済 '+doneN+'</span><span class="skl-lg re">再検 '+reN+'</span><span class="skl-lg all">計 '+(doneN+reN)+'</span></div></div>';
     h+='<div class="skl-staff">'+(staffArr.length?('担当別： '+staffArr.map(function(s){return '<span class="skl-sc">'+esc(s.name)+' <b>'+s.n+'</b></span>';}).join('')):'<span class="skl-empty2">この月の実績はまだありません</span>')+'</div>';
     h+='<div class="skl-cal"><div class="skl-dows">'+DOW.split('').map(function(d,i){return '<div class="skl-dow '+(i===0?'sun':i===6?'sat':'')+'">'+d+'</div>';}).join('')+'</div><div class="skl-grid">';
@@ -106,7 +106,7 @@
   window.renderShakenLog=function(){
     var host=document.getElementById('shakenlog-body'); if(!host) return;
     var query=(window._sklQuery||'').trim();
-    var h='<div class="skl-searchbar"><input id="skl-search" class="skl-search" type="text" value="'+esc(query)+'" oninput="sklSearch(this.value)" placeholder="🔍 過去の車検を検索（日付・車種・お客様名・担当）"><button id="skl-clear" class="skl-clear" onclick="sklSearch(\'\')" style="'+(query?'':'display:none')+'">✕ クリア</button></div>';
+    var h='<div class="skl-searchbar"><input id="skl-search"class="skl-search"type="text"value="'+esc(query)+'"oninput="sklSearch(this.value)"placeholder="過去の車検を検索（日付・車種・お客様名・担当）"><button id="skl-clear"class="skl-clear"onclick="sklSearch(\'\')"style="'+(query?'':'display:none')+'">クリア</button></div>';
     h+='<div id="skl-main">'+sklMainHtml()+'</div>';
     host.innerHTML=h;
   };

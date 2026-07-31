@@ -52,16 +52,16 @@
 
     /* ===== 入庫まわりは🧩ルールページへ集約（2026-06-04 ゆうた指示） ===== */
     h += '<div class="ps-card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">';
-    h += '<div style="font-size:13px;color:var(--text2);line-height:1.7;flex:1;min-width:240px">📥 <b>入庫に関する設定（予約枠・売上目標・平均単価・曜日ルールなど）は「🧩 ルール」ページに集約</b>しました。入庫のアルゴリズムはすべてそちらで調整します。</div>';
-    h += '<button class="vh-btn primary" onclick="showView(\'rules\')">🧩 ルールページを開く</button>';
+    h += '<div style="font-size:13px;color:var(--text2);line-height:1.7;flex:1;min-width:240px"><i data-ic=download data-ics=16></i> <b>入庫に関する設定（予約枠・売上目標・平均単価・曜日ルールなど）は「<i data-ic=puzzle data-ics=16></i> ルール」ページに集約</b>しました。入庫のアルゴリズムはすべてそちらで調整します。</div>';
+    h += '<button class="vh-btn primary" onclick="showView(\'rules\')"><i data-ic=puzzle data-ics=16></i> ルールページを開く</button>';
     h += '</div>';
 
     /* ===== 顧客データ取込（テスト・ファイルから） ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📇 顧客データ取込（テスト）</div>';
+    h += '<div class="ps-h"><i data-ic=card data-ics=16></i> 顧客データ取込（テスト）</div>';
     h += '<div class="ps-desc">bizcloud から書き出した顧客JSON（<code>顧客車両_bizcloud_*.json</code>）を読み込み、<b>この端末のブラウザ内（localStorage）だけ</b>に反映します。本番DBには送りません。現在の顧客控えは<b>全置き換え</b>されます。</div>';
     h += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px">';
-    h += '<button class="vh-btn primary" onclick="pitImportCustomersFromFile()">📥 顧客JSONを選んで取込</button>';
+    h += '<button class="vh-btn primary" onclick="pitImportCustomersFromFile()"><i data-ic=download data-ics=16></i> 顧客JSONを選んで取込</button>';
     h += '<span class="ps-status" id="ps-import-status" style="font-size:12px;color:var(--text2)">現在 ' + ((state.customers||[]).length) + ' 件</span>';
     h += '</div></div>';
 
@@ -69,13 +69,13 @@
     const lc = s.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
     const lcSum = (lc.pit||0) + (lc.yard||0) + (lc.parking||0) + (lc.extra||0);
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🅿️ 置き場（混雑度の基準）</div>';
+    h += '<div class="ps-h"><i data-ic=parking data-ics=16></i> 置き場（混雑度の基準）</div>';
     h += '<div class="ps-desc">同時に預かれる台数を<b>場所ごとに分けて</b>持ちます。混雑度ゲージ・2週間バー・最短入庫は<b>4つの合計</b>で計算。「緊急＋α」は最悪ここまで使える、の上乗せ分。</div>';
     h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">🔧 ピット内 ' + numIn('ps-lot-pit', lc.pit != null ? lc.pit : 4, 0, 99) + '<span class="ps-unit">台</span></label>';
-    h += '<label class="ps-lb">🏠 自社敷地 ' + numIn('ps-lot-yard', lc.yard != null ? lc.yard : 12, 0, 99) + '<span class="ps-unit">台</span></label>';
-    h += '<label class="ps-lb">🅿️ 駐車場 ' + numIn('ps-lot-park', lc.parking != null ? lc.parking : 8, 0, 99) + '<span class="ps-unit">台</span></label>';
-    h += '<label class="ps-lb">🚨 緊急＋α ' + numIn('ps-lot-extra', lc.extra != null ? lc.extra : 4, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb"><i data-ic=wrench data-ics=16></i> ピット内 ' + numIn('ps-lot-pit', lc.pit != null ? lc.pit : 4, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb"><i data-ic=home data-ics=16></i> 自社敷地 ' + numIn('ps-lot-yard', lc.yard != null ? lc.yard : 12, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb"><i data-ic=parking data-ics=16></i> 駐車場 ' + numIn('ps-lot-park', lc.parking != null ? lc.parking : 8, 0, 99) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb"><i data-ic=warn data-ics=16></i> 緊急＋α ' + numIn('ps-lot-extra', lc.extra != null ? lc.extra : 4, 0, 99) + '<span class="ps-unit">台</span></label>';
     h += '<span class="ps-lb">＝ 合計 <b id="ps-lot-sum" style="font-size:17px">' + lcSum + '</b><span class="ps-unit">台</span></span>';
     h += '</div>';
     h += '<div class="ps-grid" style="margin-top:12px">';
@@ -85,8 +85,8 @@
     const ov = s.lotOver || { warn: 5, danger: 10 };
     h += '<div class="ps-grid" style="margin-top:12px">';
     h += '<span class="ps-lb" style="font-weight:700">空き数字の色分け</span>';
-    h += '<label class="ps-lb">🟠 超過がここまでオレンジ ' + numIn('ps-over-warn', ov.warn != null ? ov.warn : 5, 0, 98) + '<span class="ps-unit">台</span></label>';
-    h += '<label class="ps-lb">🔴 ここからは赤 ' + numIn('ps-over-danger', ov.danger != null ? ov.danger : 10, 1, 99) + '<span class="ps-unit">台 以上</span></label>';
+    h += '<label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#f97316></i> 超過がここまでオレンジ ' + numIn('ps-over-warn', ov.warn != null ? ov.warn : 5, 0, 98) + '<span class="ps-unit">台</span></label>';
+    h += '<label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#ef4444></i> ここからは赤 ' + numIn('ps-over-danger', ov.danger != null ? ov.danger : 10, 1, 99) + '<span class="ps-unit">台 以上</span></label>';
     h += '</div>';
     h += '<div class="ps-hint">※ 空き0台まではずっと<b style="color:#1db97a">緑</b>。ちょい超過は緊急＋α・コインパで吸収できる「普通」なので、赤を安売りして受付が萎縮しないように（間の台数は濃いオレンジ）。</div>';
     h += '</div>';
@@ -94,11 +94,11 @@
     /* ===== 🚙 代車リミットの色（閾値） ===== */
     const lcl = s.loanerColors || { greenMin: 4, amberMin: 2 };
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🚙 代車リミットの色（残り日数）</div>';
+    h += '<div class="ps-h"><i data-ic=van data-ics=16></i> 代車リミットの色（残り日数）</div>';
     h += '<div class="ps-desc">代車の返却まで残り日数で色が変わります。<b style="color:#1db97a">緑</b>＝余裕／<b style="color:#f59e0b">黄</b>＝注意／<b style="color:#ef4444">赤</b>＝間近／<b style="color:#9fa8c7">黒</b>＝超過（返却日を過ぎた）。</div>';
     h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">🟢 緑：残り ' + numIn('ps-loan-green', lcl.greenMin != null ? lcl.greenMin : 4, 1, 60) + '<span class="ps-unit">日 以上</span></label>';
-    h += '<label class="ps-lb">🟡 黄：残り ' + numIn('ps-loan-amber', lcl.amberMin != null ? lcl.amberMin : 2, 1, 59) + '<span class="ps-unit">日 以上</span></label>';
+    h += '<label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#22c55e></i> 緑：残り ' + numIn('ps-loan-green', lcl.greenMin != null ? lcl.greenMin : 4, 1, 60) + '<span class="ps-unit">日 以上</span></label>';
+    h += '<label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#eab308></i> 黄：残り ' + numIn('ps-loan-amber', lcl.amberMin != null ? lcl.amberMin : 2, 1, 59) + '<span class="ps-unit">日 以上</span></label>';
     h += '</div>';
     h += '<div class="ps-hint">※ 黄の日数〜緑の手前＝黄、それ未満（当日0日含む）＝赤、返却日を過ぎる＝黒（超過）。</div>';
     h += '</div>';
@@ -106,38 +106,38 @@
     /* ===== 🏭 PIT配置図（専用エディタを別画面で開く・v0.47.0） ===== */
     var pitN = (window.PitFloorEditor && PitFloorEditor.countPits) ? PitFloorEditor.countPits() : (Array.isArray(state.bays) ? state.bays.length : 0);
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🏭 PIT配置図（工場の簡易レイアウト）</div>';
+    h += '<div class="ps-h"><i data-ic=factory data-ics=16></i> PIT配置図（工場の簡易レイアウト）</div>';
     h += '<div class="ps-desc">工場の<b>簡易的な平面図</b>を作ります。専用の編集画面で、PIT枠（平PIT／リフトPIT）をグリッドに沿って並べ、建物・ドア・シャッター・通路も置けます。ここで作った図に、作業中の車（カード）をはめていきます（次の段で「Pitリスト」「PITボード」に表示）。</div>';
     h += '<div class="pf-launch">';
-    h += '<button class="vh-btn primary" onclick="if(window.PitFloorEditor)PitFloorEditor.open()">🏭 PIT配置図を編集する</button>';
+    h += '<button class="vh-btn primary" onclick="if(window.PitFloorEditor)PitFloorEditor.open()"><i data-ic=factory data-ics=16></i> PIT配置図を編集する</button>';
     h += '<span class="pf-launch-meta">現在のPIT枠：' + pitN + ' 個</span>';
     h += '</div>';
     h += '</div>';
 
     /* ===== 作業タイプ（増減できる・v0.27.0） ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🔧 作業タイプ（メニュー）<button class="vh-btn" style="margin-left:auto" onclick="pitWtAdd()">＋ タイプを追加</button></div>';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=wrench data-ics=16></i> 作業タイプ（メニュー）<button class="vh-btn" style="margin-left:auto" onclick="pitWtAdd()">＋ タイプを追加</button></div>';
     h += '<div class="ps-desc">入庫カードの「作業タイプ」に出る選択肢。名前・色を変更でき、追加・削除も可能（削除しても過去カードのデータは消えません）。<br><b>「併用可」</b>にチェックすると、その作業は<b>他の作業を選んでいても“追加で”選べます</b>（例：車検＋3M）。コーティング等のセット作業向け。</div>';
     (state.workTypes || []).forEach(function (w, i) {
       h += '<div class="ps-wt-row">'
          + '<input type="color" class="ps-wt-color" value="' + esc(w.color || '#64748b') + '" onchange="pitWtEdit(' + i + ',\'color\',this.value)">'
          + '<input type="text" class="ps-in" style="width:170px" value="' + esc(w.label) + '" onchange="pitWtEdit(' + i + ',\'label\',this.value)">'
          + '<label class="ps-wt-combo" title="ONにすると他の作業を選んでいても追加で選べます（例：車検＋3M）"><input type="checkbox" ' + (w.combinable ? 'checked' : '') + ' onchange="pitWtToggleCombo(' + i + ')"> 併用可</label>'
-         + '<button class="rl-del" title="削除" onclick="pitWtDel(' + i + ')">🗑</button>'
+         + '<button class="rl-del" title="削除" onclick="pitWtDel(' + i + ')"><i data-ic=trash data-ics=16></i></button>'
          + '</div>';
     });
     h += '</div>';
 
     /* ===== 🧪 開発用サンプル（予約の作り直し） ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🧪 開発用サンプル</div>';
+    h += '<div class="ps-h"><i data-ic=flask data-ics=16></i> 開発用サンプル</div>';
     h += '<div class="ps-desc">今のサンプル予約（カード）を全部消して、<b>今の顧客データから</b>直近の入庫実績っぽいサンプルを作り直します。残った車は預かり中ボードに散らします。<br>※開発・動作確認用。実データ運用前の見栄え確認に。</div>';
-    h += '<button class="vh-btn" onclick="if(window.seedSampleReservations)seedSampleReservations()">🔄 予約サンプルを作り直す（顧客データから）</button>';
+    h += '<button class="vh-btn" onclick="if(window.seedSampleReservations)seedSampleReservations()"><i data-ic=refresh data-ics=16></i> 予約サンプルを作り直す（顧客データから）</button>';
     h += '</div>';
 
     /* ===== 概算預かり日数の初期値 ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">⏳ 概算預かり日数の初期値（作業タイプ別・国産／輸入）</div>';
+    h += '<div class="ps-h"><i data-ic=hourglass data-ics=15></i> 概算預かり日数の初期値（作業タイプ別・国産／輸入）</div>';
     h += '<div class="ps-desc">作業タイプを選んだ時にカードへ自動で入る「だいたい何日預かるか」。<b>国産車と輸入車で別々</b>に設定できます。カードごとに後から手で直せます。</div>';
     h += '<div class="ps-est2">';
     h += '<div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div>';
@@ -157,7 +157,7 @@
     const eamD = (s.estAmount && s.estAmount.default) || {};
     const eamI = (s.estAmount && s.estAmount.import) || {};
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">💴 概算金額の初期値（作業タイプ別・平均単価・国産／輸入）</div>';
+    h += '<div class="ps-h"><i data-ic=money data-ics=16></i> 概算金額の初期値（作業タイプ別・平均単価・国産／輸入）</div>';
     h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る平均単価。<b>国産車と輸入車で別々</b>に設定できます。将来のクォーター集計（抱え高）とAI判定の材料になります。</div>';
     h += '<div class="ps-est2">';
     h += '<div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div>';
@@ -175,12 +175,12 @@
 
     /* ===== 🏭 外注先（増減できる・v0.79.0） ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🤝 外注先（提携先）<button class="vh-btn" style="margin-left:auto" onclick="pitOsAdd()">＋ 外注先を追加</button></div>';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=external data-ics=16></i> 外注先（提携先）<button class="vh-btn" style="margin-left:auto" onclick="pitOsAdd()">＋ 外注先を追加</button></div>';
     h += '<div class="ps-desc">カードを「外注」フェーズに移すとき選ぶ提携先リスト。外注ビューの行にもなります（削除しても過去カードのデータは消えません）。</div>';
     (s.outsourcePartners || []).forEach(function (p, i) {
       h += '<div class="ps-wt-row">'
          + '<input type="text" class="ps-in" style="width:220px" value="' + esc(p) + '" onchange="pitOsEdit(' + i + ',this.value)">'
-         + '<button class="rl-del" title="削除" onclick="pitOsDel(' + i + ')">🗑</button>'
+         + '<button class="rl-del" title="削除" onclick="pitOsDel(' + i + ')"><i data-ic=trash data-ics=16></i></button>'
          + '</div>';
     });
     if (!(s.outsourcePartners || []).length) h += '<div class="ps-hint">まだ外注先がありません。「＋ 外注先を追加」で登録してください。</div>';
@@ -188,12 +188,12 @@
 
     /* ===== 営業時間・定休 ===== */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🕐 営業時間・定休</div>';
+    h += '<div class="ps-h"><i data-ic=clock data-ics=16></i> 営業時間・定休</div>';
     h += '<div class="ps-grid">';
     h += '<label class="ps-lb">営業開始（この時刻から受付） <input type="time" class="ps-in" id="ps-open" value="' + esc(s.openTime || '09:00') + '" onchange="pitSettingsApply()"></label>';
     h += '<label class="ps-lb">営業終了（この時刻で受付締切） <input type="time" class="ps-in" id="ps-cutoff" value="' + esc(s.cutoffTime || '17:00') + '" onchange="pitSettingsApply()"></label>';
     h += '</div>';
-    h += '<div class="ps-hint">※ ここは<b>時刻</b>の設定。日単位の「受付できる/できない（○△×）」は 🧩入庫ルール ページとダッシュボードの判定が担当。</div>';
+    h += '<div class="ps-hint">※ ここは<b>時刻</b>の設定。日単位の「受付できる/できない（○△×）」は <i data-ic=puzzle data-ics=16></i>入庫ルール ページとダッシュボードの判定が担当。</div>';
     h += '<div class="ps-dow-row"><span class="ps-dow-t">定休曜日</span>';
     DOW.forEach(function (d, i) {
       const on = (s.closedDow || []).indexOf(i) >= 0;
@@ -355,7 +355,7 @@
 
   /* 初期値に戻す（このページの項目だけ。🧩ルールページの内容＝ルール・辞書・予約枠・目標・単価は保持） */
   window.pitSettingsReset = function () {
-    if (!confirm('設定を初期値に戻します。よろしいですか？\n（予約・カードのデータと、🧩ルールページの内容は消えません）')) return;
+    if (!confirm('設定を初期値に戻します。よろしいですか？\n（予約・カードのデータと、ルールページの内容は消えません）')) return;
     const keep = {
       rules:      state.settings.rules,
       ruleDict:   state.settings.ruleDict,

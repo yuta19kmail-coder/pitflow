@@ -57,7 +57,7 @@
   window.HELP_CONTENTS = {
 
     overview: `
-      <h2>🔧 PitFlowとは</h2>
+      <h2><i data-ic=wrench data-ics=16></i> PitFlowとは</h2>
       <p class="lead">PitFlowは小林モータースの<strong>整備入庫の管理アプリ</strong>です。予約を受けてから、入庫・作業・返車・実績までの流れを1つの画面で回せます。</p>
       <h3>ざっくりの流れ</h3>
       <div class="help-step"><ol>
@@ -77,23 +77,23 @@
     `,
 
     screen: `
-      <h2>🖥 画面の見かた</h2>
+      <h2><i data-ic=monitor data-ics=16></i> 画面の見かた</h2>
       <h3>上のバー（トップバー）</h3>
-      <p>左から順に、<strong>☰メニューの開閉</strong>・ロゴ・バージョン、続いて<strong>文字サイズ（A A A）</strong>・<strong>テーマ切替</strong>・<strong>＋新規予約</strong>・自分のアバターと名前・<strong>同期</strong>・<strong>？ヘルプ</strong>・<strong>ログアウト</strong>が並びます。</p>
+      <p>左から順に、<strong><i data-ic=menu data-ics=15></i>メニューの開閉</strong>・ロゴ・バージョン、続いて<strong>文字サイズ（A A A）</strong>・<strong>テーマ切替</strong>・<strong>＋新規予約</strong>・自分のアバターと名前・<strong>同期</strong>・<strong>？ヘルプ</strong>・<strong>ログアウト</strong>が並びます。</p>
       <ul>
-        <li><strong>☰</strong>：左のメニュー（サイドバー）を畳む／開く。畳んだ状態は端末に記憶されます。</li>
+        <li><strong><i data-ic=menu data-ics=15></i></strong>：左のメニュー（サイドバー）を畳む／開く。畳んだ状態は端末に記憶されます。</li>
         <li><strong>A A A</strong>：文字サイズを 標準／大／特大 に。画面全体が拡大します。</li>
-        <li><strong>🌙/☀️/✨/💎</strong>：テーマ切替（後述）。</li>
+        <li><strong><i data-ic=moon data-ics=16></i>/<i data-ic=sun data-ics=16></i>/<i data-ic=sparkle data-ics=16></i>/<i data-ic=gem data-ics=16></i></strong>：テーマ切替（後述）。</li>
         <li><strong>同期</strong>：今はサンプル表示です（本番のクラウド接続後に有効化）。</li>
       </ul>
       <h3>左のメニュー（サイドバー）</h3>
       <p>「予約／車両／整備／データ／管理」のグループでビューが並びます。クリックでそのビューへ切り替わります。スマホでは上部に横並びになります。</p>
       <h3>真ん中（メイン）</h3>
-      <p>選んだビューの中身が出ます。多くのビューは右上に「🔄更新」やレンジ切替（当日/週/月…）があります。</p>
+      <p>選んだビューの中身が出ます。多くのビューは右上に「<i data-ic=refresh data-ics=16></i>更新」やレンジ切替（当日/週/月…）があります。</p>
     `,
 
     save: `
-      <h2>💾 保存とログイン（今の段階）</h2>
+      <h2><i data-ic=save data-ics=16></i> 保存とログイン（今の段階）</h2>
       <div class="help-warn"><strong>今は「開発中サンプル」段階です。</strong>データは<strong>この端末のブラウザ内</strong>に保存されます。リロードしても残りますが、<strong>別の端末やブラウザとは共有されません</strong>。</div>
       <p>編集した予約・カード・付箋・ダッシュボードの配置などは自動で保存されます。特に「保存ボタン」を押さなくても、開いた瞬間や画面を離れた時などに保存されます。</p>
       <h3>これから（本番接続後）</h3>
@@ -101,11 +101,11 @@
         <li><strong>Googleログイン</strong>：ログインした本人＝「自分」に自動で紐づきます（担当や個人BOXが本当の意味で効きます）。</li>
         <li><strong>クラウド保存</strong>：会社の全員が同じデータを共有。どの端末で開いても同じ状態になります。</li>
       </ul>
-      <div class="help-tip">設定 →「🔄 サンプルデータに戻す」で、いつでも初期状態にリセットできます（今の編集内容は消えます）。</div>
+      <div class="help-tip">設定 →「<i data-ic=refresh data-ics=16></i> サンプルデータに戻す」で、いつでも初期状態にリセットできます（今の編集内容は消えます）。</div>
     `,
 
     dashboard: `
-      <h2>🏠 ダッシュボード（自分で組む）</h2>
+      <h2><i data-ic=home data-ics=16></i> ダッシュボード（自分で組む）</h2>
       <p class="lead">ダッシュボードは<strong>役割ごとに固定</strong>ではなく、<strong>自分で好きなBOXを好きな並びで組む</strong>ビルダーです。TOPページとして最初に開きます。</p>
       <h3>BOXの操作</h3>
       <ul>
@@ -116,7 +116,7 @@
       <h3>カスタマイズ</h3>
       <div class="help-step"><ol>
         <li>右下の<strong>「＋ボックス」</strong>で追加（各アプリ機能の状況・数値、個人フォーカス、ショートカット）。</li>
-        <li><strong>「カスタマイズ」</strong>で編集モードに。⠿ドラッグや ↑↓ で並べ替え、サイズチップでサイズ変更、✕で削除。</li>
+        <li><strong>「カスタマイズ」</strong>で編集モードに。<i data-ic=grip data-ics=16></i>ドラッグや ↑↓ で並べ替え、サイズチップでサイズ変更、<i data-ic=close data-ics=16></i>で削除。</li>
         <li>編集を抜けると自動で保存されます。</li>
       </ol></div>
       <h3>個人フォーカスBOX</h3>
@@ -127,7 +127,7 @@
     `,
 
     search: `
-      <h2>🔍 検索</h2>
+      <h2><i data-ic=search data-ics=16></i> 検索</h2>
       <p>ダッシュボード上部の検索から、<strong>手元の小さな手がかり</strong>で全カードを横断検索できます。</p>
       <ul>
         <li>お客様名・カナ・車種・メーカー・<strong>ナンバー</strong>・<strong>予約番号</strong>・電話・担当・メモに当たります。</li>
@@ -139,7 +139,7 @@
     `,
 
     notes: `
-      <h2>📌 付箋（全体タスク）</h2>
+      <h2><i data-ic=pin data-ics=16></i> 付箋（全体タスク）</h2>
       <p>ダッシュボード上部の付箋ボードは、<strong>全体で共有する連絡・タスク</strong>を貼る場所です。</p>
       <ul>
         <li><strong>5色</strong>で優先度（緊急／今日中／今週中／連絡／余裕）を表現。色ラベルは変えられます。</li>
@@ -152,7 +152,7 @@
     `,
 
     newreserve: `
-      <h2>➕ 新規予約の作り方</h2>
+      <h2><i data-ic=plus data-ics=15></i> 新規予約の作り方</h2>
       <p>トップバーまたは各ビューの<strong>「＋新規予約」</strong>から、入庫カード（全画面）を開いて作ります。</p>
       <h3>入力の流れ</h3>
       <div class="help-step"><ol>
@@ -173,7 +173,7 @@
     `,
 
     today: `
-      <h2>🌅 当日ビュー</h2>
+      <h2><i data-ic=sunrise data-ics=16></i> 当日ビュー</h2>
       <p>その日の<strong>入庫予定</strong>と<strong>返車予定</strong>を時刻順で並べた、現場の朝いちで見る画面です。</p>
       <ul>
         <li>カードをタップすると、詳細を見る／<strong>入庫済みにする</strong>／<strong>返車済みにする</strong>／日時変更／キャンセルのメニューが出ます。</li>
@@ -184,7 +184,7 @@
     `,
 
     avail: `
-      <h2>🗓️ 空きカレンダー・最短入庫</h2>
+      <h2><i data-ic=calendar data-ics=16></i> 空きカレンダー・最短入庫</h2>
       <p>国産・輸入それぞれの<strong>予約の空き</strong>と<strong>最短入庫日</strong>、<strong>代車</strong>の空きを一目で見る画面です。</p>
       <h3>最短入庫日</h3>
       <p>「代車なし／代車あり／当日作業」×「国産／輸入」で、いつから入庫できるかを自動計算します。</p>
@@ -197,8 +197,8 @@
     `,
 
     reserve: `
-      <h2>📅 予約ビュー</h2>
-      <p>予約を<strong>当日／週／月／2ヶ月／未定</strong>のレンジで一覧・カレンダー表示します。右上のタブでレンジを切り替え、◀▶で日付を移動、「今日」で当日へ戻ります。</p>
+      <h2><i data-ic=calendar data-ics=16></i> 予約ビュー</h2>
+      <p>予約を<strong>当日／週／月／2ヶ月／未定</strong>のレンジで一覧・カレンダー表示します。右上のタブでレンジを切り替え、<i data-ic=chevLeft data-ics=16></i><i data-ic=chevRight data-ics=16></i>で日付を移動、「今日」で当日へ戻ります。</p>
       <ul>
         <li>カードをクリックで予約詳細を開けます。</li>
         <li>月ビューは1日あたりの表示数を絞り、枠クリックでその日の全件をポップアップ表示します。</li>
@@ -207,7 +207,7 @@
     `,
 
     tentative: `
-      <h2>🕒 仮予約・未定</h2>
+      <h2><i data-ic=clock data-ics=16></i> 仮予約・未定</h2>
       <p>日程がまだ固まらない予約の扱いです。</p>
       <ul>
         <li><strong>仮予約</strong>：新規予約で「仮予約で登録」、または詳細で切替。確定でない予約として区別されます。</li>
@@ -217,7 +217,7 @@
     `,
 
     return: `
-      <h2>📤 返車・完TEL・売掛</h2>
+      <h2><i data-ic=upload data-ics=16></i> 返車・完TEL・売掛</h2>
       <p>作業が終わってから返車・入金までを扱う画面です。返車ビューはレンジ（未定／当日／週／月／2ヶ月）で切り替えます。</p>
       <h3>ステージ</h3>
       <ul>
@@ -226,12 +226,12 @@
         <li><strong>返車済み</strong>にすると実績・売上へ積み上がります。</li>
       </ul>
       <h3>売掛（入金が返車と別のとき）</h3>
-      <p>予約詳細の金額欄で<strong>「入金日を分ける」</strong>にチェックすると、返車ビューに<strong>「💰入金待ち」</strong>として残り、入金済みにすると入金日が確定表示されます。</p>
-      <div class="help-tip">返車済みになると「確定売上金額」「確定返車日」が鍵付きで確定表示され、✏️で修正できます（実績ボードにも反映）。</div>
+      <p>予約詳細の金額欄で<strong>「入金日を分ける」</strong>にチェックすると、返車ビューに<strong>「<i data-ic=money data-ics=16></i>入金待ち」</strong>として残り、入金済みにすると入金日が確定表示されます。</p>
+      <div class="help-tip">返車済みになると「確定売上金額」「確定返車日」が鍵付きで確定表示され、<i data-ic=pencil data-ics=16></i>で修正できます（実績ボードにも反映）。</div>
     `,
 
     print: `
-      <h2>🖨 表紙印刷</h2>
+      <h2><i data-ic=printer data-ics=16></i> 表紙印刷</h2>
       <p>入庫カードの表紙（お客様情報シート）を印刷できます。新規予約の「印刷して保存」や、カードの印刷から出せます。</p>
       <ul>
         <li>お客様名・車種・ナンバー・入庫/受付日・代車・持ち物・担当・返車予定などが差し込まれます。</li>
@@ -242,18 +242,18 @@
     `,
 
     course: `
-      <h2>📋 課タスクボード（1課/2課）</h2>
+      <h2><i data-ic=clipboard data-ics=16></i> 課タスクボード（1課/2課）</h2>
       <p>入庫したカードを、作業の段階ごとにカンバンで進める画面です。1課＝国産、2課＝輸入。</p>
       <h3>列（段階）</h3>
       <p>点検待ち → 見積り中 → 連絡中 → パーツ待ち → 作業待ち → 作業完了済（＋外注／廃車・乗替）。カードをドラッグして次の段階へ動かします。</p>
       <ul>
         <li>右上の<strong>「完TEL済」「完TEL依頼」</strong>のエリアにドラッグすると、完了連絡の状態を切り替えられます。</li>
-        <li>「🏭 PITボード」で配置図と併用できます。</li>
+        <li>「<i data-ic=factory data-ics=16></i> PITボード」で配置図と併用できます。</li>
       </ul>
     `,
 
     work: `
-      <h2>🏭 Pitリスト</h2>
+      <h2><i data-ic=factory data-ics=16></i> Pitリスト</h2>
       <p>自社のPIT配置図に、実際の入庫カードをはめて<strong>今どの車がどのリフト・置き場にいるか</strong>を見る画面です。</p>
       <ul>
         <li>配置図は自社レイアウト（3PIT・1PIT・青空 等）が初期表示。</li>
@@ -262,7 +262,7 @@
     `,
 
     shaken: `
-      <h2>🔎 車検予定</h2>
+      <h2><i data-ic=search data-ics=16></i> 車検予定</h2>
       <p>車検の段取りを「行ける日候補 → 決定 → 完了／再検」で見える化する画面です。</p>
       <ul>
         <li><strong>行ける日候補</strong>：その車を車検に出せる日（午前/午後）を塗って候補に。</li>
@@ -273,7 +273,7 @@
     `,
 
     shakenlog: `
-      <h2>📇 車検履歴</h2>
+      <h2><i data-ic=card data-ics=16></i> 車検履歴</h2>
       <p>車検の<strong>実績アーカイブ</strong>。誰が・いつ行ったかを月カレンダーで残します。</p>
       <ul>
         <li>カードは2行（客名＋車種）。上部の<strong>検索バー</strong>で日付・車種・客名・担当を絞り込めます（スペース区切りAND）。</li>
@@ -282,16 +282,16 @@
     `,
 
     carsales: `
-      <h2>🧽 車販作業</h2>
+      <h2><i data-ic=drop data-ics=16></i> 車販作業</h2>
       <p>納車前の車販まわりの作業（洗車・ヘッドライト磨き・コーティング・その他依頼）を段階で管理します。</p>
       <ul>
-        <li>洗車は「☀️今日／🌙明日」「今週」に分けて表示。完了で「済」。</li>
+        <li>洗車は「<i data-ic=sun data-ics=16></i>今日／<i data-ic=moon data-ics=16></i>明日」「今週」に分けて表示。完了で「済」。</li>
         <li>ヘッドライト磨き・コーティング依頼・その他依頼も、それぞれ完了チェックできます。</li>
       </ul>
     `,
 
     outsource: `
-      <h2>🤝 外注</h2>
+      <h2><i data-ic=external data-ics=16></i> 外注</h2>
       <p>外注に出したカードを、<strong>外注先ごとに俯瞰</strong>する読み取り用の画面です。</p>
       <ul>
         <li>提携先（板金・タイヤ・ガラス 等）は設定で増減できます。</li>
@@ -300,7 +300,7 @@
     `,
 
     loaner: `
-      <h2>🚙 代車カレンダー</h2>
+      <h2><i data-ic=van data-ics=16></i> 代車カレンダー</h2>
       <p>縦＝日付（下に無限）、横＝代車のカレンダーで、<strong>どの代車がいつ貸出中か</strong>を管理します。</p>
       <ul>
         <li>絞込（ETC・ナビ・ISO・軽/普通/輸入）や並べ替え（高さ・幅・長さ・定員）ができます。</li>
@@ -310,7 +310,7 @@
     `,
 
     parking: `
-      <h2>🅿️ 駐車場</h2>
+      <h2><i data-ic=parking data-ics=16></i> 駐車場</h2>
       <p>置き場（ピット内・自社敷地・駐車場・緊急+α）のキャパに対して、<strong>その日の預かり台数と空き／超過</strong>を管理します。</p>
       <ul>
         <li>「次の営業日までに空けておく台数」など、段取りに使う目安が出ます。</li>
@@ -319,7 +319,7 @@
     `,
 
     fleet: `
-      <h2>🚐 車両管理（代車・自社車両）</h2>
+      <h2><i data-ic=van data-ics=16></i> 車両管理（代車・自社車両）</h2>
       <p>代車と社用車（積載車・営業車など）を登録・管理する台帳です。</p>
       <ul>
         <li>車種・色・ナンバー・区分（軽/普通/輸入）・寸法・定員・装備（ETC/ナビ/ISO）を登録。</li>
@@ -329,7 +329,7 @@
     `,
 
     result: `
-      <h2>✅ 実績</h2>
+      <h2><i data-ic=check data-ics=16></i> 実績</h2>
       <p>作業完了日ベースの<strong>実績カレンダー</strong>。その日に「作業完了 or 返車済み」になったカードが並びます。</p>
       <ul>
         <li>1日3件まで表示＋「+N件」。枠クリックでその日の全実績をポップアップ。</li>
@@ -338,7 +338,7 @@
     `,
 
     sales: `
-      <h2>💴 売上</h2>
+      <h2><i data-ic=money data-ics=16></i> 売上</h2>
       <p>月／年／クォーターや、フロント別・作業グループ別で売上を集計する画面です。</p>
       <ul>
         <li><strong>確度の段階</strong>（実績・確定・予定・見込・予測）で着地見込みを出します。</li>
@@ -348,44 +348,44 @@
     `,
 
     customers: `
-      <h2>👤 顧客</h2>
+      <h2><i data-ic=user data-ics=16></i> 顧客</h2>
       <p>入力補助用の<strong>顧客控え</strong>（車両ごと）。新規入庫の際に呼び出して入力を早められます。</p>
       <div class="help-tip">正式な台帳は整備ソフト側です。ここは「よく来るお客様をすぐ引ける控え」として使います。サンプル500件の投入や全削除もできます。</div>
     `,
 
     settings: `
-      <h2>⚙️ 設定・入庫ルール</h2>
+      <h2><i data-ic=settings data-ics=16></i> 設定・入庫ルール</h2>
       <p>入庫アルゴリズムの基準値や各種しきい値を設定します。</p>
       <ul>
         <li>置ける台数（内訳）・1日の予約上限（国産/輸入）・概算預かり日数・概算金額（作業タイプ別）。</li>
         <li>売上目標・平均単価・長期預かりのしきい値・駐車場オーバーの色分け。</li>
         <li>定休・長期休み（お盆/年末年始/GW）。</li>
       </ul>
-      <h3>🧩 入庫ルール</h3>
+      <h3><i data-ic=puzzle data-ics=16></i> 入庫ルール</h3>
       <p>受付可否のアルゴリズムは<strong>ノーコードの積み上げ式</strong>で、設定の「入庫ルール」から言葉で足していけます（本番化後はAIがこれを読んで日別の○△×を判定します）。</p>
-      <div class="help-warn">開発用ツールの「🔄 サンプルデータに戻す」を押すと、今の編集内容は消えて初期状態に戻ります。</div>
+      <div class="help-warn">開発用ツールの「<i data-ic=refresh data-ics=16></i> サンプルデータに戻す」を押すと、今の編集内容は消えて初期状態に戻ります。</div>
     `,
 
     theme: `
-      <h2>🎨 テーマ・文字サイズ</h2>
+      <h2><i data-ic=palette data-ics=16></i> テーマ・文字サイズ</h2>
       <h3>テーマ（4パターン）</h3>
-      <p>トップバーのテーマボタンで循環します：<strong>🌙ダーク → ☀️ライト → ✨ダーク・リキッド → 💎ライト・リキッド</strong>。リキッドはガラス調（背景グラデ＋すりガラス）の見た目です。選んだテーマは端末に記憶されます。</p>
+      <p>トップバーのテーマボタンで循環します：<strong><i data-ic=moon data-ics=16></i>ダーク → <i data-ic=sun data-ics=16></i>ライト → <i data-ic=sparkle data-ics=16></i>ダーク・リキッド → <i data-ic=gem data-ics=16></i>ライト・リキッド</strong>。リキッドはガラス調（背景グラデ＋すりガラス）の見た目です。選んだテーマは端末に記憶されます。</p>
       <h3>文字サイズ（3段）</h3>
       <p>トップバーの<strong>「A A A」</strong>で 標準／大／特大。画面全体が拡大され、遠目でも見やすくなります。こちらも記憶されます。</p>
       <div class="help-tip">現場のモニタが遠い・字が小さいと感じたら「特大」がおすすめです。</div>
     `,
 
     faq: `
-      <h2>❓ よくある質問</h2>
+      <h2><i data-ic=help data-ics=16></i> よくある質問</h2>
       <div class="help-faq"><div class="help-faq-q">編集した内容が別のPCに出てきません</div><div class="help-faq-a">今はサンプル段階で、データはこの端末のブラウザ内に保存されるためです。本番のクラウド接続後は全端末で共有されます。</div></div>
       <div class="help-faq"><div class="help-faq-q">「自分」を切り替えたいです</div><div class="help-faq-a">今は自動で既定の担当になります。特定の人のBOXが欲しい時は、ダッシュボードでBOXを追加する時に対象者を選んでください。本番ログイン後は「自分」＝ログイン本人に自動で紐づきます。</div></div>
       <div class="help-faq"><div class="help-faq-q">最短入庫日が思ったより先です</div><div class="help-faq-a">予約枠の上限・定休・連休・代車の空きから自動計算しています。設定の予約上限や概算預かり日数、入庫ルールを見直すと変わります。</div></div>
       <div class="help-faq"><div class="help-faq-q">ダッシュボードを元に戻したい</div><div class="help-faq-a">プリセットの雛形（全体用など）から作り直せます。プリセットを追加して雛形を選べば、その配置になります。</div></div>
-      <div class="help-faq"><div class="help-faq-q">画面が更新されない気がする</div><div class="help-faq-a">各ビュー右上の「🔄更新」を押してください。アプリ自体の更新は自動チェックが入っています。</div></div>
+      <div class="help-faq"><div class="help-faq-q">画面が更新されない気がする</div><div class="help-faq-a">各ビュー右上の「<i data-ic=refresh data-ics=16></i>更新」を押してください。アプリ自体の更新は自動チェックが入っています。</div></div>
     `,
 
     terms: `
-      <h2>📖 用語集</h2>
+      <h2><i data-ic=book data-ics=16></i> 用語集</h2>
       <div class="help-term"><div class="help-term-name">受付タイプ（待ち／当日返し／預かり）</div><div class="help-term-desc">お客様の車の扱い。待ち＝店で待つ、当日返し＝その日に返す、預かり＝数日置く。置き場の占有計算に使います。</div></div>
       <div class="help-term"><div class="help-term-name">概算預かり日数</div><div class="help-term-desc">作業タイプごとの「だいたい何日預かるか」の初期値。最短入庫日や駐車場の予想に使います（後で手直し可）。</div></div>
       <div class="help-term"><div class="help-term-name">完TEL</div><div class="help-term-desc">作業完了のお客様への電話連絡。完TEL待ち→完TEL済で返車待ちに進みます。</div></div>

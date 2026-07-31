@@ -100,7 +100,7 @@ window.pitResultDayPopup = function(dateStr){
   const body = cards.length
     ? cards.map(function(c){ return (typeof cardHtml === 'function') ? cardHtml(c, { compact: true }) : ('<div>' + (c.customer || '') + '</div>'); }).join('')
     : '<div class="pdp-empty">実績はありません</div>';
-  back.innerHTML = '<div class="pdp-box"><div class="pdp-head"><span>' + head + '</span><button class="pdp-x" onclick="pitReserveDayPopClose()">✕</button></div>'
+  back.innerHTML = '<div class="pdp-box"><div class="pdp-head"><span>' + head + '</span><button class="pdp-x" onclick="pitReserveDayPopClose()"><i data-ic=close data-ics=16></i></button></div>'
     + '<div class="pdp-list" onclick="pitReserveDayPopClose()">' + body + '</div></div>';
   back.classList.add('show');
 };

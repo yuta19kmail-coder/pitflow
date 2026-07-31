@@ -34,7 +34,7 @@
     var cards = (state.cards || []).filter(function(c){ return c.status === 'outsource'; });
     var h = '';
     if (!partners.length && !cards.length){
-      h = '<div class="os-empty">外注先が未登録です。設定の「🏭 外注先」で追加してください。</div>';
+      h = '<div class="os-empty">外注先が未登録です。設定の「<i data-ic=factory data-ics=16></i> 外注先」で追加してください。</div>';
       body.innerHTML = h; return;
     }
     partners.forEach(function(p){

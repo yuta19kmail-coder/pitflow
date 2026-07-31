@@ -1,6 +1,6 @@
 /* ========================================
    shaken.js  -  車検予定（整備の俯瞰）/ PitFlow v0.110.0
-   ・上＝決定カレンダー（各日を🌅午前｜🌇午後に縦割り／予定決定・完了・再検）
+   ・上＝決定カレンダー（各日を<i data-ic=sunrise data-ics=16></i>午前｜<i data-ic=sunrise data-ics=16></i>午後に縦割り／予定決定・完了・再検）
    ・下＝可能性ガント（行＝車、帯＝「行ける枠」＝予約詳細 inspSchedule.slots）
    ・帯 or 決定チップをドラッグ→決定枠へドロップで確定/移動。決定チップのタップで完了/再検/取消。
    ・配車（誰が運ぶ）は扱わない＝MHSの領分。ここは整備が段取りを目で見る場所。
@@ -67,14 +67,14 @@
     var data=collect(), decCell=data.decCell, cnt=data.cnt;
     var h='';
     // ヘッダ操作
-    h+='<div class="shk-head"><div class="shk-nav"><button onclick="shkShift(-7)">◀ 前週</button><b>'+fmtMD(days[0].iso)+' 〜</b><button onclick="shkShift(7)">次週 ▶</button><button class="shk-now" onclick="shkShift(0)">今週</button></div>';
+    h+='<div class="shk-head"><div class="shk-nav"><button onclick="shkShift(-7)"><i data-ic=chevLeft data-ics=16></i> 前週</button><b>'+fmtMD(days[0].iso)+' 〜</b><button onclick="shkShift(7)">次週 <i data-ic=chevRight data-ics=16></i></button><button class="shk-now" onclick="shkShift(0)">今週</button></div>';
     h+='<div class="shk-legend"><span class="shk-lg dc">決定</span><span class="shk-lg dn">完了</span><span class="shk-lg re">再検</span><span class="shk-lg cd">予定枠</span></div>';
     h+='<div class="shk-sum">決定'+cnt.decided+'／完了'+cnt.done+'／再検'+cnt.recheck+'／候補'+cnt.cand+'／未設定'+cnt.unset+'</div></div>';
     // 未入庫の予約（翌週末＝表示範囲＋週末ぶんまで。それ以降の先の予約は出さない）
     var _lim=new Date(window._shakenBase); _lim.setDate(_lim.getDate()+13); var _limIso=ymdL(_lim);
     var _uns=data.unsched.filter(function(c){ return !c.reserveDate || c.reserveDate<=_limIso; });
     if(_uns.length){
-      h+='<div class="shk-un">🕗 未入庫の予約（〜'+fmtMD(_limIso)+'・入庫後に予定）：'+_uns.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+(c.reserveDate?'<span class="shk-ures">'+fmtMD(c.reserveDate)+'入</span>':'')+'</span>'; }).join('')+'</div>';
+      h+='<div class="shk-un"><i data-ic=clock data-ics=16></i> 未入庫の予約（〜'+fmtMD(_limIso)+'・入庫後に予定）：'+_uns.map(function(c){ return '<span class="shk-uchip" data-card-id="'+c.id+'" onclick="openDetail(\''+c.id+'\')" style="border-left-color:'+team(c)+'">'+esc(surname(c))+'様 '+esc(carLabel(c)||'')+(c.reserveDate?'<span class="shk-ures">'+fmtMD(c.reserveDate)+'入</span>':'')+'</span>'; }).join('')+'</div>';
     }
     // スクロール表
     h+='<div class="shk-scroll"><div class="shk-tbl">';
@@ -82,9 +82,9 @@
     h+='<div class="shk-row"><div class="shk-gut hgut"></div>'+days.map(function(x){ var isT=x.iso===tIso; var n=0; ['am','pm'].forEach(function(s){ n+=(decCell[x.iso+'|'+s]||[]).length; });
       return '<div class="shk-day'+(x.off?' dayoff':'')+'"><div class="shk-dh'+(isT?' today':'')+(x.off?' off':'')+'"><span class="d">'+x.date.getDate()+'</span> <span class="w '+(x.w===0?'sun':x.w===6?'sat':'wd')+'">'+DOW[x.w]+'</span>'+(x.off?'<div class="cn">休</div>':'<div class="cn">決'+n+'</div>')+'</div></div>'; }).join('')+'</div>';
     // 午前午後
-    h+='<div class="shk-row"><div class="shk-gut hgut bb"></div>'+days.map(function(x){ if(x.off) return '<div class="shk-off2 apoff"><span class="shk-ap off">'+offLabel(x.iso)+'</span></div>'; return '<div class="shk-sc"><div class="shk-ap am">🌅午前</div></div><div class="shk-sc pm"><div class="shk-ap pm">🌇午後</div></div>'; }).join('')+'</div>';
+    h+='<div class="shk-row"><div class="shk-gut hgut bb"></div>'+days.map(function(x){ if(x.off) return '<div class="shk-off2 apoff"><span class="shk-ap off">'+offLabel(x.iso)+'</span></div>'; return '<div class="shk-sc"><div class="shk-ap am"><i data-ic=sunrise data-ics=16></i>午前</div></div><div class="shk-sc pm"><div class="shk-ap pm"><i data-ic=sunrise data-ics=16></i>午後</div></div>'; }).join('')+'</div>';
     // 決定バンド
-    h+='<div class="shk-row shk-bandrow"><div class="shk-band">📌 決定</div><div class="shk-bandfill"></div></div>';
+    h+='<div class="shk-row shk-bandrow"><div class="shk-band"><i data-ic=pin data-ics=16></i> 決定</div><div class="shk-bandfill"></div></div>';
     h+='<div class="shk-row"><div class="shk-gut glabel">行く車</div>'+days.map(function(x){
       if(x.off) return '<div class="shk-off2"></div>';
       return ['am','pm'].map(function(slot){
@@ -94,7 +94,7 @@
       }).join('');
     }).join('')+'</div>';
     // 可能性ガント
-    h+='<div class="shk-row shk-bandrow shk-gantt-drop" ondragover="shkGanttOver(event)" ondragleave="shkGanttLeave(event)" ondrop="shkGanttDrop(event)"><div class="shk-band">🕘 予定</div><div class="shk-bandfill"><span class="shk-drophint">↩ 決定チップをこの「予定」エリアにドロップ＝候補（行ける日）に戻す</span></div></div>';
+    h+='<div class="shk-row shk-bandrow shk-gantt-drop" ondragover="shkGanttOver(event)" ondragleave="shkGanttLeave(event)" ondrop="shkGanttDrop(event)"><div class="shk-band"><i data-ic=clock data-ics=16></i> 予定</div><div class="shk-bandfill"><span class="shk-drophint">↩ 決定チップをこの「予定」エリアにドロップ＝候補（行ける日）に戻す</span></div></div>';
     window._shkSubs = subs;
     var ganttCars = data.cands.concat(data.empties);
     ganttCars.forEach(function(c){ var s=ins(c); var isEmpty=data.empties.indexOf(c)>=0;
@@ -243,7 +243,7 @@
   function pop(title, body){
     var back=document.getElementById('shk-pop');
     if(!back){ back=document.createElement('div'); back.id='shk-pop'; back.className='modal-backdrop'; back.addEventListener('click',function(e){ if(e.target.id==='shk-pop') closePop(); }); document.body.appendChild(back); }
-    back.innerHTML='<div class="pdp-box shk-box"><div class="pdp-head"><span>'+title+'</span><button class="pdp-x" onclick="shkClosePop()">✕</button></div><div class="shk-popbody">'+body+'</div></div>';
+    back.innerHTML='<div class="pdp-box shk-box"><div class="pdp-head"><span>'+title+'</span><button class="pdp-x" onclick="shkClosePop()"><i data-ic=close data-ics=16></i></button></div><div class="shk-popbody">'+body+'</div></div>';
     back.classList.add('show');
   }
   function closePop(){ var b=document.getElementById('shk-pop'); if(b) b.classList.remove('show'); }

@@ -285,12 +285,12 @@
 
     // ===== 注意（外注先） ※車両注意は上部バッジ行に集約（.ph-b-cau） =====
     if (c.status === 'outsource'){
-      h += '<div class="ph-note">🤝 外注先：'+esc(c.outsourceTo||'未定')+(c.outsourceNote?'（'+esc(c.outsourceNote)+'）':'')+'</div>';
+      h += '<div class="ph-note"><i data-ic=external data-ics=16></i> 外注先：'+esc(c.outsourceTo||'未定')+(c.outsourceNote?'（'+esc(c.outsourceNote)+'）':'')+'</div>';
     }
     // ===== 下部メモ群（代車条件・予約内容・引継ぎ）＝区切り線つきで統一表示 =====
     // 代車の車種固定・条件メモ（あれば）
     if (c.needLoaner && (c.loanerFixed || (c.loanerOther||'').trim())){
-      h += '<div class="ph-sec ph-sec-loaner"><div class="ph-sec-lb">🚙 代車条件</div>'
+      h += '<div class="ph-sec ph-sec-loaner"><div class="ph-sec-lb"><i data-ic=van data-ics=16></i> 代車条件</div>'
         + '<div class="ph-sec-body">'
         + (c.loanerFixed ? '<span class="ph-fix">固定</span>' : '')
         + ((c.loanerOther||'').trim() ? '<span class="ph-lmemo">'+esc(c.loanerOther)+'</span>' : '')
@@ -298,12 +298,12 @@
     }
     // 予約内容メモ（読み取り専用）
     var _resmemo = (c.menu || c.memo || '').trim();
-    h += '<div class="ph-sec"><div class="ph-sec-lb">📝 予約内容メモ</div>'
+    h += '<div class="ph-sec"><div class="ph-sec-lb"><i data-ic=pencil data-ics=16></i> 予約内容メモ</div>'
        + '<div class="ph-sec-body ph-memo">'
        + (_resmemo ? esc(_resmemo).replace(/\n/g,'<br>') : '<span class="ph-empty">（なし）</span>')
        + '</div></div>';
     // 引継ぎメモ（その場で入力＝自動保存）。data-cid で保存先カードを固定。※位置は従来どおり（メモ群の最後）
-    h += '<div class="ph-sec"><div class="ph-sec-lb">🔁 引継ぎメモ <small>（入庫後・ここに直接入力できます）</small></div>'
+    h += '<div class="ph-sec"><div class="ph-sec-lb"><i data-ic=refresh data-ics=16></i> 引継ぎメモ <small>（入庫後・ここに直接入力できます）</small></div>'
        + '<textarea class="ph-hoinput" data-cid="'+esc(c.id)+'" rows="2" placeholder="引継ぎ・伝達を入力（自動で保存されます）">'+esc(c.handoffMemo||'')+'</textarea>'
        + '</div>';
 
@@ -314,7 +314,7 @@
       var _washOn = (c.needWash !== false);
       var _lineOn = !c.noThanksLine;
       h += '<div class="ph-sec ph-rt">';
-      h += '<div class="ph-sec-lb">📞 完TEL / 返車 <small>（ここで入力できます）</small></div>';
+      h += '<div class="ph-sec-lb"><i data-ic=phone data-ics=16></i> 完TEL / 返車 <small>（ここで入力できます）</small></div>';
       h += '<div class="ph-rt-row"><span class="ph-rt-k">確定金額</span><span class="ph-rt-in"><span class="ph-rt-yen">¥</span><input class="ph-rt-amt" inputmode="numeric" value="'+esc(_amtStr)+'"></span></div>';
       h += '<div class="ph-rt-row"><span class="ph-rt-k">返車予定日</span><span class="ph-rt-in"><input class="ph-rt-date" type="date" value="'+esc(c.returnDate||'')+'"></span></div>';
       h += '<div class="ph-rt-row"><span class="ph-rt-k">返車時間</span><span class="ph-rt-in"><input class="ph-rt-time" type="text" placeholder="900 / 9時半" value="'+esc(c.returnTime||'')+'"></span></div>';
@@ -326,7 +326,7 @@
 
     // 🛒 車販依頼メモ（バッジは上のバッジ行に出るので、ここはメモ本文だけ末尾に）
     if (c.salesReq && (c.salesReqMemo||'').trim()){
-      h += '<div class="ph-sec"><div class="ph-sec-lb">🛒 車販依頼メモ</div><div class="ph-sec-body ph-sales-line">' + esc(c.salesReqMemo) + '</div></div>';
+      h += '<div class="ph-sec"><div class="ph-sec-lb"><i data-ic=cart data-ics=16></i> 車販依頼メモ</div><div class="ph-sec-body ph-sales-line">' + esc(c.salesReqMemo) + '</div></div>';
     }
 
     ensureEl().innerHTML = h;

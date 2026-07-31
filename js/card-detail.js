@@ -73,7 +73,7 @@ function pitSaveTentative(){
   if (c){
     c.tentative = true;
     if (window.logFlow) logFlow(c, '仮予約で登録');
-    if (window.pitToast) pitToast('📝 仮予約として登録しました');
+    if (window.pitToast) pitToast('仮予約として登録しました');
   }
   closeDetail();
 }
@@ -114,7 +114,7 @@ function renderCardForm(c){
 
   /* === 顧客呼び出し（入力補助・整備ソフトとは別の控え） === */
   h += '<div class="cf-recall">';
-  h += '<input id="cf-recall-input" class="cf-input" placeholder="🔍 過去の顧客・ナンバーから呼び出し（名前/ナンバー）" oninput="custSuggest(this.value)" autocomplete="off">';
+  h += '<input id="cf-recall-input"class="cf-input"placeholder="過去の顧客・ナンバーから呼び出し（名前/ナンバー）"oninput="custSuggest(this.value)"autocomplete="off">';
   h += '<div id="cf-recall-list" class="cf-recall-list" style="display:none"></div>';
   h += '</div>';
 
@@ -122,13 +122,13 @@ function renderCardForm(c){
   if (!_cardTab) _cardTab = 'basic';
   if (withSide){
     _cardTab = 'basic';   // 新規予約は基本情報のみ表示
-    h += '<div class="cf-tabs">' + cfTabBtn('basic', '📋 基本情報') + '</div>';
+    h += '<div class="cf-tabs">' + cfTabBtn('basic', '<i data-ic=clipboard data-ics=16></i> 基本情報') + '</div>';
   } else {
     h += '<div class="cf-tabs">'
-       + cfTabBtn('basic',  '📋 基本情報')
-       + cfTabBtn('flow',   '🕒 フロー')
-       + cfTabBtn('maint',  '🔧 整備')
-       + cfTabBtn('office', '🗂 バックオフィス')
+       + cfTabBtn('basic',  '<i data-ic=clipboard data-ics=16></i> 基本情報')
+       + cfTabBtn('flow',   '<i data-ic=clock data-ics=16></i> フロー')
+       + cfTabBtn('maint',  '<i data-ic=wrench data-ics=16></i> 整備')
+       + cfTabBtn('office', '<i data-ic=folder data-ics=16></i> バックオフィス')
        + '</div>';
   }
 
@@ -137,7 +137,7 @@ function renderCardForm(c){
 
   /* === 基本情報（車両もここに統合・v0.27.0） === */
   /* 顧客を呼び出し済み（c.customerId あり）なら、右端に「この顧客で新規車両を追加」ボタン（v0.38.4） */
-  h += '<div class="cf-section"><div class="cf-section-head">👤 <span>基本情報</span>'
+  h += '<div class="cf-section"><div class="cf-section-head"><i data-ic=user data-ics=16></i> <span>基本情報</span>'
      + (c.customerId ? '<button type="button" class="cf-addveh-btn" onclick="cfAddVehicle()">＋ この顧客で新規車両を追加</button>' : '')
      + '</div><div class="cf-section-body">';
   _ensureNameParts(c);
@@ -176,7 +176,7 @@ function renderCardForm(c){
   h += secEnd();
 
   /* === 予約内容（旧「作業内容」＝作業タイプ/課/受付/相談/担当/概算＋代車を統合・v0.35.2） === */
-  h += sec('予約内容', '🗒️');
+  h += sec('予約内容', '<i data-ic=sticky data-ics=16></i>');
   /* 1行目：作業タイプ(基本)｜併用可(B.P/1Y/3M)｜課 を1行に（v0.94.0）。v0.94.3 上揃え＝ラベル/チップの上端を揃える */
   h += '<div class="cf-row" style="flex-wrap:nowrap;align-items:flex-start">';
   h += '<div class="cf-field" style="flex:0 1 auto;min-width:0"><div class="cf-label">作業タイプ</div>' + workTypeChips(c) + '</div>';
@@ -201,19 +201,19 @@ function renderCardForm(c){
   h += '<div class="cf-hint" style="margin-top:0">※ 日数・金額とも作業タイプを選ぶと平均値が自動で入る概算。診断・見積もりで後から直せばOK。</div>';
   /* 車検を選んだ時だけ：入庫時持ち物（概算の下・代車の上に出す・v0.35.4） */
   if (c.workType === 'shaken'){
-    h += '<div class="cf-subhead">📋 入庫時持ち物（車検）</div>';
-    h += '<div class="cf-mochi"><div class="cf-mochi-lead">📢 お客様にご案内ください（当日ご持参いただくもの）</div>'
-       + '<div class="cf-mochi-items"><span class="cf-mochi-i">🚗 車検証</span><span class="cf-mochi-i">🧾 納税証明書</span><span class="cf-mochi-i">📄 自賠責</span></div></div>';
+    h += '<div class="cf-subhead"><i data-ic=clipboard data-ics=16></i> 入庫時持ち物（車検）</div>';
+    h += '<div class="cf-mochi"><div class="cf-mochi-lead"><i data-ic=megaphone data-ics=16></i> お客様にご案内ください（当日ご持参いただくもの）</div>'
+       + '<div class="cf-mochi-items"><span class="cf-mochi-i"><i data-ic=car data-ics=16></i> 車検証</span><span class="cf-mochi-i"><i data-ic=receipt data-ics=16></i> 納税証明書</span><span class="cf-mochi-i"><i data-ic=file data-ics=16></i> 自賠責</span></div></div>';
     h += '<div class="cf-row" style="flex-wrap:wrap">';
     h += '<div class="cf-field cf-field-narrow"><div class="cf-label">諸費用 ¥</div>' + numIn(c, 'feeAmount', 'style="width:120px"') + '</div>';
     h += '<div class="cf-field cf-field-narrow"><div class="cf-label">早期割</div>' + toggle(c, 'earlyDiscount', '適用', 'なし') + '</div>';
     h += '</div>';
   }
   /* 代車：スイッチ＋使用代車＋車種固定を1行（中央揃え＝スイッチが上下にブレない）。貸出/条件/メモは下に展開（v0.38.9） */
-  h += '<div class="cf-subhead">🚙 代車</div>';
+  h += '<div class="cf-subhead"><i data-ic=van data-ics=16></i> 代車</div>';
   h += '<div class="cf-row cf-loaner-switchrow">';
   h += '<div class="cf-field" style="flex:0 0 auto">' + toggle(c, 'needLoaner', '必要', '不要') + '</div>';
-  if (_prevIntakeLoaner(c)) h += '<span class="cf-prevloaner">⚠ 前回入庫時 代車あり</span>';
+  if (_prevIntakeLoaner(c)) h += '<span class="cf-prevloaner"><i data-ic=warn data-ics=16></i> 前回入庫時 代車あり</span>';
   if (c.needLoaner){
     h += '<div class="cf-field" style="flex:2">' + loanerSelect(c, 'loanerId') + '</div>';   // ラベルなし＝1行高さ（スイッチがブレない）
     h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-chips"><button type="button" id="cf-fixed-btn" class="cf-chip' + (c.loanerFixed ? ' active' : '') + '"' + (c.loanerFixed ? ' style="background:#1db97a;color:#fff;border-color:#1db97a;"' : '') + '>車種固定</button></div></div>';
@@ -237,7 +237,7 @@ function renderCardForm(c){
   h += secEnd();
 
   /* === 内容（旧「整備内容（自由記入）」を独立セクション化＋テンプレ挿入・v0.35.2） === */
-  h += sec('内容', '🔧');
+  h += sec('内容', '<i data-ic=wrench data-ics=16></i>');
   h += '<div class="cf-row"><div class="cf-field" style="flex:1">';
   h += '<div class="cf-label">作業内容（自由記入）</div>';
   h += textareaIn(c, 'menu', 3);
@@ -359,9 +359,9 @@ function lineField(c){
     const url = _lstepUrl(id);
     let h = '<div class="cf-line-wrap"><span class="cf-line-done">✓ 登録済</span>';
     h += url
-      ? '<a class="cf-line-link" href="' + _pe(url) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()">🔗 Lステップ</a>'
+      ? '<a class="cf-line-link" href="' + _pe(url) + '" target="_blank" rel="noopener" draggable="true" title="クリックで開く／ドラッグでブラウザへ（タブのように掴める）" onclick="event.stopPropagation()"><i data-ic=link data-ics=16></i> Lステップ</a>'
       : '<span class="cf-line-bad">番号を確認</span>';
-    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="解除して入れ直す">✕</button></div>';
+    h += '<button type="button" class="cf-line-x" onclick="cfLineClear()" title="解除して入れ直す"><i data-ic=close data-ics=16></i></button></div>';
     return h;
   }
   // 未登録：編集できる状態セレクト（未案内/LINE NG/登録済）。「登録済」を選ぶと番号入力が出る。
@@ -513,13 +513,13 @@ function _cfsDayListHtml(c){
   function col(list, isRet){
     if (!list.length) return '<div class="dl-empty">予定なし</div>';
     const items = list.map(function(x){ const tt = isRet ? (x.returnTime||x.reserveTime||'') : (x.reserveTime||''); return { min: toMin(tt), html: evHtml(x, tt.split('-')[0]) }; });
-    BRK.forEach(function(b){ items.push({ min: toMin(b.from), html: '<div class="dl-brk">☕ 休憩 '+b.from+'–'+b.to+'</div>' }); });
+    BRK.forEach(function(b){ items.push({ min: toMin(b.from), html: '<div class="dl-brk"><i data-ic=cup data-ics=15></i> 休憩 '+b.from+'–'+b.to+'</div>' }); });
     items.sort(function(a,b){ return a.min-b.min; });
     return items.map(function(i){ return i.html; }).join('');
   }
   let h = '<div class="dl"><div class="dl-cols">';
-  h += '<div class="dl-col"><div class="dl-h in">📥 入庫</div><div class="dl-body">'+col(intake,false)+'</div></div>';
-  h += '<div class="dl-col"><div class="dl-h ret">📤 返車</div><div class="dl-body">'+col(ret,true)+'</div></div>';
+  h += '<div class="dl-col"><div class="dl-h in"><i data-ic=download data-ics=16></i> 入庫</div><div class="dl-body">'+col(intake,false)+'</div></div>';
+  h += '<div class="dl-col"><div class="dl-h ret"><i data-ic=upload data-ics=16></i> 返車</div><div class="dl-body">'+col(ret,true)+'</div></div>';
   h += '</div></div>';
   return h;
 }
@@ -528,12 +528,12 @@ function _cfsDayListHtml(c){
    データは window.pitMhsSchedule(担当名, 日付) フックから取得。本番のMHS連携を入れたらここに実データが流れる。 */
 function _cfsMhsHtml(c){
   const who = (c.frontStaff || '').trim();
-  const head = '<div class="mhs-head">📅 <span>'+(who ? _pe(who)+' の予定' : '担当の予定')+'</span><span class="mhs-tag">MHS</span></div>';
+  const head = '<div class="mhs-head"><i data-ic=calendar data-ics=16></i> <span>'+(who ? _pe(who)+' の予定' : '担当の予定')+'</span><span class="mhs-tag">MHS</span></div>';
   if (!who) return '<div class="mhs-box">'+head+'<div class="mhs-empty">フロント担当を選ぶと、その人のMHS予定が出ます。</div></div>';
   let list = [];
   if (typeof window.pitMhsSchedule === 'function'){ try { list = window.pitMhsSchedule(who, c.reserveDate || ymd(new Date())) || []; } catch(e){ list = []; } }
   if (!list.length) return '<div class="mhs-box">'+head+'<div class="mhs-empty">MHS連携は準備中（本番ログイン接続後に予定を表示）。</div></div>';
-  const ic = {mtg:'📋', out:'🚗', off:'☕', desk:'🖥'};
+  const ic = {mtg:'<i data-ic=clipboard data-ics=16></i>', out:'<i data-ic=car data-ics=16></i>', off:'<i data-ic=cup data-ics=15></i>', desk:'<i data-ic=monitor data-ics=16></i>'};
   const rows = list.map(function(s){ return '<div class="mhs-row"><span class="mhs-t">'+_pe(s.t||'')+'</span><span class="mhs-ic">'+(ic[s.type]||'•')+'</span><span class="mhs-l">'+_pe(s.label||'')+'</span></div>'; }).join('');
   return '<div class="mhs-box">'+head+'<div class="mhs-note">来客とは別の予定（MTG・外出など）。</div>'+rows+'</div>';
 }
@@ -546,9 +546,9 @@ if (!window.pitMhsSchedule){ window.pitMhsSchedule = function(staffName, dateStr
 function _cfsShortHtml(c, team, today, tStr, ro){
   if (typeof dashEarliestIntake !== 'function') return '';
   const teamColor = (team === 'import') ? '#ec4899' : '#1db97a';
-  const teamName  = (team === 'import') ? '🌍 輸入車' : '🚗 国産車';
+  const teamName  = (team === 'import') ? '<i data-ic=globe data-ics=16></i> 輸入車' : '<i data-ic=car data-ics=16></i> 国産車';
   let h = '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '">⏱ 最短入庫 <span class="cfs-team" style="color:' + teamColor + '">' + teamName + '</span></div>';
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><i data-ic=clock data-ics=16></i> 最短入庫 <span class="cfs-team" style="color:' + teamColor + '">' + teamName + '</span></div>';
   // 代車ありの最短は、作業タイプの概算預かり日数ぶん代車が連続で空く日を探す（車検5日なら5日連続確保できる日・v0.101.4）
   const _holdOv = (c && c.estHoldDays != null && c.estHoldDays !== '' && +c.estHoldDays > 0) ? +c.estHoldDays : null;
   [{ k: 'noLoaner', n: '代車なし' }, { k: 'loaner', n: '代車あり' }, { k: 'same', n: '当日作業' }].forEach(function (x) {
@@ -578,8 +578,8 @@ function _cfsCalHtml(c, team, tStr, ro){
   const tgt  = (team === 'import') ? 'capImport' : 'capDefault';
   let h = '';
   h += '<div class="cfs-card">';
-  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">' + (team === 'import' ? '🌍 輸入車空き予約' : '🚗 国産車空き予約') + '</span>'
-     + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月">◀</button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月">▶</button><button type="button" onclick="cfsCalShift(0)" title="今月に戻る">今月</button></span></div>';
+  h += '<div class="cfs-h" style="border-left-color:' + teamColor + '"><span style="color:' + teamColor + '">' + (team === 'import' ? '<i data-ic=globe data-ics=16></i> 輸入車空き予約' : '<i data-ic=car data-ics=16></i> 国産車空き予約') + '</span>'
+     + '<span class="cfs-nav"><button type="button" onclick="cfsCalShift(-1)" title="前の月"><i data-ic=chevLeft data-ics=16></i></button><b>' + ym.y + '年' + (ym.m + 1) + '月</b><button type="button" onclick="cfsCalShift(1)" title="次の月"><i data-ic=chevRight data-ics=16></i></button><button type="button" onclick="cfsCalShift(0)" title="今月に戻る">今月</button></span></div>';
   h += '<div class="cfs-cal' + (ro ? ' cfs-cal-ro' : '') + '">';
   ['日','月','火','水','木','金','土'].forEach(function (w, i) {
     h += '<div class="cfs-dow' + (i === 0 ? ' red' : (i === 6 ? ' sat' : '')) + '">' + w + '</div>';
@@ -589,7 +589,7 @@ function _cfsCalHtml(c, team, tStr, ro){
     const d = new Date(ym.y, ym.m, dd);
     const ds = ymd(d);
     const hol = (window.Holidays && Holidays.name) ? Holidays.name(ds) : null;
-    const holBadge = hol ? '<em class="cfs-hol" title="🎌' + hol + '">祝</em>' : '';
+    const holBadge = hol ? '<em class="cfs-hol"title="'+ hol + '">祝</em>': '';
     if (ds < tStr){ h += '<div class="cfs-day past"><i>' + dd + '</i>' + holBadge + '</div>'; continue; }
     let cls = '', mark = '', num = '';
     if (window.pitVerdict){
@@ -606,7 +606,7 @@ function _cfsCalHtml(c, team, tStr, ro){
     }
     const dayClick = ro ? '' : ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"';
     const avSel = (ro && window._availPick === ds) ? ' av-sel' : '';   // 空きカレンダービュー：選択日のハイライト
-    h += '<div class="cfs-day' + cls + (!ro && c.reserveDate === ds ? ' sel' : '') + (ds === tStr ? ' today' : '') + avSel + '" data-ds="' + ds + '" data-team="' + team + '"' + dayClick + ' title="' + (ym.m + 1) + '/' + dd + (hol ? '・🎌' + hol : '') + (num ? '：' + num + '台' : '') + '">'
+    h += '<div class="cfs-day'+ cls + (!ro && c.reserveDate === ds ? 'sel': '') + (ds === tStr ? 'today': '') + avSel + '"data-ds="'+ ds + '"data-team="'+ team + '"'+ dayClick + 'title="'+ (ym.m + 1) + '/'+ dd + (hol ? '・'+ hol : '') + (num ? '：'+ num + '台': '') + '">'
        + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';
@@ -702,8 +702,8 @@ function _cfsLoanerGanttHtml(today, tStr, c, ro){
     ? '<button type="button" class="cfs-sortbtn' + (sortOn ? ' on' : '') + '" onclick="cfsLgToggleSort()" title="条件で並べ替え（サイズは低い順／装備は合う車を先頭）">' + (sortOn ? '✓ 条件で並べ替え' : '並べ替えなし') + '</button>'
     : '';
   let h = '<div class="cfs-card" id="cfs-lg-card">';
-  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b">🚙 代車カレンダー</span>'
-     + '<span class="cfs-nav">' + sortBtn + '<button type="button" onclick="cfsLgToday()" title="一番上（今日）に戻る">📍 今日へ</button></span></div>';
+  h += '<div class="cfs-h" style="border-left-color:#f59e0b"><span style="color:#f59e0b"><i data-ic=van data-ics=16></i> 代車カレンダー</span>'
+     + '<span class="cfs-nav">' + sortBtn + '<button type="button" onclick="cfsLgToday()" title="一番上（今日）に戻る"><i data-ic=location data-ics=16></i> 今日へ</button></span></div>';
   h += '<div class="cfs-lg-scroll" id="cfs-lg-scroll" onscroll="cfsLgScroll(this)"><table class="cfs-lg">';
   h += '<thead><tr><th class="cfs-lg-d"></th>';
   loaners.forEach(function (l) {
@@ -801,10 +801,10 @@ window.pitCardCheck = function () {
   const misses = _cardMarkMisses(c, body);
   _cardCheckOn = misses.length > 0;   // 以降の再描画・入力でも未入力だけ赤を保つ
   if (!misses.length){
-    if (window.pitToast) pitToast('✅ 入力OK！漏れはありません');
+    if (window.pitToast) pitToast('入力OK！漏れはありません');
     return;
   }
-  if (window.pitToast) pitToast('⚠ 未入力 ' + misses.length + '件：' + misses.join('・'));
+  if (window.pitToast) pitToast('未入力 '+ misses.length + '件：'+ misses.join('・'));
   const first = body.querySelector('.cf-miss');
   if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
 };
@@ -1134,12 +1134,12 @@ function _cfEnsureContacts(c){
 function contactsBtn(c){
   const n = (Array.isArray(c.contacts) && c.contacts.length) ? c.contacts.length : (c.tel ? 1 : 0);
   const extra = n > 1 ? ('<span class="cf-ct-badge">+' + (n - 1) + '</span>') : '';
-  return '<button type="button" class="cf-contacts-btn" onclick="cfContactsOpen()">📞 その他連絡先' + extra + '</button>';
+  return '<button type="button" class="cf-contacts-btn" onclick="cfContactsOpen()"><i data-ic=phone data-ics=16></i> その他連絡先' + extra + '</button>';
 }
 function _cfRenderContacts(c){
   let m = document.getElementById('cf-contacts-modal');
   if(!m){ m = document.createElement('div'); m.id = 'cf-contacts-modal'; m.className = 'cm-overlay'; document.body.appendChild(m); }
-  let h = '<div class="cm-box"><div class="cm-head">📞 連絡先 <span class="cm-sub">「優先」の番号がカードのTEL欄に出ます</span><button class="cm-x" onclick="cfContactsClose()">✕</button></div><div class="cm-body">';
+  let h = '<div class="cm-box"><div class="cm-head"><i data-ic=phone data-ics=16></i> 連絡先 <span class="cm-sub">「優先」の番号がカードのTEL欄に出ます</span><button class="cm-x" onclick="cfContactsClose()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
   c.contacts.forEach(function(ct,i){
     const p = String(ct.tel || '').split('-');
     const v1 = _pe(p[0] || ''), v2 = _pe(p[1] || ''), v3 = _pe(p.slice(2).join('') || '');
@@ -1157,7 +1157,7 @@ function _cfRenderContacts(c){
       +   '</div></div>'
       + '</div>'
       + '<input class="cf-input cf-ct-label" value="' + _pe(ct.label || '') + '" placeholder="ラベル（例 会社携帯）" oninput="cfContactLabel(' + i + ',this.value)">'
-      + '<button type="button" class="cf-ct-del" onclick="cfContactDel(' + i + ')" title="削除">🗑</button>'
+      + '<button type="button" class="cf-ct-del" onclick="cfContactDel(' + i + ')" title="削除"><i data-ic=trash data-ics=16></i></button>'
       + '</div>';
   });
   h += '</div><div class="cm-foot"><button class="cm-cancel" onclick="cfContactAdd()">＋ 連絡先を追加</button><button class="cm-save" onclick="cfContactsClose()">完了</button></div></div>';

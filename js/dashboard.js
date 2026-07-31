@@ -87,7 +87,7 @@ function _dashCalCell(team, tgt, base, ds){
   if (eff.closed) return '<div class="drc-c drc-closed" title="' + eff.closed + '＝受付なし">休</div>';
   const cnt = dashIntake(team, ds);
   const capEff = eff.value;
-  if (capEff <= 0) return '<div class="drc-c drc-end" title="🧩ルールで受付停止">停</div>';
+  if (capEff <= 0) return '<div class="drc-c drc-end"title="ルールで受付停止">停</div>';
   if (cnt > capEff)  return '<div class="drc-c drc-over" title="枠を超えて受けています（人の最終判断で挿入）">' + cnt + '/' + capEff + '<span>超過</span></div>';
   if (cnt >= capEff) return '<div class="drc-c drc-end">' + cnt + '/' + capEff + '<span>終了</span></div>';
   return '<div class="drc-c drc-okk">' + cnt + '/' + capEff + '<span>可</span></div>';
@@ -104,7 +104,7 @@ function _dashCalCols(from, to, today, tStr){
     const hol = (window.Holidays && Holidays.name) ? Holidays.name(ds) : null;
     const cls = (d.getDay() === 0 || hol) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
     g += '<div class="drc-col' + (ds === tStr ? ' today' : '') + '">';
-    g += '<div class="drc-h' + cls + '"' + (hol ? ' title="🎌' + hol + '"' : '') + '>' + (d.getMonth()+1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (ds === tStr ? '・今日' : '') + '</div>';
+    g += '<div class="drc-h'+ cls + '"'+ (hol ? 'title="'+ hol + '"': '') + '>'+ (d.getMonth()+1) + '/'+ d.getDate() + '<br>'+ '日月火水木金土'[d.getDay()] + (ds === tStr ? '・今日': '') + '</div>';
     g += _dashCalCell('default', 'capDefault', capD, ds);
     g += _dashCalCell('import',  'capImport',  capI, ds);
     g += '</div>';
@@ -176,9 +176,9 @@ function renderDashboard(){
 
   // KPI
   h += '<div class="dash-kpis">';
-  h += dashKpi('📥', '今日の入庫', inToday, '台');
-  h += dashKpi('📤', '今日の返車', outToday, '台');
-  h += dashKpi('🅿️', '預かり中', heldNow, '台');
+  h += dashKpi('<i data-ic=download data-ics=16></i>', '今日の入庫', inToday, '台');
+  h += dashKpi('<i data-ic=upload data-ics=16></i>', '今日の返車', outToday, '台');
+  h += dashKpi('<i data-ic=parking data-ics=16></i>', '預かり中', heldNow, '台');
   h += '</div>';
 
   // 🅿️ 駐車場サマリー（1ブロック・クリックで駐車場ビュー・v0.71.0）。詳細は parking.js
@@ -193,10 +193,10 @@ function renderDashboard(){
     return '<td><b class="dash-el-d' + (isT ? ' ok' : '') + '">' + (isT ? '今日' : (d.getMonth()+1) + '/' + d.getDate()) + '</b><span class="dash-el-w">' + (isT ? 'OK' : '日月火水木金土'[d.getDay()] + '曜') + '</span></td>';
   }
   h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>⏱ 最短入庫日</span><span class="dash-note">予約枠・定休・連休・代車の空きから自動計算（代車＝' + holdN + '日連続空きで判定）</span></div>';
+  h += '<div class="dash-h"><span><i data-ic=clock data-ics=16></i> 最短入庫日</span><span class="dash-note">予約枠・定休・連休・代車の空きから自動計算（代車＝' + holdN + '日連続空きで判定）</span></div>';
   h += '<table class="dash-el"><tr><th></th><th>代車なし</th><th>代車あり</th><th>当日作業</th></tr>';
-  h += '<tr><td class="dash-el-t">🚗 国産車</td>' + elCell('default','noLoaner') + elCell('default','loaner') + elCell('default','same') + '</tr>';
-  h += '<tr><td class="dash-el-t">🌍 輸入車</td>' + elCell('import','noLoaner')  + elCell('import','loaner')  + elCell('import','same')  + '</tr>';
+  h += '<tr><td class="dash-el-t"><i data-ic=car data-ics=16></i> 国産車</td>' + elCell('default','noLoaner') + elCell('default','loaner') + elCell('default','same') + '</tr>';
+  h += '<tr><td class="dash-el-t"><i data-ic=globe data-ics=16></i> 輸入車</td>' + elCell('import','noLoaner')  + elCell('import','loaner')  + elCell('import','same')  + '</tr>';
   h += '</table>';
   h += '</div>';
 
@@ -204,8 +204,8 @@ function renderDashboard(){
   h += '<div id="board-notes-area"></div>';
 
   // チーム別の状況（国産／輸入）
-  const teams = [{ key:'default', name:'🚗 国産車チーム' }, { key:'import', name:'🌍 輸入車チーム' }];
-  h += '<div class="dash-card"><div class="dash-h"><span>👥 チーム別の状況</span><span class="dash-note">国産 : 輸入 ＝ ざっくり 6 : 4</span></div><div class="dash-teams">';
+  const teams = [{ key:'default', name:'<i data-ic=car data-ics=16></i> 国産車チーム' }, { key:'import', name:'<i data-ic=globe data-ics=16></i> 輸入車チーム' }];
+  h += '<div class="dash-card"><div class="dash-h"><span><i data-ic=users data-ics=16></i> チーム別の状況</span><span class="dash-note">国産 : 輸入 ＝ ざっくり 6 : 4</span></div><div class="dash-teams">';
   teams.forEach(function(t){
     const held = _dashHeldOnTeam(t.key, tStr, tStr);
     const tin  = state.cards.filter(function(c){ return c.boardId === t.key && c.reserveDate === tStr && _dashHeld(c); }).length;
@@ -220,14 +220,14 @@ function renderDashboard(){
   // 🗓 予約の埋まり（横軸の無限カレンダー・v0.25.0 ゆうた指示のシンプル表示）
   //    可（緑）＝空きあり／終了（赤）＝満枠／超過（黒）＝人の判断で枠を超えて受けた分／休＝定休・連休
   h += '<div class="dash-card">';
-  h += '<div class="dash-h"><span>🗓 予約の埋まり</span><span class="dash-note">右へスクロールで無限に先まで｜<span style="color:#1db97a">可</span>＝空きあり・<span style="color:#ef4444">終了</span>＝満枠・<b>超過(黒)</b>＝人の判断で枠超え</span></div>';
+  h += '<div class="dash-h"><span><i data-ic=calendar data-ics=16></i> 予約の埋まり</span><span class="dash-note">右へスクロールで無限に先まで｜<span style="color:#1db97a">可</span>＝空きあり・<span style="color:#ef4444">終了</span>＝満枠・<b>超過(黒)</b>＝人の判断で枠超え</span></div>';
   h += '<div class="drc-scroll" id="drc-scroll"><div class="drc-grid" id="drc-grid">';
-  h += '<div class="drc-col drc-lab"><div class="drc-h"></div><div class="drc-c">🚗 国産車</div><div class="drc-c">🌍 輸入車</div></div>';
+  h += '<div class="drc-col drc-lab"><div class="drc-h"></div><div class="drc-c"><i data-ic=car data-ics=16></i> 国産車</div><div class="drc-c"><i data-ic=globe data-ics=16></i> 輸入車</div></div>';
   h += _dashCalCols(0, window._dashCalN, today, tStr);
   h += '</div></div>';
   h += '</div>';
 
-  h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は <a href="javascript:showView(\'settings\')" style="color:inherit;font-weight:700">⚙️ 設定</a> から変更できます。</div>';
+  h += '<div class="dash-foot">「置き場・代車・予約上限」は確定して読める部分。<b>未来の置き場は概算預かり日数による“予想（不確定）”</b>＝診断・見積もりが進むほど精度が上がる前提。置ける台数・1日の上限・概算日数は <a href="javascript:showView(\'settings\')" style="color:inherit;font-weight:700"><i data-ic=settings data-ics=16></i> 設定</a> から変更できます。</div>';
 
   wrap.innerHTML = h;
 

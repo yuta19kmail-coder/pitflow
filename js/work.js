@@ -36,7 +36,7 @@ function renderWork(){
   // 配置図の枠が無い場合は案内
   if (!window.PitFloorView || !Array.isArray(state.bays) || state.bays.length === 0){
     grid.style.width = ''; grid.style.height = '';
-    grid.innerHTML = '<div class="pitlist-nofloor">まだPIT配置図がありません。<br>設定 → 🏭 PIT配置図を編集 から工場の平面図を作るか、保存済みの配置図を読み込んでください。</div>';
+    grid.innerHTML = '<div class="pitlist-nofloor">まだPIT配置図がありません。<br>設定 → <i data-ic=factory data-ics=16></i> PIT配置図を編集 から工場の平面図を作るか、保存済みの配置図を読み込んでください。</div>';
     _renderUnassigned(targets);
     return;
   }
@@ -63,8 +63,8 @@ function _renderUnassigned(list){
   var open = _pitlistTrayOpen();
 
   var head = '<div class="pitlist-tray-head" onclick="togglePitlistTray()" title="クリックで開閉">'
-    + '<span class="ptl-caret">' + (open ? '▼' : '▶') + '</span>'
-    + '<span>📥 未割当（PIT枠未指定）</span>'
+    + '<span class="ptl-caret">' + (open ? '<i data-ic=chevDown data-ics=15></i>' : '<i data-ic=chevRight data-ics=16></i>') + '</span>'
+    + '<span><i data-ic=download data-ics=16></i> 未割当（PIT枠未指定）</span>'
     + '<span class="pitlist-tray-meta">' + list.length + ' 件' + (open ? '・ドラッグで枠へ' : '（クリックで開く）') + '</span>'
     + '</div>';
 

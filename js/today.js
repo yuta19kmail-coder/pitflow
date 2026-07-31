@@ -100,14 +100,14 @@ function renderToday(){
   html += '<div class="count-chip out"><span class="num">' + returnTotal + '</span><span class="lbl">返車</span>'
         + (outMoved > 0 ? '<span class="rem">残' + outLeft + '</span>' : '') + '</div>';
   html += '<button class="tnav-btn full-btn' + (window._todayFull ? ' on' : '') + '" onclick="todayToggleFull()" title="入庫と返車の時間を左右で揃えて表示">'
-        + (window._todayFull ? '▤ コンパクト' : '▥ フルビュー') + '</button>';
+        + (window._todayFull ? '<i data-ic=grid data-ics=15></i> コンパクト' : '<i data-ic=list data-ics=15></i> フルビュー') + '</button>';
   html += '</div>';
 
   // 当日/翌日トグル（旧 金庫/SNS/掃除 の位置）
   html += '<div class="today-nav">';
-  html += '<button class="tnav-btn" onclick="todayShift(-1)" ' + (isToday ? 'disabled' : '') + '>◀ 前日</button>';
+  html += '<button class="tnav-btn" onclick="todayShift(-1)" ' + (isToday ? 'disabled' : '') + '><i data-ic=chevLeft data-ics=16></i> 前日</button>';
   html += '<button class="tnav-btn" onclick="todayShift(0)">今日</button>';
-  html += '<button class="tnav-btn" onclick="todayShift(1)">翌日 ▶</button>';
+  html += '<button class="tnav-btn" onclick="todayShift(1)">翌日 <i data-ic=chevRight data-ics=16></i></button>';
   html += '</div>';
   html += '</div>';
 
@@ -121,11 +121,11 @@ function renderToday(){
 
   html += '<div class="today-cols' + (window._todayFull ? ' full' : '') + '">';
   html += '<div class="today-col">';
-  html += '<div class="today-col-head intake"><span class="ic">📥</span>入庫 <span class="cnt">' + intake.length + '</span></div>';
+  html += '<div class="today-col-head intake"><span class="ic"><i data-ic=download data-ics=16></i></span>入庫 <span class="cnt">' + intake.length + '</span></div>';
   html += '<div class="today-col-body">' + (_todHasAny(merged.left) ? merged.left : '<div class="today-empty">入庫予定なし</div>') + '</div>';
   html += '</div>';
   html += '<div class="today-col">';
-  html += '<div class="today-col-head return"><span class="ic">📤</span>返車 <span class="cnt">' + returns.length + '</span></div>';
+  html += '<div class="today-col-head return"><span class="ic"><i data-ic=upload data-ics=16></i></span>返車 <span class="cnt">' + returns.length + '</span></div>';
   html += '<div class="today-col-body">' + (_todHasAny(merged.right) ? merged.right : '<div class="today-empty">返車予定なし</div>') + '</div>';
   html += '</div>';
   html += '</div>';
@@ -168,11 +168,11 @@ window.pitTodayTap = function(id, isReturn){
     document.body.appendChild(back);
   }
   const wt = state.workTypes.find(w => w.id === c.workType);
-  const team = (c.boardId === 'import') ? '🌍 輸入車' : '🚗 国産車';
-  const doneLabel = isReturn ? '📤 返車済みにする' : '📥 入庫済みにする';
+  const team = (c.boardId === 'import') ? '<i data-ic=globe data-ics=16></i> 輸入車' : '<i data-ic=car data-ics=16></i> 国産車';
+  const doneLabel = isReturn ? '<i data-ic=upload data-ics=16></i> 返車済みにする' : '<i data-ic=download data-ics=16></i> 入庫済みにする';
   const doneSub   = isReturn ? 'この日の実績（確定売上）に固めます' : 'タスクへ移動・予約から外れます';
   const doneFn    = isReturn ? 'pitTodayReturn' : 'pitTodayCheckIn';
-  const cancelLabel = isReturn ? '🚫 返車キャンセル' : '🚫 キャンセル（来店なし）';
+  const cancelLabel = isReturn ? '<i data-ic=ban data-ics=16></i> 返車キャンセル' : '<i data-ic=ban data-ics=16></i> キャンセル（来店なし）';
   const cancelSub   = isReturn ? '返車予定を外して「返車・未定」へ戻す' : '「未入庫」へ（1ヶ月後に自動アーカイブ）';
   back.innerHTML =
     '<div class="ta-sheet">' +
@@ -181,8 +181,8 @@ window.pitTodayTap = function(id, isReturn){
         '<div class="ta-sub">' + team + (wt ? '・' + wt.label : '') + (isReturn ? '・返車' : '・入庫') + '</div>' +
       '</div>' +
       '<button class="ta-btn primary" onclick="' + doneFn + '(\'' + id + '\')"><b>' + doneLabel + '</b><span>' + doneSub + '</span></button>' +
-      '<button class="ta-btn" onclick="pitTodayEditDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>🕒 日時変更</b><span>' + (isReturn ? '返車' : '入庫') + 'の日付・時間だけ変更</span></button>' +
-      '<button class="ta-btn" onclick="pitTodayDetail(\'' + id + '\')"><b>📋 詳細を見る</b><span>カードを開いて確認・編集</span></button>' +
+      '<button class="ta-btn" onclick="pitTodayEditDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b><i data-ic=clock data-ics=16></i> 日時変更</b><span>' + (isReturn ? '返車' : '入庫') + 'の日付・時間だけ変更</span></button>' +
+      '<button class="ta-btn" onclick="pitTodayDetail(\'' + id + '\')"><b><i data-ic=clipboard data-ics=16></i> 詳細を見る</b><span>カードを開いて確認・編集</span></button>' +
       '<button class="ta-btn danger" onclick="pitTodayCancel(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>' + cancelLabel + '</b><span>' + cancelSub + '</span></button>' +
       '<button class="ta-cancel" onclick="pitTodayActionClose()">閉じる</button>' +
     '</div>';
@@ -199,11 +199,11 @@ window.pitTodayEditDt = function(id, isReturn){
   const tVal = isReturn ? (c.returnTime || '') : (c.reserveTime || '');
   back.innerHTML =
     '<div class="ta-sheet">' +
-      '<div class="ta-head"><b>🕒 ' + (isReturn ? '返車' : '入庫') + 'の日時変更</b>' +
+      '<div class="ta-head"><b><i data-ic=clock data-ics=16></i> ' + (isReturn ? '返車' : '入庫') + 'の日時変更</b>' +
         '<div class="ta-sub">' + (c.customer || '') + ' 様　' + (c.car || '') + '</div></div>' +
       '<label class="ta-f">日付<input type="date" id="ta-dt-d" value="' + dVal + '"></label>' +
       '<label class="ta-f">時間<input type="text" id="ta-dt-t" value="' + tVal + '" placeholder="例 09:30 / 09:00-10:00"></label>' +
-      '<button class="ta-btn primary" onclick="pitTodaySaveDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>💾 保存</b></button>' +
+      '<button class="ta-btn primary" onclick="pitTodaySaveDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b><i data-ic=save data-ics=16></i> 保存</b></button>' +
       '<button class="ta-cancel" onclick="pitTodayTap(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')">← 戻る</button>' +
     '</div>';
 };
@@ -217,7 +217,7 @@ window.pitTodaySaveDt = function(id, isReturn){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitToast) pitToast('🕒 日時を変更しました');
+  if (window.pitToast) pitToast('日時を変更しました');
 };
 
 /* 🚫 キャンセル：入庫＝未入庫へ（1ヶ月でアーカイブ）／返車＝返車未定へ差し戻し */
@@ -238,7 +238,7 @@ window.pitTodayCancel = function(id, isReturn){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitToast) pitToast(isReturn ? '🚫 返車・未定へ戻しました' : '🚫 未入庫へ移しました');
+  if (window.pitToast) pitToast(isReturn ? '返車・未定へ戻しました': '未入庫へ移しました');
 };
 window.pitTodayActionClose = function(){
   const back = document.getElementById('today-action');
@@ -258,7 +258,7 @@ window.pitTodayCheckIn = function(id){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitToast) pitToast('📥 入庫済み → タスク「点検待ち」へ移動しました');
+  if (window.pitToast) pitToast('入庫済み → タスク「点検待ち」へ移動しました');
 };
 /* 返車済み：実績へ。completedAtを今日に・売上を確定値で固める */
 window.pitTodayReturn = function(id){
@@ -273,7 +273,7 @@ window.pitTodayReturn = function(id){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitToast) pitToast('📤 返車済み → 実績（確定売上）に固めました');
+  if (window.pitToast) pitToast('返車済み → 実績（確定売上）に固めました');
 };
 
 /* カードと休憩を時間順にブロック分け：[{break?, cards:[...]}] の配列を返す */
@@ -336,7 +336,7 @@ function _todSegHtml(block, rows, isReturn){
 function _todBreakHtml(block, rows, isReturn){
   const cards = (block && block.cards) ? block.cards : [];
   let h = '<div class="tod-break">';
-  h += '<div class="tod-break-bar">☕ ' + block.from + '〜' + block.to + ' 休憩</div>';
+  h += '<div class="tod-break-bar"><i data-ic=cup data-ics=15></i> ' + block.from + '〜' + block.to + ' 休憩</div>';
   cards.forEach(c => { h += todayRow(c, isReturn, true); });
   for (let k = cards.length; k < rows; k++) h += '<div class="tod-break-pad"></div>';
   h += '</div>';

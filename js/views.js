@@ -44,7 +44,7 @@ function showView(viewId){
   if (viewId === 'shakencal' && window.renderShaken) renderShaken();
   if (viewId === 'shakenlog' && window.renderShakenLog) renderShakenLog();
   if (viewId === 'sales' && window.renderSales) renderSales();
-  if (viewId === 'worksum' && window.renderWorkSummary) renderWorkSummary();   // 🧑‍🔧 作業サマリー（v0.129.0）
+  if (viewId === 'worksum' && window.renderWorkSummary) renderWorkSummary();   // <i data-ic=user data-ics=16></i> 作業サマリー（v0.129.0）
   if (viewId === 'parking' && window.renderParking) renderParking();
   if (viewId === 'fleet' && window.renderFleet) renderFleet();
   if (viewId === 'settings' && window.renderSettings) renderSettings();
@@ -83,7 +83,7 @@ window.pitOpenCardDetail = pitOpenCardDetail;
 
 /* ===== サイドバー フライアウト（親をホバー/タップ→右に小メニュー・StockFlow流用を汎用化）v0.33.0 =====
    HTML側：<div class="si-flyout" id="fly-<key>" onmouseenter="openFlyout('<key>')" onmouseleave="scheduleCloseFlyout()">
-             <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'<key>')">…<span class="si-caret">▸</span></div>
+             <div class="si-item si-has-flyout" onclick="toggleFlyout(event,'<key>')">…<span class="si-caret"><i data-ic=chevRight data-ics=15></i></span></div>
              <div class="si-flyout-panel" id="flypanel-<key>" onmouseenter="openFlyout('<key>')" onmouseleave="scheduleCloseFlyout()">…子…</div>
            </div> */
 let _flyCloseT = null;
@@ -161,7 +161,8 @@ function toggleTheme(){
   const cur = root.getAttribute('data-theme') || 'dark';
   const next = cur === 'dark' ? 'light' : 'dark';
   root.setAttribute('data-theme', next);
-  document.querySelector('.theme-toggle').textContent = next === 'dark' ? '🌙' : '☀️';
+  var _tt = document.querySelector('.theme-toggle');
+  if (_tt) _tt.innerHTML = (window.ico ? ico(next === 'dark' ? 'moon' : 'sun', 17) : '');
 }
 
 function statusLabel(s){
@@ -236,7 +237,7 @@ function escAttr(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, funct
 function openNewReserve(){
   const id = 'c' + Date.now();
   const card = {
-    id, resNo: (window.pitGenResNo ? pitGenResNo() : ''),   // 🔢 予約番号（ローマ字1＋5桁・例 K48201）
+    id, resNo: (window.pitGenResNo ? pitGenResNo() : ''),   // <i data-ic=numbers data-ics=16></i> 予約番号（ローマ字1＋5桁・例 K48201）
     status: 'reserved', boardId: null, bayId: null,   // 国産/輸入は未選択スタート（選ぶと片方のカレンダーが消える）
     division: null,   // 課は国産/輸入を選んだ瞬間に自動で入る
     log: [{ label: '予約作成', at: Date.now() }],

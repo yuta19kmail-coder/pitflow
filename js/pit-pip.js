@@ -19,9 +19,9 @@
     el.id = 'pitpip'; el.className = 'pitpip';
     el.innerHTML =
       '<div class="pitpip-bar" id="pitpip-bar">'
-      + '<span class="pitpip-title">🏭 PITボード <span class="pitpip-tip">カードをPiPの外にドラッグ＝枠から外す</span></span>'
-      + '<button class="pitpip-btn" title="更新" onclick="PitPip.refresh()">🔄</button>'
-      + '<button class="pitpip-btn" title="閉じる" onclick="PitPip.close()">✕</button>'
+      + '<span class="pitpip-title"><i data-ic=factory data-ics=16></i> PITボード <span class="pitpip-tip">カードをPiPの外にドラッグ＝枠から外す</span></span>'
+      + '<button class="pitpip-btn" title="更新" onclick="PitPip.refresh()"><i data-ic=refresh data-ics=16></i></button>'
+      + '<button class="pitpip-btn" title="閉じる" onclick="PitPip.close()"><i data-ic=close data-ics=16></i></button>'
       + '</div>'
       + '<div class="pitpip-body" id="pitpip-body"><div id="pitpip-grid" class="pf-grid"></div></div>'
       + '<span class="pitpip-resize" id="pitpip-resize"></span>';
@@ -62,7 +62,7 @@
     if (!grid || !window.PitFloorView || !window.state) return;
     if (!Array.isArray(state.bays) || state.bays.length === 0) {
       grid.style.width = ''; grid.style.height = '';
-      grid.innerHTML = '<div class="pitlist-nofloor" style="padding:24px">PIT配置図が未設定です。設定→🏭配置図を編集で作成してください。</div>';
+      grid.innerHTML = '<div class="pitlist-nofloor" style="padding:24px">PIT配置図が未設定です。設定→<i data-ic=factory data-ics=16></i>配置図を編集で作成してください。</div>';
       return;
     }
     var targets = state.cards.filter(function (c) {

@@ -164,7 +164,7 @@
       + (c.plate ? '<span class="psr-plate">' + esc(c.plate) + '</span>' : '')
       + rowBadges(c)
       + '</div>'
-      + '<div class="psr-l2">' + (tel ? ('📞 ' + esc(tel)) : '') + (dstr ? ((tel ? '　・　' : '') + '📅 ' + esc(dstr)) : '') + '</div>'
+      + '<div class="psr-l2">' + (tel ? ('<i data-ic=phone data-ics=16></i> ' + esc(tel)) : '') + (dstr ? ((tel ? '　・　' : '') + '<i data-ic=calendar data-ics=16></i> ' + esc(dstr)) : '') + '</div>'
       + '</div>'
       + '<div class="psr-acts">' + acts + '</div>'
       + '</div>';
@@ -187,10 +187,10 @@
     const more = vs.length > 1 ? '<span class="psr-more">ほか' + (vs.length - 1) + '台</span>' : '';
     const last = custLastVisit(cust);
     return '<div class="psr-row">'
-      + '<div class="psr-lead"><span class="psr-cust-tag">👤</span></div>'
+      + '<div class="psr-lead"><span class="psr-cust-tag"><i data-ic=user data-ics=16></i></span></div>'
       + '<div class="psr-main">'
       + '<div class="psr-l1"><b class="psr-name">' + esc(cust.name || '（無名）') + ' 様</b>' + car + plate + more + '</div>'
-      + '<div class="psr-l2">' + (tel ? ('📞 ' + esc(tel)) : '') + (last ? ((tel ? '　・　' : '') + '最終入庫 ' + esc(last)) : '') + '</div>'
+      + '<div class="psr-l2">' + (tel ? ('<i data-ic=phone data-ics=16></i> ' + esc(tel)) : '') + (last ? ((tel ? '　・　' : '') + '最終入庫 ' + esc(last)) : '') + '</div>'
       + '</div>'
       + '<div class="psr-acts">'
       + actBtn('顧客情報', "pitSearchOpenCust('" + esc(cust.id) + "')")
@@ -228,12 +228,12 @@
         + list.slice(0, MAX).map(resultRow).join('');
     };
     let html = '';
-    html += sec('🗂', 'カード', recent, '');                       // 予約・作業中・直近1か月の返車済み
+    html += sec('<i data-ic=folder data-ics=16></i>', 'カード', recent, '');                       // 予約・作業中・直近1か月の返車済み
     if (custHits.length) {
-      html += '<div class="psr-head">👤 顧客 ' + custHits.length + '件' + (custHits.length > MAX ? '（上位' + MAX + '件）' : '') + '</div>';
+      html += '<div class="psr-head"><i data-ic=user data-ics=16></i> 顧客 ' + custHits.length + '件' + (custHits.length > MAX ? '（上位' + MAX + '件）' : '') + '</div>';
       html += custHits.slice(0, MAX).map(custRow).join('');
     }
-    html += sec('📦', '過去入庫', past, '<span style="color:var(--text3)">（1か月より前の返車済み）</span>');
+    html += sec('<i data-ic=box data-ics=16></i>', '過去入庫', past, '<span style="color:var(--text3)">（1か月より前の返車済み）</span>');
     box.innerHTML = html;
     box.classList.add('open');
   };

@@ -100,7 +100,7 @@
   function calStrip(n) {
     var cols = window._dashCalCols ? _dashCalCols(0, n, C.today, C.tStr) : '';
     return '<div class="md-tiny" style="margin-top:8px">今後' + Math.round(n / 7) + '週間の空き（<span style="color:#1db97a">可</span>＝空きあり／<span style="color:#ef4444">終了</span>＝満枠／超過／休）</div>' +
-      '<div class="md-cal-scroll"><div class="drc-grid"><div class="drc-col drc-lab"><div class="drc-h"></div><div class="drc-c">🚗 国産</div><div class="drc-c">🌍 輸入</div></div>' + cols + '</div></div>';
+      '<div class="md-cal-scroll"><div class="drc-grid"><div class="drc-col drc-lab"><div class="drc-h"></div><div class="drc-c"><i data-ic=car data-ics=16></i> 国産</div><div class="drc-c"><i data-ic=globe data-ics=16></i> 輸入</div></div>' + cols + '</div></div>';
   }
   function miniStat(label, n) { return '<div class="md-mini' + (n ? ' on' : '') + '"><div class="md-mini-n">' + n + '</div><div class="md-mini-l">' + label + '</div></div>'; }
 
@@ -222,8 +222,8 @@
           return '<td><b class="md-el-d' + (isT ? ' ok' : '') + '">' + (isT ? '今日' : (d.getMonth() + 1) + '/' + d.getDate()) + '</b><span class="md-el-w">' + (isT ? 'OK' : '日月火水木金土'[d.getDay()] + '曜') + '</span></td>';
         }
         var tbl = '<table class="md-el"><tr><th></th><th>代車なし</th><th>代車あり</th><th>当日作業</th></tr>' +
-          '<tr><td class="md-el-t">🚗 国産</td>' + cell('default', 'noLoaner') + cell('default', 'loaner') + cell('default', 'same') + '</tr>' +
-          '<tr><td class="md-el-t">🌍 輸入</td>' + cell('import', 'noLoaner') + cell('import', 'loaner') + cell('import', 'same') + '</tr></table>';
+          '<tr><td class="md-el-t"><i data-ic=car data-ics=16></i> 国産</td>' + cell('default', 'noLoaner') + cell('default', 'loaner') + cell('default', 'same') + '</tr>' +
+          '<tr><td class="md-el-t"><i data-ic=globe data-ics=16></i> 輸入</td>' + cell('import', 'noLoaner') + cell('import', 'loaner') + cell('import', 'same') + '</tr></table>';
         if (sz === 'xl') return tbl + calStrip(28) + openFoot('availcal', '空きカレンダー');
         return tbl;
       },
@@ -305,7 +305,7 @@
         var t = mdTot();
         if (sz === 's') return kpi(t.mC, '台', man(t.mA) + manUnit(t.mA), 'g');
         var h = '<div class="md-inline">' + kpi(t.mC, '台', '今月の完成', 'g') + kpi(man(t.mA), manUnit(t.mA), '売上（見込込）', 'b') + '</div>';
-        if (sz === 'l' && t.d1 && t.d2) h += '<div class="md-list" style="margin-top:8px">' + rowCard(null, '🚗 1課（国産）', t.d1.mC + '台 / ' + man(t.d1.mA) + manUnit(t.d1.mA), 'tag') + rowCard(null, '🌍 2課（輸入）', t.d2.mC + '台 / ' + man(t.d2.mA) + manUnit(t.d2.mA), 'tag') + '</div>';
+        if (sz === 'l' && t.d1 && t.d2) h += '<div class="md-list" style="margin-top:8px">' + rowCard(null, '<i data-ic=car data-ics=16></i> 1課（国産）', t.d1.mC + '台 / ' + man(t.d1.mA) + manUnit(t.d1.mA), 'tag') + rowCard(null, '<i data-ic=globe data-ics=16></i> 2課（輸入）', t.d2.mC + '台 / ' + man(t.d2.mA) + manUnit(t.d2.mA), 'tag') + '</div>';
         return h;
       },
       more: function () { var t = mdTot(); return '<div class="md-tiny">今週 上げた ' + t.wC + '台 / ' + man(t.wA) + manUnit(t.wA) + '　残り ' + t.rC + '台</div>'; }
@@ -368,7 +368,7 @@
           }).join('') + '</div>';
         };
         var lim = sz === 'xl' ? 30 : 6;
-        return head + '<div class="' + (sz === 'xl' ? 'md-scroll md-scroll-tall' : '') + '">' + mk('✅ 決定済み', s.decidedList, lim) + mk('🕒 行ける日候補', s.candList, lim) + '</div>' + openFoot('shakencal', '車検予定');
+        return head + '<div class="' + (sz === 'xl' ? 'md-scroll md-scroll-tall' : '') + '">' + mk('<i data-ic=check data-ics=16></i> 決定済み', s.decidedList, lim) + mk('<i data-ic=clock data-ics=16></i> 行ける日候補', s.candList, lim) + '</div>' + openFoot('shakencal', '車検予定');
       },
       more: function () { return openFoot('shakencal', '車検予定'); }
     },
@@ -451,7 +451,7 @@
       body: function (sz) {
         var s = csStat();
         if (sz === 's') return kpi(s.washToday.length, '台', '今日の洗車', s.washToday.length ? 'o' : 'g');
-        return '<div class="md-grid2">' + miniStat('☀️ 今日 洗車', s.washToday.length) + miniStat('🌙 明日 洗車', s.washTomorrow.length) + miniStat('📅 今週 洗車', s.washWeek.length) + miniStat('💡 ヘッドライト', s.headlight.length) + miniStat('✨ コーティング', s.coatReq.length) + miniStat('📝 その他依頼', s.salesReq.length) + '</div>' + (sz === 'l' ? openFoot('carsales', '車販作業') : '');
+        return '<div class="md-grid2">' + miniStat('<i data-ic=sun data-ics=16></i> 今日 洗車', s.washToday.length) + miniStat('<i data-ic=moon data-ics=16></i> 明日 洗車', s.washTomorrow.length) + miniStat('<i data-ic=calendar data-ics=16></i> 今週 洗車', s.washWeek.length) + miniStat('<i data-ic=bulb data-ics=16></i> ヘッドライト', s.headlight.length) + miniStat('<i data-ic=sparkle data-ics=16></i> コーティング', s.coatReq.length) + miniStat('<i data-ic=pencil data-ics=16></i> その他依頼', s.salesReq.length) + '</div>' + (sz === 'l' ? openFoot('carsales', '車販作業') : '');
       },
       more: function () { return openFoot('carsales', '車販作業'); }
     },
@@ -459,12 +459,12 @@
     course: {
       title: '課別タスク', icon: '📋', jump: 'course1', sizes: ['s', 'm', 'l'],
       body: function (sz) {
-        var STAT = [{ k: 'check', i: '🔍' }, { k: 'estim', i: '🧮' }, { k: 'contact', i: '📞' }, { k: 'parts', i: '📦' }, { k: 'work', i: '🔧' }];
+        var STAT = [{ k: 'check', i: '<i data-ic=search data-ics=16></i>' }, { k: 'estim', i: '<i data-ic=calculator data-ics=16></i>' }, { k: 'contact', i: '<i data-ic=phone data-ics=16></i>' }, { k: 'parts', i: '<i data-ic=box data-ics=16></i>' }, { k: 'work', i: '<i data-ic=wrench data-ics=16></i>' }];
         var cnt = function (board) { var o = {}; STAT.forEach(function (s) { o[s.k] = 0; }); C.cards.forEach(function (c) { if (c.boardId === board && !c.returnStage && o[c.status] != null) o[c.status]++; }); o._t = STAT.reduce(function (a, s) { return a + o[s.k]; }, 0); return o; };
         var d1 = cnt('default'), d2 = cnt('import');
         if (sz === 's') return kpi(d1._t + d2._t, '台', '作業中（両課）', 'b');
         var line = function (label, o, view) { return '<div class="md-course md-int" onclick="event.stopPropagation();mydGo(\'' + view + '\')"><span class="md-course-n">' + label + '</span>' + STAT.map(function (s) { return '<span class="md-course-c" title="' + TASK_LABEL[s.k] + '">' + s.i + '<b>' + o[s.k] + '</b></span>'; }).join('') + '</div>'; };
-        return line('🚗 1課', d1, 'course1') + line('🌍 2課', d2, 'course2');
+        return line('<i data-ic=car data-ics=16></i> 1課', d1, 'course1') + line('<i data-ic=globe data-ics=16></i> 2課', d2, 'course2');
       },
       more: function () { return ''; }
     },
@@ -608,14 +608,14 @@
     if (!$('mydash-pinned')) {
       host.innerHTML =
         '<div id="mydash-pinned">' +
-        '  <div id="mydash-search-wrap" class="md-search"><input id="mydash-search-input" type="search" autocomplete="off" placeholder="🔍 検索（顧客・名前・車・ナンバー・予約番号・代車・日付…）" onfocus="pitSearchBind(\'mydash-search-wrap\',\'mydash-search-input\',\'mydash-search-results\')" oninput="pitSearchInput(this.value)"><div id="mydash-search-results" class="pit-search-results"></div></div>' +
+        '<div id="mydash-search-wrap"class="md-search"><input id="mydash-search-input"type="search"autocomplete="off"placeholder="検索（顧客・名前・車・ナンバー・予約番号・代車・日付…）"onfocus="pitSearchBind(\'mydash-search-wrap\',\'mydash-search-input\',\'mydash-search-results\')"oninput="pitSearchInput(this.value)"><div id="mydash-search-results"class="pit-search-results"></div></div>'+
         '  <div id="mydash-notes-area"></div>' +
         '</div>' +
         '<div class="md-flow" id="mydash-flow"></div>' +
         '<div class="myd-fabbar">' +
         '  <button class="myd-fab primary" onclick="mydOpenPalette()">＋ ボックス</button>' +
-        '  <button class="myd-fab" id="myd-edit-fab" onclick="mydToggleEdit()">🎛 カスタマイズ</button>' +
-        '  <button class="myd-fab" onclick="mydOpenPresets()">⚙️ プリセット</button>' +
+        '  <button class="myd-fab" id="myd-edit-fab" onclick="mydToggleEdit()"><i data-ic=sliders data-ics=16></i> カスタマイズ</button>' +
+        '  <button class="myd-fab" onclick="mydOpenPresets()"><i data-ic=settings data-ics=16></i> プリセット</button>' +
         '</div>';
       bindFlow();
     }
@@ -633,7 +633,7 @@
   }
 
   function boxDef(it) {
-    if (it.e === 'sc') return { title: it.label || 'ショートカット', icon: it.icon || '🔗', sizes: ['s', 'm'], shortcut: true };
+    if (it.e === 'sc') return { title: it.label || 'ショートカット', icon: it.icon || '<i data-ic=link data-ics=16></i>', sizes: ['s', 'm'], shortcut: true };
     return EL[it.e];
   }
 
@@ -649,18 +649,18 @@
       if (def.shortcut) {
         tools = '<span class="md-tools">' + sizeChips(it, def, idx) + moveTools(idx) + '</span>';
       } else {
-        tools = '<span class="md-tools">' + sizeChips(it, def, idx) + (def.person ? '<span class="md-tbtn" title="対象を選ぶ" onclick="mydPickTarget(event,' + idx + ')">👤</span>' : '') + moveTools(idx) + '</span>';
+        tools = '<span class="md-tools">' + sizeChips(it, def, idx) + (def.person ? '<span class="md-tbtn" title="対象を選ぶ" onclick="mydPickTarget(event,' + idx + ')"><i data-ic=user data-ics=16></i></span>' : '') + moveTools(idx) + '</span>';
       }
       var bodyHtml, moreHtml = '';
       if (def.shortcut) {
-        bodyHtml = '<div class="md-sc md-int" onclick="event.stopPropagation();mydGo(\'' + it.view + '\'' + (it.range ? ",'" + it.range + "'" : '') + ')"><span class="md-sc-ic">' + (it.icon || '🔗') + '</span><span class="md-sc-l">' + esc(it.label || '') + '</span><span class="md-sc-go">開く →</span></div>';
+        bodyHtml = '<div class="md-sc md-int" onclick="event.stopPropagation();mydGo(\'' + it.view + '\'' + (it.range ? ",'" + it.range + "'" : '') + ')"><span class="md-sc-ic">' + icoE(it.icon || '🔗') + '</span><span class="md-sc-l">' + esc(it.label || '') + '</span><span class="md-sc-go">開く →</span></div>';
       } else {
         bodyHtml = safe(def.body, it.s, it);
         if (!noexp) moreHtml = '<div class="md-more">' + safe(def.more, it.s, it) + '</div>';
       }
       return '<section class="md-box md-' + it.s + (noexp ? ' md-noexp' : '') + (def.shortcut ? ' md-scbox' : '') + '" data-idx="' + idx + '" draggable="true">' +
-        '<div class="md-bh"><span class="md-grip">⠿</span><span class="md-ic">' + def.icon + '</span><h3>' + esc(title) + '</h3>' +
-        (noexp ? '' : '<span class="md-caret">▾</span>') + tools + '</div>' +
+        '<div class="md-bh"><span class="md-grip"><i data-ic=grip data-ics=16></i></span><span class="md-ic">' + icoE(def.icon) + '</span><h3>' + esc(title) + '</h3>' +
+        (noexp ? '' : '<span class="md-caret"><i data-ic=chevDown data-ics=15></i></span>') + tools + '</div>' +
         '<div class="md-body">' + bodyHtml + '</div>' + moreHtml + '</section>';
     }).join('');
     bindDrag();
@@ -668,7 +668,7 @@
   function sizeChips(it, def, idx) {
     return ['s', 'm', 'l', 'xl'].map(function (sz) { var ok = def.sizes.indexOf(sz) >= 0; return '<span class="md-szchip' + (ok ? '' : ' na') + (it.s === sz ? ' on' : '') + '"' + (ok ? ' onclick="mydResize(event,' + idx + ',\'' + sz + '\')"' : '') + '>' + SZL[sz] + '</span>'; }).join('');
   }
-  function moveTools(idx) { return '<span class="md-tbtn" onclick="mydMove(event,' + idx + ',-1)">↑</span><span class="md-tbtn" onclick="mydMove(event,' + idx + ',1)">↓</span><span class="md-tbtn del" onclick="mydRemove(event,' + idx + ')">✕</span>'; }
+  function moveTools(idx) { return '<span class="md-tbtn" onclick="mydMove(event,' + idx + ',-1)">↑</span><span class="md-tbtn" onclick="mydMove(event,' + idx + ',1)">↓</span><span class="md-tbtn del" onclick="mydRemove(event,' + idx + ')"><i data-ic=close data-ics=16></i></span>'; }
   function safe(fn, sz, it) { try { return fn ? fn(sz, it) : ''; } catch (e) { console.error('[mydash] render error', e); return '<div class="md-empty">表示エラー</div>'; } }
 
   // ---------------------------------------------------------
@@ -713,22 +713,22 @@
     var b = $('myd-pal-body');
     var dataEls = Object.keys(EL).filter(function (k) { return !EL[k].person; });
     var personEls = Object.keys(EL).filter(function (k) { return EL[k].person; });
-    var dataSec = '<div class="md-pal-sec">📊 状況・数値</div>' + dataEls.map(function (k) {
+    var dataSec = '<div class="md-pal-sec"><i data-ic=chart data-ics=16></i> 状況・数値</div>' + dataEls.map(function (k) {
       var d = EL[k];
       var chips = ['s', 'm', 'l', 'xl'].map(function (sz) { var ok = d.sizes.indexOf(sz) >= 0; return '<span class="md-szchip' + (ok ? '' : ' na') + '"' + (ok ? ' onclick="mydAdd(\'' + k + '\',\'' + sz + '\')"' : '') + '>' + SZL[sz] + '</span>'; }).join('');
-      return '<div class="md-pe"><span class="md-pe-ic">' + d.icon + '</span><span class="md-pe-n">' + esc(d.title) + '</span><span class="md-pe-sz">' + chips + '</span></div>';
+      return '<div class="md-pe"><span class="md-pe-ic">' + icoE(d.icon) + '</span><span class="md-pe-n">' + esc(d.title) + '</span><span class="md-pe-sz">' + chips + '</span></div>';
     }).join('');
     // 個人BOX＝「誰のBOXを作るか」をここで選んでから追加（例：自分の売上／斎藤の売上）
     var opts = '<option value="__me__">自分</option>' + assignableStaff().map(function (s) { return '<option value="' + esc(s.name) + '">' + esc(s.name) + '</option>'; }).join('');
-    var personSec = '<div class="md-pal-sec">👤 個人（担当者）＝誰のBOXを作るか選んで追加</div>' + personEls.map(function (k) {
+    var personSec = '<div class="md-pal-sec"><i data-ic=user data-ics=16></i> 個人（担当者）＝誰のBOXを作るか選んで追加</div>' + personEls.map(function (k) {
       var d = EL[k];
       var chips = ['s', 'm', 'l', 'xl'].map(function (sz) { var ok = d.sizes.indexOf(sz) >= 0; return '<span class="md-szchip' + (ok ? '' : ' na') + '"' + (ok ? ' onclick="mydAddPerson(\'' + k + '\',\'' + sz + '\')"' : '') + '>' + SZL[sz] + '</span>'; }).join('');
-      return '<div class="md-pe"><span class="md-pe-ic">' + d.icon + '</span><span class="md-pe-n">' + esc(d.title) + '</span><select class="md-pe-person" id="md-pers-' + k + '">' + opts + '</select><span class="md-pe-sz">' + chips + '</span></div>';
-    }).join('') + '<div class="md-tiny">複数人（自分＋部下など）にしたい時は、追加後にBOXの 👤 から選び直せます。</div>';
-    var scSec = '<div class="md-pal-sec">🔗 ショートカット（ビュー/アンカーへ飛ぶ）</div>' +
-      '<div class="md-scgrid">' + SHORTCUTS.map(function (s, i) { return '<span class="md-scadd" onclick="mydAddSc(' + i + ')">' + s.icon + ' ' + esc(s.label) + '</span>'; }).join('') + '</div>';
+      return '<div class="md-pe"><span class="md-pe-ic">' + icoE(d.icon) + '</span><span class="md-pe-n">' + esc(d.title) + '</span><select class="md-pe-person" id="md-pers-' + k + '">' + opts + '</select><span class="md-pe-sz">' + chips + '</span></div>';
+    }).join('') + '<div class="md-tiny">複数人（自分＋部下など）にしたい時は、追加後にBOXの <i data-ic=user data-ics=16></i> から選び直せます。</div>';
+    var scSec = '<div class="md-pal-sec"><i data-ic=link data-ics=16></i> ショートカット（ビュー/アンカーへ飛ぶ）</div>' +
+      '<div class="md-scgrid">' + SHORTCUTS.map(function (s, i) { return '<span class="md-scadd" onclick="mydAddSc(' + i + ')">' + icoE(s.icon) + ' ' + esc(s.label) + '</span>'; }).join('') + '</div>';
     b.innerHTML = dataSec + personSec + scSec +
-      '<div class="md-pal-all"><button class="myd-fab primary" onclick="mydAddAll()">📥 全部のせ（まず全部見る）</button><span class="md-tiny">初めての人向け：一旦すべて表示して、要らないBOXを消していけます</span></div>';
+      '<div class="md-pal-all"><button class="myd-fab primary" onclick="mydAddAll()"><i data-ic=download data-ics=16></i> 全部のせ（まず全部見る）</button><span class="md-tiny">初めての人向け：一旦すべて表示して、要らないBOXを消していけます</span></div>';
     $('myd-pal').classList.add('show');
   };
   window.mydClosePalette = function () { $('myd-pal').classList.remove('show'); };
@@ -773,7 +773,7 @@
       return '<div class="md-preset-row"><input class="md-preset-name" value="' + esc(p.name) + '" onchange="mydRenamePreset(' + i + ',this.value)">' +
         '<span class="md-preset-n">' + (p.layout ? p.layout.length : 0) + 'BOX</span>' +
         (i === m.active ? '<span class="md-preset-cur">表示中</span>' : '<button class="md-mini-btn" onclick="mydSwitchPreset(' + i + ');mydOpenPresets()">表示</button>') +
-        (m.presets.length > 1 ? '<button class="md-mini-btn del" onclick="mydDeletePreset(' + i + ')">🗑</button>' : '') + '</div>';
+        (m.presets.length > 1 ? '<button class="md-mini-btn del" onclick="mydDeletePreset(' + i + ')"><i data-ic=trash data-ics=16></i></button>' : '') + '</div>';
     }).join('');
     var tmpl = '<select id="md-new-tmpl"><option value="">空（現在の配置をコピー）</option>' + TEMPLATE_NAMES.map(function (n) { return '<option value="' + n + '">' + n + '（デフォルト雛形）</option>'; }).join('') + '</select>';
     $('myd-preset-body').innerHTML = '<div class="md-preset-list">' + rows + '</div>' +

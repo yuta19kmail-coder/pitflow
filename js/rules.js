@@ -1,17 +1,17 @@
 /* ========================================
-   rules.js  -  🧩 入庫ルール（入庫アルゴリズム設定ページ）／PitFlow v0.19.0
+   rules.js  -  <i data-ic=puzzle data-ics=16></i> 入庫ルール（入庫アルゴリズム設定ページ）／PitFlow v0.19.0
    ----------------------------------------
    ◎運用フロー（2026-06-04 ゆうた指示）
      閲覧モード（既定）＝現在適用中の内容を表示するだけ（誤操作で変わらない）
-       → 「✏️ 編集する」で編集モードへ＝現在の内容を丸っとコピー（下書き）
+       → 「<i data-ic=pencil data-ics=16></i> 編集する」で編集モードへ＝現在の内容を丸っとコピー（下書き）
        → 目標・ルールをいじる → 下のプレビュー（2週間）で確認
-       → 「✅ OKで反映」＝本番へ一括反映 ／ 「✖ やめる」＝捨てて元のまま
+       → 「<i data-ic=check data-ics=16></i> OKで反映」＝本番へ一括反映 ／ 「<i data-ic=close data-ics=16></i> やめる」＝捨てて元のまま
    ◎ページ構成
      ① 入庫の基本値（予約枠・売上目標・平均単価） ② 積み上げルール
      ③ 言葉の辞書（％） ④ 2週間ビジュアル（閲覧=現在適用中／編集=プレビュー）
    ◎計算仕様
      ％は合算して1回掛け。端数は減らす系=切り捨て・増やす系=切り上げ。
-     「無くす」=0台。「⚠注意表示」=文言のみ。理由（ルール#）を必ず表示。
+     「無くす」=0台。「<i data-ic=warn data-ics=16></i>注意表示」=文言のみ。理由（ルール#）を必ず表示。
    ◎保存：state.settings.reserveCap / target / unitPrice / rules / ruleDict（PitDB永続化）
      ※ ダッシュボード等が使う window.pitRulesFor / pitEffective は常に「反映済み（本番）」を読む。
        編集中の下書きはこのページのプレビューにしか影響しない。
@@ -57,7 +57,7 @@
     { id: 'minimize', label: 'できる限り無くす', grp: 'down' },
     { id: 'zero',     label: '無くす（0にする）', grp: 'down' },
     { id: 'allow',    label: '許容する',         grp: 'up' },
-    { id: 'warn',     label: '⚠ 注意表示',      grp: 'warn' },
+    { id: 'warn',     label: '<i data-ic=warn data-ics=16></i> 注意表示',      grp: 'warn' },
   ];
   const DICT_LABEL = { increase: '増やす', decrease: '減らす', careful: '気を付ける', minimize: 'できる限り無くす', allow: '許容する' };
   const KEYS = ['reserveCap', 'target', 'unitPrice', 'rules', 'ruleDict', 'longBreaks', 'fuzzyRules'];
@@ -202,7 +202,7 @@
        ※置き場(lotNormal)は対象外＝休み中も預かり車は置き場を使い続ける */
     if (target === 'capDefault' || target === 'capImport' || target === 'capBoth') {
       const br = _inBreak(cfg, dateStr);
-      if (br) return { value: 0, pct: -100, zero: true, rules: [], closed: '🏖 ' + (br.label || '長期休み') };
+      if (br) return { value: 0, pct: -100, zero: true, rules: [], closed: '<i data-ic=parasol data-ics=16></i> ' + (br.label || '長期休み') };
       const pp = String(dateStr).split('-');
       const dw = new Date(+pp[0], +pp[1] - 1, +pp[2]).getDay();
       if ((state.settings.closedDow || []).indexOf(dw) >= 0) {
@@ -305,14 +305,14 @@
     const cnt = _bookCount(team, dStr);
     const left = eff.value - cnt;
     let mark, reason;
-    if (eff.zero)            { mark = '×'; reason = '🧩ルールで受付停止（' + eff.rules.map(function (n) { return '#' + n; }).join('・') + '）'; }
+    if (eff.zero)            { mark = '×'; reason = '<i data-ic=puzzle data-ics=16></i>ルールで受付停止（' + eff.rules.map(function (n) { return '#' + n; }).join('・') + '）'; }
     else if (left <= 0)      { mark = '×'; reason = '枠が埋まりました（' + cnt + '/' + eff.value + '台）＝受付終了'; }
     else if (left === 1)     { mark = '△'; reason = '残り1台（' + cnt + '/' + eff.value + '台）'; }
     else                     { mark = '○'; reason = '空きあり（残り' + left + '台）'; }
     /* ⚠注意ルールがある日は ○ を △ に落とす（理由つき） */
     if (mark === '○') {
       const rs = _rulesForC(cfg, dStr);
-      if (rs.warns.length) { mark = '△'; reason = '⚠ ' + rs.warns.map(function (w) { return w.msg; }).join('／'); }
+      if (rs.warns.length) { mark = '△'; reason = '<i data-ic=warn data-ics=16></i> ' + rs.warns.map(function (w) { return w.msg; }).join('／'); }
     }
     return { mark: mark, reason: reason, cnt: cnt, cap: eff.value, by: 'calc' };
   }
@@ -362,7 +362,7 @@
     const tName = (team === 'import') ? '輸入' : '国産';
     if (tv.mark === '×' || tv.mark === '休') {
       const head = (tv.mark === '休') ? '休業日' : '受付終了（×）';
-      const ok = confirm('📅 ' + dLabel + ' の' + tName + 'は ' + head + ' です。\n理由：' + tv.reason + (tv.by === 'ai' ? '（AI判定）' : '') + '\n\nそれでも予約を入れますか？（最終判断は人でOK）');
+      const ok = confirm(''+ dLabel + 'の'+ tName + 'は '+ head + 'です。\n理由：'+ tv.reason + (tv.by === 'ai'? '（AI判定）': '') + '\n\nそれでも予約を入れますか？（最終判断は人でOK）');
       return ok ? newDate : (oldDate || '');
     }
     if (tv.mark === '△') pitToast('△ ' + dLabel + ' ' + tName + '：' + tv.reason);
@@ -386,14 +386,14 @@
 
     /* モードバー */
     if (!ed) {
-      h += '<div class="ps-bar"><span class="ps-bar-note">いま<b>適用中</b>の内容です。変更は「✏️ 編集する」→ プレビュー確認 → OKで反映。</span>'
+      h += '<div class="ps-bar"><span class="ps-bar-note">いま<b>適用中</b>の内容です。変更は「<i data-ic=pencil data-ics=16></i> 編集する」→ プレビュー確認 → OKで反映。</span>'
          + '<span class="ps-status" id="ps-status"></span>'
-         + '<button class="vh-btn primary" onclick="pitRuleEditStart()">✏️ 編集する</button></div>';
+         + '<button class="vh-btn primary" onclick="pitRuleEditStart()"><i data-ic=pencil data-ics=16></i> 編集する</button></div>';
     } else {
-      h += '<div class="ps-bar edit"><span class="rl-ebadge">🟡 編集中</span><span class="ps-bar-note">まだ<b>反映されていません</b>。下のプレビューで確認 → OKで全面反映／やめるで元のまま。</span>'
+      h += '<div class="ps-bar edit"><span class="rl-ebadge"><i data-ic=dot data-ics=12 style=color:#eab308></i> 編集中</span><span class="ps-bar-note">まだ<b>反映されていません</b>。下のプレビューで確認 → OKで全面反映／やめるで元のまま。</span>'
          + '<span class="ps-status" id="ps-status"></span>'
-         + '<button class="vh-btn" onclick="pitRuleCancel()">✖ やめる（元に戻す）</button>'
-         + '<button class="vh-btn primary" onclick="pitRuleOk()">✅ OKで反映</button></div>';
+         + '<button class="vh-btn" onclick="pitRuleCancel()"><i data-ic=close data-ics=16></i> やめる（元に戻す）</button>'
+         + '<button class="vh-btn primary" onclick="pitRuleOk()"><i data-ic=check data-ics=16></i> OKで反映</button></div>';
     }
 
     /* 🧮 目標 → 日の理論値（計算式カスケード・入れると下に流れて自動計算） */
@@ -417,47 +417,47 @@
     }
 
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">🧮 目標 → 日の理論値<span class="fx-note">固定値は年1回レベル／営業日・連休は毎月自動反映</span></div>';
+    h += '<div class="ps-h"><i data-ic=calculator data-ics=16></i> 目標 → 日の理論値<span class="fx-note">固定値は年1回レベル／営業日・連休は毎月自動反映</span></div>';
     h += '<div class="fx">';
     h += '<div class="fx-row"><span class="fx-lb">売上目標（月）</span>' + fxIn('rb-tg-min', Math.round(tg.monthMin / 10000), 76) + '<span class="fx-u">万</span><span class="fx-u">〜</span>' + fxIn('rb-tg-max', Math.round(tg.monthMax / 10000), 76) + '<span class="fx-u">万</span></div>';
     h += '<div class="fx-arr">↓ 部門に分ける（国産 ' + fxIn('rb-ratio', ratioD, 56) + '<span class="fx-u">%</span><span class="fx-u">：輸入 ' + (100 - ratioD) + '%</span>）</div>';
-    h += '<div class="fx-row"><span class="fx-lb">部門目標</span><span class="fx-pair">🚗 <b>' + man(dMin) + '〜' + man(dMax) + '</b><span class="fx-u">万</span></span><span class="fx-pair">🌍 <b>' + man(iMin) + '〜' + man(iMax) + '</b><span class="fx-u">万</span></span></div>';
-    h += '<div class="fx-arr">↓ 台単価で割る（🚗 ' + fxIn('rb-up-d', manStr(upD0), 60, '0.1') + '<span class="fx-u">万</span>・🌍 ' + fxIn('rb-up-i', manStr(upI0), 60, '0.1') + '<span class="fx-u">万</span>＝実績3ヶ月平均に自動切替予定）</div>';
-    h += '<div class="fx-row"><span class="fx-lb">月の入庫数</span><span class="fx-pair">🚗 <b>' + Math.round(cDmin) + '〜' + Math.round(cDmax) + '</b><span class="fx-u">台</span></span><span class="fx-pair">🌍 <b>' + Math.round(cImin) + '〜' + Math.round(cImax) + '</b><span class="fx-u">台</span></span><span class="fx-pair dim">計 ' + Math.round(cDmin + cImin) + '〜' + Math.round(cDmax + cImax) + '台</span></div>';
+    h += '<div class="fx-row"><span class="fx-lb">部門目標</span><span class="fx-pair"><i data-ic=car data-ics=16></i> <b>' + man(dMin) + '〜' + man(dMax) + '</b><span class="fx-u">万</span></span><span class="fx-pair"><i data-ic=globe data-ics=16></i> <b>' + man(iMin) + '〜' + man(iMax) + '</b><span class="fx-u">万</span></span></div>';
+    h += '<div class="fx-arr">↓ 台単価で割る（<i data-ic=car data-ics=16></i> ' + fxIn('rb-up-d', manStr(upD0), 60, '0.1') + '<span class="fx-u">万</span>・<i data-ic=globe data-ics=16></i> ' + fxIn('rb-up-i', manStr(upI0), 60, '0.1') + '<span class="fx-u">万</span>＝実績3ヶ月平均に自動切替予定）</div>';
+    h += '<div class="fx-row"><span class="fx-lb">月の入庫数</span><span class="fx-pair"><i data-ic=car data-ics=16></i> <b>' + Math.round(cDmin) + '〜' + Math.round(cDmax) + '</b><span class="fx-u">台</span></span><span class="fx-pair"><i data-ic=globe data-ics=16></i> <b>' + Math.round(cImin) + '〜' + Math.round(cImax) + '</b><span class="fx-u">台</span></span><span class="fx-pair dim">計 ' + Math.round(cDmin + cImin) + '〜' + Math.round(cDmax + cImax) + '台</span></div>';
     h += '<div class="fx-arr">↓ 営業日で割る（今月 <b>' + biz + '</b>日＝月−定休日−長期休み・自動）</div>';
-    h += '<div class="fx-row fx-big"><span class="fx-lb">日の理論値</span><span class="fx-pair">🚗 <b>' + f1(cDmin / biz) + '〜' + f1(cDmax / biz) + '</b><span class="fx-u">台/日</span></span><span class="fx-pair">🌍 <b>' + f1(cImin / biz) + '〜' + f1(cImax / biz) + '</b><span class="fx-u">台/日</span></span></div>';
-    const okD = (rcD0 >= cDmax / biz) ? '✅' : ((rcD0 >= cDmin / biz) ? '🟡' : '🔴');
-    const okI = (rcI0 >= cImax / biz) ? '✅' : ((rcI0 >= cImin / biz) ? '🟡' : '🔴');
+    h += '<div class="fx-row fx-big"><span class="fx-lb">日の理論値</span><span class="fx-pair"><i data-ic=car data-ics=16></i> <b>' + f1(cDmin / biz) + '〜' + f1(cDmax / biz) + '</b><span class="fx-u">台/日</span></span><span class="fx-pair"><i data-ic=globe data-ics=16></i> <b>' + f1(cImin / biz) + '〜' + f1(cImax / biz) + '</b><span class="fx-u">台/日</span></span></div>';
+    const okD = (rcD0 >= cDmax / biz) ? '<i data-ic=check data-ics=16></i>' : ((rcD0 >= cDmin / biz) ? '<i data-ic=dot data-ics=12 style=color:#eab308></i>' : '<i data-ic=dot data-ics=12 style=color:#ef4444></i>');
+    const okI = (rcI0 >= cImax / biz) ? '<i data-ic=check data-ics=16></i>' : ((rcI0 >= cImin / biz) ? '<i data-ic=dot data-ics=12 style=color:#eab308></i>' : '<i data-ic=dot data-ics=12 style=color:#ef4444></i>');
     h += '<div class="fx-arr">↓ 予約枠（1日に受付できる上限）と比べる</div>';
-    h += '<div class="fx-row"><span class="fx-lb">予約枠</span><span class="fx-pair">🚗 ' + fxIn('rb-cap-d', rcD0, 56) + '<span class="fx-u">台</span> ' + okD + '</span><span class="fx-pair">🌍 ' + fxIn('rb-cap-i', rcI0, 56) + '<span class="fx-u">台</span> ' + okI + '</span><span class="fx-pair dim">✅天井まで可｜🟡目標のみ｜🔴不足</span></div>';
+    h += '<div class="fx-row"><span class="fx-lb">予約枠</span><span class="fx-pair"><i data-ic=car data-ics=16></i> ' + fxIn('rb-cap-d', rcD0, 56) + '<span class="fx-u">台</span> ' + okD + '</span><span class="fx-pair"><i data-ic=globe data-ics=16></i> ' + fxIn('rb-cap-i', rcI0, 56) + '<span class="fx-u">台</span> ' + okI + '</span><span class="fx-pair dim"><i data-ic=check data-ics=16></i>天井まで可｜<i data-ic=dot data-ics=12 style=color:#eab308></i>目標のみ｜<i data-ic=dot data-ics=12 style=color:#ef4444></i>不足</span></div>';
     h += '</div>';
     h += '</div>';
 
     /* 🏖 長期休み */
     const brs = c.longBreaks || [];
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🏖 長期休み（お盆・年末年始・GWなど）'
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=parasol data-ics=16></i> 長期休み（お盆・年末年始・GWなど）'
        + (ed ? '<button class="vh-btn" style="margin-left:auto" onclick="pitBreakAdd()">＋ 休みを追加</button>' : '')
        + '</div>';
     h += '<div class="ps-desc">期間中＝受付自動0・営業日からも自動除外（置き場は使われたまま）。</div>';
     if (!brs.length) {
-      h += '<div class="ps-hint">登録なし。' + (ed ? '「＋ 休みを追加」で登録してください。' : '「✏️ 編集する」から登録できます。') + '</div>';
+      h += '<div class="ps-hint">登録なし。' + (ed ? '「＋ 休みを追加」で登録してください。' : '「<i data-ic=pencil data-ics=16></i> 編集する」から登録できます。') + '</div>';
     }
     brs.forEach(function (b, i) {
       if (!ed) {
-        h += '<div class="rl-row rl-vw"><span class="rl-no" style="background:#0e7490">🏖</span><span class="rl-vtxt"><b>' + esc(b.label || '休み') + '</b>　' + esc(b.from || '?') + ' 〜 ' + esc(b.to || '?') + '</span></div>';
+        h += '<div class="rl-row rl-vw"><span class="rl-no" style="background:#0e7490"><i data-ic=parasol data-ics=16></i></span><span class="rl-vtxt"><b>' + esc(b.label || '休み') + '</b>　' + esc(b.from || '?') + ' 〜 ' + esc(b.to || '?') + '</span></div>';
       } else {
         h += '<div class="rl-row">';
-        h += '<span class="rl-no" style="background:#0e7490">🏖</span>';
+        h += '<span class="rl-no" style="background:#0e7490"><i data-ic=parasol data-ics=16></i></span>';
         h += '<input type="text" class="ps-in rl-brk-lb" placeholder="名前（例：お盆）" value="' + esc(b.label || '') + '" onchange="pitBreakEdit(' + i + ',\'label\',this.value)">';
         h += '<input type="date" class="ps-in" value="' + esc(b.from || '') + '" onchange="pitBreakEdit(' + i + ',\'from\',this.value)">';
         h += '<span class="rl-jo">〜</span>';
         h += '<input type="date" class="ps-in" value="' + esc(b.to || '') + '" onchange="pitBreakEdit(' + i + ',\'to\',this.value)">';
-        h += '<button class="rl-del" title="削除" onclick="pitBreakDel(' + i + ')">🗑</button>';
+        h += '<button class="rl-del" title="削除" onclick="pitBreakDel(' + i + ')"><i data-ic=trash data-ics=16></i></button>';
         h += '</div>';
       }
     });
-    h += '<div class="ps-hint">⚠ 休み前週はパーツが来ない → 「長期休みの前1週間 × 預かり入庫 × 気を付ける」ルール推奨。</div>';
+    h += '<div class="ps-hint"><i data-ic=warn data-ics=16></i> 休み前週はパーツが来ない → 「長期休みの前1週間 × 預かり入庫 × 気を付ける」ルール推奨。</div>';
     h += '</div>';
 
     /* 📐 今月の配分（営業日ベース・自動計算）＋枠とのつじつまチェック */
@@ -480,37 +480,37 @@
       return Math.round(yen * ratioD / 100 / upD + yen * (100 - ratioD) / 100 / upI);
     }
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📐 期への自動配分（' + _nowM + '月・営業日比' + (ed ? '＝プレビュー' : '') + '）</div>';
+    h += '<div class="ps-h"><i data-ic=ruler data-ics=16></i> 期への自動配分（' + _nowM + '月・営業日比' + (ed ? '＝プレビュー' : '') + '）</div>';
     h += '<table class="rl-alloc"><tr><th>期</th><th>営業日</th><th>目標</th><th>天井</th><th>入庫数</th><th>枠</th><th>判定</th></tr>';
     alloc.q.forEach(function (q, i) {
       const needMin = _needCars(q.min), needMax = _needCars(q.max);
       const capSum = _qCapSum(q);
       let judge;
-      if (capSum >= needMax)      judge = '<span style="color:#1db97a">✅ 余裕</span>';
-      else if (capSum >= needMin) judge = '<span style="color:#eab308">🟡 天井に届かない</span>';
-      else                        judge = '<span style="color:#ef4444">🔴 目標に足りない</span>';
+      if (capSum >= needMax)      judge = '<span style="color:#1db97a"><i data-ic=check data-ics=16></i> 余裕</span>';
+      else if (capSum >= needMin) judge = '<span style="color:#eab308"><i data-ic=dot data-ics=12 style=color:#eab308></i> 天井に届かない</span>';
+      else                        judge = '<span style="color:#ef4444"><i data-ic=dot data-ics=12 style=color:#ef4444></i> 目標に足りない</span>';
       h += '<tr><td>' + (i + 1) + '期（' + q.from + '〜' + q.to + '日）</td><td>' + q.days + '日</td><td><b>' + Math.round(q.min / 10000) + '</b>万</td><td><b>' + Math.round(q.max / 10000) + '</b>万</td><td>' + needMin + '〜' + needMax + '台</td><td><b>' + capSum + '</b>台</td><td>' + judge + '</td></tr>';
     });
     h += '<tr><td class="dim">合計</td><td class="dim">' + alloc.total + '日</td><td class="dim">' + Math.round((c.target || {}).monthMin / 10000 || 0) + '万</td><td class="dim">' + Math.round((c.target || {}).monthMax / 10000 || 0) + '万</td><td class="dim"></td><td class="dim"></td><td class="dim"></td></tr>';
     h += '</table>';
-    h += '<div class="ps-hint">🟡🔴の期＝枠が足りない → ルールで増やすか目標を調整（自動では上げない）。</div>';
+    h += '<div class="ps-hint"><i data-ic=dot data-ics=12 style=color:#eab308></i><i data-ic=dot data-ics=12 style=color:#ef4444></i>の期＝枠が足りない → ルールで増やすか目標を調整（自動では上げない）。</div>';
     h += '</div>';
 
     /* ② 積み上げルール */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🧩 積み上げルール'
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=puzzle data-ics=16></i> 積み上げルール'
        + (ed ? '<button class="vh-btn primary" style="margin-left:auto" onclick="pitRuleAdd()">＋ ルールを追加</button>' : '')
        + '</div>';
     h += '<div class="ps-desc">上から全部足し算。<span style="color:#1db97a">緑＝増</span>／<span style="color:#ef4444">赤＝減</span>／<span style="color:#eab308">黄＝注意</span>。</div>';
     if (!rules.length) {
-      h += '<div class="ps-hint">まだルールがありません。' + (ed ? '「＋ ルールを追加」で1つ目を積んでください。' : '「✏️ 編集する」から追加できます。') + '<br>例：「土曜・日曜」は「国産の予約枠」を「増やす」／「定休日の前日」は「代車つき預かり」に「⚠注意表示」。</div>';
+      h += '<div class="ps-hint">まだルールがありません。' + (ed ? '「＋ ルールを追加」で1つ目を積んでください。' : '「<i data-ic=pencil data-ics=16></i> 編集する」から追加できます。') + '<br>例：「土曜・日曜」は「国産の予約枠」を「増やす」／「定休日の前日」は「代車つき預かり」に「<i data-ic=warn data-ics=16></i>注意表示」。</div>';
     }
     rules.forEach(function (r, i) { h += ed ? _rowEditHtml(r, i) : _rowViewHtml(r, i); });
     h += '</div>';
 
     /* ③ 言葉の辞書 */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">📖 言葉の辞書（％）</div>';
+    h += '<div class="ps-h"><i data-ic=book data-ics=16></i> 言葉の辞書（％）</div>';
     if (!ed) {
       h += '<div class="ps-desc">';
       h += Object.keys(DICT_LABEL).map(function (k) {
@@ -531,22 +531,22 @@
     /* 🗣 肌感ルール（言葉のまま積む＝AIの判断基準層） */
     const fz = c.fuzzyRules || [];
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🗣 肌感ルール（言葉のまま積む）'
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=comment data-ics=16></i> 肌感ルール（言葉のまま積む）'
        + (ed ? '<button class="vh-btn" style="margin-left:auto" onclick="pitFuzzyAdd()">＋ 肌感を追加</button>' : '')
        + '</div>';
-    h += '<div class="ps-desc">計算式にできない現場の知恵を<b>そのままの言葉</b>で登録。上の🧩ルール（数字）と違い、ここは<b>AIの判断基準</b>になる層＝％や台数に直さなくてOK。</div>';
+    h += '<div class="ps-desc">計算式にできない現場の知恵を<b>そのままの言葉</b>で登録。上の<i data-ic=puzzle data-ics=16></i>ルール（数字）と違い、ここは<b>AIの判断基準</b>になる層＝％や台数に直さなくてOK。</div>';
     if (!fz.length) {
-      h += '<div class="ps-hint">まだ登録なし。' + (ed ? '「＋ 肌感を追加」で1つ目を。' : '「✏️ 編集する」から登録できます。') + '<br>例：「高額な作業が3台以上重なる週はメカがしんどいので控えめに」「常連の急ぎは多少無理しても受ける」</div>';
+      h += '<div class="ps-hint">まだ登録なし。' + (ed ? '「＋ 肌感を追加」で1つ目を。' : '「<i data-ic=pencil data-ics=16></i> 編集する」から登録できます。') + '<br>例：「高額な作業が3台以上重なる週はメカがしんどいので控えめに」「常連の急ぎは多少無理しても受ける」</div>';
     }
     fz.forEach(function (f, i) {
       if (!ed) {
-        h += '<div class="rl-row rl-vw' + (f.on === false ? ' off' : '') + '"><span class="rl-no" style="background:#7c3aed">🗣</span><span class="rl-vtxt">' + esc(f.text || '（未入力）') + '</span>' + (f.on === false ? '<span class="rl-offtag">停止中</span>' : '') + '</div>';
+        h += '<div class="rl-row rl-vw' + (f.on === false ? ' off' : '') + '"><span class="rl-no" style="background:#7c3aed"><i data-ic=comment data-ics=16></i></span><span class="rl-vtxt">' + esc(f.text || '（未入力）') + '</span>' + (f.on === false ? '<span class="rl-offtag">停止中</span>' : '') + '</div>';
       } else {
         h += '<div class="rl-row' + (f.on === false ? ' off' : '') + '">';
-        h += '<span class="rl-no" style="background:#7c3aed">🗣</span>';
+        h += '<span class="rl-no" style="background:#7c3aed"><i data-ic=comment data-ics=16></i></span>';
         h += '<label class="rl-on" title="ON/OFF"><input type="checkbox"' + (f.on !== false ? ' checked' : '') + ' onchange="pitFuzzyEdit(' + i + ',\'on\',this.checked)"></label>';
         h += '<input type="text" class="ps-in rl-note" style="flex:1;min-width:240px" placeholder="現場の知恵をそのままの言葉で（例：休み前の週は重整備を控えめに）" value="' + esc(f.text || '') + '" onchange="pitFuzzyEdit(' + i + ',\'text\',this.value)">';
-        h += '<button class="rl-del" title="削除" onclick="pitFuzzyDel(' + i + ')">🗑</button>';
+        h += '<button class="rl-del" title="削除" onclick="pitFuzzyDel(' + i + ')"><i data-ic=trash data-ics=16></i></button>';
         h += '</div>';
       }
     });
@@ -557,15 +557,15 @@
     const rlOn = rules.filter(function (r) { return r.on !== false; }).length;
     const aiCnt = Object.keys(state.aiVerdicts || {}).length;
     h += '<div class="ps-card">';
-    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px">🤖 AI判定（受付の○△×）<span class="rl-offtag" style="margin-left:auto">未接続＝本番化（Firebase）とセットで接続</span></div>';
+    h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=robot data-ics=16></i> AI判定（受付の○△×）<span class="rl-offtag" style="margin-left:auto">未接続＝本番化（Firebase）とセットで接続</span></div>';
     h += '<div class="ps-desc">流れ：<b>①計算ルール</b>（枠・営業日＝上のカード群）→ <b>②肌感ルール</b>（言葉）→ <b>③AIが1日1回、日別の○△×と理由を判定</b> → <b>④人が予約を入れる</b>（ラベルは見えるが強制しない）。</div>';
-    h += '<div class="ps-hint">いまは③を<b>計算式の仮判定</b>で代用中（枠の埋まり具合から自動で○△×）。本番化後は Claude API がここの判定を毎朝更新し、肌感ルール' + fzOn + '件・🧩ルール' + rlOn + '件・予約状況・通年達成率を読んで<b>理由つき</b>で判定します（1日1回更新＝月数百円の見込み）。AIは○△×ラベルだけでなく<b>その日の枠（分母）そのもの</b>も日々書き換えられます（例：国産5→4台。定休・連休だけはAIでも開けない）。'
-       + (aiCnt ? '<br>🤖 AI判定の保存数：' + aiCnt + '日分' : '') + '</div>';
+    h += '<div class="ps-hint">いまは③を<b>計算式の仮判定</b>で代用中（枠の埋まり具合から自動で○△×）。本番化後は Claude API がここの判定を毎朝更新し、肌感ルール' + fzOn + '件・<i data-ic=puzzle data-ics=16></i>ルール' + rlOn + '件・予約状況・通年達成率を読んで<b>理由つき</b>で判定します（1日1回更新＝月数百円の見込み）。AIは○△×ラベルだけでなく<b>その日の枠（分母）そのもの</b>も日々書き換えられます（例：国産5→4台。定休・連休だけはAIでも開けない）。'
+       + (aiCnt ? '<br><i data-ic=robot data-ics=16></i> AI判定の保存数：' + aiCnt + '日分' : '') + '</div>';
     h += '</div>';
 
     /* ④ 2週間 */
     h += '<div class="ps-card">';
-    h += '<div class="ps-h">' + (ed ? '🧪 プレビュー — OKで反映するとこうなる（2週間）' : '📅 これから2週間 — いま適用中の実効枠') + '</div>';
+    h += '<div class="ps-h">' + (ed ? '<i data-ic=flask data-ics=16></i> プレビュー — OKで反映するとこうなる（2週間）' : '<i data-ic=calendar data-ics=16></i> これから2週間 — いま適用中の実効枠') + '</div>';
     h += '<div class="ps-desc">日をクリックで理由表示。<span style="color:#1db97a">緑＝増</span>／<span style="color:#f97316">橙＝減</span>／<span style="color:#ef4444">赤＝停止</span>。</div>';
     h += '<div id="rl-grid"></div>';
     h += '<div id="rl-test-out" class="rl-test-out" style="margin-top:12px"></div>';
@@ -608,7 +608,7 @@
     if (r.action === 'warn') {
       h += '<input type="text" class="ps-in rl-note" placeholder="受付に出す文言（例：返却が翌々日になる）" value="' + esc(r.note || '') + '" onchange="pitRuleEdit(' + i + ',\'note\',this.value)">';
     }
-    h += '<button class="rl-del" title="削除" onclick="pitRuleDel(' + i + ')">🗑</button>';
+    h += '<button class="rl-del" title="削除" onclick="pitRuleDel(' + i + ')"><i data-ic=trash data-ics=16></i></button>';
     h += '</div>';
     return h;
   }
@@ -626,7 +626,7 @@
   window.pitRuleEditStart = function () {
     _mkDraft();
     renderRules();
-    _flash('✏️ 編集モード（まだ反映されません）');
+    _flash('編集モード（まだ反映されません）');
   };
 
   window.pitRuleOk = function () {
@@ -636,7 +636,7 @@
     _draft = null;
     if (window.PitDB) PitDB.save(true);
     renderRules();
-    _flash('✅ 反映しました');
+    _flash('反映しました');
   };
 
   window.pitRuleCancel = function () {
@@ -681,14 +681,14 @@
     if (_draft.target.monthMax < _draft.target.monthMin) _draft.target.monthMax = _draft.target.monthMin;
     _draft.unitPrice = { default: Math.round(rf('rb-up-d', 8.3, 0.1, 999) * 10000), import: Math.round(rf('rb-up-i', 13, 0.1, 999) * 10000) };
     renderRules();   // カスケードの自動計算を全部更新
-    _flash('🟡 プレビューに反映（未確定）');
+    _flash('プレビューに反映（未確定）');
   };
 
   window.pitRuleAdd = function () {
     if (!_draft) return;
     _rules().push({ on: true, when: 'weekend', target: 'capDefault', action: 'increase', note: '' });
     renderRules();
-    _flash('🟡 追加（未確定）');
+    _flash('追加（未確定）');
   };
 
   window.pitRuleEdit = function (i, field, val) {
@@ -698,7 +698,7 @@
     if (field === 'on') r.on = !!val;
     else r[field] = val;
     renderRules();
-    _flash('🟡 プレビューに反映（未確定）');
+    _flash('プレビューに反映（未確定）');
   };
 
   window.pitRuleDel = function (i) {
@@ -707,7 +707,7 @@
     if (!r) return;
     _rules().splice(i, 1);
     renderRules();
-    _flash('🟡 削除（未確定・OKで確定）');
+    _flash('削除（未確定・OKで確定）');
   };
 
   /* 長期休みの編集（下書きにだけ効く） */
@@ -716,7 +716,7 @@
     if (!_draft.longBreaks) _draft.longBreaks = [];
     _draft.longBreaks.push({ label: '', from: '', to: '' });
     renderRules();
-    _flash('🟡 追加（未確定）');
+    _flash('追加（未確定）');
   };
   window.pitBreakEdit = function (i, field, val) {
     if (!_draft) return;
@@ -725,13 +725,13 @@
     b[field] = val;
     if (b.from && b.to && b.to < b.from) b.to = b.from;   // 終わりが始まりより前なら補正
     renderRules();
-    _flash('🟡 プレビューに反映（未確定）');
+    _flash('プレビューに反映（未確定）');
   };
   window.pitBreakDel = function (i) {
     if (!_draft) return;
     (_draft.longBreaks || []).splice(i, 1);
     renderRules();
-    _flash('🟡 削除（未確定・OKで確定）');
+    _flash('削除（未確定・OKで確定）');
   };
 
   /* 🗣 肌感ルールの編集（下書きにだけ効く） */
@@ -740,7 +740,7 @@
     if (!_draft.fuzzyRules) _draft.fuzzyRules = [];
     _draft.fuzzyRules.push({ on: true, text: '' });
     renderRules();
-    _flash('🟡 追加（未確定）');
+    _flash('追加（未確定）');
   };
   window.pitFuzzyEdit = function (i, field, val) {
     if (!_draft) return;
@@ -749,13 +749,13 @@
     if (field === 'on') f.on = !!val;
     else f[field] = val;
     renderRules();
-    _flash('🟡 プレビューに反映（未確定）');
+    _flash('プレビューに反映（未確定）');
   };
   window.pitFuzzyDel = function (i) {
     if (!_draft) return;
     (_draft.fuzzyRules || []).splice(i, 1);
     renderRules();
-    _flash('🟡 削除（未確定・OKで確定）');
+    _flash('削除（未確定・OKで確定）');
   };
 
   window.pitRuleDictApply = function () {
@@ -771,7 +771,7 @@
       el.value = v;
       dict[k] = v;
     });
-    _flash('🟡 プレビューに反映（未確定）');
+    _flash('プレビューに反映（未確定）');
     pitRuleGrid();
     if (window._rlTestDate) pitRuleDay(window._rlTestDate);
   };
@@ -804,30 +804,30 @@
       const cls = (d.getDay() === 0 || hol || brk) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
       g += '<div class="rl-g-h' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (brk ? '・連休' : (closed ? '・休' : '')) + '</div>';
     });
-    g += '<div class="rl-g-n">🚗 国産枠</div>';
+    g += '<div class="rl-g-n"><i data-ic=car data-ics=16></i> 国産枠</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const eff = _effC(c, ds, 'capDefault', rc.default != null ? rc.default : 5);
       g += '<div class="rl-g-c' + (eff.closed ? ' closed' : cellCls(eff)) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.closed ? '休' : (eff.zero ? '停' : eff.value)) + '</div>';
     });
-    g += '<div class="rl-g-n">🌍 輸入枠</div>';
+    g += '<div class="rl-g-n"><i data-ic=globe data-ics=16></i> 輸入枠</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const eff = _effC(c, ds, 'capImport', rc.import != null ? rc.import : 3);
       g += '<div class="rl-g-c' + (eff.closed ? ' closed' : cellCls(eff)) + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (eff.closed ? '休' : (eff.zero ? '停' : eff.value)) + '</div>';
     });
-    g += '<div class="rl-g-n">⚠ 注意</div>';
+    g += '<div class="rl-g-n"><i data-ic=warn data-ics=16></i> 注意</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const rs = _rulesForC(c, ds);
-      g += '<div class="rl-g-c wmark' + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (rs.warns.length ? '⚠' + (rs.warns.length > 1 ? rs.warns.length : '') : '') + '</div>';
+      g += '<div class="rl-g-c wmark' + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (rs.warns.length ? '<i data-ic=warn data-ics=16></i>' + (rs.warns.length > 1 ? rs.warns.length : '') : '') + '</div>';
     });
-    g += '<div class="rl-g-n">📞 受付</div>';
+    g += '<div class="rl-g-n"><i data-ic=phone data-ics=16></i> 受付</div>';
     days.forEach(function (d) {
       const ds = _ds(d);
       const v = _verdictC(c, ds);
       const cls = (v.day === '○') ? ' vd-ok' : (v.day === '△') ? ' vd-mid' : (v.day === '×') ? ' vd-ng' : ' closed';
-      g += '<div class="rl-g-c' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')" title="🚗' + v.default.mark + '／🌍' + v.import.mark + '">' + v.day + '</div>';
+      g += '<div class="rl-g-c'+ cls + (window._rlTestDate === ds ? 'sel': '') + '"onclick="pitRuleDay(\''+ ds + '\')"title="'+ v.default.mark + '／'+ v.import.mark + '">'+ v.day + '</div>';
     });
     g += '</div>';
     box.innerHTML = g;
@@ -864,8 +864,8 @@
     }
 
     const dayBrk = _inBreak(c, dStr);
-    let h = '<div class="rl-day-t">📅 ' + (dd.getMonth() + 1) + '月' + dd.getDate() + '日（' + '日月火水木金土'[dd.getDay()] + '）' + (_holName(dStr) ? '・🎌' + esc(_holName(dStr)) : '') + (dayBrk ? '・🏖' + esc(dayBrk.label || '長期休み') : '') + (_editing() ? '<span class="rl-ebadge" style="margin-left:8px">プレビュー</span>' : '') + ' の中身</div>';
-    if (dayBrk) h += '<div class="ps-hint" style="margin:0 0 8px">🏖 長期休み中＝入庫受付なし。預かり中の車は置き場を使い続けます（置き場の通常枠は生きたまま）。</div>';
+    let h = '<div class="rl-day-t"><i data-ic=calendar data-ics=16></i> ' + (dd.getMonth() + 1) + '月' + dd.getDate() + '日（' + '日月火水木金土'[dd.getDay()] + '）' + (_holName(dStr) ? '・<i data-ic=flag data-ics=16></i>' + esc(_holName(dStr)) : '') + (dayBrk ? '・<i data-ic=parasol data-ics=16></i>' + esc(dayBrk.label || '長期休み') : '') + (_editing() ? '<span class="rl-ebadge" style="margin-left:8px">プレビュー</span>' : '') + ' の中身</div>';
+    if (dayBrk) h += '<div class="ps-hint" style="margin:0 0 8px"><i data-ic=parasol data-ics=16></i> 長期休み中＝入庫受付なし。預かり中の車は置き場を使い続けます（置き場の通常枠は生きたまま）。</div>';
     h += line('予約枠（国産）', 'capDefault', rc.default != null ? rc.default : 5, '台');
     h += line('予約枠（輸入）', 'capImport', rc.import != null ? rc.import : 3, '台');
     h += line('置き場の通常枠', 'lotNormal', lotNormal, '台');
@@ -873,14 +873,14 @@
     h += policyLine('当日仕上げ', 'sameDay');
     h += policyLine('代車つき預かり', 'loanerDrop');
     rs.warns.forEach(function (w) {
-      h += '<div class="rl-tl warn"><span class="rl-tl-n">⚠ ' + esc(labelOf(TARGET, w.target)) + '</span><span class="rl-tl-v">' + esc(w.msg) + '</span><span class="rl-tl-r">ルール #' + w.no + '</span></div>';
+      h += '<div class="rl-tl warn"><span class="rl-tl-n"><i data-ic=warn data-ics=16></i> ' + esc(labelOf(TARGET, w.target)) + '</span><span class="rl-tl-v">' + esc(w.msg) + '</span><span class="rl-tl-r">ルール #' + w.no + '</span></div>';
     });
     /* 📞 受付の○△×（仮判定＝枠の埋まり具合。AI判定が保存されていればそちらを表示） */
     const vd = _verdictC(c, dStr);
-    [{ k: 'default', n: '📞 受付（国産）' }, { k: 'import', n: '📞 受付（輸入）' }].forEach(function (t) {
+    [{ k: 'default', n: '<i data-ic=phone data-ics=16></i> 受付（国産）' }, { k: 'import', n: '<i data-ic=phone data-ics=16></i> 受付（輸入）' }].forEach(function (t) {
       const tv = vd[t.k];
       const col = (tv.mark === '○') ? '#1db97a' : (tv.mark === '△') ? '#f97316' : '#ef4444';
-      h += '<div class="rl-tl"><span class="rl-tl-n">' + t.n + '</span><span class="rl-tl-v"><b style="color:' + col + '">' + tv.mark + '</b>　' + esc(tv.reason) + '</span><span class="rl-tl-r">' + (tv.by === 'ai' ? '🤖 AI判定' : '計算式の仮判定（本番化後はAIが理由を書く）') + '</span></div>';
+      h += '<div class="rl-tl"><span class="rl-tl-n">' + t.n + '</span><span class="rl-tl-v"><b style="color:' + col + '">' + tv.mark + '</b>　' + esc(tv.reason) + '</span><span class="rl-tl-r">' + (tv.by === 'ai' ? '<i data-ic=robot data-ics=16></i> AI判定' : '計算式の仮判定（本番化後はAIが理由を書く）') + '</span></div>';
     });
     out.innerHTML = h;
     pitRuleGrid();

@@ -167,10 +167,10 @@
     const opt=(arr,sel,ph)=>'<option value="">'+ph+'</option>'+arr.map(v=>'<option value="'+esc(v)+'"'+(sel===v?' selected':'')+'>'+esc(v)+'</option>').join('');
     let h='';
     h+='<div class="cust-head">'+
-       '<input class="cust-search" placeholder="🔍 名前・カナ(ひらがなOK)・ナンバー・車・電話で絞り込み" value="'+esc(_q)+'" oninput="custFilter(this.value)">'+
+       '<input class="cust-search"placeholder="名前・カナ(ひらがなOK)・ナンバー・車・電話で絞り込み"value="'+esc(_q)+'"oninput="custFilter(this.value)">'+
        '<span class="cust-count" id="cust-count"></span>'+
-       '<button class="vh-btn" onclick="custReseed()" title="サンプルを入れ替え">🎲 サンプル入替</button>'+
-       '<button class="vh-btn" onclick="clearCustomers()" title="控えを全削除">🗑 全削除</button>'+
+       '<button class="vh-btn" onclick="custReseed()" title="サンプルを入れ替え"><i data-ic=dice data-ics=16></i> サンプル入替</button>'+
+       '<button class="vh-btn" onclick="clearCustomers()" title="控えを全削除"><i data-ic=trash data-ics=16></i> 全削除</button>'+
        '</div>';
     h+='<div class="cust-filters">'+
        '<select class="cust-fsel" onchange="custSetFilter(\'board\',this.value)"><option value="">区分：すべて</option>'+
@@ -192,7 +192,7 @@
     if(!rows.length){ host.innerHTML='<div class="cust-empty">'+(list().length?'該当なし':'まだ登録がありません。入庫カードを保存すると自動で貯まります。')+'</div>'; return; }
     // 以前の1行テーブル。基本1人1行＝先頭車両を表示。2台目以降は「車の欄だけ」を下に増やす（人の欄は空）
     const cols=[ ['name','名前'],['kana','カナ'],['maker','メーカー'],['karte','カルテNo'],['car','車種'],['plate','ナンバー'],['tel','TEL'],['board','区分'],['div','課'],['front','担当'],['updatedAt','最終入庫'] ];
-    const arrow=k=> _sortKey===k?(_sortDir==='asc'?' ▲':' ▼'):'';
+    const arrow=k=> _sortKey===k?(_sortDir==='asc'?' <i data-ic=chevUp data-ics=15></i>':' <i data-ic=chevDown data-ics=15></i>'):'';
     let h='<div class="ct-wrap"><table class="ct"><thead><tr>';
     cols.forEach(c=>{ h+='<th class="ct-th'+(_sortKey===c[0]?' on':'')+'" onclick="custSort(\''+c[0]+'\')">'+esc(c[1])+arrow(c[0])+'</th>'; });
     h+='<th class="ct-th ct-acth">操作</th></tr></thead><tbody>';
@@ -261,7 +261,7 @@
   function _divSel(v){ return '<select class="ce-div"><option value="">—</option>'+(state.divisions||[]).map(d=>'<option value="'+d.id+'"'+(v===d.id?' selected':'')+'>'+esc(d.label)+'</option>').join('')+'</select>'; }
   function _frontSel(v){ return '<select class="ce-front"><option value="">—</option>'+frontStaffList().map(n=>'<option value="'+esc(n)+'"'+(v===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>'; }
   function _renderEdit(cust){
-    let h='<div class="cm-head">✏ 顧客を編集 <span class="cm-sub">'+esc(cust.name||'')+'</span><button class="cm-x" onclick="custCloseModal()">✕</button></div><div class="cm-body">';
+    let h='<div class="cm-head"><i data-ic=pencil data-ics=16></i> 顧客を編集 <span class="cm-sub">'+esc(cust.name||'')+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
     h+='<div class="cm-2"><div class="cm-f"><label>お客様名</label><input id="ce-name" value="'+esc(cust.name||'')+'"></div>'+
        '<div class="cm-f"><label>カナ</label><input id="ce-kana" value="'+esc(cust.kana||'')+'"></div></div>';
     // 連絡先
@@ -270,7 +270,7 @@
       h+='<div class="ce-ct"><label class="cf-ct-pri"><input type="radio" name="ce-pri" '+(ct.primary?'checked':'')+'> 優先</label>'+
          '<input class="ce-ctel" value="'+esc(ct.tel||'')+'" placeholder="090-1234-5678">'+
          '<input class="ce-clabel" value="'+esc(ct.label||'')+'" placeholder="ラベル">'+
-         '<button type="button" class="cf-ct-del" onclick="custEditDelContact(this)">🗑</button></div>';
+         '<button type="button" class="cf-ct-del" onclick="custEditDelContact(this)"><i data-ic=trash data-ics=16></i></button></div>';
     });
     h+='</div><button class="ce-add" onclick="custEditAddContact()">＋ 連絡先</button>';
     // LINE（新規予約欄と同じ：未案内/LINE NG/登録済＋Lステップ番号）
@@ -280,7 +280,7 @@
     h+='<div class="ce-sec">LINE</div><div class="ce-line">'+
        '<select id="ce-line-status" class="ce-line-sel" onchange="custEditSyncLine()">'+lineOpts+'</select>'+
        '<input id="ce-lstep" class="ce-line-id" value="'+esc(cust.lstepId||'')+'" placeholder="Lステップ番号 / URL貼付OK（登録済のとき）" oninput="custEditSyncLine()"'+(ceIsOk?'':' style="display:none"')+'>'+
-       '<a id="ce-lstep-link" class="ct-bline" href="'+esc(ceUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Lステップを開く"'+(ceUrl?'':' style="display:none"')+'>🔗 Lステップ</a>'+
+       '<a id="ce-lstep-link" class="ct-bline" href="'+esc(ceUrl)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Lステップを開く"'+(ceUrl?'':' style="display:none"')+'><i data-ic=link data-ics=16></i> Lステップ</a>'+
        '</div>';
     // 車両
     h+='<div class="ce-sec">車両（複数台OK）</div><div id="ce-vehicles">';
@@ -291,7 +291,7 @@
          '<input class="ce-car" value="'+esc(v.car||'')+'" placeholder="車種">'+
          '<input class="ce-karte" value="'+esc(v.karteNo||'')+'" placeholder="カルテNo">'+
          '</div><div class="ce-veh-r">'+_boardSel(v.boardId)+_divSel(v.division)+_frontSel(v.frontStaff)+
-         '<button type="button" class="cf-ct-del" onclick="custEditDelVehicle(this)">🗑</button></div></div>';
+         '<button type="button" class="cf-ct-del" onclick="custEditDelVehicle(this)"><i data-ic=trash data-ics=16></i></button></div></div>';
     });
     h+='</div><button class="ce-add" onclick="custEditAddVehicle()">＋ 車両を追加</button>';
     h+='</div><div class="cm-foot"><button class="cm-cancel" onclick="custCloseModal()">キャンセル</button><button class="cm-save" onclick="custSaveEdit(\''+cust.id+'\')">保存</button></div>';
@@ -357,7 +357,7 @@
     const arr=Array.isArray(state.cards)?state.cards:[];
     const cards=(plate?arr.filter(c=>norm(c.plate)===norm(plate)):[]).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
     const vlabel=v?(vehLabel(v)+(plate?' / '+plate:'')):'（車両不明）';
-    let h='<div class="cm-head">🕒 来店履歴 <span class="cm-sub">'+esc(cust.name||'(無名)')+' ・ '+esc(vlabel)+'</span><button class="cm-x" onclick="custCloseModal()">✕</button></div><div class="cm-body">';
+    let h='<div class="cm-head"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cm-sub">'+esc(cust.name||'(無名)')+' ・ '+esc(vlabel)+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
     if(!cards.length){
       h+='<div class="cust-empty">この車の入庫カードはまだありません。<br>（整備ソフトに正式履歴があります）</div>';
     } else {
@@ -369,7 +369,7 @@
         const amt=(c.estAmount!=null&&c.estAmount!=='')?('¥'+Number(c.estAmount).toLocaleString()):'—';
         const dt=cardDate(c)||'日付未定';
         let loa='';
-        if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa='🚙代車'+(l?('（'+l.name+'）'):''); }
+        if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa='<i data-ic=van data-ics=16></i>代車'+(l?('（'+l.name+'）'):''); }
         h+='<div class="cm-hrow"><div class="cm-hdt">'+esc(dt)+'</div>'+
            '<div class="cm-hmid"><b>'+esc(wl)+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+(loa?' ・ <span style="color:#1db97a">'+esc(loa)+'</span>':'')+'<div class="cm-hsub">'+esc(st)+(c.menu?' ・ '+esc(String(c.menu).split('\n')[0]):'')+'</div></div>'+
            '<div class="cm-hamt">'+esc(amt)+'</div></div>';
@@ -401,7 +401,7 @@
     if(st==='ok'){
       var id=((o&&o.lstepId)||'').trim();
       var url=(id&&window.pitLstepUrl)?pitLstepUrl(id):'';
-      return url?'<a class="cd-pill green cd-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()">🔗 Lステップ</a>':'<span class="cd-pill green">LINE登録済</span>';
+      return url?'<a class="cd-pill green cd-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()"><i data-ic=link data-ics=16></i> Lステップ</a>':'<span class="cd-pill green">LINE登録済</span>';
     }
     return '';
   }
@@ -414,10 +414,10 @@
     else {
       var id=((o&&o.lstepId)||'').trim();
       var url=(id&&window.pitLstepUrl)?pitLstepUrl(id):'';
-      main=url?'<a class="cd-pill green cd-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()" title="Lステップを開く">🔗 Lステップ</a>':'LINE登録済';
+      main=url?'<a class="cd-pill green cd-line-link" href="'+esc(url)+'" target="_blank" rel="noopener" draggable="true" onclick="event.stopPropagation()" title="Lステップを開く"><i data-ic=link data-ics=16></i> Lステップ</a>':'LINE登録済';
       lab='LINE / Lステップ';
     }
-    return '<div class="cd-ct"><div class="cd-ctic">💬</div><div class="cd-ctmain"><div class="cd-cttel">'+main+'</div><div class="cd-ctlab">'+lab+'</div></div></div>';
+    return '<div class="cd-ct"><div class="cd-ctic"><i data-ic=comment data-ics=16></i></div><div class="cd-ctmain"><div class="cd-cttel">'+main+'</div><div class="cd-ctlab">'+lab+'</div></div></div>';
   }
   /* v0.96.9 「🆕 新規予約」＝顧客/車両（or既存カード）から新規予約カードを作成。カルテNo・LINEも引き継ぐ。 */
   function _newReserveBase(){
@@ -472,8 +472,8 @@
     let h='';
     // 上部バー
     h+='<div class="cd-top"><button class="cd-back" onclick="custCloseModal()">'+backLbl+'</button>'+
-       '<div class="cd-acts"><button class="cd-btn" onclick="custEdit(\''+cust.id+'\')">✏️ 編集</button>'+
-       '<button class="cd-btn danger" onclick="custDelete(\''+cust.id+'\')">🗑 削除</button></div></div>';
+       '<div class="cd-acts"><button class="cd-btn" onclick="custEdit(\''+cust.id+'\')"><i data-ic=pencil data-ics=16></i> 編集</button>'+
+       '<button class="cd-btn danger" onclick="custDelete(\''+cust.id+'\')"><i data-ic=trash data-ics=16></i> 削除</button></div></div>';
     // ヘッダー
     h+='<div class="cd-hero"><div class="cd-hmain">'+
        '<div class="cd-hname">'+esc(cust.name||'(無名)')+' <small>様</small></div>'+
@@ -485,18 +485,18 @@
        '</div><div class="cd-total"><span>累計概算（合計金額）</span><b>'+yen(total)+'</b></div></div></div>';
     // 連絡先（電話＋LINE/Lステップを同じ枠で1つずつ表示）
     const lineRow=_lineContactRow(cust);
-    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">📞 連絡先 <span class="cd-cnt">'+(cust.contacts||[]).length+'件</span></div></div>';
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=phone data-ics=16></i> 連絡先 <span class="cd-cnt">'+(cust.contacts||[]).length+'件</span></div></div>';
     if((cust.contacts||[]).length || lineRow){
       h+='<div class="cd-contacts">';
       (cust.contacts||[]).forEach(function(ct){
-        h+='<div class="cd-ct"><div class="cd-ctic">'+(ct.primary?'📱':'📞')+'</div><div class="cd-ctmain"><div class="cd-cttel">'+esc(ct.tel||'—')+'</div><div class="cd-ctlab">'+esc(ct.label||'')+'</div></div>'+(ct.primary?'<span class="cd-ctpri">優先</span>':'')+'</div>';
+        h+='<div class="cd-ct"><div class="cd-ctic">'+(ct.primary?'<i data-ic=smartphone data-ics=16></i>':'<i data-ic=phone data-ics=16></i>')+'</div><div class="cd-ctmain"><div class="cd-cttel">'+esc(ct.tel||'—')+'</div><div class="cd-ctlab">'+esc(ct.label||'')+'</div></div>'+(ct.primary?'<span class="cd-ctpri">優先</span>':'')+'</div>';
       });
       h+=lineRow;
       h+='</div>';
     } else { h+='<div class="cd-empty">連絡先は未登録です</div>'; }
     h+='</div>';
     // 車両
-    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">🚗 車両 <span class="cd-cnt">'+vehicles.length+'台</span></div></div>';
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=car data-ics=16></i> 車両 <span class="cd-cnt">'+vehicles.length+'台</span></div></div>';
     if(vehicles.length){
       h+='<div class="cd-vehs">';
       vehicles.forEach(function(v){
@@ -511,7 +511,7 @@
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
            '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill" style="background:'+esc(t.courseColor)+'22;color:'+esc(t.courseColor)+';border-color:'+esc(t.courseColor)+'66">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
            ((v.karteNo||'').trim()?'<div class="cd-vkarte" title="カルテNo">'+esc(v.karteNo.trim())+'</div>':'')+
-           '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')">🕒 履歴</span>'+
+           '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=clock data-ics=16></i> 履歴</span>'+
            '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+
            '</div>';
       });
@@ -519,7 +519,7 @@
     } else { h+='<div class="cd-empty">車両は未登録です</div>'; }
     h+='</div>';
     // 来店履歴
-    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect">🕒 来店履歴 <span class="cd-cnt">'+(visits?('直近'+Math.min(visits,12)+'件'):'なし')+'</span></div></div>';
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cd-cnt">'+(visits?('直近'+Math.min(visits,12)+'件'):'なし')+'</span></div></div>';
     if(visits){
       h+='<div class="cd-hist">';
       cards.slice(0,12).forEach(function(c){
@@ -527,13 +527,13 @@
         const wl=wt?wt.label:(c.workType||'—'); const wc=wt?wt.color:'#64748b';
         const amt=(c.amountFinal!=null&&c.amountFinal!=='')?Number(c.amountFinal):(c.estAmount!=null&&c.estAmount!==''?Number(c.estAmount):null);
         const amtStr=(amt!=null&&isFinite(amt))?yen(amt):'—';
-        let loa=''; if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa=' ・ <span class="cd-loa">🚙代車'+(l?('（'+esc(l.name)+'）'):'')+'</span>'; }
+        let loa=''; if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa=' ・ <span class="cd-loa"><i data-ic=van data-ics=16></i>代車'+(l?('（'+esc(l.name)+'）'):'')+'</span>'; }
         const menuTxt=c.menu?esc(String(c.menu).split('\n')[0]):'';
         // ステータスバッジ：予約→予約カレンダー／返車済み→実績カレンダー（行クリックは予約詳細）
         const isResv=(c.status==='reserved'), isRet=(c.status==='returned');
         const stClick=isResv?("event.stopPropagation();pitGotoReserveDate('"+esc(c.reserveDate||'')+"')")
                     :isRet?("event.stopPropagation();pitGotoResultMonth('"+esc(c.returnDate||c.reserveDate||'')+"')"):'';
-        const stBadge='<span class="cd-hst'+((isResv||isRet)?' clickable':'')+'"'+(stClick?(' onclick="'+stClick+'" title="'+(isResv?'予約カレンダーへ':'実績カレンダーへ')+'"'):'')+'>'+esc(_statusLbl(c))+(isResv?' 📅':isRet?' 📊':'')+'</span>';
+        const stBadge='<span class="cd-hst'+((isResv||isRet)?' clickable':'')+'"'+(stClick?(' onclick="'+stClick+'" title="'+(isResv?'予約カレンダーへ':'実績カレンダーへ')+'"'):'')+'>'+esc(_statusLbl(c))+(isResv?' <i data-ic=calendar data-ics=16></i>':isRet?' <i data-ic=chart data-ics=16></i>':'')+'</span>';
         h+='<div class="cd-hrow clickable" onclick="pitOpenCardDetail(\''+esc(c.id)+'\')" title="クリックで予約詳細">'+
            '<div class="cd-hdt">'+esc(cardDate(c)||'日付未定')+'</div>'+
            '<div class="cd-hwt" style="background:'+wc+'">'+esc(wl)+'</div>'+

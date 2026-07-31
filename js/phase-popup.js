@@ -29,7 +29,7 @@
     bd.innerHTML =
       '<div class="modal-box pp-box">'
       + '<div class="modal-head"><div class="modal-title" id="pp-title">フェーズ移動</div>'
-      + '<button class="modal-close" onclick="PitPhasePopup.close(false)">✕</button></div>'
+      + '<button class="modal-close" onclick="PitPhasePopup.close(false)"><i data-ic=close data-ics=16></i></button></div>'
       + '<div class="modal-body">'
       + '  <div class="pp-move" id="pp-move"></div>'
       + '  <div class="pp-field" id="pp-amt-field">'
@@ -94,7 +94,7 @@
       el('pp-ret-field').style.display = 'none';
       el('pp-outdue-field').style.display = '';
       PitPhasePopup.onPartner();   // メモ欄の出し分け
-      el('pp-title').textContent = '🤝 外注へ';
+      el('pp-title').textContent = '外注へ';
       el('pp-note').textContent = '外注先と、外注先との完了予定日を入れてください。外注先は設定で増減できます。';
       el('pp-ok').textContent = '外注へ移動';
       el('pp-backdrop').classList.add('show');
@@ -112,13 +112,13 @@
                                                       : '見積 '+yen(card.amountQuote)+'　受注 '+yen(card.amountOrder);
 
     if (mode === 'estimate'){
-      el('pp-title').textContent = '💬 見積金額の入力';
+      el('pp-title').textContent = '見積金額の入力';
       el('pp-amt-lb').textContent = '見積金額';
       el('pp-ret-field').style.display = 'none';
       el('pp-note').textContent = 'お客様に伝える見積金額です。空のままでも進めます（あとから変更可）。';
       el('pp-ok').textContent = '連絡中へ';
     } else if (mode === 'order'){
-      el('pp-title').textContent = '📦 受注完了';
+      el('pp-title').textContent = '受注完了';
       el('pp-amt-lb').textContent = '確定見積金額';
       el('pp-ret-field').style.display = '';
       var retPrefill = card.returnDateFinal || card.returnDate || addDaysISO(todayISO(), 7);
@@ -129,14 +129,14 @@
       var _ids = (Array.isArray(card.workTypes) && card.workTypes.length) ? card.workTypes : (card.workType ? [card.workType] : []);
       var _isShaken = (card.workType === 'shaken' || _ids.indexOf('shaken') >= 0);
       var _hasCoat = (_ids.indexOf('coat1y') >= 0 || _ids.indexOf('coat3m') >= 0);
-      var _sh = '<div class="pp-saleshd">🛒 車販部門への依頼</div>';
-      if (_isShaken) _sh += '<label class="pp-check"><input type="checkbox" id="pp-headlight"' + (card.headlight ? ' checked' : '') + '> 🔦 車検ヘッドライト磨き</label>';
-      if (_hasCoat)  _sh += '<label class="pp-check"><input type="checkbox" id="pp-coatingok"' + (card.coatingOK ? ' checked' : '') + '> ✨ コーティング受注OK</label>';
-      _sh += '<label class="pp-check"><input type="checkbox" id="pp-salesreq"' + (card.salesReq ? ' checked' : '') + '> 🛒 その他 車販依頼</label>';
+      var _sh = '<div class="pp-saleshd"><i data-ic=cart data-ics=16></i> 車販部門への依頼</div>';
+      if (_isShaken) _sh += '<label class="pp-check"><input type="checkbox" id="pp-headlight"' + (card.headlight ? ' checked' : '') + '> <i data-ic=search data-ics=16></i> 車検ヘッドライト磨き</label>';
+      if (_hasCoat)  _sh += '<label class="pp-check"><input type="checkbox" id="pp-coatingok"' + (card.coatingOK ? ' checked' : '') + '> <i data-ic=sparkle data-ics=16></i> コーティング受注OK</label>';
+      _sh += '<label class="pp-check"><input type="checkbox" id="pp-salesreq"' + (card.salesReq ? ' checked' : '') + '> <i data-ic=cart data-ics=16></i> その他 車販依頼</label>';
       _sh += '<input class="pp-salesmemo" id="pp-salesmemo" type="text" placeholder="依頼メモ（1行・任意）" value="' + esc(card.salesReqMemo || '') + '">';
       if (_sf){ _sf.innerHTML = _sh; _sf.style.display = ''; }
     } else { // final（作業完了）
-      el('pp-title').textContent = '✅ 作業完了 — 確定金額';
+      el('pp-title').textContent = '作業完了 — 確定金額';
       el('pp-amt-lb').textContent = '確定金額（請求額）';
       el('pp-ret-field').style.display = 'none';
       el('pp-note').textContent = '作業完了です。お客様への確定金額（請求額）を入れてください。空でも進めます。';

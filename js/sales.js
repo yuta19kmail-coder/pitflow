@@ -180,7 +180,7 @@
     h += '</div>';
 
     // 日次進捗チャート
-    h += '<div class="sv-card"><div class="sv-card-h"><span>📈 日次の進捗（返車＝実績の累計）</span><span class="sv-legend">'
+    h += '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=chart data-ics=16></i> 日次の進捗（返車＝実績の累計）</span><span class="sv-legend">'
        + '<i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-proj"></i>着地予測 <i class="sv-lg sv-lg-min"></i>最低ペース <i class="sv-lg sv-lg-max"></i>最高ペース</span></div>';
     h += dailyChartSvg(data.cum, data.lastDay, todayIdx, tg.min, tg.max, landing);
     h += '<div class="sv-note">実績は<b>返車済みになった日</b>で計上（返車が翌月なら翌月扱い）。点線＝残りを今のパイプラインで積んだ着地予測。</div></div>';
@@ -194,7 +194,7 @@
     // 課別（1課/2課）
     var scaleC = Math.max(tg.max/1, sumTiers(data.byCourse.div1,['actual','confirmed','planned','prospect','forecast']), sumTiers(data.byCourse.div2,['actual','confirmed','planned','prospect','forecast']),1);
     h += '<div class="sv-courses">';
-    [{id:'div1',label:'1課',team:'🚗 国産',color:'#1db97a'},{id:'div2',label:'2課',team:'🌍 輸入',color:'#ec4899'}].forEach(function(d){
+    [{id:'div1',label:'1課',team:'<i data-ic=car data-ics=16></i> 国産',color:'#1db97a'},{id:'div2',label:'2課',team:'<i data-ic=globe data-ics=16></i> 輸入',color:'#ec4899'}].forEach(function(d){
       var cc=data.byCourse[d.id];
       var cLanding=sumTiers(cc,['actual','confirmed','planned','prospect','forecast']);
       h += '<div class="sv-course" style="--cc:'+d.color+'">';
@@ -221,7 +221,7 @@
   function frontTable(fronts){
     var rows = Object.keys(fronts).map(function(k){ var f=fronts[k]; return { name:k, actual:f.actual, confirmed:f.confirmed, planned:f.planned, count:f.count, total:f.actual+f.confirmed+f.planned }; });
     rows.sort(function(a,b){ return b.actual-a.actual || b.total-a.total; });
-    var h = '<div class="sv-card"><div class="sv-card-h"><span>🧑‍🔧 フロント別（実績・確定・予定）</span></div>';
+    var h = '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=user data-ics=16></i> フロント別（実績・確定・予定）</span></div>';
     if (!rows.length){ h += '<div class="sv-empty">対象データがありません</div></div>'; return h; }
     h += '<table class="sv-table"><thead><tr><th>フロント</th><th>実績</th><th>確定</th><th>予定</th><th>台数</th></tr></thead><tbody>';
     rows.forEach(function(r){ h += '<tr><td class="sv-td-name">'+esc(r.name)+'</td><td class="sv-num" style="color:#1db97a">'+man(r.actual)+'</td><td class="sv-num" style="color:#2563eb">'+man(r.confirmed)+'</td><td class="sv-num" style="color:#38bdf8">'+man(r.planned)+'</td><td class="sv-num">'+r.count+'</td></tr>'; });
@@ -256,7 +256,7 @@
     if (hasPrev){ var diff=yTotal-pTotal; h += '<div class="sv-hero-main"><div class="sv-hero-lb">前年度（'+prevRange+'）</div><div class="sv-hero-num" style="color:#9ca3af">'+man(pTotal)+'<span>円</span></div><div class="sv-hero-sub">昨対 <b style="color:'+(diff>=0?'#1db97a':'#ef4444')+'">'+(diff>=0?'+':'')+man(diff)+'</b></div></div>'; }
     h += '</div></div>';
 
-    h += '<div class="sv-card"><div class="sv-card-h"><span>📊 月別 実績と目標</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>今年度'+(hasPrev?' <i class="sv-lg sv-lg-prev"></i>前年度':'')+' <i class="sv-lg sv-lg-min"></i>月目標(最低)</span></div>';
+    h += '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=chart data-ics=16></i> 月別 実績と目標</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>今年度'+(hasPrev?' <i class="sv-lg sv-lg-prev"></i>前年度':'')+' <i class="sv-lg sv-lg-min"></i>月目標(最低)</span></div>';
     h += yearChartSvg(monA, monP, tg.min, hasPrev, SLOT);
     if (!hasPrev) h += '<div class="sv-note">前年度（'+prevRange+'）の返車実績がまだ無いため、昨対は表示していません。データが貯まると自動で出ます。</div>';
     h += '</div>';
@@ -355,7 +355,7 @@
     TIERS.forEach(function(tt){ h+=tierCard(tt.id,tt.label,tt.color,man(qt[tt.id].sum),qt[tt.id].count+'台',tt.note); });
     h+='</div>';
     // 4Qカード＋累計
-    h+='<div class="sv-card"><div class="sv-card-h"><span>📆 クォーター実績（月4分割・営業日配分）</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-min"></i>目標累計(最低)</span></div>'+quarterChartSvg(qAct,qMin,todayQ)+'<div class="sv-note">クォーター＝1〜7 / 8〜15 / 16〜23 / 24〜末。実績は返車日で計上。上の6区分は現Qの着地見込み（確定/予定/見込/予測は翌Qまでを上限に計上）。</div></div>';
+    h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=calendar data-ics=16></i> クォーター実績（月4分割・営業日配分）</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-min"></i>目標累計(最低)</span></div>'+quarterChartSvg(qAct,qMin,todayQ)+'<div class="sv-note">クォーター＝1〜7 / 8〜15 / 16〜23 / 24〜末。実績は返車日で計上。上の6区分は現Qの着地見込み（確定/予定/見込/予測は翌Qまでを上限に計上）。</div></div>';
     h+='<div class="sv-qcards">';
     for(i=0;i<4;i++){ var p=pct(qAct[i],qMin[i]); var pc=p>=100?'ok':(p>=85?'near':'warn');
       h+='<div class="sv-qcard'+(i===todayQ?' now':'')+'"><div class="sv-qcard-h">Q'+(i+1)+' <span>'+qs[i].f+'〜'+qs[i].t+'日</span>'+(i===todayQ?'<em>進行中</em>':'')+'</div><div class="sv-qcard-num" style="color:#1db97a">'+man(qAct[i])+'</div><div class="sv-qbar"><i class="sv-'+pc+'" style="width:'+Math.min(100,p)+'%"></i></div><div class="sv-qcard-sub">目標 '+man(qMin[i])+'〜'+man(qMax[i])+' ／ <b class="sv-'+pc+'">'+p+'%</b> ／ '+qCnt[i]+'台</div></div>';
@@ -384,7 +384,7 @@
     for(i=0;i<12;i++){ var ymo=slotToYM(i); var al=qAlloc(ymo.y,ymo.m+1); for(var q=0;q<4;q++){ grid[i][q].min=al?al.q[q].min:Math.round(tg.min/4); } }
     (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=c.returnDateFinal||c.returnDate||''; if(!d)return; var dd=pd(d),cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; if(fy!==Y)return; var slot=(cm===11)?0:cm+1; grid[slot][qOfDay(dd.getDate())].act+=actAmt(c); });
     var h=header('year',{y:Y});
-    h+='<div class="sv-card"><div class="sv-card-h"><span>🔥 クォーター達成率ヒートマップ（年度・月×Q）</span><span class="sv-legend">達成率 低 <i class="sv-hm-lg"></i> 高</span></div>';
+    h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=fire data-ics=16></i> クォーター達成率ヒートマップ（年度・月×Q）</span><span class="sv-legend">達成率 低 <i class="sv-hm-lg"></i> 高</span></div>';
     h+='<table class="sv-hm"><thead><tr><th></th><th>Q1<br><i>1-7</i></th><th>Q2<br><i>8-15</i></th><th>Q3<br><i>16-23</i></th><th>Q4<br><i>24-末</i></th><th>月計</th></tr></thead><tbody>';
     for(i=0;i<12;i++){ h+='<tr><td class="sv-hm-mo">'+SLOT[i]+'月</td>'; var moAct=0,moMin=0;
       for(q=0;q<4;q++){ var cell=grid[i][q]; var p=pct(cell.act,cell.min); moAct+=cell.act; moMin+=cell.min; h+='<td class="sv-hm-c" style="background:'+hmColor(cell.act>0?p:-1)+'"><b>'+(cell.act>0?p+'%':'—')+'</b><i>'+man(cell.act)+'</i></td>'; }
@@ -411,7 +411,7 @@
     var grand=WGROUPS.reduce(function(a,x){return a+gTot(w.g[x.id]).sum;},0)||1;
     var h='<div class="sv-viewsw"><button class="sv-vbtn'+(view==='info'?' on':'')+'" onclick="svSetWorkView(\'info\')">インフォグラフィック</button><button class="sv-vbtn'+(view==='table'?' on':'')+'" onclick="svSetWorkView(\'table\')">表</button></div>';
     if(view==='table'){
-      ['div1','div2'].forEach(function(cs){ var cname=cs==='div1'?'🚗 国産':'🌍 輸入';
+      ['div1','div2'].forEach(function(cs){ var cname=cs==='div1'?'<i data-ic=car data-ics=16></i> 国産':'<i data-ic=globe data-ics=16></i> 輸入';
         h+='<div class="sv-card"><div class="sv-card-h"><span>'+cname+'</span></div><table class="sv-table"><thead><tr><th>作業</th><th>台数</th><th>売上</th><th>平均単価</th><th>最低</th><th>最高</th><th>構成比</th></tr></thead><tbody>';
         var cTot=WGROUPS.reduce(function(a,x){return a+w.g[x.id][cs].sum;},0)||1;
         WGROUPS.forEach(function(x){ var o=w.g[x.id][cs]; var avg=o.cnt?o.sum/o.cnt:0;
@@ -427,7 +427,7 @@
     WGROUPS.forEach(function(x){ var t=gTot(w.g[x.id]);
       h+='<div class="sv-wgcard" style="--cc:'+x.color+'"><div class="sv-wgcard-h"><span class="sv-course-pill" style="background:'+x.color+'">'+x.label+'</span><span class="sv-wgcard-tot">'+man(t.sum)+'／'+t.cnt+'台</span><span class="sv-wgcard-share">構成比 '+pct(t.sum,grand)+'%</span></div>';
       h+='<div class="sv-wgcard-body">';
-      [['div1','🚗 国産','#1db97a'],['div2','🌍 輸入','#ec4899']].forEach(function(cc){ var o=w.g[x.id][cc[0]]; var avg=o.cnt?o.sum/o.cnt:0;
+      [['div1','<i data-ic=car data-ics=16></i> 国産','#1db97a'],['div2','<i data-ic=globe data-ics=16></i> 輸入','#ec4899']].forEach(function(cc){ var o=w.g[x.id][cc[0]]; var avg=o.cnt?o.sum/o.cnt:0;
         h+='<div class="sv-wgcol"><div class="sv-wgcol-h" style="color:'+cc[2]+'">'+cc[1]+'</div>';
         h+='<div class="sv-metric"><span>台数</span><b>'+o.cnt+'</b></div>';
         h+='<div class="sv-metric"><span>売上</span><b>'+man(o.sum)+'</b></div>';
@@ -446,7 +446,7 @@
     var mon=[]; for(var i=0;i<12;i++){ mon[i]={shaken:0,'12pt':0,general:0}; }
     (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=c.returnDateFinal||c.returnDate||''; if(!d)return; var dd=pd(d),cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; if(fy!==Y)return; var slot=(cm===11)?0:cm+1; mon[slot][workGroupOf(c)]+=actAmt(c); });
     var h=header('year',{y:Y});
-    h+='<div class="sv-card"><div class="sv-card-h"><span>🔧 作業グループ 月別推移（年度）</span><span class="sv-legend">'+WGROUPS.map(function(x){return '<i class="sv-lg" style="border-top-color:'+x.color+'"></i>'+x.label;}).join(' ')+'</span></div>'+workYearChart(mon,SLOT)+'</div>';
+    h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=wrench data-ics=16></i> 作業グループ 月別推移（年度）</span><span class="sv-legend">'+WGROUPS.map(function(x){return '<i class="sv-lg" style="border-top-color:'+x.color+'"></i>'+x.label;}).join(' ')+'</span></div>'+workYearChart(mon,SLOT)+'</div>';
     var tot={shaken:0,'12pt':0,general:0}; mon.forEach(function(mm){ tot.shaken+=mm.shaken;tot['12pt']+=mm['12pt'];tot.general+=mm.general; });
     h+='<div class="sv-card"><div class="sv-card-h"><span>月別内訳</span></div><table class="sv-table"><thead><tr><th>月</th>'+WGROUPS.map(function(x){return '<th>'+x.label+'</th>';}).join('')+'<th>計</th></tr></thead><tbody>';
     for(i=0;i<12;i++){ var mm=mon[i]; var mt=mm.shaken+mm['12pt']+mm.general; h+='<tr><td class="sv-td-name">'+SLOT[i]+'月</td><td class="sv-num">'+man(mm.shaken)+'</td><td class="sv-num">'+man(mm['12pt'])+'</td><td class="sv-num">'+man(mm.general)+'</td><td class="sv-num" style="color:#1db97a">'+man(mt)+'</td></tr>'; }
@@ -524,10 +524,10 @@
   function header(mode, ctx){
     var tab=window._svTab||'sales';
     var TABS=[['sales','売上'],['quarter','クォーター'],['work','作業内容'],['front','フロント']];
-    var h='<div class="sv-tabbar">'+TABS.map(function(t){ return '<button class="sv-topbtn'+(tab===t[0]?' on':'')+'" onclick="svSetTab(\''+t[0]+'\')">'+t[1]+'</button>'; }).join('')+'<div class="sv-tools"><button class="sv-toolbtn" onclick="svExportPdf()" title="A4のPDFで保存（ベクター）">📄 PDF出力</button></div></div>';
+    var h='<div class="sv-tabbar">'+TABS.map(function(t){ return '<button class="sv-topbtn'+(tab===t[0]?' on':'')+'" onclick="svSetTab(\''+t[0]+'\')">'+t[1]+'</button>'; }).join('')+'<div class="sv-tools"><button class="sv-toolbtn" onclick="svExportPdf()" title="A4のPDFで保存（ベクター）"><i data-ic=file data-ics=16></i> PDF出力</button></div></div>';
     h+='<div class="sv-head"><div class="sv-tabs"><button class="sv-tab'+(mode==='month'?' on':'')+'" onclick="svSetMode(\'month\')">当月</button><button class="sv-tab'+(mode==='year'?' on':'')+'" onclick="svSetMode(\'year\')">月間（年度）</button></div>';
-    if (mode==='month'){ h+='<div class="sv-nav"><button onclick="svShiftMonth(-1)" title="前の月">◀</button><b>'+ctx.y+'年'+(ctx.m+1)+'月</b><button onclick="svShiftMonth(1)" title="次の月">▶</button><button class="sv-now" onclick="svShiftMonth(0)">今月</button></div>'; }
-    else { h+='<div class="sv-nav"><button onclick="svShiftYear(-1)" title="前の年度">◀</button><b>'+(ctx.y-1)+'/12〜'+ctx.y+'/11</b><button onclick="svShiftYear(1)" title="次の年度">▶</button><button class="sv-now" onclick="svShiftYear(0)">今年度</button></div>'; }
+    if (mode==='month'){ h+='<div class="sv-nav"><button onclick="svShiftMonth(-1)" title="前の月"><i data-ic=chevLeft data-ics=16></i></button><b>'+ctx.y+'年'+(ctx.m+1)+'月</b><button onclick="svShiftMonth(1)" title="次の月"><i data-ic=chevRight data-ics=16></i></button><button class="sv-now" onclick="svShiftMonth(0)">今月</button></div>'; }
+    else { h+='<div class="sv-nav"><button onclick="svShiftYear(-1)" title="前の年度"><i data-ic=chevLeft data-ics=16></i></button><b>'+(ctx.y-1)+'/12〜'+ctx.y+'/11</b><button onclick="svShiftYear(1)" title="次の年度"><i data-ic=chevRight data-ics=16></i></button><button class="sv-now" onclick="svShiftYear(0)">今年度</button></div>'; }
     h+='</div>'; return h;
   }
 

@@ -33,7 +33,7 @@ function _undTeamColor(c){ return (c.boardId === 'import') ? '#ec4899' : '#1db97
 /* 予約ビュー内「未定」タブ：3カラム横並び（仮予約／未定（パーツ待ち）／未入庫（キャンセル））。
    返車ビュー未定と同じ通常カード方式（cardHtml compact）。v0.100.0 仮予約カラム新設。
    ・仮予約 ＝ status:reserved かつ tentative。入庫日が入っていれば予約カレンダーにも「仮」で出る。本予約化は予約詳細の⋮メニュー。
-   ・未定（パーツ待ち）＝ intakeTbd（仮予約を除く）。カードの📅で入庫日を入れて予約へ。
+   ・未定（パーツ待ち）＝ intakeTbd（仮予約を除く）。カードの<i data-ic=calendar data-ics=16></i>で入庫日を入れて予約へ。
    ・未入庫（キャンセル）＝ cancelled。↩で予約に戻す。 */
 function renderReserveTbd(){
   ['reserve-day-list','reserve-week','reserve-month','reserve-2month'].forEach(id => {
@@ -58,15 +58,15 @@ function renderReserveTbd(){
 
   let h = '<div class="ret-tbd-cols">';
 
-  h += col('📝 仮予約 <small>（仮おさえ）</small>', tentative.length,
+  h += col('<i data-ic=pencil data-ics=16></i> 仮予約 <small>（仮おさえ）</small>', tentative.length,
     tentative.length ? tentative.map(c => item(c, '')).join('') : empty,
     '入庫日が決まっている仮予約は、予約カレンダーにも「仮」で出ます。本予約に確定するときはカードを開いて⋮メニューから。');
 
-  h += col('🅿️ 未定 <small>（パーツ待ち・入庫日決まらず）</small>', intakeTbd.length,
-    intakeTbd.length ? intakeTbd.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndSetIntake(\'' + c.id + '\')">📅 入庫日を入れる</button>')).join('') : empty,
-    'カードの📅で入庫日を入れると予約カレンダーへ移ります。');
+  h += col('<i data-ic=parking data-ics=16></i> 未定 <small>（パーツ待ち・入庫日決まらず）</small>', intakeTbd.length,
+    intakeTbd.length ? intakeTbd.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndSetIntake(\'' + c.id + '\')"><i data-ic=calendar data-ics=16></i> 入庫日を入れる</button>')).join('') : empty,
+    'カードの<i data-ic=calendar data-ics=16></i>で入庫日を入れると予約カレンダーへ移ります。');
 
-  h += col('🚫 未入庫 <small>（来店なし・キャンセル）</small>', noShow.length,
+  h += col('<i data-ic=ban data-ics=16></i> 未入庫 <small>（来店なし・キャンセル）</small>', noShow.length,
     noShow.length ? noShow.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndRestore(\'' + c.id + '\')">↩ 予約に戻す</button>')).join('') : empty,
     '※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でキャンセル・アーカイブされます。');
 
@@ -95,11 +95,11 @@ function renderReturnTbd(){
   const card = c => (typeof cardHtml === 'function') ? cardHtml(c, { compact: true }) : '';
 
   let h = '<div class="ret-tbd-cols">';
-  h += '<div class="ret-tbd-col"><div class="ret-tbd-h">📞 完TEL待ち <small>（完TEL依頼ぶん）</small><span class="und-cnt">' + callWait.length + '</span></div>';
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=phone data-ics=16></i> 完TEL待ち <small>（完TEL依頼ぶん）</small><span class="und-cnt">' + callWait.length + '</span></div>';
   h += '<div class="ret-tbd-body">' + (callWait.length ? callWait.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
   h += '<div class="und-note">完TELしたら、カードを押して確定金額・返車日時を入れてください。</div></div>';
 
-  h += '<div class="ret-tbd-col"><div class="ret-tbd-h">🚗 返車未定 <small>（完TEL済・日付待ち）</small><span class="und-cnt">' + noDate.length + '</span></div>';
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=car data-ics=16></i> 返車未定 <small>（完TEL済・日付待ち）</small><span class="und-cnt">' + noDate.length + '</span></div>';
   h += '<div class="ret-tbd-body">' + (noDate.length ? noDate.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
   h += '<div class="und-note">カードを押して返車日を入れると、当日／週／月へ移ります。</div></div>';
 
@@ -107,7 +107,7 @@ function renderReturnTbd(){
   const payWait = state.cards.filter(c => c.status === 'returned' && c.paymentSeparate && !c.paymentDate);
   const _fmd = d => d ? (window.fmtMD ? fmtMD(d) : d) : '—';
   const _yen = n => (n != null && n !== '') ? '¥' + Number(n).toLocaleString() : '—';
-  h += '<div class="ret-tbd-col"><div class="ret-tbd-h">💰 入金待ち <small>（売掛・返車済）</small><span class="und-cnt">' + payWait.length + '</span></div>';
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=money data-ics=16></i> 入金待ち <small>（売掛・返車済）</small><span class="und-cnt">' + payWait.length + '</span></div>';
   h += '<div class="ret-tbd-body">' + (payWait.length ? payWait.map(c =>
         '<div class="rtbd-item">' + card(c)
         + '<div class="rtbd-pay"><span class="rtbd-payinfo">返車 ' + _fmd(c.returnDateFinal || c.returnDate) + ' ・ ' + _yen(c.amountFinal) + '</span>'
@@ -129,7 +129,7 @@ window.pitSetPaymentDate = function(id, v){
   if (window.logFlow) logFlow(c, '入金日を記録（' + v + '）');
   if (window.PitDB) PitDB.save();
   renderReturnTbd();
-  if (window.pitToast) pitToast('💰 入金日 ' + v + ' を記録しました');
+  if (window.pitToast) pitToast('入金日 '+ v + 'を記録しました');
 };
 
 function _undRow(c, kind){
@@ -142,9 +142,9 @@ function _undRow(c, kind){
     meta = '<span class="und-meta">キャンセル ' + c.cancelledAt.slice(5).replace('-', '/') + '・あと' + Math.max(0, left) + '日</span>';
   }
   let act = '';
-  if (kind === 'intakeTbd') act = '<button class="und-act" onclick="event.stopPropagation();pitUndSetIntake(\'' + c.id + '\')">📅 入庫日を入れる</button>';
+  if (kind === 'intakeTbd') act = '<button class="und-act" onclick="event.stopPropagation();pitUndSetIntake(\'' + c.id + '\')"><i data-ic=calendar data-ics=16></i> 入庫日を入れる</button>';
   if (kind === 'noShow')    act = '<button class="und-act" onclick="event.stopPropagation();pitUndRestore(\'' + c.id + '\')">↩ 予約に戻す</button>';
-  if (kind === 'returnTbd') act = '<button class="und-act" onclick="event.stopPropagation();pitUndComplete(\'' + c.id + '\')">📞 完TEL → 返車日</button>';
+  if (kind === 'returnTbd') act = '<button class="und-act" onclick="event.stopPropagation();pitUndComplete(\'' + c.id + '\')"><i data-ic=phone data-ics=16></i> 完TEL → 返車日</button>';
 
   let h = '<div class="und-row" style="--team:' + teamColor + '" onclick="openDetail(\'' + c.id + '\')">';
   h += '<div class="und-main"><div class="und-headline"><b>' + (c.customer || '（未入力）') + ' 様</b>'
@@ -166,7 +166,7 @@ window.pitUndSetIntake = function(id){
   if (window.logFlow) logFlow(c, '入庫日を設定（予約へ）');
   if (window.PitDB) PitDB.save();
   renderReserveTbd();
-  if (window.pitToast) pitToast('📅 ' + c.reserveDate + ' の予約に入れました');
+  if (window.pitToast) pitToast(''+ c.reserveDate + 'の予約に入れました');
 };
 
 /* 未入庫 → 予約に戻す（再度連絡が来た等） */
@@ -194,5 +194,5 @@ window.pitUndComplete = function(id){
   if (window.logFlow) logFlow(c, '完TEL → 返車日設定');
   if (window.PitDB) PitDB.save();
   renderReturnTbd();
-  if (window.pitToast) pitToast('📞 ' + c.returnDate + ' の返車予定に入れました');
+  if (window.pitToast) pitToast(''+ c.returnDate + 'の返車予定に入れました');
 };

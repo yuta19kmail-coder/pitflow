@@ -36,7 +36,7 @@ function _renderKanban(board, cols){
     if (col.side)     colClass += ' side';
     const stage = stageColor(col.id);
     let html = '<div class="' + colClass + '" style="--stage:' + stage + ';">';
-    html += '<div class="kanban-col-head"><span>' + col.icon + '</span><span>' + col.name + '</span><span class="count">' + inCol.length + '</span></div>';
+    html += '<div class="kanban-col-head"><span>' + icoE(col.icon) + '</span><span>' + col.name + '</span><span class="count">' + inCol.length + '</span></div>';
     if (hasTD){
       const main = inCol.filter(c => !c.testDrive);
       const td   = inCol.filter(c => c.testDrive);
@@ -47,7 +47,7 @@ function _renderKanban(board, cols){
       html += '<div class="kanban-td2">';
       html += '<div class="kanban-td2-box kanban-td2-normal" data-drop="status" data-drop-val="' + col.id + '"><div class="kanban-td2-ph">ここにドラッグ</div></div>';
       html += '<div class="kanban-td2-box kanban-td2-test' + (td.length ? ' has' : '') + '" data-drop="testdrive" data-drop-val="' + col.id + '">';
-      html += '<div class="kanban-td2-lb">🚗 試運転</div>';
+      html += '<div class="kanban-td2-lb"><i data-ic=car data-ics=16></i> 試運転</div>';
       html += td.length ? td.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-td2-ph">ここにドラッグ</div>';
       html += '</div>';
       html += '</div>';

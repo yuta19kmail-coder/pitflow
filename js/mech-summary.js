@@ -6,7 +6,7 @@
    ・サイドバー「作業サマリー」ビュー（売上ビューと同じインフォグラフィック調）。
    ・カード「整備」タブの割合表示（埋め込み）もここのエンジンを使う（pitMechAllocText）。
 
-   ▼配分アルゴリズム（ゆうた指定・2026-07-21）
+   <i data-ic=chevDown data-ics=15></i>配分アルゴリズム（ゆうた指定・2026-07-21）
      - 点検料（初期値・設定 state.settings.inspectFee で調整可／税抜）：
          車検=15,000 ／ 12点=10,000 ／ 一般=10,000 ／ オイル・板金・コーティング=0（純作業）
      - 一般ルール：確定売上が点検料に満たなければ「点検/作業を50:50」で分ける。
@@ -108,8 +108,8 @@
         + '<span class="mech-alloc-veh">'+veh(o.vehicles)+'台</span>'
         + '<span class="mech-alloc-amt">'+yen(o.amount)+'</span></div>';
     }
-    a.inspectors.forEach(function(o){ h += row(o, '🔍点検', 'insp'); });
-    a.mechanics.forEach(function(o){ h += row(o, '🔧整備', 'mech'); });
+    a.inspectors.forEach(function(o){ h += row(o, '<i data-ic=search data-ics=16></i>点検', 'insp'); });
+    a.mechanics.forEach(function(o){ h += row(o, '<i data-ic=wrench data-ics=16></i>整備', 'mech'); });
     h += '</div>';
     return h;
   }
@@ -162,7 +162,7 @@
   }
 
   function peopleTable(rows){
-    var h = '<div class="sv-card"><div class="sv-card-h"><span>🧑‍🔧 メカニック別（点検・整備）</span>'
+    var h = '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=user data-ics=16></i> メカニック別（点検・整備）</span>'
       + '<span class="sv-legend"><i class="mech-lg mech-lg-insp"></i>点検 <i class="mech-lg mech-lg-work"></i>整備</span></div>';
     if(!rows.length){ return h + '<div class="sv-empty">対象データがありません（返車済みカードに点検/整備担当者を割り当てると集計されます）。</div></div>'; }
     h += '<table class="sv-table mech-table"><thead><tr>'
@@ -190,12 +190,12 @@
       + '<button class="sv-tab'+(mode==='month'?' on':'')+'" onclick="wsSetMode(\'month\')">当月</button>'
       + '<button class="sv-tab'+(mode==='year'?' on':'')+'" onclick="wsSetMode(\'year\')">月間（年度）</button></div>';
     if(mode==='month'){
-      h += '<div class="sv-nav"><button onclick="wsShiftMonth(-1)" title="前の月">◀</button><b>'+ym.y+'年'+(ym.m+1)+'月</b>'
-         + '<button onclick="wsShiftMonth(1)" title="次の月">▶</button><button class="sv-now" onclick="wsShiftMonth(0)">今月</button></div>';
+      h += '<div class="sv-nav"><button onclick="wsShiftMonth(-1)" title="前の月"><i data-ic=chevLeft data-ics=16></i></button><b>'+ym.y+'年'+(ym.m+1)+'月</b>'
+         + '<button onclick="wsShiftMonth(1)" title="次の月"><i data-ic=chevRight data-ics=16></i></button><button class="sv-now" onclick="wsShiftMonth(0)">今月</button></div>';
     } else {
       var Y = window._wsYear;
-      h += '<div class="sv-nav"><button onclick="wsShiftYear(-1)" title="前の年度">◀</button><b>'+(Y-1)+'/12〜'+Y+'/11</b>'
-         + '<button onclick="wsShiftYear(1)" title="次の年度">▶</button><button class="sv-now" onclick="wsShiftYear(0)">今年度</button></div>';
+      h += '<div class="sv-nav"><button onclick="wsShiftYear(-1)" title="前の年度"><i data-ic=chevLeft data-ics=16></i></button><b>'+(Y-1)+'/12〜'+Y+'/11</b>'
+         + '<button onclick="wsShiftYear(1)" title="次の年度"><i data-ic=chevRight data-ics=16></i></button><button class="sv-now" onclick="wsShiftYear(0)">今年度</button></div>';
     }
     h += '</div>';
     return h;
@@ -217,14 +217,14 @@
        + '<div class="sv-hero-sub">割当済み台数 '+veh(d.totalVeh)+' 台</div></div>';
     h += '</div></div>';
 
-    h += '<div class="sv-card"><div class="sv-card-h"><span>📊 メカニック別 作業額（点検＝水色／整備＝緑）</span></div>';
+    h += '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=chart data-ics=16></i> メカニック別 作業額（点検＝水色／整備＝緑）</span></div>';
     h += (d.rows.length ? barChart(d.rows) : '<div class="sv-empty">この月の割当データはまだありません。</div>');
     h += '</div>';
 
     h += peopleTable(d.rows);
 
     if(d.unassignedCnt){
-      h += '<div class="sv-note">⚠ 担当者が未割り当ての返車 '+d.unassignedCnt+'台（'+man(d.unassignedAmt)+'円）は誰にも配分していません。カード詳細の「整備」タブで点検/整備担当者を選ぶと集計に入ります。</div>';
+      h += '<div class="sv-note"><i data-ic=warn data-ics=16></i> 担当者が未割り当ての返車 '+d.unassignedCnt+'台（'+man(d.unassignedAmt)+'円）は誰にも配分していません。カード詳細の「整備」タブで点検/整備担当者を選ぶと集計に入ります。</div>';
     }
     h += '<div class="sv-foot">配分：確定売上−点検料＝整備者へ／点検料は点検者へ（車検1.5万・12点/一般1万・オイル/板金/コーティング0）。台数は点検料の割合で点検/作業に按分。金額はすべて税抜。</div>';
     wrap.innerHTML = h;
@@ -245,12 +245,12 @@
        + '<div class="sv-hero-num">'+d.people+'<span>人</span></div>'
        + '<div class="sv-hero-sub">割当済み台数 '+veh(d.totalVeh)+' 台</div></div>';
     h += '</div></div>';
-    h += '<div class="sv-card"><div class="sv-card-h"><span>📊 メカニック別 作業額（年度）</span></div>';
+    h += '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=chart data-ics=16></i> メカニック別 作業額（年度）</span></div>';
     h += (d.rows.length ? barChart(d.rows) : '<div class="sv-empty">この年度の割当データはまだありません。</div>');
     h += '</div>';
     h += peopleTable(d.rows);
     if(d.unassignedCnt){
-      h += '<div class="sv-note">⚠ 未割り当ての返車 '+d.unassignedCnt+'台（'+man(d.unassignedAmt)+'円）は配分していません。</div>';
+      h += '<div class="sv-note"><i data-ic=warn data-ics=16></i> 未割り当ての返車 '+d.unassignedCnt+'台（'+man(d.unassignedAmt)+'円）は配分していません。</div>';
     }
     h += '<div class="sv-foot">年度＝会計年度（12月〜翌11月）。当月の詳細は「当月」タブへ。金額はすべて税抜。</div>';
     wrap.innerHTML = h;

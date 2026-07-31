@@ -16,9 +16,11 @@
   'use strict';
 
   var ICONS = [
-    { v: '', lb: 'アイコンなし' }, { v: '🔧', lb: '🔧 整備' }, { v: '🛞', lb: '🛞 タイヤ' },
-    { v: '🎨', lb: '🎨 板金・塗装' }, { v: '🔍', lb: '🔍 点検' }, { v: '⚡', lb: '⚡ 電装' },
-    { v: '🧰', lb: '🧰 一般' }, { v: '🚗', lb: '🚗 一時置き' }
+    /* v＝保存する値（絵文字のまま持つ）。画面には icoE() で線画アイコンにして出す。
+       lb＝プルダウンに出す文字（<option> の中はSVGを出せないので文字だけ） */
+    { v: '', lb: 'アイコンなし' }, { v: '🔧', lb: '整備' }, { v: '🛞', lb: 'タイヤ' },
+    { v: '🎨', lb: '板金・塗装' }, { v: '🔍', lb: '点検' }, { v: '⚡', lb: '電装' },
+    { v: '🧰', lb: '一般' }, { v: '🚗', lb: '一時置き' }
   ];
   var TOOLS = [
     { id: 'select', lb: '選択・移動' }, { id: 'flat', lb: '平PIT' }, { id: 'lift', lb: 'リフトPIT' },
@@ -118,13 +120,13 @@
 
   function buildChrome() {
     var f = fp(), h = '';
-    h += '<div class="pf-bar"><span class="pf-bar-title">🏭 PIT配置図</span><div class="pf-tools">';
+    h += '<div class="pf-bar"><span class="pf-bar-title"><i data-ic=factory data-ics=16></i> PIT配置図</span><div class="pf-tools">';
     TOOLS.forEach(function (t) { h += '<button class="pf-tool' + (tool === t.id ? ' on' : '') + '" data-tool="' + t.id + '" onclick="PitFloorEditor.setTool(\'' + t.id + '\')">' + t.lb + '</button>'; });
     h += '</div>';
     h += '<span class="pf-scale-wrap">縮尺<input type="range" id="pf-scale" min="8" max="30" step="1" value="' + f.cols + '"><span id="pf-scale-lb">横' + f.cols + 'マス</span></span>';
-    h += '<button class="pf-sample" onclick="PitFloorEditor.exportPlan()">💾 書き出し</button>';
-    h += '<button class="pf-sample" onclick="PitFloorEditor.importPlan()">📂 読み込み</button>';
-    h += '<button class="pf-sample" onclick="PitFloorEditor.loadSample()">🏭 サンプル</button>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.exportPlan()"><i data-ic=save data-ics=16></i> 書き出し</button>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.importPlan()"><i data-ic=folderOpen data-ics=16></i> 読み込み</button>';
+    h += '<button class="pf-sample" onclick="PitFloorEditor.loadSample()"><i data-ic=factory data-ics=16></i> サンプル</button>';
     h += '<button class="pf-done" onclick="PitFloorEditor.close()">完了して閉じる</button></div>';
     h += '<div class="pf-hint" id="pf-hint">' + toolHint() + '</div>';
     h += '<div class="pf-stage" id="pf-stage"><div class="pf-grid" id="pf-grid"></div></div>';
@@ -210,7 +212,7 @@
   }
 
   function pos(el, o) { el.style.left = (o.gx * cell) + 'px'; el.style.top = (o.gy * cell) + 'px'; el.style.width = (o.gw * cell) + 'px'; el.style.height = (o.gh * cell) + 'px'; }
-  function lockChip(kind, o) { return '<span class="pf-lock' + (o.locked ? ' on' : '') + '" data-lock="' + kind + '|' + o.id + '" title="' + (o.locked ? 'ロック中（クリックで解除）' : 'ロックする') + '">' + (o.locked ? '🔒' : '🔓') + '</span>'; }
+  function lockChip(kind, o) { return '<span class="pf-lock' + (o.locked ? ' on' : '') + '" data-lock="' + kind + '|' + o.id + '" title="' + (o.locked ? 'ロック中（クリックで解除）' : 'ロックする') + '">' + (o.locked ? '<i data-ic=lock data-ics=16></i>' : '<i data-ic=unlock data-ics=16></i>') + '</span>'; }
   // リフトの飾り（枠の外＝SVG層に描く）。柱＋直線足＋正方形パッド＋内側ブラケット＋外側ピンク出っ張り。
   // 着地状態で外側にはねる。色は課（divisionColor）。
   function liftDeco(b) {
@@ -278,7 +280,7 @@
     d.style.borderColor = divColor(b.division); d.style.color = divColor(b.division);
     d.setAttribute('data-bay', b.id);
     var cap = m.ncol * m.rows;
-    var h = '<div class="pf-box-hd" style="height:' + m.headH + 'px"><span class="pf-box-nm">' + esc((b.icon ? b.icon + ' ' : '') + (b.name || '')) + '</span>' + lockChip('bay', b) + '</div>';
+    var h = '<div class="pf-box-hd" style="height:' + m.headH + 'px"><span class="pf-box-nm">' + (b.icon ? icoE(b.icon) + ' ' : '') + esc(b.name || '') + '</span>' + lockChip('bay', b) + '</div>';
     h += '<div class="pf-cards" style="gap:' + m.gap + 'px;padding:' + m.pad + 'px">';
     for (var col = 0; col < m.ncol; col++) {
       h += '<div class="pf-cardcol" style="gap:' + m.gap + 'px">';
@@ -312,7 +314,7 @@
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'division\',this.value)">' + dop('', '共通') + dop('div1', '1課') + dop('div2', '2課') + '</select>'
         + '<select class="pf-in" onchange="PitFloorEditor.edit(\'dir\',this.value)"><option value="v"' + ((o.dir || 'v') === 'v' ? ' selected' : '') + '>縦向き</option><option value="h"' + (o.dir === 'h' ? ' selected' : '') + '>横向き</option></select>'
         + (function () { var nc = Math.max(1, o.ncol || 1), nr = Math.max(1, o.rows || (o.dir === 'h' ? 2 : 5)); return '<span class="pf-cap-note">' + nc + '列×' + nr + '行＝' + (nc * nr) + '枚（右下で増減）</span>'; })()
-        + zlockBtns() + '<button class="pf-del" onclick="PitFloorEditor.removeSel()">🗑 削除</button>';
+        + zlockBtns() + '<button class="pf-del" onclick="PitFloorEditor.removeSel()"><i data-ic=trash data-ics=16></i> 削除</button>';
     } else if (sel && sel.kind === 'shape' && o) {
       var nm = o.type === 'building' ? '建物' : (o.type === 'door' ? 'ドア' : (o.type === 'shutter' ? 'シャッター' : '壁・通路'));
       var ex = '';
@@ -321,16 +323,16 @@
       else if (o.type === 'shutter') ex = '<button class="pf-zbtn" onclick="PitFloorEditor.shutterLen(-1)">－短く</button><button class="pf-zbtn" onclick="PitFloorEditor.shutterLen(1)">＋長く</button>';
       p.innerHTML = '<span class="pf-prop-t">' + nm + '</span>' + ex
         + '<span class="pf-cap-note">' + (o.type === 'wall' ? '両端の●をドラッグ（15°刻み）' : (o.type === 'building' ? 'ドラッグで移動・右下で大きさ' : '壁/建物の縁に沿ってドラッグで位置調整')) + '</span>'
-        + zlockBtns() + '<button class="pf-del" onclick="PitFloorEditor.removeSel()">🗑 削除</button>';
+        + zlockBtns() + '<button class="pf-del" onclick="PitFloorEditor.removeSel()"><i data-ic=trash data-ics=16></i> 削除</button>';
     } else {
       p.innerHTML = '<span class="pf-prop-empty">枠・建物・線をクリックすると、ここで編集（名前／課／種類／重ね順／ロック／削除）できます。</span>';
     }
   }
   function zlockBtns() {
     var o = selObj(); var locked = o && o.locked;
-    return '<button class="pf-zbtn" onclick="PitFloorEditor.toFront()" title="最前面へ">⬆ 前面</button>'
-      + '<button class="pf-zbtn" onclick="PitFloorEditor.toBack()" title="最背面へ">⬇ 背面</button>'
-      + '<button class="pf-zbtn' + (locked ? ' on' : '') + '" onclick="PitFloorEditor.toggleLock()">' + (locked ? '🔒 解除' : '🔓 ロック') + '</button>';
+    return '<button class="pf-zbtn" onclick="PitFloorEditor.toFront()" title="最前面へ"><i data-ic=up data-ics=15></i> 前面</button>'
+      + '<button class="pf-zbtn" onclick="PitFloorEditor.toBack()" title="最背面へ"><i data-ic=down data-ics=15></i> 背面</button>'
+      + '<button class="pf-zbtn' + (locked ? ' on' : '') + '" onclick="PitFloorEditor.toggleLock()">' + (locked ? '<i data-ic=lock data-ics=16></i> 解除' : '<i data-ic=unlock data-ics=16></i> ロック') + '</button>';
   }
 
   // ===== 追加・編集・並び =====
@@ -619,7 +621,7 @@
     // 同枠内の並び順＝baySlot（小さい順）。未設定は後ろ（追加順）。
     cards = cards.slice().sort(function (x, y) { return (x.baySlot == null ? 1e9 : x.baySlot) - (y.baySlot == null ? 1e9 : y.baySlot); });
     var cap = m.ncol * m.rows;
-    var h = '<div class="pf-box-hd" style="height:' + m.headH + 'px"><span class="pf-box-nm">' + esc((b.icon ? b.icon + ' ' : '') + (b.name || '')) + '</span></div>';
+    var h = '<div class="pf-box-hd" style="height:' + m.headH + 'px"><span class="pf-box-nm">' + (b.icon ? icoE(b.icon) + ' ' : '') + esc(b.name || '') + '</span></div>';
     h += '<div class="pf-cards" style="gap:' + m.gap + 'px;padding:' + m.pad + 'px">';
     var idx = 0;
     for (var cc = 0; cc < m.ncol; cc++) {

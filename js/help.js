@@ -18,18 +18,18 @@
   function build(host) {
     var nav = window.HELP_NAV || [];
     var contents = window.HELP_CONTENTS || {};
-    var sb = '<div class="help-sb-search-wrap"><input class="help-sb-search" type="search" autocomplete="off" placeholder="🔍 ヘルプ内を検索" oninput="onHelpSearch(this.value)"></div>';
+    var sb = '<div class="help-sb-search-wrap"><input class="help-sb-search"type="search"autocomplete="off"placeholder="ヘルプ内を検索"oninput="onHelpSearch(this.value)"></div>';
     nav.forEach(function (g) {
       sb += '<div class="help-sb-cat">' + esc(g.cat) + '</div>';
       g.items.forEach(function (it) {
         sb += '<div class="help-sb-item" data-section="' + esc(it.id) + '" onclick="showHelpSection(\'' + esc(it.id) + '\')">' + esc(it.label) + '</div>';
       });
     });
-    var content = '<button class="help-mobile-toggle vh-btn" onclick="toggleHelpSidebar()">☰ 目次</button>';
+    var content = '<button class="help-mobile-toggle vh-btn" onclick="toggleHelpSidebar()"><i data-ic=menu data-ics=15></i> 目次</button>';
     nav.forEach(function (g) {
       g.items.forEach(function (it) {
         var html = contents[it.id];
-        content += '<div class="help-sec" data-section="' + esc(it.id) + '">' + (typeof html === 'string' ? html : '<div class="help-wip">📝 このセクションは準備中です。</div>') + '</div>';
+        content += '<div class="help-sec" data-section="' + esc(it.id) + '">' + (typeof html === 'string' ? html : '<div class="help-wip"><i data-ic=pencil data-ics=16></i> このセクションは準備中です。</div>') + '</div>';
       });
     });
     host.innerHTML = '<div class="help-layout"><aside class="help-sidebar" id="help-sidebar">' + sb + '</aside><div class="help-content" id="help-content">' + content + '</div></div>';

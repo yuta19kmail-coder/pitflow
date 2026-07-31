@@ -118,49 +118,49 @@ function renderCarSales(){
     const washToday = washAll.filter(c => c.returnStage==='returnWait' && c.returnDate === todayStr);
     const st = split(washToday.sort(sortTime), 'washSalesDone');
     const sm = split(washTomorrow.sort(sortTime), 'washSalesDone');
-    const bodyHtml = '<div class="cs-subh">☀️ 今日</div>'
+    const bodyHtml = '<div class="cs-subh"><i data-ic=sun data-ics=16></i> 今日</div>'
       + (st.open.length ? st.open.map(c=>_csCard(c,'wash')).join('') : '<div class="cs-empty">なし</div>')
-      + '<div class="cs-subh">🌙 明日 <small>（翌営業日 ' + nextBiz.slice(5).replace('-','/') + '）</small></div>'
+      + '<div class="cs-subh"><i data-ic=moon data-ics=16></i> 明日 <small>（翌営業日 ' + nextBiz.slice(5).replace('-','/') + '）</small></div>'
       + (sm.open.length ? sm.open.map(c=>_csCard(c,'wash')).join('') : '<div class="cs-empty">なし</div>');
     const doneHtml = st.done.concat(sm.done).map(c=>_csDoneCard(c,'wash')).join('');
-    h += _csSec('🧽 洗車', '今日・明日ぶん', bodyHtml, doneHtml);
+    h += _csSec('<i data-ic=drop data-ics=16></i> 洗車', '今日・明日ぶん', bodyHtml, doneHtml);
   }
   // ② 今週の洗車予定（日付決定 ＋ 返車日未定）
   {
     const sw = split(washWeek.sort(sortDate), 'washSalesDone');
     const sn = split(washNoDate.sort(sortTime), 'washSalesDone');
-    let bodyHtml = '<div class="cs-subh">📅 予定決定（〜今週日曜）</div>'
+    let bodyHtml = '<div class="cs-subh"><i data-ic=calendar data-ics=16></i> 予定決定（〜今週日曜）</div>'
       + (sw.open.length ? sw.open.map(c=>_csCard(c,'wash',_csRetLabel(c))).join('') : '<div class="cs-empty">なし</div>')
-      + '<div class="cs-subh">❓ 洗車で返車日未定</div>'
+      + '<div class="cs-subh"><i data-ic=help data-ics=16></i> 洗車で返車日未定</div>'
       + (sn.open.length ? sn.open.map(c=>_csCard(c,'wash')).join('') : '<div class="cs-empty">なし</div>');
     const doneHtml = sw.done.concat(sn.done).map(c=>_csDoneCard(c,'wash')).join('');
-    h += _csSec('🗓️ 今週の洗車予定', '', bodyHtml, doneHtml);
+    h += _csSec('<i data-ic=calendar data-ics=16></i> 今週の洗車予定', '', bodyHtml, doneHtml);
   }
   // ③ 車検ヘッドライト磨き
   {
     const s = split(headlight.sort(sortDate), 'headlightDone');
-    h += _csSec('🔦 車検ヘッドライト磨き', '',
+    h += _csSec('<i data-ic=search data-ics=16></i> 車検ヘッドライト磨き', '',
       s.open.map(c=>_csCard(c,'headlight')).join(''),
       s.done.map(c=>_csDoneCard(c,'headlight')).join(''));
   }
   // ④ コーティング依頼
   {
     const s = split(coatReq.sort(sortDate), 'coatingDone');
-    h += _csSec('✨ コーティング依頼', '受注OK・返車予定日つき',
+    h += _csSec('<i data-ic=sparkle data-ics=16></i> コーティング依頼', '受注OK・返車予定日つき',
       s.open.map(c=>_csCard(c,'coating',_csRetLabel(c))).join(''),
       s.done.map(c=>_csDoneCard(c,'coating')).join(''));
   }
   // ⑤ 直近1か月のコーティング予定（完了なし＝予定一覧）
   {
-    h += _csSec('📆 直近1か月のコーティング予定', '予約・入庫中の1Y/3M',
+    h += _csSec('<i data-ic=calendar data-ics=16></i> 直近1か月のコーティング予定', '予約・入庫中の1Y/3M',
       coatPlan.sort((a,b)=>String(a.reserveDate||'9999').localeCompare(String(b.reserveDate||'9999'))).map(c=>_csCard(c,null,_csInLabel(c))).join(''),
       '');
   }
   // ⑥ その他依頼事項
   {
     const s = split(salesReq, 'salesReqDone');
-    h += _csSec('🛒 その他依頼事項', '車販依頼',
-      s.open.map(c=>_csCard(c,'salesReq', c.salesReqMemo ? ('📝 '+_csEsc(c.salesReqMemo)) : '')).join(''),
+    h += _csSec('<i data-ic=cart data-ics=16></i> その他依頼事項', '車販依頼',
+      s.open.map(c=>_csCard(c,'salesReq', c.salesReqMemo ? ('<i data-ic=pencil data-ics=16></i> '+_csEsc(c.salesReqMemo)) : '')).join(''),
       s.done.map(c=>_csDoneCard(c,'salesReq')).join(''));
   }
 
@@ -173,17 +173,17 @@ window.renderCarSales = renderCarSales;
 function _csRetLabel(c){
   if (c.returnDate){
     const d = new Date(c.returnDate+'T00:00:00');
-    if (!isNaN(d)) return '🚗 返車 ' + (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）' + (c.returnTime?' '+c.returnTime:'');
+    if (!isNaN(d)) return '<i data-ic=car data-ics=16></i> 返車 ' + (d.getMonth()+1) + '/' + d.getDate() + '（' + '日月火水木金土'[d.getDay()] + '）' + (c.returnTime?' '+c.returnTime:'');
   }
-  return '🚗 返車日未定';
+  return '<i data-ic=car data-ics=16></i> 返車日未定';
 }
 /* 入庫/予約ラベル（コーティング予定用） */
 function _csInLabel(c){
   if (c.status === 'reserved'){
-    if (c.reserveDate){ const d=new Date(c.reserveDate+'T00:00:00'); if(!isNaN(d)) return '📅 入庫予約 '+(d.getMonth()+1)+'/'+d.getDate(); }
-    return '📅 予約';
+    if (c.reserveDate){ const d=new Date(c.reserveDate+'T00:00:00'); if(!isNaN(d)) return '<i data-ic=calendar data-ics=16></i> 入庫予約 '+(d.getMonth()+1)+'/'+d.getDate(); }
+    return '<i data-ic=calendar data-ics=16></i> 予約';
   }
-  return '🏭 入庫中（' + (window.statusLabel ? statusLabel(c.status) : c.status) + '）';
+  return '<i data-ic=factory data-ics=16></i> 入庫中（' + (window.statusLabel ? statusLabel(c.status) : c.status) + '）';
 }
 
 /* 完了／戻す */

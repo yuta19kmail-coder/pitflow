@@ -60,7 +60,7 @@ function renderMaintDash(){
     { id:'div1', label:'1課', color:'#1db97a' },
     { id:'div2', label:'2課', color:'#ec4899' },
   ]);
-  const teamName = { div1:'🚗 国産チーム', div2:'🌍 輸入チーム' };
+  const teamName = { div1:'<i data-ic=car data-ics=16></i> 国産チーム', div2:'<i data-ic=globe data-ics=16></i> 輸入チーム' };
 
   const calc = {};
   divs.forEach(function(d){ calc[d.id] = _mdCalc(d.id, cards, moS, moE, wkS, wkE); });
@@ -84,10 +84,10 @@ function renderMaintDash(){
 
   // 工場ぜんたい KPI（両課の合計）
   h += '<div class="md-kpis">';
-  h += _mdKpi('🏁', '今月 上げた', tot.mC, '台', _mdMan(tot.mA) + '円', '');
-  h += _mdKpi('📅', '今週 上げた', tot.wC, '台', _mdMan(tot.wA) + '円', '');
-  h += _mdKpi('🔧', '今週 残り', tot.rC, '台', _mdMan(tot.rA) + '円', tot.rC > 0 ? 'warn' : 'ok');
-  h += _mdKpi('⏳', '長期 預かり', longs.length, '台', longN + '日以上', longs.length > 0 ? 'alert' : 'ok');
+  h += _mdKpi('<i data-ic=flag data-ics=16></i>', '今月 上げた', tot.mC, '台', _mdMan(tot.mA) + '円', '');
+  h += _mdKpi('<i data-ic=calendar data-ics=16></i>', '今週 上げた', tot.wC, '台', _mdMan(tot.wA) + '円', '');
+  h += _mdKpi('<i data-ic=wrench data-ics=16></i>', '今週 残り', tot.rC, '台', _mdMan(tot.rA) + '円', tot.rC > 0 ? 'warn' : 'ok');
+  h += _mdKpi('<i data-ic=hourglass data-ics=15></i>', '長期 預かり', longs.length, '台', longN + '日以上', longs.length > 0 ? 'alert' : 'ok');
   h += '</div>';
 
   // 課別の対比（情報共有＆モチベ）
@@ -106,9 +106,9 @@ function renderMaintDash(){
 
   // ⏳ 長期預かりアラート
   h += '<div class="dash-card md-alert-card">';
-  h += '<div class="dash-h"><span>⏳ 預かりが長くなっているクルマ</span><span class="dash-note">入庫から ' + longN + '日以上 たった在庫車（工程の詰まり）／日数の長い順</span></div>';
+  h += '<div class="dash-h"><span><i data-ic=hourglass data-ics=15></i> 預かりが長くなっているクルマ</span><span class="dash-note">入庫から ' + longN + '日以上 たった在庫車（工程の詰まり）／日数の長い順</span></div>';
   if (!longs.length){
-    h += '<div class="md-alert-none">長期の預かりはありません 👍 工程はスムーズです</div>';
+    h += '<div class="md-alert-none">長期の預かりはありません <i data-ic=thumbUp data-ics=16></i> 工程はスムーズです</div>';
   } else {
     h += '<div class="md-alert-list">';
     longs.forEach(function(o){

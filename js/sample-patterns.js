@@ -28,10 +28,10 @@
   // 受付・フロント部分（全案共通の土台）
   function baseSections(){
     let h='';
-    h+=sec('👤 基本情報', row(fld('お客様',EX.customer+' 様'), fld('TEL',EX.tel)) + row(fld('ナンバー',EX.plate), fld('区分',EX.repeat)));
-    h+=sec('🚗 車両・日程', row(fld('車名・型式',EX.car)) + row(fld('入庫',EX.inAt), fld('返車予定',EX.retAt)));
-    h+=sec('🔧 作業内容', row(fld('作業タイプ',EX.work)) + row(fld('整備内容',EX.menu)));
-    h+=sec('👥 担当', row(fld('フロント',EX.front), fld('作業担当',EX.staff)));
+    h+=sec('<i data-ic=user data-ics=16></i> 基本情報', row(fld('お客様',EX.customer+' 様'), fld('TEL',EX.tel)) + row(fld('ナンバー',EX.plate), fld('区分',EX.repeat)));
+    h+=sec('<i data-ic=car data-ics=16></i> 車両・日程', row(fld('車名・型式',EX.car)) + row(fld('入庫',EX.inAt), fld('返車予定',EX.retAt)));
+    h+=sec('<i data-ic=wrench data-ics=16></i> 作業内容', row(fld('作業タイプ',EX.work)) + row(fld('整備内容',EX.menu)));
+    h+=sec('<i data-ic=users data-ics=16></i> 担当', row(fld('フロント',EX.front), fld('作業担当',EX.staff)));
     return h;
   }
 
@@ -44,8 +44,8 @@
       cons:['整備の「やったか」がPitFlowに出ない＝進捗が受付で止まる','紙ハンコの抜け漏れは防げないまま'],
       mock:function(){
         return baseSections()
-          + sec('🚙 代車・💴 支払・📝 メモ', row(fld('代車','不要'), fld('支払','現金')) + row(fld('メモ','—')))
-          + '<div class="sp-paper">🗒 オイル・空気圧などの作業チェックは <b>紙のハンコ＋✓</b> のまま（この案では取り込まない）</div>';
+          + sec('<i data-ic=van data-ics=16></i> 代車・<i data-ic=money data-ics=16></i> 支払・<i data-ic=pencil data-ics=16></i> メモ', row(fld('代車','不要'), fld('支払','現金')) + row(fld('メモ','—')))
+          + '<div class="sp-paper"><i data-ic=sticky data-ics=16></i> オイル・空気圧などの作業チェックは <b>紙のハンコ＋✓</b> のまま（この案では取り込まない）</div>';
       }
     },
     B: {
@@ -63,8 +63,8 @@
           + chk('洗車', false, '')
           + '</div>';
         return baseSections()
-          + sec('✅ 作業チェック（車検タイプの定番項目）', checks + '<div class="sp-hint">タップでチェック。項目は作業タイプごとに設定で編集できる想定。</div>')
-          + sec('🚙 代車・💴 支払', row(fld('代車','不要'), fld('支払','現金')));
+          + sec('<i data-ic=check data-ics=16></i> 作業チェック（車検タイプの定番項目）', checks + '<div class="sp-hint">タップでチェック。項目は作業タイプごとに設定で編集できる想定。</div>')
+          + sec('<i data-ic=van data-ics=16></i> 代車・<i data-ic=money data-ics=16></i> 支払', row(fld('代車','不要'), fld('支払','現金')));
       }
     },
     C: {
@@ -78,10 +78,10 @@
         const koukan='<div class="sp-checks">'+chk('オイル交換', true,'壱谷')+chk('エレメント', true,'壱谷')+'</div>';
         const sokutei='<div class="sp-meass">'+meas('ブレーキ残量(前)','7.5','mm')+meas('タイヤ溝(前)','5','mm')+meas('空気圧(前)','240','kPa')+meas('空気圧(後)','230','kPa')+'</div>';
         return baseSections()
-          + sec('🔎 点検', tenken)
-          + sec('🔁 交換', koukan)
-          + sec('📏 測定値', sokutei + '<div class="sp-hint">数値も残すので、次回との比較や引き継ぎに使える。</div>')
-          + sec('📝 整備メモ', row(fld('メモ','右フロント パッド次回交換目安')));
+          + sec('<i data-ic=search data-ics=16></i> 点検', tenken)
+          + sec('<i data-ic=refresh data-ics=16></i> 交換', koukan)
+          + sec('<i data-ic=ruler data-ics=16></i> 測定値', sokutei + '<div class="sp-hint">数値も残すので、次回との比較や引き継ぎに使える。</div>')
+          + sec('<i data-ic=pencil data-ics=16></i> 整備メモ', row(fld('メモ','右フロント パッド次回交換目安')));
       }
     },
     D: {
@@ -101,8 +101,8 @@
           +'</div>';
         const genka='<div class="sp-meass">'+meas('部品原価','12,400','円')+meas('外注','0','円')+'</div>';
         return baseSections()
-          + sec('✅ 作業チェック（かんたん）', checks)
-          + sec('🗂 バックオフィス（返車後の後処理）', bo + genka + '<div class="sp-hint">受付 → 整備 → 返車 → <b>後処理（カルテ確認・原価・請求/入金・締め）</b> → 完了、までを1枚で。原価/請求は整備ソフト・会計と重複しない範囲に絞る前提。事務向けなので現場には隠す等の出し分けが要る。</div>');
+          + sec('<i data-ic=check data-ics=16></i> 作業チェック（かんたん）', checks)
+          + sec('<i data-ic=folder data-ics=16></i> バックオフィス（返車後の後処理）', bo + genka + '<div class="sp-hint">受付 → 整備 → 返車 → <b>後処理（カルテ確認・原価・請求/入金・締め）</b> → 完了、までを1枚で。原価/請求は整備ソフト・会計と重複しない範囲に絞る前提。事務向けなので現場には隠す等の出し分けが要る。</div>');
       }
     }
   };
@@ -118,7 +118,7 @@
     const p = PATTERNS[cur];
     const tabs = Object.keys(PATTERNS).map(k=>'<button class="sp-tab'+(k===cur?' on':'')+'" onclick="spPick(\''+k+'\')">'+k+'</button>').join('');
     let h='';
-    h+='<div class="sp-banner">🧪 <b>カード設計のたたき台</b>：チームで「入庫カードにどこまで持たせるか」を決めるための見比べ用です。実データには繋がっていません。決まったらこのメニューは消します。</div>';
+    h+='<div class="sp-banner"><i data-ic=flask data-ics=16></i> <b>カード設計のたたき台</b>：チームで「入庫カードにどこまで持たせるか」を決めるための見比べ用です。実データには繋がっていません。決まったらこのメニューは消します。</div>';
     h+='<div class="sp-tabs">'+tabs+'</div>';
     h+='<div class="sp-grid">';
     // 左：説明

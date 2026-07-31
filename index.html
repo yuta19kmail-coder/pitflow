@@ -3,12 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.129.2"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.130.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <link rel="manifest" href="manifest.json?v=1">
 <meta name="theme-color" content="#1f7a4d">
+<link rel="stylesheet" href="css/coreflow-ui.css?v=2"><!-- 見た目の基準（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=40">
@@ -90,7 +91,7 @@
     <div class="pl-sub">整備入庫管理システム</div>
     <button class="pl-btn" onclick="pitSampleLogin()">Google でログイン（デモ）</button>
     <div class="pl-note">※ ダミー（デモ版・後日 Google 連携）</div>
-    <div class="pl-ver">v0.129.2</div>
+    <div class="pl-ver">v0.130.0</div>
   </div>
 </div>
 
@@ -98,13 +99,13 @@
 
   <!-- ===== トップバー（CarFlow準拠：左＝畳む/ロゴ/版/新規予約/文字/テーマ｜右＝アバター/名前/同期/ヘルプ/ログアウト） ===== -->
   <div id="topbar">
-    <button class="tb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="サイドバーを開閉" aria-label="サイドバーを開閉">☰</button>
+    <button class="tb-toggle" id="sb-toggle" onclick="toggleSidebar()" title="サイドバーを開閉" aria-label="サイドバーを開閉"><i data-ic=menu data-ics=15></i></button>
     <div class="logo">
       <img class="tb-appicon" src="apple-touch-icon.png" alt="">
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v0.129.2</span>
+    <span class="ver">v0.130.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -112,7 +113,7 @@
       <button class="tb-fontsize-btn" data-fontsize="xl" onclick="setFontSize('xl')"><span style="font-size:19px;font-weight:800">A</span></button>
     </div>
     <!-- テーマ4パターン循環（ダーク→ライト→ダーク・リキッド→ライト・リキッド） -->
-    <button class="tb-theme-cycle" id="tb-theme-cycle" onclick="cycleTheme()" title="テーマ切替" aria-label="テーマ切替">🌙</button>
+    <button class="tb-theme-cycle" id="tb-theme-cycle" onclick="cycleTheme()" title="テーマ切替" aria-label="テーマ切替"><i data-ic=moon data-ics=16></i></button>
     <!-- 右：新規予約＋ユーザー群（アバター/名前/同期/ヘルプ/ログアウト） -->
     <div class="topbar-user">
       <button class="tb-btn primary tb-newres" onclick="openNewReserve()">＋ 新規予約</button>
@@ -129,42 +130,42 @@
 
     <!-- ダッシュボード（自分で組めるビルダー＝TOP） -->
     <div class="si-item active" data-view="dashboard" onclick="showView('dashboard')">
-      <span class="icon">🏠</span><span>ダッシュボード</span>
+      <span class="icon"><i data-ic=home data-ics=16></i></span><span>ダッシュボード</span>
     </div>
 
-    <!-- ▼ 一旦フラット表示（フライアウトのたたみは保留・section titleで区切り）。フライアウトに戻す時はこの範囲を si-flyout 版へ -->
+    <!-- <i data-ic=chevDown data-ics=15></i> 一旦フラット表示（フライアウトのたたみは保留・section titleで区切り）。フライアウトに戻す時はこの範囲を si-flyout 版へ -->
     <div class="si-section-title">予約</div>
-    <div class="si-item" data-view="today" onclick="showView('today')"><span class="icon">🌅</span><span>当日</span></div>
-    <div class="si-item" data-view="availcal" onclick="showView('availcal')"><span class="icon">🗓️</span><span>空きカレンダー</span></div>
-    <div class="si-item" data-view="reserve" onclick="showView('reserve')"><span class="icon">📅</span><span>予約</span></div>
-    <div class="si-item" data-view="return" onclick="showView('return')"><span class="icon">📤</span><span>返車</span></div>
-    <div class="si-item" data-view="carsales" onclick="showView('carsales')"><span class="icon">🧽</span><span>車販作業</span></div>
+    <div class="si-item" data-view="today" onclick="showView('today')"><span class="icon"><i data-ic=sunrise data-ics=16></i></span><span>当日</span></div>
+    <div class="si-item" data-view="availcal" onclick="showView('availcal')"><span class="icon"><i data-ic=calendar data-ics=16></i></span><span>空きカレンダー</span></div>
+    <div class="si-item" data-view="reserve" onclick="showView('reserve')"><span class="icon"><i data-ic=calendar data-ics=16></i></span><span>予約</span></div>
+    <div class="si-item" data-view="return" onclick="showView('return')"><span class="icon"><i data-ic=upload data-ics=16></i></span><span>返車</span></div>
+    <div class="si-item" data-view="carsales" onclick="showView('carsales')"><span class="icon"><i data-ic=drop data-ics=16></i></span><span>車販作業</span></div>
 
     <div class="si-section-title">車両</div>
-    <div class="si-item" data-view="loaner" onclick="showView('loaner')"><span class="icon">🚙</span><span>代車カレンダー</span></div>
-    <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon">🅿️</span><span>駐車場</span></div>
-    <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon">🚐</span><span>代車・自社車両管理</span></div>
+    <div class="si-item" data-view="loaner" onclick="showView('loaner')"><span class="icon"><i data-ic=van data-ics=16></i></span><span>代車カレンダー</span></div>
+    <div class="si-item" data-view="parking" onclick="showView('parking')"><span class="icon"><i data-ic=parking data-ics=16></i></span><span>駐車場</span></div>
+    <div class="si-item" data-view="fleet" onclick="showView('fleet')"><span class="icon"><i data-ic=van data-ics=16></i></span><span>代車・自社車両管理</span></div>
 
     <div class="si-section-title">整備</div>
-    <div class="si-item" data-view="shakencal" onclick="showView('shakencal')"><span class="icon">🔎</span><span>車検予定</span></div>
-    <div class="si-item" data-view="shakenlog" onclick="showView('shakenlog')"><span class="icon">📇</span><span>車検履歴</span></div>
-    <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon">1️⃣</span><span>1課</span></div>
-    <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon">2️⃣</span><span>2課</span></div>
-    <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon">🏭</span><span>Pitリスト</span></div>
-    <div class="si-item" data-view="outsource" onclick="showView('outsource')"><span class="icon">🤝</span><span>外注</span></div>
-    <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon">✅</span><span>実績</span></div>
+    <div class="si-item" data-view="shakencal" onclick="showView('shakencal')"><span class="icon"><i data-ic=search data-ics=16></i></span><span>車検予定</span></div>
+    <div class="si-item" data-view="shakenlog" onclick="showView('shakenlog')"><span class="icon"><i data-ic=card data-ics=16></i></span><span>車検履歴</span></div>
+    <div class="si-item" data-view="course1" onclick="showView('course1')"><span class="icon"><b class="ic-num">1</b></span><span>1課</span></div>
+    <div class="si-item" data-view="course2" onclick="showView('course2')"><span class="icon"><b class="ic-num">2</b></span><span>2課</span></div>
+    <div class="si-item" data-view="work" onclick="showView('work')"><span class="icon"><i data-ic=factory data-ics=16></i></span><span>Pitリスト</span></div>
+    <div class="si-item" data-view="outsource" onclick="showView('outsource')"><span class="icon"><i data-ic=external data-ics=16></i></span><span>外注</span></div>
+    <div class="si-item" data-view="result" onclick="showView('result')"><span class="icon"><i data-ic=check data-ics=16></i></span><span>実績</span></div>
 
     <div class="si-section-title">データ</div>
-    <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon">💴</span><span>売上</span></div>
-    <div class="si-item" data-view="worksum" onclick="showView('worksum')"><span class="icon">🧑‍🔧</span><span>作業サマリー</span></div>
-    <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon">👤</span><span>顧客</span></div>
+    <div class="si-item" data-view="sales" onclick="showView('sales')"><span class="icon"><i data-ic=money data-ics=16></i></span><span>売上</span></div>
+    <div class="si-item" data-view="worksum" onclick="showView('worksum')"><span class="icon"><i data-ic=user data-ics=16></i></span><span>作業サマリー</span></div>
+    <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon"><i data-ic=user data-ics=16></i></span><span>顧客</span></div>
 
     <div class="si-section-title">管理</div>
-    <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon">👥</span><span>メンバー</span><span class="si-soon">準備中</span></div>
-    <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon">📜</span><span>操作ログ</span><span class="si-soon">準備中</span></div>
-    <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon">⚙️</span><span>設定</span></div>
-    <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon">📣</span><span>お知らせ</span><span class="si-soon">準備中</span></div>
-    <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon">❓</span><span>ヘルプ</span></div>
+    <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon"><i data-ic=users data-ics=16></i></span><span>メンバー</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon"><i data-ic=history data-ics=16></i></span><span>操作ログ</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon"><i data-ic=settings data-ics=16></i></span><span>設定</span></div>
+    <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon"><i data-ic=megaphone data-ics=16></i></span><span>お知らせ</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon"><i data-ic=help data-ics=16></i></span><span>ヘルプ</span></div>
 
 
     <!-- CoreFlow アプリランチャー（共通） -->
@@ -178,9 +179,9 @@
     <!-- ===== ダッシュボード（自分で組めるビルダー＝TOP） ===== -->
     <section id="view-dashboard" class="view active">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🏠</span>ダッシュボード <span id="myd-presets" class="myd-presets"></span></div>
+        <div class="view-title"><span class="icon"><i data-ic=home data-ics=16></i></span>ダッシュボード <span id="myd-presets" class="myd-presets"></span></div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="mydRefresh()">🔄 更新</button>
+          <button class="vh-btn" onclick="mydRefresh()"><i data-ic=refresh data-ics=16></i> 更新</button>
         </div>
       </div>
       <div id="view-mydash-body"></div>
@@ -220,9 +221,9 @@
     <!-- ===== 当日ビュー ===== -->
     <section id="view-today" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🌅</span>当日</div>
+        <div class="view-title"><span class="icon"><i data-ic=sunrise data-ics=16></i></span>当日</div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="renderToday()">🔄 更新</button>
+          <button class="vh-btn" onclick="renderToday()"><i data-ic=refresh data-ics=16></i> 更新</button>
         </div>
       </div>
       <div id="view-today-body"></div>
@@ -231,8 +232,8 @@
     <!-- ===== 空きカレンダービュー（国産/輸入の空き＋最短＋代車を一同に） ===== -->
     <section id="view-availcal" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🗓️</span>空きカレンダー <span style="font-size:11px;color:var(--text3);font-weight:400">国産・輸入の空き／最短入庫／代車を一目で</span></div>
-        <div class="view-actions"><button class="vh-btn" onclick="renderAvail()">🔄 更新</button></div>
+        <div class="view-title"><span class="icon"><i data-ic=calendar data-ics=16></i></span>空きカレンダー <span style="font-size:11px;color:var(--text3);font-weight:400">国産・輸入の空き／最短入庫／代車を一目で</span></div>
+        <div class="view-actions"><button class="vh-btn" onclick="renderAvail()"><i data-ic=refresh data-ics=16></i> 更新</button></div>
       </div>
       <div id="view-availcal-body"></div>
     </section>
@@ -240,18 +241,18 @@
     <!-- ===== 予約ビュー ===== -->
     <section id="view-reserve" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">📅</span>予約</div>
+        <div class="view-title"><span class="icon"><i data-ic=calendar data-ics=16></i></span>予約</div>
         <div class="range-tabs" data-mode="reserve">
           <button class="active" data-range="day">当日</button>
           <button data-range="week">週</button>
           <button data-range="month">月</button>
           <button data-range="2month">2ヶ月</button>
-          <button data-range="tbd">🕒 未定</button>
+          <button data-range="tbd"><i data-ic=clock data-ics=16></i> 未定</button>
         </div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="reservePrev()">◀</button>
+          <button class="vh-btn" onclick="reservePrev()"><i data-ic=chevLeft data-ics=16></i></button>
           <span id="reserve-label" style="font-size:14px;font-weight:600;min-width:200px;text-align:center"></span>
-          <button class="vh-btn" onclick="reserveNext()">▶</button>
+          <button class="vh-btn" onclick="reserveNext()"><i data-ic=chevRight data-ics=16></i></button>
           <button class="vh-btn" onclick="goToday()">今日</button>
           <button class="vh-btn primary" onclick="openNewReserve()">＋ 予約追加</button>
         </div>
@@ -267,18 +268,18 @@
     <!-- ===== 返車ビュー ===== -->
     <section id="view-return" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">📤</span>返車</div>
+        <div class="view-title"><span class="icon"><i data-ic=upload data-ics=16></i></span>返車</div>
         <div class="range-tabs" data-mode="return">
-          <button class="active" data-range="tbd">🕒 未定</button>
+          <button class="active" data-range="tbd"><i data-ic=clock data-ics=16></i> 未定</button>
           <button data-range="day">当日</button>
           <button data-range="week">週</button>
           <button data-range="month">月</button>
           <button data-range="2month">2ヶ月</button>
         </div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="returnPrev()">◀</button>
+          <button class="vh-btn" onclick="returnPrev()"><i data-ic=chevLeft data-ics=16></i></button>
           <span id="return-label" style="font-size:14px;font-weight:600;min-width:200px;text-align:center"></span>
-          <button class="vh-btn" onclick="returnNext()">▶</button>
+          <button class="vh-btn" onclick="returnNext()"><i data-ic=chevRight data-ics=16></i></button>
           <button class="vh-btn" onclick="returnToday()">今日</button>
         </div>
       </div>
@@ -292,14 +293,14 @@
 
     <!-- ===== 車販作業ビュー ===== -->
     <section id="view-carsales" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">🧽</span>車販作業</div></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=drop data-ics=16></i></span>車販作業</div></div>
       <div id="carsales-body"></div>
     </section>
 
     <!-- ===== タスクビュー ===== -->
     <section id="view-task" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">📋</span>タスク</div>
+        <div class="view-title"><span class="icon"><i data-ic=clipboard data-ics=16></i></span>タスク</div>
         <div class="board-tabs" id="board-tabs"></div>
         <div class="view-actions">
           <button class="vh-btn" onclick="addBoard()">＋ 看板を追加</button>
@@ -311,9 +312,9 @@
     <!-- ===== Pitリスト（PIT配置図に実カードをはめる） ===== -->
     <section id="view-work" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🏭</span>Pitリスト <span style="font-size:11px;color:var(--text3);font-weight:400">PIT配置図に実際のカードをはめる</span></div>
+        <div class="view-title"><span class="icon"><i data-ic=factory data-ics=16></i></span>Pitリスト <span style="font-size:11px;color:var(--text3);font-weight:400">PIT配置図に実際のカードをはめる</span></div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="renderWork()">🔄 更新</button>
+          <button class="vh-btn" onclick="renderWork()"><i data-ic=refresh data-ics=16></i> 更新</button>
         </div>
       </div>
       <div id="pitlist-stage" class="pitlist-stage"><div id="pitlist-grid" class="pf-grid pfv-grid"></div></div>
@@ -323,8 +324,8 @@
     <!-- ===== 外注ビュー（外注先ごとの俯瞰・読み取り専用） ===== -->
     <section id="view-outsource" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🤝</span>外注 <span style="font-size:11px;color:var(--text3);font-weight:400">外注先ごとに俯瞰（クリックで詳細）</span></div>
-        <div class="view-actions"><button class="vh-btn" onclick="renderOutsource()">🔄 更新</button></div>
+        <div class="view-title"><span class="icon"><i data-ic=external data-ics=16></i></span>外注 <span style="font-size:11px;color:var(--text3);font-weight:400">外注先ごとに俯瞰（クリックで詳細）</span></div>
+        <div class="view-actions"><button class="vh-btn" onclick="renderOutsource()"><i data-ic=refresh data-ics=16></i> 更新</button></div>
       </div>
       <div id="view-outsource-body"></div>
     </section>
@@ -332,23 +333,23 @@
     <!-- ===== 実績ビュー ===== -->
     <!-- ===== 車検予定カレンダー（整備） ===== -->
     <section id="view-shakencal" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">🔎</span>車検予定 <span style="font-size:11px;color:var(--text3);font-weight:400">いつ行く／決定／完了・再検</span></div></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=search data-ics=16></i></span>車検予定 <span style="font-size:11px;color:var(--text3);font-weight:400">いつ行く／決定／完了・再検</span></div></div>
       <div id="shakencal-body"></div>
     </section>
 
     <!-- ===== 車検履歴カレンダー（アーカイブ・実績のみ） ===== -->
     <section id="view-shakenlog" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">📇</span>車検履歴 <span style="font-size:11px;color:var(--text3);font-weight:400">実績アーカイブ／誰が・いつ行ったか</span></div></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=card data-ics=16></i></span>車検履歴 <span style="font-size:11px;color:var(--text3);font-weight:400">実績アーカイブ／誰が・いつ行ったか</span></div></div>
       <div id="shakenlog-body"></div>
     </section>
 
     <section id="view-result" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">✅</span>実績</div>
+        <div class="view-title"><span class="icon"><i data-ic=check data-ics=16></i></span>実績</div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="prevMonth()">◀</button>
+          <button class="vh-btn" onclick="prevMonth()"><i data-ic=chevLeft data-ics=16></i></button>
           <span id="result-month-label" style="font-size:14px;font-weight:600;min-width:90px;text-align:center"></span>
-          <button class="vh-btn" onclick="nextMonth()">▶</button>
+          <button class="vh-btn" onclick="nextMonth()"><i data-ic=chevRight data-ics=16></i></button>
           <button class="vh-btn" onclick="closeMonth()">この月を締める</button>
         </div>
       </div>
@@ -358,7 +359,7 @@
     <!-- ===== 代車ビュー（縦＝日付・横＝代車・無限スクロール） ===== -->
     <section id="view-loaner" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🚙</span>代車カレンダー <span style="font-size:11px;color:var(--text3);font-weight:400">縦＝日付（下に無限）／横＝代車</span></div>
+        <div class="view-title"><span class="icon"><i data-ic=van data-ics=16></i></span>代車カレンダー <span style="font-size:11px;color:var(--text3);font-weight:400">縦＝日付（下に無限）／横＝代車</span></div>
         <div class="view-actions">
           <div class="lo-filters">
             <span class="lo-filters-lb">絞込</span>
@@ -374,10 +375,10 @@
             <button class="lo-filter" data-sort="length" onclick="loToggleSort('length')" title="短い順">長さ↑</button>
             <button class="lo-filter" data-sort="seats"  onclick="loToggleSort('seats')"  title="少ない順">定員↑</button>
           </div>
-          <button class="vh-btn" onclick="loAddManualBlock()" title="車販の乗り換え等：整備予約に出さず代車だけ貸出">🚗 予約以外で貸出</button>
-          <button class="vh-btn lo-emg-btn" onclick="loAddEmergency()" title="クレーム等で社用車を緊急で出す（一番左に追加・返車で消える）">🚨 緊急車両追加</button>
-          <button class="vh-btn" onclick="loScrollToday()">📍 今日へ</button>
-          <button class="vh-btn" onclick="showView('fleet')">🚐 車両管理へ</button>
+          <button class="vh-btn" onclick="loAddManualBlock()" title="車販の乗り換え等：整備予約に出さず代車だけ貸出"><i data-ic=car data-ics=16></i> 予約以外で貸出</button>
+          <button class="vh-btn lo-emg-btn" onclick="loAddEmergency()" title="クレーム等で社用車を緊急で出す（一番左に追加・返車で消える）"><i data-ic=warn data-ics=16></i> 緊急車両追加</button>
+          <button class="vh-btn" onclick="loScrollToday()"><i data-ic=location data-ics=16></i> 今日へ</button>
+          <button class="vh-btn" onclick="showView('fleet')"><i data-ic=van data-ics=16></i> 車両管理へ</button>
         </div>
       </div>
       <div id="lo-draft-bar" style="display:none"></div>
@@ -389,10 +390,10 @@
     <!-- ===== 顧客ビュー（控え・入力補助） ===== -->
     <section id="view-customers" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">👤</span>顧客 <span style="font-size:12px;color:var(--text3);font-weight:400">控え（入力補助）</span></div>
+        <div class="view-title"><span class="icon"><i data-ic=user data-ics=16></i></span>顧客 <span style="font-size:12px;color:var(--text3);font-weight:400">控え（入力補助）</span></div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="seedSampleCustomers(500,true)">🎲 サンプル500件</button>
-          <button class="vh-btn" onclick="clearCustomers()">🗑 全削除</button>
+          <button class="vh-btn" onclick="seedSampleCustomers(500,true)"><i data-ic=dice data-ics=16></i> サンプル500件</button>
+          <button class="vh-btn" onclick="clearCustomers()"><i data-ic=trash data-ics=16></i> 全削除</button>
           <button class="vh-btn primary" onclick="openNewReserve()">＋ 新規入庫</button>
         </div>
       </div>
@@ -402,10 +403,10 @@
     <!-- ===== 代車・自社車両管理 ===== -->
     <section id="view-fleet" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🚐</span>代車・自社車両管理</div>
+        <div class="view-title"><span class="icon"><i data-ic=van data-ics=16></i></span>代車・自社車両管理</div>
         <div class="view-actions">
           <button class="vh-btn primary" onclick="fleetOpenModal()">＋ 車両を追加</button>
-          <button class="vh-btn" onclick="showView('loaner')">🚙 代車カレンダーへ</button>
+          <button class="vh-btn" onclick="showView('loaner')"><i data-ic=van data-ics=16></i> 代車カレンダーへ</button>
         </div>
       </div>
       <div id="view-fleet-body"></div>
@@ -414,16 +415,16 @@
     <!-- ===== 設定ビュー ===== -->
     <section id="view-settings" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">⚙️</span>設定</div>
+        <div class="view-title"><span class="icon"><i data-ic=settings data-ics=16></i></span>設定</div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="showView('rules')">🧩 入庫ルール</button>
+          <button class="vh-btn" onclick="showView('rules')"><i data-ic=puzzle data-ics=16></i> 入庫ルール</button>
         </div>
       </div>
       <div id="view-settings-body"></div>
       <div class="pit-devtools">
-        <h4>🚧 開発用ツール（サンプル段階）</h4>
+        <h4><i data-ic=cone data-ics=16></i> 開発用ツール（サンプル段階）</h4>
         <p>いまは「サンプルログイン＋この端末のブラウザ内に保存」で動いています。編集した内容はリロードしても残ります。<br>本物の Google ログインと会社の Firebase（carflow-9d500）へのクラウド保存は後日スイッチONします。</p>
-        <button onclick="PitDB.resetSample()">🔄 サンプルデータに戻す</button>
+        <button onclick="PitDB.resetSample()"><i data-ic=refresh data-ics=16></i> サンプルデータに戻す</button>
         <button onclick="pitLogout()">↩️ ログアウト（サンプル）</button>
       </div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;color:var(--text2);font-size:12.5px;line-height:1.7">
@@ -434,7 +435,7 @@
     <!-- ===== ルールビュー（ノーコード積み上げ式） ===== -->
     <section id="view-rules" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon">🧩</span>入庫ルール <span style="font-size:11px;color:var(--text3);font-weight:400">入庫のアルゴリズムはすべてここで設定（基本値 ＋ 積み上げルール）</span></div>
+        <div class="view-title"><span class="icon"><i data-ic=puzzle data-ics=16></i></span>入庫ルール <span style="font-size:11px;color:var(--text3);font-weight:400">入庫のアルゴリズムはすべてここで設定（基本値 ＋ 積み上げルール）</span></div>
         <div class="view-actions"><button class="vh-btn" onclick="showView('settings')">← 設定へ戻る</button></div>
       </div>
       <div id="view-rules-body"></div>
@@ -442,51 +443,51 @@
 
     <!-- ===== 準備中ビュー（器のみ・中身は順次実装 v0.33.0） ===== -->
     <section id="view-parking" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">🅿️</span>駐車場</div></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=parking data-ics=16></i></span>駐車場</div></div>
       <div id="view-parking-body"></div>
     </section>
 
     <section id="view-course1" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">1️⃣</span>1課（国産）タスクボード</div>
+      <div class="view-header"><div class="view-title"><span class="icon"><b class="ic-num">1</b></span>1課（国産）タスクボード</div>
         <div class="view-actions">
-          <div class="kb-droparea" data-drop="callDone"><div class="kb-droparea-t">📞 完TEL済</div><div class="kb-droparea-s">ここへドラッグ</div></div>
-          <div class="kb-droparea" data-drop="callReq"><div class="kb-droparea-t">📞 完TEL依頼</div><div class="kb-droparea-s">ここへドラッグ</div></div>
-          <button class="vh-btn" onclick="PitPip.toggle('course1')">🏭 PITボード</button></div></div>
+          <div class="kb-droparea" data-drop="callDone"><div class="kb-droparea-t"><i data-ic=phone data-ics=16></i> 完TEL済</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <div class="kb-droparea" data-drop="callReq"><div class="kb-droparea-t"><i data-ic=phone data-ics=16></i> 完TEL依頼</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <button class="vh-btn" onclick="PitPip.toggle('course1')"><i data-ic=factory data-ics=16></i> PITボード</button></div></div>
       <div class="kanban" id="kanban-cols-1"></div>
     </section>
 
     <section id="view-course2" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">2️⃣</span>2課（輸入）タスクボード</div>
+      <div class="view-header"><div class="view-title"><span class="icon"><b class="ic-num">2</b></span>2課（輸入）タスクボード</div>
         <div class="view-actions">
-          <div class="kb-droparea" data-drop="callDone"><div class="kb-droparea-t">📞 完TEL済</div><div class="kb-droparea-s">ここへドラッグ</div></div>
-          <div class="kb-droparea" data-drop="callReq"><div class="kb-droparea-t">📞 完TEL依頼</div><div class="kb-droparea-s">ここへドラッグ</div></div>
-          <button class="vh-btn" onclick="PitPip.toggle('course2')">🏭 PITボード</button></div></div>
+          <div class="kb-droparea" data-drop="callDone"><div class="kb-droparea-t"><i data-ic=phone data-ics=16></i> 完TEL済</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <div class="kb-droparea" data-drop="callReq"><div class="kb-droparea-t"><i data-ic=phone data-ics=16></i> 完TEL依頼</div><div class="kb-droparea-s">ここへドラッグ</div></div>
+          <button class="vh-btn" onclick="PitPip.toggle('course2')"><i data-ic=factory data-ics=16></i> PITボード</button></div></div>
       <div class="kanban" id="kanban-cols-2"></div>
     </section>
 
     <section id="view-sales" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">💴</span>売上</div></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=money data-ics=16></i></span>売上</div></div>
       <div id="view-sales-body"></div>
     </section>
 
     <section id="view-worksum" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">🧑‍🔧</span>作業サマリー</div></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=user data-ics=16></i></span>作業サマリー</div></div>
       <div id="view-worksum-body"></div>
     </section>
 
     <section id="view-members" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">👥</span>メンバー</div></div>
-      <div class="soon-card"><div class="soon-emoji">👥</div><h3>メンバー管理（準備中）</h3><p>スタッフの追加・権限・担当設定をここで。StockFlowのメンバー機能をベースに移植します。</p></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=users data-ics=16></i></span>メンバー</div></div>
+      <div class="soon-card"><div class="soon-emoji"><i data-ic=users data-ics=16></i></div><h3>メンバー管理（準備中）</h3><p>スタッフの追加・権限・担当設定をここで。StockFlowのメンバー機能をベースに移植します。</p></div>
     </section>
 
     <section id="view-oplog" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">📜</span>操作ログ</div></div>
-      <div class="soon-card"><div class="soon-emoji">📜</div><h3>操作ログ（準備中）</h3><p>誰が・いつ・何をしたかの操作ログ。CarFlow/StockFlowと同じ設計でここに作ります。</p></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=history data-ics=16></i></span>操作ログ</div></div>
+      <div class="soon-card"><div class="soon-emoji"><i data-ic=history data-ics=16></i></div><h3>操作ログ（準備中）</h3><p>誰が・いつ・何をしたかの操作ログ。CarFlow/StockFlowと同じ設計でここに作ります。</p></div>
     </section>
 
     <section id="view-news" class="view">
-      <div class="view-header"><div class="view-title"><span class="icon">📣</span>お知らせ</div></div>
-      <div class="soon-card"><div class="soon-emoji">📣</div><h3>お知らせ（準備中）</h3><p>更新情報や社内連絡をここに表示します。</p></div>
+      <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=megaphone data-ics=16></i></span>お知らせ</div></div>
+      <div class="soon-card"><div class="soon-emoji"><i data-ic=megaphone data-ics=16></i></div><h3>お知らせ（準備中）</h3><p>更新情報や社内連絡をここに表示します。</p></div>
     </section>
 
     <section id="view-help" class="view">
@@ -499,10 +500,10 @@
       <div class="view-header card-page-head">
         <button class="vh-btn" onclick="closeDetail()">← 戻る</button>
         <div class="view-title" id="card-title" style="flex:1;min-width:0">入庫カード</div>
-        <button class="vh-btn" onclick="pitCardCheck()">🔎 入力チェック</button>
-        <button class="vh-btn" onclick="closeDetail()">💾 保存する</button>
-        <button class="vh-btn vh-kari" onclick="pitSaveTentative()">📝 仮予約で登録</button>
-        <button class="vh-btn primary" onclick="pitSaveAndPrint()">🖨 印刷して保存</button>
+        <button class="vh-btn" onclick="pitCardCheck()"><i data-ic=search data-ics=16></i> 入力チェック</button>
+        <button class="vh-btn" onclick="closeDetail()"><i data-ic=save data-ics=16></i> 保存する</button>
+        <button class="vh-btn vh-kari" onclick="pitSaveTentative()"><i data-ic=pencil data-ics=16></i> 仮予約で登録</button>
+        <button class="vh-btn primary" onclick="pitSaveAndPrint()"><i data-ic=printer data-ics=16></i> 印刷して保存</button>
       </div>
       <div id="md-body" class="card-page-body"></div>
     </section>
@@ -515,7 +516,7 @@
   <div class="modal-box fl-modal">
     <div class="modal-head">
       <div class="modal-title" id="fl-modal-title">＋ 車両を追加</div>
-      <button class="modal-close" onclick="fleetCloseModal()">✕</button>
+      <button class="modal-close" onclick="fleetCloseModal()"><i data-ic=close data-ics=16></i></button>
     </div>
     <div class="modal-body">
       <div class="fl-mform">
@@ -524,7 +525,7 @@
         </label>
         <label class="fl-mlb">番号 <input id="fl-number" type="number" min="1" step="1" class="fl-in" oninput="flNumberCheck()" placeholder="自動採番（末番）"></label>
         <div class="fl-mlb fl-rep" id="fl-rep-row" style="display:none">
-          <span class="fl-rep-note">⚠ この番号は使用中＝<b>入替予定</b>として登録します。</span>
+          <span class="fl-rep-note"><i data-ic=warn data-ics=16></i> この番号は使用中＝<b>入替予定</b>として登録します。</span>
           入替日 <input id="fl-repdate" type="date" class="fl-in"> 以降に旧車を置き換え（それまで「(仮)」表示・カレンダーに予定）
         </div>
         <label class="fl-mlb">車種名 <input id="fl-model" class="fl-in" placeholder="例：タント"></label>
@@ -566,7 +567,7 @@
         <div class="fl-note">※ 項目はこの後もっと増やす前提の暫定版（任意保険・購入日・走行距離など追加予定）。</div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
           <button class="vh-btn" onclick="fleetCloseModal()">キャンセル</button>
-          <button class="vh-btn primary" onclick="fleetSubmit()">💾 保存</button>
+          <button class="vh-btn primary" onclick="fleetSubmit()"><i data-ic=save data-ics=16></i> 保存</button>
         </div>
       </div>
     </div>
@@ -578,17 +579,17 @@
   <div class="modal-box fl-modal">
     <div class="modal-head">
       <div class="modal-title" id="flev-title">＋ イベントを追加</div>
-      <button class="modal-close" onclick="flEventClose()">✕</button>
+      <button class="modal-close" onclick="flEventClose()"><i data-ic=close data-ics=16></i></button>
     </div>
     <div class="modal-body">
       <div class="fl-mform">
         <label class="fl-mlb">車両 <select id="flev-vehicle" class="fl-in"></select></label>
         <label class="fl-mlb">種別
           <select id="flev-type" class="fl-in">
-            <option value="shakenIn">🔴 車検入庫（この期間で車検をやる）</option>
-            <option value="tenken">🟠 12ヶ月点検</option>
-            <option value="lease">🟣 リースアップ／新車切替</option>
-            <option value="other">🔵 その他（タイヤ交換・修理など）</option>
+            <option value="shakenIn">車検入庫（この期間で車検をやる）</option>
+            <option value="tenken">12ヶ月点検</option>
+            <option value="lease">リースアップ／新車切替</option>
+            <option value="other">その他（タイヤ交換・修理など）</option>
           </select>
         </label>
         <label class="fl-mlb">内容（任意） <input id="flev-label" class="fl-in" placeholder="例：代車5 車検入庫／リースアップ→切替"></label>
@@ -596,9 +597,9 @@
         <label class="fl-mlb">終了日 <input id="flev-to" type="date" class="fl-in"></label>
         <div class="fl-note">※ ここで入れたイベントは<b>代車カレンダー（利用ビュー）にも重ねて表示</b>されます。例：「この3日で代車5の車検」を先に押さえる。</div>
         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
-          <button class="vh-btn del" id="flev-del" style="display:none;margin-right:auto;border-color:var(--red);color:var(--red)" onclick="flEventDelete()">🗑 削除</button>
+          <button class="vh-btn del" id="flev-del" style="display:none;margin-right:auto;border-color:var(--red);color:var(--red)" onclick="flEventDelete()"><i data-ic=trash data-ics=16></i> 削除</button>
           <button class="vh-btn" onclick="flEventClose()">キャンセル</button>
-          <button class="vh-btn primary" onclick="flEventSubmit()">💾 保存</button>
+          <button class="vh-btn primary" onclick="flEventSubmit()"><i data-ic=save data-ics=16></i> 保存</button>
         </div>
       </div>
     </div>
@@ -610,22 +611,22 @@
   <div class="modal-box card-modal">
     <div class="modal-head">
       <div class="modal-title" id="card-title-modal">入庫カード</div>
-      <button class="modal-close" onclick="closeDetail()">✕</button>
+      <button class="modal-close" onclick="closeDetail()"><i data-ic=close data-ics=16></i></button>
     </div>
     <div class="modal-body" id="md-body-modal"></div>
   </div>
 </div>
 
-<!-- ===== 📌 付箋ボード（全体タスク・v0.63.0） ===== -->
+<!-- ===== <i data-ic=pin data-ics=16></i> 付箋ボード（全体タスク・v0.63.0） ===== -->
 <!-- ⋮ アクションシート -->
 <div class="modal-backdrop" id="modal-bn-actions" onclick="if(event.target.id==='modal-bn-actions')closeBoardNoteActions()">
   <div class="bn-actionsheet" onclick="event.stopPropagation()">
     <div class="bn-actionsheet-title" id="bn-actionsheet-title">付箋メニュー</div>
-    <button class="bn-actionsheet-btn" onclick="bnActionEdit()">✏️ 編集</button>
-    <button class="bn-actionsheet-btn" id="bn-action-done" onclick="bnActionDone()">✅ 済にする</button>
+    <button class="bn-actionsheet-btn" onclick="bnActionEdit()"><i data-ic=pencil data-ics=16></i> 編集</button>
+    <button class="bn-actionsheet-btn" id="bn-action-done" onclick="bnActionDone()"><i data-ic=check data-ics=16></i> 済にする</button>
     <button class="bn-actionsheet-btn" id="bn-action-undone" onclick="bnActionUndone()" style="display:none">↩️ 未済に戻す</button>
-    <button class="bn-actionsheet-btn" id="bn-action-reply" onclick="bnActionReply()">💬 返信する</button>
-    <button class="bn-actionsheet-btn bn-danger" onclick="bnActionDelete()">🗑 消去</button>
+    <button class="bn-actionsheet-btn" id="bn-action-reply" onclick="bnActionReply()"><i data-ic=comment data-ics=16></i> 返信する</button>
+    <button class="bn-actionsheet-btn bn-danger" onclick="bnActionDelete()"><i data-ic=trash data-ics=16></i> 消去</button>
     <button class="bn-actionsheet-btn bn-cancel" onclick="closeBoardNoteActions()">キャンセル</button>
   </div>
 </div>
@@ -634,8 +635,8 @@
 <div class="modal-backdrop" id="modal-bn-reply" onclick="if(event.target.id==='modal-bn-reply')closeBoardNoteReply()">
   <div class="modal-box" style="max-width:480px">
     <div class="modal-head">
-      <div class="modal-title">💬 返信する</div>
-      <button class="modal-close" onclick="closeBoardNoteReply()">✕</button>
+      <div class="modal-title"><i data-ic=comment data-ics=16></i> 返信する</div>
+      <button class="modal-close" onclick="closeBoardNoteReply()"><i data-ic=close data-ics=16></i></button>
     </div>
     <div class="modal-body">
       <div style="font-size:12px;color:var(--text3)">対象：<span id="bn-reply-note-title" style="color:var(--text2)"></span></div>
@@ -659,7 +660,7 @@
   <div class="modal-box" style="max-width:560px">
     <div class="modal-head">
       <div class="modal-title" id="bn-modal-title">付箋を追加</div>
-      <button class="modal-close" onclick="closeBoardNoteModal()">✕</button>
+      <button class="modal-close" onclick="closeBoardNoteModal()"><i data-ic=close data-ics=16></i></button>
     </div>
     <div class="modal-body">
       <div class="bn-modal-body">
@@ -706,7 +707,7 @@
       </div>
       <div style="display:flex;justify-content:flex-end;gap:8px">
         <button class="vh-btn" onclick="closeBoardNoteModal()">キャンセル</button>
-        <button class="vh-btn primary" onclick="saveBoardNoteFromModal()">💾 保存</button>
+        <button class="vh-btn primary" onclick="saveBoardNoteFromModal()"><i data-ic=save data-ics=16></i> 保存</button>
       </div>
     </div>
   </div>
@@ -714,7 +715,7 @@
 
 <!-- 画像プレビュー -->
 <div class="modal-backdrop" id="modal-bn-image" onclick="closeBnImage()">
-  <button class="bn-image-close" onclick="closeBnImage()">✕</button>
+  <button class="bn-image-close" onclick="closeBnImage()"><i data-ic=close data-ics=16></i></button>
   <div class="bn-image-wrap" onclick="event.stopPropagation()">
     <img id="bn-image-img" src="" alt="" onclick="closeBnImage()">
   </div>
@@ -726,60 +727,62 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
+<script src="js/coreflow-icons.js?v=2"></script><!-- 線画アイコン IC()（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
+<script src="js/pit-icons.js?v=2"></script><!-- 画面に線画アイコンを流し込む -->
 <script src="js/state.js?v=52"></script>
-<script src="js/theme.js?v=2"></script>
+<script src="js/theme.js?v=3"></script>
 <script src="js/sample-data.js?v=17"></script>
 <script src="js/sample-fleet.js?v=10"></script>
 <meta name="app-key" content="pitflow">
 <script src="js/firebase-init.js?v=8"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
-<script src="js/db-pit.js?v=36"></script>
-<script src="js/views.js?v=43"></script>
-<script src="js/work-content.js?v=8"></script>
-<script src="js/card-detail.js?v=96"></script>
-<script src="js/card-view.js?v=35"></script>
+<script src="js/db-pit.js?v=37"></script>
+<script src="js/views.js?v=44"></script>
+<script src="js/work-content.js?v=9"></script>
+<script src="js/card-detail.js?v=97"></script>
+<script src="js/card-view.js?v=36"></script>
 <script src="js/cover-print.js?v=7"></script>
-<script src="js/avail.js?v=5"></script>
-<script src="js/card-tabs.js?v=8"></script>
-<script src="js/customers.js?v=30"></script>
+<script src="js/avail.js?v=6"></script>
+<script src="js/card-tabs.js?v=9"></script>
+<script src="js/customers.js?v=31"></script>
 <script src="js/sample-customers.js?v=7"></script>
 <script src="js/sample-reservations.js?v=28"></script>
-<script src="js/dashboard.js?v=15"></script>
-<script src="js/parking.js?v=4"></script>
-<script src="js/board-notes.js?v=3"></script>
-<script src="js/search.js?v=9"></script>
-<script src="js/maintdash.js?v=2"></script>
-<script src="js/sales.js?v=8"></script>
+<script src="js/dashboard.js?v=16"></script>
+<script src="js/parking.js?v=5"></script>
+<script src="js/board-notes.js?v=4"></script>
+<script src="js/search.js?v=10"></script>
+<script src="js/maintdash.js?v=3"></script>
+<script src="js/sales.js?v=9"></script>
 <script src="js/sales-print.js?v=3"></script>
-<script src="js/mech-summary.js?v=1"></script>
-<script src="js/pit-floor.js?v=31"></script>
-<script src="js/settings.js?v=19"></script>
-<script src="js/import-bizcloud.js?v=5"></script>
-<script src="js/rules.js?v=9"></script>
-<script src="js/today.js?v=22"></script>
-<script src="js/undetermined.js?v=7"></script>
-<script src="js/reserve.js?v=59"></script>
-<script src="js/return.js?v=18"></script>
-<script src="js/car-sales.js?v=2"></script>
-<script src="js/task.js?v=18"></script>
-<script src="js/work.js?v=13"></script>
-<script src="js/result.js?v=10"></script>
-<script src="js/shaken.js?v=15"></script>
-<script src="js/shaken-log.js?v=5"></script>
-<script src="js/outsource.js?v=2"></script>
-<script src="js/loaner.js?v=50"></script>
-<script src="js/fleet.js?v=10"></script>
+<script src="js/mech-summary.js?v=2"></script>
+<script src="js/pit-floor.js?v=32"></script>
+<script src="js/settings.js?v=20"></script>
+<script src="js/import-bizcloud.js?v=6"></script>
+<script src="js/rules.js?v=10"></script>
+<script src="js/today.js?v=23"></script>
+<script src="js/undetermined.js?v=8"></script>
+<script src="js/reserve.js?v=60"></script>
+<script src="js/return.js?v=19"></script>
+<script src="js/car-sales.js?v=3"></script>
+<script src="js/task.js?v=19"></script>
+<script src="js/work.js?v=14"></script>
+<script src="js/result.js?v=11"></script>
+<script src="js/shaken.js?v=16"></script>
+<script src="js/shaken-log.js?v=6"></script>
+<script src="js/outsource.js?v=3"></script>
+<script src="js/loaner.js?v=51"></script>
+<script src="js/fleet.js?v=11"></script>
 <script src="js/auth-pit.js?v=9"></script>
 <script src="js/launcher.js?v=icon0730"></script>
 <script src="js/holidays.js?v=1"></script>
 <script src="js/dnd.js?v=13"></script>
-<script src="js/pit-pip.js?v=8"></script>
-<script src="js/card-hover.js?v=29"></script>
-<script src="js/phase-popup.js?v=10"></script>
-<script src="js/return-popup.js?v=3"></script>
-<script src="js/help-content.js?v=1"></script>
-<script src="js/help.js?v=1"></script>
-<script src="js/mydash.js?v=4"></script>
+<script src="js/pit-pip.js?v=9"></script>
+<script src="js/card-hover.js?v=30"></script>
+<script src="js/phase-popup.js?v=11"></script>
+<script src="js/return-popup.js?v=4"></script>
+<script src="js/help-content.js?v=2"></script>
+<script src="js/help.js?v=2"></script>
+<script src="js/mydash.js?v=5"></script>
 <script src="js/main.js?v=11"></script>
 <script src="js/auto-update.js?v=1"></script>
 

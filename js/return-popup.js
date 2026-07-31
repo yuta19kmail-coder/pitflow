@@ -30,7 +30,7 @@
     bd.innerHTML =
       '<div class="modal-box pp-box rp-box">'
       + '<div class="modal-head"><div class="modal-title" id="rp-title">返車へ</div>'
-      + '<button class="modal-close" onclick="PitReturnPopup.close(false)">✕</button></div>'
+      + '<button class="modal-close" onclick="PitReturnPopup.close(false)"><i data-ic=close data-ics=16></i></button></div>'
       + '<div class="modal-body">'
       + '  <div class="pp-move" id="rp-move"></div>'
       + '  <div class="pp-field">'
@@ -81,7 +81,7 @@
   function openModal(card, mode){
     build();
     var isDone = (mode === 'callDone');
-    el('rp-title').textContent = isDone ? '📞 完TEL済 → 返車予定へ' : '📞 完TEL依頼（先に金額だけ）';
+    el('rp-title').textContent = isDone ? '完TEL済 → 返車予定へ': '完TEL依頼（先に金額だけ）';
     el('rp-ok').textContent = isDone ? '返車予定に入れる' : '完TEL待ちへ';
     el('rp-move').innerHTML = '<span class="pp-to">'+esc((card.customer||'（未入力）')+' 様')+'</span>'
       + (card.car ? '<span class="pp-who">'+esc(card.car)+'</span>' : '');
@@ -161,7 +161,7 @@
       if (window.PitDB) PitDB.save();
       if (state.currentView) showView(state.currentView);
       if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
-      if (window.pitToast) pitToast(isDone ? (c.returnDate ? '📞 返車予定に入れました' : '📞 返車未定に入れました') : '📞 完TEL待ちに入れました');
+      if (window.pitToast) pitToast(isDone ? (c.returnDate ? '返車予定に入れました': '返車未定に入れました') : '完TEL待ちに入れました');
     }
   };
 })();

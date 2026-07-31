@@ -190,14 +190,14 @@
           try { return _renderNoteCard(n); }
           catch (err) {
             console.error('[board-notes] render error', n && n.id, err);
-            return `<div class="bn-card bn-color-yellow"><div class="bn-title">⚠ 表示エラー</div></div>`;
+            return `<div class="bn-card bn-color-yellow"><div class="bn-title"><i data-ic=warn data-ics=16></i> 表示エラー</div></div>`;
           }
         }).join('');
 
     target.innerHTML = `
       <div class="bn-header">
         <div class="bn-header-left">
-          <span class="bn-header-icon">📌</span>
+          <span class="bn-header-icon"><i data-ic=pin data-ics=16></i></span>
           <span class="bn-header-title">全体タスク</span>
           <div class="bn-label-chips">${labelChipsHtml}</div>
         </div>
@@ -222,13 +222,13 @@
     const labelText = (state.boardLabels && state.boardLabels[color]) || '';
     const isSecret = _isSecretNote(note);
     const secretBadge = isSecret
-      ? `<span class="bn-secret-badge" title="あなただけに見える付箋です（他の人の画面には出ません）">🔒 自分用</span>` : '';
+      ? `<span class="bn-secret-badge" title="あなただけに見える付箋です（他の人の画面には出ません）"><i data-ic=lock data-ics=16></i> 自分用</span>` : '';
     const titleHtml = note.title ? _esc(note.title) : '<span class="bn-empty-title">(無題)</span>';
     const bodyHtml = _esc(note.body || '');
     const imgHtml = note.imageURL
       ? `<img class="bn-img" src="${_esc(note.imageURL)}" alt="" onclick="event.stopPropagation();openBnImage('${_esc(note.imageURL)}')">` : '';
     const deadlineHtml = note.deadline
-      ? `<div class="bn-deadline ${overdue ? 'is-overdue' : ''}">${overdue ? '🚨 ' : '⏰ '}${_esc(_formatDeadline(note.deadline))}</div>` : '';
+      ? `<div class="bn-deadline ${overdue ? 'is-overdue' : ''}">${overdue ? '<i data-ic=warn data-ics=16></i> ' : '<i data-ic=clock data-ics=16></i> '}${_esc(_formatDeadline(note.deadline))}</div>` : '';
 
     const dragAttrs = (!_isTouchDevice())
       ? `draggable="true"
@@ -257,7 +257,7 @@
         : '<span class="bn-no-member">担当なし</span>';
       const total = uids.length;
       const dn = uids.filter(u => doneSet.has(u)).length;
-      const typeChip = `<span style="font-size:10px;padding:2px 7px;border-radius:7px;background:rgba(99,102,241,.18);color:#4338ca;border:1px solid rgba(99,102,241,.35)">🔁 回覧 ${dn}/${total}</span>`;
+      const typeChip = `<span style="font-size:10px;padding:2px 7px;border-radius:7px;background:rgba(99,102,241,.18);color:#4338ca;border:1px solid rgba(99,102,241,.35)"><i data-ic=refresh data-ics=16></i> 回覧 ${dn}/${total}</span>`;
       let selfBtn = '';
       const myId = _meId();
       if (myId && uids.includes(myId)) {
@@ -535,8 +535,8 @@
     if (quick) {
       const btn = (label, onclick, extra) => `<button type="button" class="bn-actionsheet-btn" style="width:auto;font-size:11px;padding:3px 8px;${extra || ''}" onclick="${onclick}">${label}</button>`;
       let qhtml = btn('全員', 'bnQuickSelectAll()') + btn('クリア', 'bnQuickClear()', 'opacity:.7');
-      (state.divisions || []).forEach(d => { qhtml += btn('👥 ' + _esc(d.label), `bnQuickSelectDivision('${_esc(d.id)}')`); });
-      qhtml += btn('📞 受付', 'bnQuickSelectReception()');
+      (state.divisions || []).forEach(d => { qhtml += btn('<i data-ic=users data-ics=16></i> ' + _esc(d.label), `bnQuickSelectDivision('${_esc(d.id)}')`); });
+      qhtml += btn('<i data-ic=phone data-ics=16></i> 受付', 'bnQuickSelectReception()');
       quick.innerHTML = qhtml;
     }
 

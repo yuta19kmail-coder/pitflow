@@ -13,7 +13,8 @@
   var DEFAULT_THEME = 'dark';
   var DEFAULT_FONT = 'md';
   var VALID_THEMES = ['dark', 'light', 'dark-liquid', 'light-liquid'];
-  var THEME_ICON = { 'dark': '🌙', 'light': '☀️', 'dark-liquid': '✨', 'light-liquid': '💎' };
+  /* テーマの印（線画アイコンの名前）。絵文字はやめた＝色を持たないのでどのテーマでも浮かない。 */
+  var THEME_ICON = { 'dark': 'moon', 'light': 'sun', 'dark-liquid': 'sparkle', 'light-liquid': 'gem' };
   var THEME_NAME = { 'dark': 'ダーク', 'light': 'ライト', 'dark-liquid': 'ダーク・リキッド', 'light-liquid': 'ライト・リキッド' };
   var FONT_ORDER = ['md', 'lg', 'xl'];
   var FONT_NAME = { md: '標準', lg: '大', xl: '特大' };
@@ -34,7 +35,7 @@
     document.documentElement.setAttribute('data-theme', t);
     try { localStorage.setItem(THEME_KEY, t); } catch (e) {}
     refreshThemeUI();
-    showToast(THEME_ICON[t] + ' ' + THEME_NAME[t] + ' に切替えました');
+    showToast(THEME_NAME[t] + ' に切替えました');
   }
   window.setTheme = setTheme;
   // 4テーマ循環（dark → light → dark-liquid → light-liquid）
@@ -55,7 +56,7 @@
   function refreshThemeUI() {
     var cur = document.documentElement.getAttribute('data-theme') || DEFAULT_THEME;
     var b = document.getElementById('tb-theme-cycle');
-    if (b) { b.textContent = THEME_ICON[cur] || '🌙'; b.title = 'テーマ切替（現在：' + (THEME_NAME[cur] || '') + '）'; b.setAttribute('aria-label', 'テーマ切替。現在：' + (THEME_NAME[cur] || '')); }
+    if (b) { b.innerHTML = (window.ico ? ico(THEME_ICON[cur] || 'moon', 17) : ''); b.title = 'テーマ切替（現在：'+ (THEME_NAME[cur] || '') + '）'; b.setAttribute('aria-label', 'テーマ切替。現在：'+ (THEME_NAME[cur] || '')); }
   }
 
   // ---- 文字サイズ ----
@@ -64,7 +65,7 @@
     document.documentElement.setAttribute('data-fontsize', s);
     try { localStorage.setItem(FONT_KEY, s); } catch (e) {}
     refreshFontUI();
-    showToast('🔤 文字サイズ：' + FONT_NAME[s]);
+    showToast('文字サイズ：' + FONT_NAME[s]);
   }
   window.setFontSize = setFontSize;
   function refreshFontUI() {
@@ -100,7 +101,7 @@
 
   // ---- 同期（サンプル）----
   window.pitSyncSample = function () {
-    showToast('🔄 同期はサンプルです（本番のGoogleログイン＋クラウド保存の接続後に有効になります）');
+    showToast('同期はサンプルです（本番のGoogleログイン＋クラウド保存の接続後に有効になります）');
   };
 
   function initUI() { refreshThemeUI(); refreshFontUI(); if (window.pitRenderTopUser) pitRenderTopUser(); }

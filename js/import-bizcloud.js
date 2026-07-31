@@ -69,7 +69,7 @@
         var st = document.getElementById('ps-import-status');
         if (st) st.textContent = '取込済 ' + out.length + ' 件';
         var veh = out.reduce(function (n, c) { return n + (c.vehicles ? c.vehicles.length : 0); }, 0);
-        if (window.toast) toast('✅ 顧客 ' + out.length + ' 件／車両 ' + veh + ' 台を取り込みました（この端末のみ）');
+        if (window.toast) toast('顧客 '+ out.length + '件／車両 '+ veh + '台を取り込みました（この端末のみ）');
         else alert('取り込み完了：顧客 ' + out.length + ' 件／車両 ' + veh + ' 台');
       };
       r.readAsText(f, 'utf-8');

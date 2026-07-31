@@ -60,9 +60,9 @@ function renderReserveDay(){
   let html = '';
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html += '<div style="font-size:13px;color:var(--text2);">';
-  if (isClosed) html += '<span style="color:var(--red);">🔴 定休日</span>　';
+  if (isClosed) html += '<span style="color:var(--red);"><i data-ic=dot data-ics=12 style=color:#ef4444></i> 定休日</span>　';
   const holDay = (window.Holidays && Holidays.name(dateStr)) || null;
-  if (holDay) html += '<span class="hol-badge">🎌 ' + holDay + '</span>　';
+  if (holDay) html += '<span class="hol-badge"><i data-ic=flag data-ics=16></i> ' + holDay + '</span>　';
   html += '受付 ' + state.settings.openTime + ' 〜 ' + state.settings.cutoffTime + '　／　予約 ' + todays.length + ' 件';
   html += '</div></div>';
 
@@ -212,7 +212,7 @@ function _rmlRows(from, to){
 
     html += '<div class="rml-row' + (isClosed ? ' closed' : '') + '">';
     html += '<div class="rml-date' + dCls + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + (ds === todayStr ? '・今日' : '') + '</span>'
-         + (hol ? '<span class="rml-hol">🎌' + hol + '</span>' : '')
+         + (hol ? '<span class="rml-hol"><i data-ic=flag data-ics=16></i>' + hol + '</span>' : '')
          + (isClosed ? '<span class="rml-hol">定休</span>' : '') + '</div>';
     html += '<div class="rml-cards" data-drop="reserveDate" data-drop-val="' + ds + '">';
     if (!cardsOfDay.length){
@@ -362,7 +362,7 @@ window.pitReserveDayPopup = function(dateStr, mode){
   const body = cards.length
     ? cards.map(function(c){ return cardHtml(c, { compact: true }); }).join('')
     : '<div class="pdp-empty">予定はありません</div>';
-  back.innerHTML = '<div class="pdp-box"><div class="pdp-head"><span>' + head + '</span><button class="pdp-x" onclick="pitReserveDayPopClose()">✕</button></div>'
+  back.innerHTML = '<div class="pdp-box"><div class="pdp-head"><span>' + head + '</span><button class="pdp-x" onclick="pitReserveDayPopClose()"><i data-ic=close data-ics=16></i></button></div>'
     + '<div class="pdp-list" onclick="pitReserveDayPopClose()">' + body + '</div></div>';
   back.classList.add('show');
 };
@@ -461,7 +461,7 @@ function cardHtml(c, opts){
       var _odN = c.phaseAt ? (Math.floor((Date.now() - c.phaseAt) / 86400000) + 1) : null;
       var _odTxt = (_odN != null) ? (_odN + '日目') : '';
       var _oName = (c.outsourceTo || '外注先未定') + (c.outsourceNote ? ' ' + c.outsourceNote : '');
-      h += '<div class="pcm-out">🤝 <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';
+      h += '<div class="pcm-out"><i data-ic=external data-ics=16></i> <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';
     }
     h += '</div>';
     return h;
@@ -492,8 +492,8 @@ function cardHtml(c, opts){
   html += '</div>';
   if (opts.kanban){
     html += '<div class="pc-kbtns" onclick="event.stopPropagation()">';
-    html += '<button class="pc-kbtn" title="前の工程へ" onclick="advanceCard(\'' + c.id + '\',-1)">◀</button>';
-    html += '<button class="pc-kbtn next" title="次の工程へ" onclick="advanceCard(\'' + c.id + '\',1)">次へ ▶</button>';
+    html += '<button class="pc-kbtn" title="前の工程へ" onclick="advanceCard(\'' + c.id + '\',-1)"><i data-ic=chevLeft data-ics=16></i></button>';
+    html += '<button class="pc-kbtn next" title="次の工程へ" onclick="advanceCard(\'' + c.id + '\',1)">次へ <i data-ic=chevRight data-ics=16></i></button>';
     html += '</div>';
   }
   html += '</div>';
