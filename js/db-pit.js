@@ -22,8 +22,18 @@
     ready: false,
     _t: null,
 
-    /* 起動：localStorage 優先で state を上書き。無ければサンプルを初期保存 */
+    /* 起動：localStorage 優先で state を上書き。無ければサンプルを初期保存
+       ⚠ クラウドモード（本番）では localStorage のデータは読まない。
+          ログインが済んでから connectCloud() で Firestore の中身に入れ替える。
+          （ログイン前の画面はログイン画面で隠れているので、裏でサンプルが入っていても見えない） */
     init: function () {
+      if (window.PIT_CLOUD) {
+        this.mode = 'cloud-pending';
+        this.ready = true;
+        this._bindAutosave();
+        console.log('[PitDB] 本番モード：ログイン後にクラウドから読み込みます');
+        return;
+      }
       // state.js の既定（＝自社レイアウト）を退避。古いサンプル端末の移行に使う。
       const DEF_BAYS = state.bays, DEF_FP = state.floorPlan;
       try {
@@ -92,6 +102,14 @@
     /* 保存（既定はデバウンス。immediate=true で即時）。戻り値＝成功(true)/失敗(false)。 */
     save: function (immediate) {
       const self = this;
+      /* クラウドモード：localStorage には書かず、変わった所だけ Firestore に送る */
+      if (this.mode === 'cloud' || this.mode === 'cloud-pending') {
+        if (this._applying) return true;      // クラウドから受け取った内容を反映中は書き返さない
+        clearTimeout(this._t);
+        if (immediate) return this._cloudFlush();
+        this._t = setTimeout(function () { self._cloudFlush(); }, 500);
+        return undefined;
+      }
       const doSave = function () {
         try {
           localStorage.setItem(LS_KEY, JSON.stringify({
@@ -132,8 +150,12 @@
       return undefined;
     },
 
-    /* サンプルに戻す */
+    /* サンプルに戻す（本番では使えない＝みんなのデータを消してしまうため） */
     resetSample: function () {
+      if (this.mode === 'cloud' || this.mode === 'cloud-pending') {
+        alert('本番ではサンプルに戻せません。\n（この操作は全員の本物のデータを消してしまうため）\n練習したい時はデモ版を使ってください。');
+        return;
+      }
       if (!confirm('サンプルデータに戻します。\n今の編集内容は消えます。よろしいですか？')) return;
       try { localStorage.removeItem(LS_KEY); } catch (e) {}
       location.reload();
@@ -169,15 +191,271 @@
       document.addEventListener('visibilitychange', function () { if (document.hidden) flush(); });
     },
 
-    /* ===== 将来：本物ログイン導入時にこのブロックを有効化 =====
-       connectCloud: function (user) {
-         if (!window.fb || !window.fb.ready) return;
-         this.mode = 'cloud';
-         const col = window.fb.db.collection('companies').doc('kobayashi_motors');
-         // pit_cards / pit_loanerAssigns を onSnapshot で購読し state に流し込む
-         // 書き込みは _cloudSave() でドキュメント単位 set
-       },
-    */
+    /* =========================================================
+       ここから下：クラウド保存（本番モード）
+       ---------------------------------------------------------
+       ◎考え方
+         ・画面の作りは一切変えない。state をいじって PitDB.save() を呼ぶ、
+           という今までのやり方のまま、保存先だけ Firestore になる。
+         ・1件＝1ドキュメント。変わった所（増えた・直した・消えた）だけを送る。
+         ・onSnapshot で全端末に即反映。他の人が直した内容もその場で入ってくる。
+       ◎入れ物
+         pitCards / pitCustomers / pitLoaners / pitLoanerAssigns /
+         pitCompanyCars / pitFleetEvents / pitBoardNotes … 1件＝1ドキュメント
+         pitSettings/main … 設定・PIT配置図・入庫ルールの判定・付箋の色（まとめて1枚）
+       ========================================================= */
+
+    /* state の配列名 → Firestore の入れ物の名前 */
+    _COLS: {
+      cards:         'pitCards',
+      customers:     'pitCustomers',
+      loaners:       'pitLoaners',
+      loanerAssigns: 'pitLoanerAssigns',
+      companyCars:   'pitCompanyCars',
+      fleetEvents:   'pitFleetEvents',
+      boardNotes:    'pitBoardNotes'
+    },
+    /* まとめて1枚に入れるもの */
+    _SETTINGS_KEYS: ['settings', 'bays', 'floorPlan', 'aiVerdicts', 'boardLabels'],
+
+    _shadow: null,      // 最後にクラウドと合っていた内容（差分を出すための控え）
+    _pending: {},       // いま書いている最中のもの（自分の書き込みが跳ね返ってくるのを無視する）
+    _unsubs: [],
+    _applying: false,
+    _cloudErr: 0,
+
+    _co: function () { return window.fb.company(); },
+
+    /* 差分を見るための文字列化。
+       ⚠ ふつうの JSON.stringify は「キーの並び順」で文字が変わる。
+          自分で作った物と、クラウドから返ってきた物は並びが違うことがあるので、
+          キーを並べ替えてから文字にする。これをしないと、
+          同じ内容なのに「違う」と判定されて永久に保存し続ける。 */
+    _js: function (v) {
+      var self = this;
+      if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+      if (Array.isArray(v)) return '[' + v.map(function (x) { return self._js(x); }).join(',') + ']';
+      var keys = Object.keys(v).filter(function (k) {
+        return k !== 'id' && typeof v[k] !== 'function' && v[k] !== undefined;
+      }).sort();
+      return '{' + keys.map(function (k) { return JSON.stringify(k) + ':' + self._js(v[k]); }).join(',') + '}';
+    },
+
+    /* ---- ログイン直後に呼ばれる（members-pit.js から） ---- */
+    connectCloud: function (user, member) {
+      if (!window.fb || !window.fb.ready || !window.fb.db) {
+        console.error('[PitDB] Firebase が使えないのでクラウド保存に繋げません');
+        return;
+      }
+      const self = this;
+      this.mode = 'cloud';
+      this._shadow = { docs: {}, settings: null };
+      console.log('[PitDB] クラウドから読み込みます…');
+
+      const names = Object.keys(this._COLS);
+      const gets = names.map(function (k) { return self._co().collection(self._COLS[k]).get(); });
+      gets.push(this._co().collection('pitSettings').doc('main').get());
+
+      Promise.all(gets).then(function (res) {
+        self._applying = true;
+        let total = 0;
+        names.forEach(function (k, i) {
+          const arr = [];
+          res[i].forEach(function (d) {
+            const o = d.data() || {}; o.id = d.id; arr.push(o);
+            self._shadow.docs[self._COLS[k] + '/' + d.id] = self._js(o);
+          });
+          state[k] = arr;
+          total += arr.length;
+        });
+
+        const sdoc = res[res.length - 1];
+        if (sdoc.exists) {
+          const sv = sdoc.data() || {};
+          self._SETTINGS_KEYS.forEach(function (k) {
+            if (sv[k] !== undefined && sv[k] !== null) {
+              if (k === 'settings') self._mergeSettings(sv[k]); else state[k] = sv[k];
+            }
+          });
+          self._shadow.settings = self._js(self._settingsPayload());
+        } else {
+          /* 初回：いまの既定（自社PIT配置図・作業タイプ・入庫ルールなど）をそのまま初期値として上げる */
+          console.log('[PitDB] 初回です。いまの設定を初期値としてクラウドに保存します');
+          self._shadow.settings = '';
+        }
+        self._applying = false;
+
+        console.log('[PitDB] 読み込み完了（' + total + '件）');
+        if (!sdoc.exists) self._cloudFlush();     // 初回だけ設定を書き上げる
+        self._watch();
+        self._afterApply();
+      }).catch(function (e) {
+        console.error('[PitDB] クラウドの読み込みに失敗', e);
+        if (window.showToast) showToast('データを読み込めませんでした。通信を確認して開き直してください');
+      });
+    },
+
+    disconnectCloud: function () {
+      this._unsubs.forEach(function (u) { try { u(); } catch (e) {} });
+      this._unsubs = [];
+      this.mode = 'cloud-pending';
+      this._shadow = null;
+    },
+
+    /* ---- 他の端末の変更を受け取る ---- */
+    _watch: function () {
+      const self = this;
+      this.disconnectCloudKeepMode_ = true;
+      this._unsubs.forEach(function (u) { try { u(); } catch (e) {} });
+      this._unsubs = [];
+
+      Object.keys(this._COLS).forEach(function (k) {
+        const col = self._COLS[k];
+        const un = self._co().collection(col).onSnapshot(function (snap) {
+          let touched = false;
+          self._applying = true;
+          snap.docChanges().forEach(function (ch) {
+            const id = ch.doc.id, key = col + '/' + id;
+            if (ch.type === 'removed') {
+              if (self._shadow.docs[key] === undefined) return;   // 自分で消した分
+              delete self._shadow.docs[key];
+              state[k] = (state[k] || []).filter(function (x) { return x.id !== id; });
+              touched = true;
+              return;
+            }
+            if (self._pending[key]) return;                        // 自分がいま書いた分＝見送る
+            const o = ch.doc.data() || {}; o.id = id;
+            const js = self._js(o);
+            if (self._shadow.docs[key] === js) return;             // 自分が書いた分＝何もしない
+            self._shadow.docs[key] = js;
+            const arr = state[k] || (state[k] = []);
+            const idx = arr.findIndex(function (x) { return x.id === id; });
+            if (idx >= 0) arr[idx] = o; else arr.push(o);
+            touched = true;
+          });
+          self._applying = false;
+          if (touched) self._afterApply();
+        }, function (e) { console.error('[PitDB] ' + col + ' の購読に失敗', e); });
+        self._unsubs.push(un);
+      });
+
+      const un2 = this._co().collection('pitSettings').doc('main').onSnapshot(function (d) {
+        if (!d.exists) return;
+        const sv = d.data() || {};
+        if (self._pending['@settings']) return;                    // 自分がいま書いた分＝見送る
+        const js = self._js({
+          settings: sv.settings, bays: sv.bays, floorPlan: sv.floorPlan,
+          aiVerdicts: sv.aiVerdicts, boardLabels: sv.boardLabels
+        });
+        if (js === self._shadow.settings) return;
+        self._applying = true;
+        self._SETTINGS_KEYS.forEach(function (k) {
+          if (sv[k] !== undefined && sv[k] !== null) {
+            if (k === 'settings') self._mergeSettings(sv[k]); else state[k] = sv[k];
+          }
+        });
+        self._shadow.settings = js;
+        self._applying = false;
+        self._afterApply();
+      }, function (e) { console.error('[PitDB] 設定の購読に失敗', e); });
+      this._unsubs.push(un2);
+    },
+
+    /* クラウドの内容を state に入れたあと、いま開いている画面を描き直す */
+    _afterApply: function () {
+      try {
+        if (window.state && state.currentView && window.showView) showView(state.currentView);
+      } catch (e) { console.warn('[PitDB] 画面の描き直しでエラー', e); }
+    },
+
+    _settingsPayload: function () {
+      return {
+        settings: state.settings || {},
+        bays: state.bays || [],
+        floorPlan: state.floorPlan || { shapes: [] },
+        aiVerdicts: state.aiVerdicts || {},
+        boardLabels: state.boardLabels || {}
+      };
+    },
+
+    /* ---- 変わった所だけ送る ---- */
+    _cloudFlush: function () {
+      if (this.mode !== 'cloud' || !this._shadow) return false;
+      const self = this;
+      const ops = [];
+
+      Object.keys(this._COLS).forEach(function (k) {
+        const col = self._COLS[k];
+        const arr = state[k] || [];
+        const alive = {};
+        arr.forEach(function (o) {
+          if (!o || !o.id) return;
+          alive[o.id] = true;
+          const key = col + '/' + o.id;
+          const js = self._js(o);
+          if (self._shadow.docs[key] === js) return;
+          const body = self._clean(o);
+          ops.push({ t: 'set', ref: self._co().collection(col).doc(o.id), body: body, key: key, js: js });   /* js は並べ替え済みの文字（_js） */
+        });
+        /* 消えたもの */
+        Object.keys(self._shadow.docs).forEach(function (key) {
+          if (key.indexOf(col + '/') !== 0) return;
+          const id = key.slice(col.length + 1);
+          if (alive[id]) return;
+          ops.push({ t: 'del', ref: self._co().collection(col).doc(id), key: key });
+        });
+      });
+
+      const sjs = this._js(this._settingsPayload());
+      if (sjs !== this._shadow.settings) {
+        ops.push({ t: 'set', ref: this._co().collection('pitSettings').doc('main'),
+                   body: this._clean(this._settingsPayload()), key: '@settings', js: sjs });
+      }
+
+      if (!ops.length) return true;
+      ops.forEach(function (op) { self._pending[op.key] = 1; });
+
+      /* Firestore のまとめ書きは1回500件まで。多い時は分けて送る。 */
+      const chunks = [];
+      for (let i = 0; i < ops.length; i += 400) chunks.push(ops.slice(i, i + 400));
+
+      chunks.reduce(function (p, group) {
+        return p.then(function () {
+          const batch = window.fb.db.batch();
+          group.forEach(function (op) {
+            if (op.t === 'del') batch.delete(op.ref); else batch.set(op.ref, op.body);
+          });
+          return batch.commit().then(function () {
+            group.forEach(function (op) {
+              if (op.t === 'del') delete self._shadow.docs[op.key];
+              else if (op.key === '@settings') self._shadow.settings = op.js;
+              else self._shadow.docs[op.key] = op.js;
+              delete self._pending[op.key];
+            });
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        self._cloudErr = 0;
+        console.log('[PitDB] 保存しました（' + ops.length + '件）');
+      }).catch(function (e) {
+        console.error('[PitDB] 保存に失敗', e);
+        ops.forEach(function (op) { delete self._pending[op.key]; });
+        self._cloudErr++;
+        if (self._cloudErr <= 2 && window.showToast) {
+          showToast('保存できませんでした。通信を確認してください（直した内容はこの画面には残っています）');
+        }
+      });
+      return true;
+    },
+
+    /* Firestore に入れられない値（undefined・関数）を落とす。id は入れ物の名前と重複するので外す。 */
+    _clean: function (o) {
+      const out = JSON.parse(JSON.stringify(o, function (k, v) {
+        return (typeof v === 'function' || v === undefined) ? undefined : v;
+      }));
+      if (out && typeof out === 'object') delete out.id;
+      return out;
+    }
   };
 
   window.PitDB = PitDB;

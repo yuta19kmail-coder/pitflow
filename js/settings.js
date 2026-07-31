@@ -207,6 +207,8 @@
     h += (window.WorkContent ? WorkContent.settingsCardHtml() : '');
     // 🅿️ 駐車場（理論値・バッファ）の編集（parking.js・v0.71.0）
     h += (window.ParkingView ? ParkingView.settingsCardHtml() : '');
+    // 設定の引っ越し（開発サイト → 本番サイト）
+    h += (window.pitTransferCardHtml ? pitTransferCardHtml() : '');
 
     body.innerHTML = h;
 
