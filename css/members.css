@@ -1,0 +1,75 @@
+/* ========================================
+   members.css  -  メンバー画面（PitFlow）
+   接頭辞は mb-。他の画面と当たらないようにしてある。
+   ======================================== */
+
+#members-body { padding: 0 4px 40px; }
+
+/* 上の案内 */
+.mb-note{
+  display:flex; align-items:flex-start; gap:12px;
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--r);
+  padding:14px 16px; margin-bottom:14px; font-size:12.5px; line-height:1.7; color:var(--text2);
+}
+.mb-note-ic{ color:var(--acc,#2ea567); flex:none; margin-top:1px }
+.mb-note b{ color:var(--text) }
+.mb-openportal{
+  margin-left:auto; flex:none; display:inline-flex; align-items:center; gap:6px;
+  padding:7px 12px; border-radius:8px; white-space:nowrap;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text);
+  font-size:12px; text-decoration:none;
+}
+.mb-openportal:hover{ border-color:#2ea567; color:#2ea567 }
+
+.mb-warn{
+  display:flex; align-items:center; gap:8px;
+  background:rgba(234,179,8,.10); border:1px solid rgba(234,179,8,.35);
+  color:#eab308; border-radius:var(--r); padding:10px 14px; margin-bottom:14px; font-size:12.5px;
+}
+
+/* 一覧 */
+.mb-table-wrap{
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--r);
+  overflow:auto; max-width:100%;
+}
+.mb-table{ width:100%; border-collapse:collapse; font-size:13px }
+.mb-table th{
+  position:sticky; top:0; z-index:1;
+  background:var(--bg3); color:var(--text2); font-weight:600; font-size:11.5px;
+  text-align:left; padding:10px 12px; white-space:nowrap; border-bottom:1px solid var(--border);
+}
+.mb-table td{ padding:8px 12px; border-bottom:1px solid var(--border); vertical-align:middle }
+.mb-table tbody tr:last-child td{ border-bottom:0 }
+.mb-table tbody tr:hover{ background:var(--bg3) }
+
+.mb-c-name{ min-width:170px }
+.mb-c-ck{ text-align:center; width:96px }
+.mb-c-mail{ color:var(--text2); font-size:11.5px; white-space:nowrap }
+
+.mb-av{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; border-radius:50%; margin-right:9px; overflow:hidden;
+  background:linear-gradient(135deg,#1db97a,#2563eb); color:#fff;
+  font-size:11px; font-weight:700; vertical-align:middle; flex:none;
+}
+.mb-av img{ width:100%; height:100%; object-fit:cover; display:block }
+.mb-nm{ font-weight:600 }
+
+.mb-sel{
+  background:var(--bg3); color:var(--text); border:1px solid var(--border);
+  border-radius:6px; padding:5px 8px; font-size:12.5px; font-family:inherit;
+}
+.mb-sel:disabled{ opacity:.55 }
+.mb-c-ck input[type=checkbox]{ width:16px; height:16px; cursor:pointer; accent-color:#2ea567 }
+.mb-c-ck input[type=checkbox]:disabled{ cursor:default; opacity:.4 }
+
+.mb-empty{ text-align:center; color:var(--text2); padding:26px 12px; font-size:12.5px }
+.mb-hint{ margin-top:12px; font-size:11.5px; line-height:1.9; color:var(--text2) }
+.mb-hint b{ color:var(--text) }
+
+/* スマホは横スクロールで見る（閲覧ベース） */
+@media (max-width:760px){
+  .mb-note{ flex-wrap:wrap }
+  .mb-openportal{ margin-left:0 }
+  .mb-table{ min-width:640px }
+}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.130.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.131.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="css/topbar.css?v=4">
 <link rel="stylesheet" href="css/help.css?v=1">
 <link rel="stylesheet" href="css/mech-summary.css?v=1">
+<link rel="stylesheet" href="css/members.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -60,6 +61,15 @@
   #pit-login .pl-btn:hover{background:#26935c}
   #pit-login .pl-btn.ghost{background:transparent;border:1px solid rgba(159,179,169,.35);color:#8aa094;font-weight:600;cursor:not-allowed;margin-top:10px}
   #pit-login .pl-note{margin-top:16px;font-size:11.5px;line-height:1.6;color:#7f968b}
+  /* サンプル／本番で注意書きを出し分け（クラスは auth-pit.js が付ける） */
+  #pit-login .pl-note-cloud{display:none}
+  #pit-login.pl-cloud .pl-note-sample{display:none}
+  #pit-login.pl-cloud .pl-note-cloud{display:block}
+  #pit-login .pl-error{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;
+    background:rgba(220,38,38,.14);border:1px solid rgba(248,113,113,.45);color:#fca5a5;text-align:left}
+  #pit-login .pl-inapp{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;
+    background:rgba(234,179,8,.14);border:1px solid rgba(250,204,21,.45);color:#fde68a;text-align:left}
+  #pit-login .pl-btn:disabled{opacity:.6;cursor:default}
   #pit-login .pl-ver{margin-top:14px;font-size:11px;color:#5f7268}
   /* 開発ツール（設定内） */
   .pit-devtools{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
@@ -89,9 +99,14 @@
     <img class="login-appicon" src="apple-touch-icon.png" alt="PitFlow">
     <div class="pl-logo">PitFlow</div>
     <div class="pl-sub">整備入庫管理システム</div>
-    <button class="pl-btn" onclick="pitSampleLogin()">Google でログイン（デモ）</button>
-    <div class="pl-note">※ ダミー（デモ版・後日 Google 連携）</div>
-    <div class="pl-ver">v0.130.0</div>
+    <button class="pl-btn" id="pl-google" onclick="pitSampleLogin()">Google でログイン</button>
+    <div class="pl-error" id="pl-error" style="display:none"></div>
+    <div class="pl-inapp" id="pl-inapp" style="display:none">
+      このアプリ内ブラウザでは Google ログインができません。<br>右上のメニューから <b>Safari / Chrome で開く</b> を選んでください。
+    </div>
+    <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
+    <div class="pl-note pl-note-cloud">※ CoreFlow の名簿にいて、PitFlow の利用がオンの人だけ入れます</div>
+    <div class="pl-ver">v0.131.0</div>
   </div>
 </div>
 
@@ -105,7 +120,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v0.130.0</span>
+    <span class="ver">v0.131.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -161,7 +176,7 @@
     <div class="si-item" data-view="customers" onclick="showView('customers')"><span class="icon"><i data-ic=user data-ics=16></i></span><span>顧客</span></div>
 
     <div class="si-section-title">管理</div>
-    <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon"><i data-ic=users data-ics=16></i></span><span>メンバー</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon"><i data-ic=users data-ics=16></i></span><span>メンバー</span></div>
     <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon"><i data-ic=history data-ics=16></i></span><span>操作ログ</span><span class="si-soon">準備中</span></div>
     <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon"><i data-ic=settings data-ics=16></i></span><span>設定</span></div>
     <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon"><i data-ic=megaphone data-ics=16></i></span><span>お知らせ</span><span class="si-soon">準備中</span></div>
@@ -477,7 +492,7 @@
 
     <section id="view-members" class="view">
       <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=users data-ics=16></i></span>メンバー</div></div>
-      <div class="soon-card"><div class="soon-emoji"><i data-ic=users data-ics=16></i></div><h3>メンバー管理（準備中）</h3><p>スタッフの追加・権限・担当設定をここで。StockFlowのメンバー機能をベースに移植します。</p></div>
+      <div id="members-body"></div>
     </section>
 
     <section id="view-oplog" class="view">
@@ -734,7 +749,7 @@
 <script src="js/sample-data.js?v=17"></script>
 <script src="js/sample-fleet.js?v=10"></script>
 <meta name="app-key" content="pitflow">
-<script src="js/firebase-init.js?v=8"></script>
+<script src="js/firebase-init.js?v=9"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
 <script src="js/db-pit.js?v=37"></script>
 <script src="js/views.js?v=44"></script>
@@ -772,7 +787,8 @@
 <script src="js/outsource.js?v=3"></script>
 <script src="js/loaner.js?v=51"></script>
 <script src="js/fleet.js?v=11"></script>
-<script src="js/auth-pit.js?v=9"></script>
+<script src="js/auth-pit.js?v=10"></script>
+<script src="js/members-pit.js?v=1"></script>
 <script src="js/launcher.js?v=icon0730"></script>
 <script src="js/holidays.js?v=1"></script>
 <script src="js/dnd.js?v=13"></script>

@@ -1,45 +1,238 @@
 /* ========================================
-   auth-pit.js  -  サンプルログイン（PitFlow v0.1.0）
+   auth-pit.js  -  ログイン（PitFlow）
    ----------------------------------------
-   ★現状は「開発用のサンプルログイン」。
-     ・本物の Google 認証はまだ繋いでいない（後日 CarFlow/StockFlow と同方式で導入）。
-     ・ボタンを押すとアプリに入れる。入った状態は記憶する（毎回聞かれない）。
+   2つのモードがある。どちらで動くかは firebase-init.js が決める（window.PIT_CLOUD）。
+
+   ① 本番モード（pitflow.kobayashi-motors.com など）
+      Google でログイン → CoreFlow の名簿（portalMembers）で入室を判定する。
+      入れる条件＝名簿に居る／在籍中（active）／CoreFlowで「PitFlow＝使える」がオン。
+      （マスター＝ゆうたは常に入れる）
+      入れたら state.staff を CoreFlow の実メンバーに差し替える（members-pit.js）。
+
+   ② サンプルモード（github.io・localhost・デモ版）
+      いままでどおり。ボタンひとつで入れて、この端末だけに保存される。
+
+   ⚠ ログイン画面と本体の出し分けは、どちらのモードでも
+      #pit-login の表示／body.pit-authed で行う（今までと同じ作り）。
    ======================================== */
 (function () {
-  const FLAG = 'pitflow_sample_authed';
+  var FLAG = 'pitflow_sample_authed';
+  var COMPANY_ID = 'kobayashi_motors';
+  var _busy = false;
+
+  function el(id) { return document.getElementById(id); }
 
   function showApp() {
-    const lg = document.getElementById('pit-login');
+    var lg = el('pit-login');
     if (lg) lg.style.display = 'none';
     document.body.classList.add('pit-authed');
   }
   function showLogin() {
-    const lg = document.getElementById('pit-login');
+    var lg = el('pit-login');
     if (lg) lg.style.display = 'flex';
     document.body.classList.remove('pit-authed');
   }
+  function loginError(msg) {
+    var e = el('pl-error');
+    if (e) { e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
+  }
+  function setBusy(b) {
+    _busy = !!b;
+    var btn = el('pl-google');
+    if (btn) { btn.disabled = !!b; btn.textContent = b ? 'ログイン中…' : 'Google でログイン'; }
+  }
 
-  window.pitSampleLogin = function () {
-    try { localStorage.setItem(FLAG, '1'); } catch (e) {}
-    showApp();
-  };
-  window.pitLogout = function () {
-    try { localStorage.removeItem(FLAG); } catch (e) {}
-    showLogin();
-  };
+  /* ---- アプリ内ブラウザ（LINE/Instagram等）は Google ログインが弾かれる ---- */
+  function isInAppBrowser() {
+    var ua = navigator.userAgent || '';
+    if (/Line\//i.test(ua)) return true;
+    if (/FBAN|FBAV|FB_IAB/.test(ua)) return true;
+    if (/Instagram/i.test(ua)) return true;
+    if (/Twitter/i.test(ua)) return true;
+    if (/Slack\//i.test(ua)) return true;
+    if (/MicroMessenger/i.test(ua)) return true;
+    if (/KAKAOTALK/i.test(ua)) return true;
+    if (/iPhone|iPad|iPod/.test(ua) && !/Safari\//.test(ua)) return true;
+    return false;
+  }
+  function isMobile() { return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || ''); }
 
-  /* v0.82.0: いまログインしている人の「スタッフ名」を返すフック。
-     ★現状はサンプルログイン（個人を特定していない）ので空文字を返す＝予約担当は空のまま。
-     ★本番（CarFlow/StockFlow と同じ Google ログイン＋名簿 portalMembers）を接続したら、
-       ここを「ログインユーザーの uid/email → 名簿/state.staff の name」に解決して返すよう差し替えるだけで、
-       新規予約の「予約担当」が自動でその人になる（openNewReserve が起動時に参照）。 */
-  window.pitCurrentStaffName = function () {
-    return '';
-  };
+  /* =======================================================
+     ② サンプルモード（今までと同じ）
+     ======================================================= */
+  function initSampleMode() {
+    window.pitSampleLogin = function () {
+      try { localStorage.setItem(FLAG, '1'); } catch (e) {}
+      showApp();
+    };
+    window.pitLogout = function () {
+      try { localStorage.removeItem(FLAG); } catch (e) {}
+      showLogin();
+    };
+    /* サンプルでは「誰でログインしているか」を特定できないので空を返す＝予約担当は空のまま */
+    window.pitCurrentStaffName = function () { return ''; };
+    window.pitIsAdmin = function () { return true; };   // サンプルは全部さわれる
 
-  document.addEventListener('DOMContentLoaded', function () {
-    let authed = false;
+    var authed = false;
     try { authed = localStorage.getItem(FLAG) === '1'; } catch (e) {}
     if (authed) showApp(); else showLogin();
-  });
+  }
+
+  /* =======================================================
+     ① 本番モード
+     ======================================================= */
+  function normEmail(s) {
+    return (typeof s === 'string') ? s.normalize('NFKC').toLowerCase().trim() : '';
+  }
+
+  /* 名簿から自分を探す（uid → メール → 大文字小文字・全角＠違いを救済） */
+  function findMyMember(user) {
+    var coll = window.fb.company().collection('portalMembers');
+    return coll.doc(user.uid).get().then(function (doc) {
+      if (doc.exists) { var m = doc.data() || {}; m.id = doc.id; return m; }
+      if (!user.email) return null;
+      var norm = normEmail(user.email);
+      return coll.where('email', '==', user.email).limit(1).get().then(function (snap) {
+        if (!snap.empty) { var d = snap.docs[0]; var m2 = d.data() || {}; m2.id = d.id; return m2; }
+        return coll.where('email', '==', norm).limit(1).get().then(function (s2) {
+          if (!s2.empty) { var d2 = s2.docs[0]; var m3 = d2.data() || {}; m3.id = d2.id; return m3; }
+          return coll.limit(300).get().then(function (all) {
+            var hit = null;
+            all.forEach(function (x) {
+              if (hit) return;
+              if (normEmail(String((x.data() || {}).email || '')) === norm) hit = x;
+            });
+            if (!hit) return null;
+            var m4 = hit.data() || {}; m4.id = hit.id; return m4;
+          });
+        });
+      });
+    }).catch(function (e) {
+      console.warn('[auth-pit] 名簿の照会に失敗', e);
+      return null;
+    });
+  }
+
+  /* 入室できるか（CoreFlowで「PitFlow＝使える」がオンの人だけ。マスターは常に可） */
+  function canUse(m) {
+    if (m.master === true) return true;
+    return !!(m.pitflow && m.pitflow.on === true);
+  }
+  /* PitFlow の中の権限（管理／メンバー）。メンバーの設定を触れるのは管理だけ。 */
+  function isAdminRole(m) {
+    if (!m) return false;
+    if (m.master === true || m.admin === true) return true;
+    return !!(m.pitflow && m.pitflow.role === '管理');
+  }
+
+  window.doPitLogin = function () {
+    if (_busy || !window.fb || !window.fb.auth) return;
+    if (window.fb.auth.currentUser) return;
+    loginError('');
+    setBusy(true);
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    var p = isMobile() ? window.fb.auth.signInWithRedirect(provider)
+                       : window.fb.auth.signInWithPopup(provider);
+    p.catch(function (err) {
+      console.error('[auth-pit] ログイン失敗', err);
+      var msg = 'ログインに失敗しました';
+      var code = err && err.code;
+      if (code === 'auth/popup-closed-by-user') msg = 'ログインが途中で閉じられました';
+      else if (code === 'auth/popup-blocked') msg = 'ポップアップがブロックされました。ブラウザで許可してください';
+      else if (code === 'auth/unauthorized-domain') msg = 'このアドレスはまだ Firebase に登録されていません（承認済みドメイン）';
+      loginError(msg);
+      setBusy(false);
+    });
+  };
+
+  window.pitLogout = function () {
+    if (!window.fb || !window.fb.auth) { showLogin(); return; }
+    window.fb.auth.signOut().catch(function (e) { console.error('[auth-pit] ログアウト失敗', e); });
+  };
+  /* ログイン画面のボタンはモードで中身が変わる（本番では Google ログインになる） */
+  window.pitSampleLogin = function () { window.doPitLogin(); };
+
+  /* いまログインしている人の名前。新規予約の「予約担当」や個人BOXの「自分」がこれを見る。 */
+  window.pitCurrentStaffName = function () {
+    var m = window.fb && window.fb.currentMember;
+    return (m && m.name) ? m.name : '';
+  };
+  window.pitIsAdmin = function () { return isAdminRole(window.fb && window.fb.currentMember); };
+
+  function kickOut(msg) {
+    loginError(msg);
+    setBusy(false);
+    try { window.fb.auth.signOut(); } catch (e) {}
+    showLogin();
+  }
+
+  function onSignedIn(user) {
+    findMyMember(user).then(function (member) {
+      if (!member) return kickOut('CoreFlowの名簿にこのアカウントがありません。管理者に追加してもらってください。');
+      if (member.active === false) return kickOut('このアカウントは在籍なしになっています。');
+      if (!canUse(member)) return kickOut('PitFlow の利用がオンになっていません。CoreFlowのメンバー管理で「PitFlow＝使える」をオンにしてもらってください。');
+
+      window.fb.currentUser = user;
+      window.fb.currentMember = member;
+      window.fb.currentCompanyId = COMPANY_ID;
+
+      /* ルール判定の橋渡し（CarFlow と同じ。失敗しても止めない） */
+      window.fb.company().collection('userPrefs').doc(user.uid)
+        .set({ memberId: member.id, memberEmail: (member.email || user.email || '') }, { merge: true })
+        .catch(function (e) { console.warn('[auth-pit] userPrefs 記録に失敗（継続）', e); });
+
+      /* 「自分」＝ログイン本人に紐づける（個人フォーカスBOX・付箋の自分） */
+      try { localStorage.setItem('pitflow_bn_me', member.id); } catch (e) {}
+
+      setBusy(false);
+      loginError('');
+      showApp();
+      console.log('[auth-pit] ログイン', member.name, '／管理=' + isAdminRole(member));
+
+      /* 名簿の読み込み → 保存の接続。順番が大事なので members-pit.js に任せる。 */
+      if (typeof window.pitOnLogin === 'function') {
+        try { window.pitOnLogin(member, user); } catch (e) { console.error('[auth-pit] pitOnLogin でエラー', e); }
+      }
+    });
+  }
+
+  function onSignedOut() {
+    window.fb.currentUser = null;
+    window.fb.currentMember = null;
+    setBusy(false);
+    showLogin();
+    if (typeof window.pitOnLogout === 'function') {
+      try { window.pitOnLogout(); } catch (e) {}
+    }
+  }
+
+  function initCloudMode() {
+    if (!window.fb || !window.fb.auth) { console.error('[auth-pit] Firebase 未初期化'); showLogin(); return; }
+
+    var box = el('pit-login');
+    if (box) box.classList.add('pl-cloud');   /* 本番用の文言に切り替え（CSSで出し分け） */
+
+    if (isInAppBrowser()) {
+      var w = el('pl-inapp'); if (w) w.style.display = 'block';
+      var b = el('pl-google'); if (b) b.style.display = 'none';
+    }
+
+    if (window.fb.auth.getRedirectResult) {
+      window.fb.auth.getRedirectResult().catch(function (err) {
+        console.error('[auth-pit] リダイレクト戻りでエラー', err);
+        loginError('ログインに失敗しました（' + ((err && err.code) || '不明') + '）');
+      });
+    }
+    window.fb.auth.onAuthStateChanged(function (user) {
+      if (user) onSignedIn(user); else onSignedOut();
+    });
+  }
+
+  function boot() {
+    if (window.PIT_CLOUD) initCloudMode();
+    else initSampleMode();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();

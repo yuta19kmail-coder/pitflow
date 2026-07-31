@@ -49,6 +49,7 @@ function showView(viewId){
   if (viewId === 'fleet' && window.renderFleet) renderFleet();
   if (viewId === 'settings' && window.renderSettings) renderSettings();
   if (viewId === 'rules' && window.renderRules) renderRules();
+  if (viewId === 'members' && window.renderMembers) renderMembers();
 }
 
 /* 📅 予約カレンダー（その日）へ飛ぶ（顧客履歴・検索結果から） */

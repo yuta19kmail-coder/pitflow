@@ -35,6 +35,7 @@
             if (Array.isArray(d.loanerAssigns)) state.loanerAssigns = d.loanerAssigns;
             if (Array.isArray(d.loaners))       state.loaners       = d.loaners;
             if (Array.isArray(d.customers))     state.customers     = d.customers;
+            if (Array.isArray(d.staff) && d.staff.length) state.staff = d.staff;   // メンバー画面で直した内容（サンプルモード用）
             if (Array.isArray(d.companyCars))   state.companyCars   = d.companyCars;
             if (Array.isArray(d.fleetEvents))   state.fleetEvents   = d.fleetEvents;
             // ★PIT配置図：旧サンプル（PIT1〜4の初期4枠）のままの端末は、自社レイアウト既定へ自動移行。
@@ -101,6 +102,7 @@
             loanerAssigns: (state.loanerAssigns || []),
             loaners: state.loaners,
             customers: state.customers,
+            staff: state.staff,                        // メンバーの課・フロント担当・受付（サンプルモード用）
             companyCars: state.companyCars,
             fleetEvents: state.fleetEvents,
             bays: state.bays,                          // v0.46.0：PIT配置図の枠（位置・大きさ・課）
