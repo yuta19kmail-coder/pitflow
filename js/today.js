@@ -258,6 +258,7 @@ window.pitTodayCheckIn = function(id){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
+  if (window.pitLog) pitLog('入庫済みにした', { cardId: c.id, kind: 'in', label: (c.customer? c.customer+' 様':'') + (c.car? ' / '+c.car:'') });
   if (window.pitToast) pitToast('入庫済み → タスク「点検待ち」へ移動しました');
 };
 /* 返車済み：実績へ。completedAtを今日に・売上を確定値で固める */
@@ -273,6 +274,7 @@ window.pitTodayReturn = function(id){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
+  if (window.pitLog) pitLog('返車済みにした（実績へ）', { cardId: c.id, kind: 'out', label: (c.customer? c.customer+' 様':'') + (c.car? ' / '+c.car:'') + (c.amountFinal? ' / ¥'+Number(c.amountFinal).toLocaleString():'') });
   if (window.pitToast) pitToast('返車済み → 実績（確定売上）に固めました');
 };
 

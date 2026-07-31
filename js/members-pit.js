@@ -221,6 +221,9 @@
       return;
     }
     rebuildStaff();
+    var _who = (_members.find(function (m) { return m.id === id; }) || {}).name || id;
+    var _lb = { role: '区分', division: '課', front: 'フロント担当', reception: '受付' }[key] || key;
+    if (window.pitLog) pitLog('メンバー設定を変更（' + _lb + '）', { kind: 'member', label: _who + ' → ' + val });
     saveProps().then(function (ok) {
       if (ok && window.showToast) showToast('メンバーの設定を保存しました');
     });

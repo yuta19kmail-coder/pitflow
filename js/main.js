@@ -29,5 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  console.log('PitFlow v0.0.6 ready');
+  // お知らせの未読の丸を出す
+  if (window.pitNewsRefreshBadge) setTimeout(pitNewsRefreshBadge, 400);
+
+  console.log('PitFlow ready');
 });

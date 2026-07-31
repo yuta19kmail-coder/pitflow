@@ -213,6 +213,14 @@ window.logFlow = function(card, label){
    dnd.js（ドラッグ）／task.js（<i data-ic=chevLeft data-ics=16></i><i data-ic=chevRight data-ics=16></i>）から status を変える時に呼ぶ。
    card.phaseAt ＝ 今のフェーズに入った時刻（「このフェーズ何日目」のカウント起点）。 */
 window.logPhaseMove = function(card, fromStatus, toStatus){
+  /* 操作ログ（誰が・いつ・どのカードを動かしたか） */
+  try{
+    if (window.pitLog && card && fromStatus !== toStatus){
+      var _sl = (typeof statusLabel === 'function') ? statusLabel : function(x){ return x; };
+      pitLog('フェーズ移動 ' + _sl(fromStatus) + ' → ' + _sl(toStatus),
+             { cardId: card.id, kind: 'phase', label: (card.customer? card.customer+' 様':'') + (card.car? ' / '+card.car:'') });
+    }
+  }catch(e){}
   if (!card) return;
   if (!Array.isArray(card.log)) card.log = [];
   var d = new Date();

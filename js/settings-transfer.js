@@ -81,6 +81,7 @@
         state.workTypes = d.workTypes;
         state.settings.workTypes = d.workTypes;
       }
+      if (window.pitLog) pitLog('設定ファイルを読み込んだ', { kind: 'settings', label: String(d._at || '') });
       if (window.PitDB) PitDB.save(true);
       alert('設定を読み込みました。画面を作り直します。');
       location.reload();

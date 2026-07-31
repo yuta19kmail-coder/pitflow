@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="0.133.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="0.134.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -31,6 +31,7 @@
 <link rel="stylesheet" href="css/help.css?v=1">
 <link rel="stylesheet" href="css/mech-summary.css?v=1">
 <link rel="stylesheet" href="css/members.css?v=1">
+<link rel="stylesheet" href="css/news-oplog.css?v=1">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -106,7 +107,7 @@
     </div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
     <div class="pl-note pl-note-cloud">※ CoreFlow の名簿にいて、PitFlow の利用がオンの人だけ入れます</div>
-    <div class="pl-ver">v0.133.0</div>
+    <div class="pl-ver">v0.134.0</div>
   </div>
 </div>
 
@@ -120,7 +121,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v0.133.0</span>
+    <span class="ver">v0.134.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -177,9 +178,9 @@
 
     <div class="si-section-title">管理</div>
     <div class="si-item" data-view="members" onclick="showView('members')"><span class="icon"><i data-ic=users data-ics=16></i></span><span>メンバー</span></div>
-    <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon"><i data-ic=history data-ics=16></i></span><span>操作ログ</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="oplog" onclick="showView('oplog')"><span class="icon"><i data-ic=history data-ics=16></i></span><span>操作ログ</span></div>
     <div class="si-item" data-view="settings" onclick="showView('settings')"><span class="icon"><i data-ic=settings data-ics=16></i></span><span>設定</span></div>
-    <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon"><i data-ic=megaphone data-ics=16></i></span><span>お知らせ</span><span class="si-soon">準備中</span></div>
+    <div class="si-item" data-view="news" onclick="showView('news')"><span class="icon"><i data-ic=megaphone data-ics=16></i></span><span>お知らせ</span></div>
     <div class="si-item" data-view="help" onclick="showView('help')"><span class="icon"><i data-ic=help data-ics=16></i></span><span>ヘルプ</span></div>
 
 
@@ -497,12 +498,12 @@
 
     <section id="view-oplog" class="view">
       <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=history data-ics=16></i></span>操作ログ</div></div>
-      <div class="soon-card"><div class="soon-emoji"><i data-ic=history data-ics=16></i></div><h3>操作ログ（準備中）</h3><p>誰が・いつ・何をしたかの操作ログ。CarFlow/StockFlowと同じ設計でここに作ります。</p></div>
+      <div id="oplog-body"></div>
     </section>
 
     <section id="view-news" class="view">
       <div class="view-header"><div class="view-title"><span class="icon"><i data-ic=megaphone data-ics=16></i></span>お知らせ</div></div>
-      <div class="soon-card"><div class="soon-emoji"><i data-ic=megaphone data-ics=16></i></div><h3>お知らせ（準備中）</h3><p>更新情報や社内連絡をここに表示します。</p></div>
+      <div id="news-body"></div>
     </section>
 
     <section id="view-help" class="view">
@@ -790,6 +791,8 @@
 <script src="js/fleet.js?v=11"></script>
 <script src="js/auth-pit.js?v=10"></script>
 <script src="js/members-pit.js?v=1"></script>
+<script src="js/oplog-pit.js?v=1"></script>
+<script src="js/news-pit.js?v=1"></script>
 <script src="js/launcher.js?v=icon0730"></script>
 <script src="js/holidays.js?v=1"></script>
 <script src="js/dnd.js?v=13"></script>
@@ -800,8 +803,24 @@
 <script src="js/help-content.js?v=2"></script>
 <script src="js/help.js?v=2"></script>
 <script src="js/mydash.js?v=5"></script>
-<script src="js/main.js?v=11"></script>
+<script src="js/main.js?v=12"></script>
 <script src="js/auto-update.js?v=1"></script>
 
+
+<!-- お知らせを書く（news-pit.js） -->
+<div class="nw-modal" id="nw-modal" style="display:none" onclick="if(event.target===this)pitNewsClose()">
+  <div class="nw-box">
+    <div class="nw-box-h"><span id="nw-modal-t">お知らせを書く</span>
+      <button class="nw-x" onclick="pitNewsClose()" title="閉じる"><i data-ic=close data-ics=16></i></button></div>
+    <label class="nw-lb">見出し</label>
+    <input id="nw-title" class="nw-input" type="text" maxlength="80" placeholder="例：8/12〜8/16 はお盆休みです">
+    <label class="nw-lb">本文</label>
+    <textarea id="nw-text" class="nw-text" rows="8" placeholder="伝えたいことを書いてください（改行そのまま出ます）"></textarea>
+    <div class="nw-box-f">
+      <button class="nw-cancel" onclick="pitNewsClose()">やめる</button>
+      <button class="nw-ok" onclick="pitNewsSave()">出す</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

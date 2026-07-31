@@ -50,6 +50,8 @@ function showView(viewId){
   if (viewId === 'settings' && window.renderSettings) renderSettings();
   if (viewId === 'rules' && window.renderRules) renderRules();
   if (viewId === 'members' && window.renderMembers) renderMembers();
+  if (viewId === 'oplog' && window.renderOplog) renderOplog();
+  if (viewId === 'news' && window.renderNews) renderNews();
 }
 
 /* 📅 予約カレンダー（その日）へ飛ぶ（顧客履歴・検索結果から） */
@@ -236,6 +238,7 @@ function holdDaysLabel(c, workLabel){                 // 預かり：6/10〜（5
 function escAttr(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 
 function openNewReserve(){
+  if (window.pitLog) pitLog('新規予約を開いた', { kind:'new' });
   const id = 'c' + Date.now();
   const card = {
     id, resNo: (window.pitGenResNo ? pitGenResNo() : ''),   // <i data-ic=numbers data-ics=16></i> 予約番号（ローマ字1＋5桁・例 K48201）

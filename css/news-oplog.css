@@ -1,0 +1,121 @@
+/* ========================================
+   news-oplog.css  -  お知らせ（nw-）と操作ログ（op-）
+   ======================================== */
+
+/* ===== 共通 ===== */
+.nw-loading,.op-loading,.nw-empty,.op-empty{
+  padding:30px 12px; text-align:center; color:var(--text2); font-size:13px;
+}
+.nw-note,.op-note{
+  display:flex; align-items:center; gap:8px; margin-bottom:12px;
+  background:rgba(234,179,8,.10); border:1px solid rgba(234,179,8,.32);
+  color:#eab308; border-radius:var(--r); padding:9px 14px; font-size:12.5px;
+}
+
+/* ===== サイドバーの未読の丸 ===== */
+.si-newsbadge{
+  margin-left:auto; min-width:18px; height:18px; padding:0 5px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:#ef4444; color:#fff; border-radius:999px;
+  font-size:10.5px; font-weight:700; line-height:1;
+}
+
+/* ===== お知らせ ===== */
+#news-body{ padding:0 4px 40px }
+.nw-bar{ margin-bottom:14px }
+.nw-add{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:9px 15px; border-radius:8px; cursor:pointer;
+  border:0; background:#1f7a4d; color:#fff; font-size:13px; font-weight:600; font-family:inherit;
+}
+.nw-add:hover{ background:#26935c }
+
+.nw-list{ display:flex; flex-direction:column; gap:12px }
+.nw-card{
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); padding:15px 17px;
+}
+.nw-card.unread{ border-color:rgba(46,165,103,.55); box-shadow:0 0 0 1px rgba(46,165,103,.18) }
+.nw-h{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:9px }
+.nw-h h3{ margin:0; font-size:15px; font-weight:700; color:var(--text) }
+.nw-new{
+  background:#1f7a4d; color:#fff; border-radius:4px; padding:2px 6px;
+  font-size:10px; font-weight:800; letter-spacing:.04em;
+}
+.nw-meta{ font-size:11.5px; color:var(--text2) }
+.nw-tools{ margin-left:auto; display:flex; gap:4px }
+.nw-tools button{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; border-radius:6px; cursor:pointer;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text2);
+}
+.nw-tools button:hover{ border-color:#2ea567; color:#2ea567 }
+.nw-body{ font-size:13px; line-height:1.85; color:var(--text); white-space:normal }
+
+/* 書き込みモーダル */
+.nw-modal{
+  position:fixed; inset:0; z-index:1200; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.55); padding:20px;
+}
+.nw-box{
+  width:min(94vw,560px); background:var(--bg2); border:1px solid var(--border);
+  border-radius:12px; padding:18px 20px 16px; box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+.nw-box-h{ display:flex; align-items:center; font-size:15px; font-weight:700; margin-bottom:14px }
+.nw-x{
+  margin-left:auto; width:28px; height:28px; border-radius:6px; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text2);
+}
+.nw-x:hover{ border-color:#2ea567; color:#2ea567 }
+.nw-lb{ display:block; font-size:11.5px; color:var(--text2); margin:10px 0 5px }
+.nw-input,.nw-text{
+  width:100%; box-sizing:border-box; background:var(--bg3); color:var(--text);
+  border:1px solid var(--border); border-radius:8px; padding:9px 11px;
+  font-size:13px; font-family:inherit; line-height:1.7;
+}
+.nw-text{ resize:vertical }
+.nw-input:focus,.nw-text:focus{ outline:none; border-color:#2ea567 }
+.nw-box-f{ display:flex; justify-content:flex-end; gap:9px; margin-top:16px }
+.nw-cancel,.nw-ok{ padding:9px 18px; border-radius:8px; cursor:pointer; font-size:13px; font-family:inherit }
+.nw-cancel{ border:1px solid var(--border); background:var(--bg3); color:var(--text2) }
+.nw-ok{ border:0; background:#1f7a4d; color:#fff; font-weight:600 }
+.nw-ok:hover{ background:#26935c }
+
+/* ===== 操作ログ ===== */
+#oplog-body{ padding:0 4px 40px }
+.op-bar{ display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-wrap:wrap }
+.op-search{
+  display:inline-flex; align-items:center; gap:7px; flex:1; min-width:220px; max-width:460px;
+  background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:0 11px; color:var(--text2);
+}
+.op-search input{
+  flex:1; background:transparent; border:0; outline:none; color:var(--text);
+  font-size:13px; font-family:inherit; padding:9px 0;
+}
+.op-count{ font-size:12px; color:var(--text2) }
+.op-reload{
+  margin-left:auto; display:inline-flex; align-items:center; gap:6px;
+  padding:8px 13px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--border); background:var(--bg3); color:var(--text); font-size:12.5px; font-family:inherit;
+}
+.op-reload:hover{ border-color:#2ea567; color:#2ea567 }
+
+.op-list{ background:var(--bg2); border:1px solid var(--border); border-radius:var(--r); overflow:hidden }
+.op-row{
+  display:grid; grid-template-columns:88px 90px minmax(150px,1fr) minmax(120px,1.4fr);
+  gap:12px; align-items:center; padding:9px 14px;
+  border-bottom:1px solid var(--border); font-size:12.5px;
+}
+.op-row:last-child{ border-bottom:0 }
+.op-row:hover{ background:var(--bg3) }
+.op-time{ color:var(--text2); font-variant-numeric:tabular-nums; white-space:nowrap }
+.op-user{ font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.op-act{ color:var(--text) }
+.op-label{ color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.op-label a{ color:#2ea567; text-decoration:none }
+.op-label a:hover{ text-decoration:underline }
+
+@media (max-width:760px){
+  .op-row{ grid-template-columns:1fr; gap:2px; padding:11px 14px }
+  .op-label{ white-space:normal }
+}

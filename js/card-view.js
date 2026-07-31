@@ -782,6 +782,7 @@
 
   window.cvDeleteCard = function(){
     if(!_c) return; const idx = state.cards.findIndex(c=>c.id===_c.id);
+    if(window.pitLog) pitLog('予約カードを削除', { kind:'delete', label: (_c.resNo? '['+_c.resNo+'] ':'') + (_c.customer? _c.customer+' 様':'') + (_c.car? ' / '+_c.car:'') });
     if(idx>=0) state.cards.splice(idx,1);
     cvCloseDel();
     if(window.closeDetail) closeDetail(); else save();
