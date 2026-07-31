@@ -286,6 +286,7 @@
         self._applying = false;
 
         console.log('[PitDB] 読み込み完了（' + total + '件）');
+        if (window.PitSync) PitSync.connected();
         if (!sdoc.exists) self._cloudFlush();     // 初回だけ設定を書き上げる
         self._watch();
         self._afterApply();
@@ -334,7 +335,7 @@
             touched = true;
           });
           self._applying = false;
-          if (touched) self._afterApply();
+          if (touched) { if (window.PitSync) PitSync.received(); self._afterApply(); }
         }, function (e) { console.error('[PitDB] ' + col + ' の購読に失敗', e); });
         self._unsubs.push(un);
       });
@@ -356,6 +357,7 @@
         });
         self._shadow.settings = js;
         self._applying = false;
+        if (window.PitSync) PitSync.received();
         self._afterApply();
       }, function (e) { console.error('[PitDB] 設定の購読に失敗', e); });
       this._unsubs.push(un2);
@@ -414,6 +416,7 @@
 
       if (!ops.length) return true;
       ops.forEach(function (op) { self._pending[op.key] = 1; });
+      if (window.PitSync) PitSync.saving();
 
       /* Firestore のまとめ書きは1回500件まで。多い時は分けて送る。 */
       const chunks = [];
@@ -436,9 +439,11 @@
         });
       }, Promise.resolve()).then(function () {
         self._cloudErr = 0;
+        if (window.PitSync) PitSync.saved();
         console.log('[PitDB] 保存しました（' + ops.length + '件）');
       }).catch(function (e) {
         console.error('[PitDB] 保存に失敗', e);
+        if (window.PitSync) PitSync.failed();
         ops.forEach(function (op) { delete self._pending[op.key]; });
         self._cloudErr++;
         if (self._cloudErr <= 2 && window.showToast) {

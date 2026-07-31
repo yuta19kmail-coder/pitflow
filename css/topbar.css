@@ -111,16 +111,38 @@
 .av img { width: 100%; height: 100%; object-fit: cover; }
 .tb-username { font-size: 13px; color: var(--text2); white-space: nowrap; }
 
-/* 同期インジケータ（CarFlow準拠：脈打つ緑ドット＋「同期」。今はサンプル＝クリックで案内） */
+/* 同期ランプ（sync-pit.js が状態でクラスを付け替える）
+   同期済み＝緑で脈打つ／同期中＝黄で点滅／受信＝青／オフライン・エラー＝赤／端末保存＝灰 */
 .sync-indicator {
   display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 10px;
   font-size: 10px; font-weight: 600; background: var(--bg3); border: 1px solid var(--border);
   color: var(--text2); user-select: none; white-space: nowrap; cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
 }
 .sync-indicator .sync-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #22c55e; animation: syncPulse 2.4s infinite; }
-.sync-indicator.sync-offline { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.4); color: #fca5a5; }
-.sync-indicator.sync-offline .sync-dot { background: #ef4444; animation: none; }
+
+/* 同期済み（既定） */
+.sync-indicator.sync-idle { background: rgba(34,197,94,.10); border-color: rgba(34,197,94,.32); color: #86efac; }
+
+/* 同期中 */
+.sync-indicator.sync-saving { background: rgba(234,179,8,.14); border-color: rgba(234,179,8,.42); color: #fde68a; }
+.sync-indicator.sync-saving .sync-dot { background: #eab308; animation: syncBlink .7s infinite; }
+
+/* 受信（他の人の変更が入った） */
+.sync-indicator.sync-recv { background: rgba(59,130,246,.14); border-color: rgba(59,130,246,.42); color: #93c5fd; }
+.sync-indicator.sync-recv .sync-dot { background: #3b82f6; animation: syncBlink .5s 2; }
+
+/* オフライン・保存エラー */
+.sync-indicator.sync-offline, .sync-indicator.sync-error { background: rgba(239,68,68,.14); border-color: rgba(239,68,68,.4); color: #fca5a5; }
+.sync-indicator.sync-offline .sync-dot, .sync-indicator.sync-error .sync-dot { background: #ef4444; animation: none; }
+.sync-indicator.sync-error .sync-dot { animation: syncBlink .9s infinite; }
+
+/* サンプル（この端末だけ） */
+.sync-indicator.sync-local { background: var(--bg3); border-color: var(--border); color: var(--text2); }
+.sync-indicator.sync-local .sync-dot { background: #94a3b8; animation: none; }
+
 @keyframes syncPulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,.5); } 70% { box-shadow: 0 0 0 5px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+@keyframes syncBlink { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
 
 /* ヘルプ（CarFlow .help-btn 準拠：丸） */
 #topbar .help-btn {

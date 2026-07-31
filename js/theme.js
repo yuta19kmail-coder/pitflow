@@ -87,15 +87,37 @@
   // ---- TOPバーのユーザー表示（アバター＋名前）----
   // 今は「自分」（付箋/個人BOXと共通の pitflow_bn_me）＝サンプル。本番ログイン後は本人に自動で紐づく。
   function currentUser() {
+    /* 本番＝ログインした本人（CoreFlowの名簿の名前と写真）。写真はCoreMembersで登録したもの。 */
+    var me = window.fb && window.fb.currentMember;
+    if (me) {
+      return {
+        name: me.name || 'メンバー',
+        initial: (me.ini || me.name || '？').trim().slice(0, 2) || '？',
+        photo: me.photo || ''
+      };
+    }
+    /* サンプル＝付箋や個人BOXと同じ「自分」 */
     var staff = (window.state && state.staff) || [];
     var id = null; try { id = localStorage.getItem('pitflow_bn_me'); } catch (e) {}
     var m = staff.find(function (s) { return s.id === id; }) || staff.find(function (s) { return s.front; }) || staff[0];
     var name = (window.pitCurrentStaffName && pitCurrentStaffName()) || (m && m.name) || 'ゲスト';
-    return { name: name, initial: (name || '？').trim().slice(0, 2) || '？' };
+    return { name: name, initial: (name || '？').trim().slice(0, 2) || '？', photo: (m && m.photo) || '' };
   }
   window.pitRenderTopUser = function () {
     var u = currentUser();
-    var av = document.getElementById('tb-avatar'); if (av) av.textContent = u.initial;
+    var av = document.getElementById('tb-avatar');
+    if (av) {
+      av.textContent = u.initial;                  /* まず頭文字。写真が読めたら差し替わる */
+      if (u.photo) {
+        /* ⚠ HTMLの文字列で組むと、写真のURLに引用符が入った時に壊れる。
+              部品として作って差し込む（読めなかったら頭文字のまま残す）。 */
+        var img = document.createElement('img');
+        img.alt = '';
+        img.onload = function () { av.textContent = ''; av.appendChild(img); };
+        img.onerror = function () { av.textContent = u.initial; };
+        img.src = u.photo;
+      }
+    }
     var nm = document.getElementById('tb-username'); if (nm) nm.textContent = u.name;
   };
 
