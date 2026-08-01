@@ -191,6 +191,14 @@
     hourglass:  'M7 3.6h10M7 20.4h10M8 3.6v3.2c0 2 4 3.5 4 5.2s-4 3.2-4 5.2v3.2M16 3.6v3.2c0 2-4 3.5-4 5.2s4 3.2 4 5.2v3.2',
     /* ---- 2026-08-01 追加（MHS のアイコン化で必要になった3つ） ---- */
     bed:        'M3.4 20.2V6.6M3.4 12.8h13a4.6 4.6 0 0 1 4.6 4.6v2.8M3.4 17.4h17.6M7.2 12.8v-2.2a1.6 1.6 0 0 1 1.6-1.6h2.8a1.6 1.6 0 0 1 1.6 1.6v2.2',
+    /* ---- 2026-08-01 追加（CarFlow ほか全アプリのアイコン化で必要になった7つ） ---- */
+    siren:      'M6.2 19.6h11.6M7.6 19.6v-6.4a4.4 4.4 0 0 1 8.8 0v6.4M12 4v2.6M5.2 7.4l1.8 1.8M18.8 7.4L17 9.2',
+    handshake:  'M11 17.2l1.9 1.9a1.4 1.4 0 0 0 2-2 M13.9 14.1l2.4 2.4a1.4 1.4 0 0 0 2-2l-3.8-3.8a2.8 2.8 0 0 0-4 0l-.8.8a1.4 1.4 0 0 1-2-2l2.7-2.7a5.4 5.4 0 0 1 6.6-.8l.5.3a1.8 1.8 0 0 0 1.3.2L21 4.6 M20.8 3.8L21.8 14h-2 M3.2 3.8L2.2 14l6.2 6.2a1.4 1.4 0 0 0 2-2 M3.2 4.8h7.6',
+    trophy:     'M8 4.2h8v5.4a4 4 0 0 1-8 0z M8 5.8H5.4a2.4 2.4 0 0 0 2.6 4.4M16 5.8h2.6a2.4 2.4 0 0 1-2.6 4.4M12 13.6v3.2M9.2 20.2h5.6l-.7-3.4H9.9z',
+    shield:     'M12 3.6l7 2.6v5.6c0 4.2-2.9 7.4-7 8.6-4.1-1.2-7-4.4-7-8.6V6.2z',
+    speaker:    'M4 9.4h3.4L12 5.4v13.2L7.4 14.6H4z M15.4 9.8a3.6 3.6 0 0 1 0 4.4M18.2 7.4a7 7 0 0 1 0 9.2',
+    mute:       'M4 9.4h3.4L12 5.4v13.2L7.4 14.6H4z M16.2 9.8l4.4 4.4M20.6 9.8l-4.4 4.4',
+    music:      'M9.4 17.8V6.2l9.2-1.8v11.6M9.4 17.8a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0z M18.6 16a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0z',
     power:      'M12 3.8v7.4M7.6 6.9a7.2 7.2 0 1 0 8.8 0',
     sunset:     'M12 8.6V4.2M9.7 6.5l2.3 2.3 2.3-2.3M2.6 17.4h18.8M6.6 17.4a5.4 5.4 0 0 1 10.8 0M4.6 20.4h14.8',
     /* 状態の丸（🔴🟡🟢の置き換え）。色は文字色で付く。塗りで描く。 */
@@ -244,5 +252,83 @@
   IC.names = function () { return Object.keys(P); };
   IC.aliases = function () { return Object.keys(ALIAS); };
 
+  /* ─────────────────────────────────────────────────────────────
+     アプリ側から使う2つ（2026-08-01 追加。各アプリで同じものを書き直さなくて済むよう本体へ移した）
+
+       ic('trash','🗑️',16)  … SVGの文字列を返す。**その名前が無ければ第2引数（元の絵文字/文字）を返す**。
+                              ＝このファイルが読めなかった時でもボタンが空にならないための保険。
+                              ⚠ SVGなので innerHTML でしか使えない。textContent に入れるとタグが文字で出る。
+
+       icHydrate(root)      … 静的HTMLに書いた <i data-ic="trash" data-s="16">🗑️</i> の中身をSVGに差し替える。
+                              このファイルが読めていなければ何もしない＝絵文字のまま残る。
+                              画面を組み直したあとに呼び直すこと（差し替え済みには印を付けるので何度呼んでもよい）。
+
+     ⚠ 各アプリの index.html には「ic が無ければ絵文字を返すだけの ic を作る」2行の保険が入っている。
+        このファイルが読めていれば、そちらは動かない。
+     ───────────────────────────────────────────────────────────── */
+  w.ic = function (name, fb, size) {
+    try { if (IC.has(name)) return IC(name, size || 16); } catch (e) {}
+    return (fb == null ? '' : fb);
+  };
+  w.icHydrate = function (root) {
+    try {
+      var list = (root || document).querySelectorAll('i[data-ic]');
+      for (var i = 0; i < list.length; i++) {
+        var el = list[i];
+        if (el.getAttribute('data-icd')) continue;
+        var nm = el.getAttribute('data-ic');
+        if (!IC.has(nm)) continue;
+        el.innerHTML = IC(nm, +(el.getAttribute('data-s') || 18));
+        el.setAttribute('data-icd', '1');
+      }
+    } catch (e) {}
+  };
+
+
+  /* ─────────────────────────────────────────────────────────────
+     icoE(文字列) … **保存されている絵文字を、描く時だけ線画アイコンに読み替える**（2026-08-01）
+
+       ・保存データ（タスクのアイコン・フェーズ名など）に入っている絵文字は書き換えない。
+         書き換えると古い保存と食い違うため。PitFlow v0.130.0 の icoE() と同じ考え方。
+       ・使い方： el.innerHTML = icoE(t.icon + ' ' + t.name);
+       ⚠ 返すのはHTML。**textContent に入れないこと**（タグが文字で出てしまう）。
+       ・表に無い絵文字（お祝い・演出など）はそのまま残る。
+     ───────────────────────────────────────────────────────────── */
+  var E2I = {
+    '↩':'undo','⏻':'power','▲':'chevUp','▶':'chevRight','▸':'chevRight','▼':'chevDown',
+    '◀':'chevLeft','☀':'sun','★':'starFill','☆':'star','☐':'checkbox','☑':'checkbox','☰':'menu',
+    '♾':'arrowsH','⚔':'dice','⚖':'sliders','⚙':'settings','⚠':'warn','⚡':'bolt','✅':'check',
+    '✉':'send','✍':'pen','✏':'pencil','✓':'check','✔':'check','✕':'close','✗':'close','✦':'sparkle',
+    '✨':'sparkle','❌':'close','❓':'help','➕':'plus','➖':'minus','➡':'right','⬆':'up','⬇':'down',
+    '⭐':'starFill','🌏':'globe','🌐':'globe','🌙':'moon','🌱':'sparkle','🍃':'sparkle','🍵':'cup',
+    '🎁':'box','🎛':'sliders','🎨':'palette','🎬':'play','🎯':'target','🎵':'music','🏅':'crown',
+    '🏆':'trophy','🏎':'car','🏠':'home','🏢':'building','🏪':'shop','🏷':'tag','👀':'eye','👁':'eye',
+    '👍':'thumbUp','👤':'user','👥':'users','💎':'gem','💚':'dot','💡':'bulb','💬':'comment','💰':'money',
+    '💴':'money','💻':'monitor','💼':'briefcase','💾':'save','📁':'folder','📂':'folderOpen',
+    '📄':'fileText','📅':'calendar','📈':'chart','📉':'chart','📊':'chart','📋':'clipboard','📌':'pin',
+    '📍':'location','📐':'ruler','📑':'files','📖':'book','📘':'book','📚':'book','📜':'fileText',
+    '📝':'pencil','📡':'signal','📢':'megaphone','📣':'megaphone','📤':'upload','📥':'download','📦':'box',
+    '📧':'send','📨':'send','📱':'smartphone','📲':'smartphone','📷':'camera','📺':'monitor','🔀':'swap',
+    '🔁':'refresh','🔃':'refresh','🔄':'refresh','🔇':'mute','🔊':'speaker','🔌':'bolt','🔍':'search',
+    '🔎':'search','🔐':'lock','🔑':'key','🔒':'lock','🔓':'unlock','🔔':'bell','🔕':'bell','🔗':'link',
+    '🔢':'numbers','🔤':'textT','🔥':'fire','🔧':'wrench','🔴':'dot','🔶':'dot','🔼':'chevUp',
+    '🔽':'chevDown','🕊':'send','🕒':'clock','🕗':'clock','🕘':'clock','🖊':'pen','🖐':'hand',
+    '🖥':'monitor','🖨':'printer','🖱':'cursor','🖼':'image','🗂':'files','🗑':'trash','🗒':'sticky',
+    '🗓':'calendar','🗺':'map','😴':'bed','🙅':'ban','🙆':'check','🙋':'hand','🙌':'hand','🚀':'bolt',
+    '🚐':'van','🚗':'car','🚘':'car','🚙':'car','🚚':'van','🚦':'signal','🚧':'cone','🚨':'siren',
+    '🚪':'external','🚫':'ban','🛑':'cone','🛒':'cart','🛠':'wrench','🛡':'shield','🛻':'van','🟠':'dot',
+    '🟡':'dot','🟢':'dot','🟥':'shapeSq','🟦':'shapeSq','🟧':'shapeSq','🟩':'shapeSq','🤖':'robot',
+    '🤝':'handshake','🥇':'crown','🥈':'crown','🥉':'crown','🧑':'user','🧩':'puzzle','🧭':'target',
+    '🧮':'calculator','🧰':'briefcase','🧹':'broom','🧾':'receipt','🪪':'card','🪶':'pen'
+  };
+  var E_RE = /[\u2190-\u21FF\u2300-\u27BF\u2B00-\u2BFF\uFE0F]|[\uD83C-\uD83E][\uDC00-\uDFFF]/g;
+  w.icoE = function (str, size) {
+    if (str == null) return '';
+    return String(str).replace(E_RE, function (m) {
+      if (m === '\uFE0F') return '';           /* 異体字セレクタは落とす */
+      var n = E2I[m];
+      return n ? IC(n, size || 16) : m;
+    });
+  };
   w.IC = IC;
 })(window);

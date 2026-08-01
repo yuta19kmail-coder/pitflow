@@ -1,7 +1,16 @@
 /* ============================================
-   CoreFlow アプリランチャー（共通：全アプリで同一）v2.2（2026-06-07）
+   CoreFlow アプリランチャー（共通：全アプリで同一）v2.3（2026-08-01）
    中心＝CoreFlow（太陽・トリガーに被らないよう右上にオフセット）＋公転2周。
    ラベルは普段隠し球ホバーで表示。位置は各 .cf-lo-item の inline --dx/--dy。
+
+   ⚠ このファイルの本体は  D:\Claude\アプリ開発\_shared\launcher.css  です。
+      直す時はそこを直して、sync-shared.ps1 を実行して全アプリに配ること。
+      各アプリの css\ に入っているのは配られたコピー。直接直すと次の配布で消えます。
+      （2026-08-01：9アプリに手で配る運用をやめ、coreflow-icons.js と同じ「_shared が本体」に統一）
+
+   v2.3（2026-08-01）：閉じている時のトリガーの丸を「C＋虹リング」から CoreFlow の丸ロゴへ。
+      **開いた時に中心へ出る太陽（.cf-lo-sun）とまったく同じ作り**＝暗い丸＋うすい枠＋ロゴ。
+      開く前と後で見た目がつながる。画像が読めなかった時は今までどおり「C」に戻る。
    ============================================ */
 [data-cf-launcher]{margin-top:auto}
 
@@ -23,18 +32,21 @@
   background: var(--bg4, var(--bg3, rgba(255,255,255,.08)));
   border-color: rgba(127,127,127,.45);
 }
+/* 閉じている時の丸＝CoreFlowロゴ（v2.3）。開いた時の太陽 .cf-lo-sun と同じ作りにしてある。
+   ⚠ 色はテーマに関係なく暗い丸で固定（ロゴが透過なので、明るい下地だと渦が背景に溶ける）。 */
 .cf-lg-logo{
-  width:26px;height:26px;border-radius:50%;
-  background-color:#fff;
-  background-image: linear-gradient(#fff,#fff), conic-gradient(#ff0040,#ff8800,#ffe600,#00d048,#00c8ff,#5e3bff,#ff00aa,#ff0040);
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  border:2px solid transparent;
+  width:28px;height:28px;border-radius:50%;
+  background:#0e1116;
+  border:1.5px solid rgba(255,255,255,.22);
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
   box-sizing: border-box;
-  display:flex;align-items:center;justify-content:center;font-weight:800;color:#1a1a1a;font-size:11px;
+  padding:3px;
+  display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:11px;
   flex:0 0 auto;
   transition:box-shadow .2s ease;
 }
+/* 画像が読めなかった時は launcher.js が中身を「C」に戻す＝上の文字指定がそのまま効く */
+.cf-lg-logo>img{width:100%;height:100%;display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none}
 .cf-launcher-trigger:hover .cf-lg-logo,
 body.cf-open .cf-lg-logo{ box-shadow:0 0 14px 3px rgba(255,255,255,.45); }
 .cf-lg-text{display:flex;flex-direction:column;line-height:1.2}

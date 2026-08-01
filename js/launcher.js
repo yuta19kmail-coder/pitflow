@@ -1,5 +1,16 @@
 /* ============================================
    CoreFlow アプリランチャー（共通：全アプリで同一）
+
+   ⚠ このファイルの本体は  D:\Claude\アプリ開発\_shared\launcher.js  です。
+      直す時はそこを直して、sync-shared.ps1 を実行して全アプリに配ること。
+      各アプリの js\ に入っているのは配られたコピー。直接直すと次の配布で消えます。
+      （2026-08-01：9アプリに手で配る＋?v= を手で上げる運用をやめ、_shared 本体に統一。
+        ?v= はファイルの中身のハッシュから sync-shared.ps1 が自動で書き換える）
+
+   v2.5（2026-08-01）：①**閉じている時のトリガーの丸を「C」から CoreFlow の丸ロゴに**。
+     開いた時に中心へ出る太陽と同じ作り（暗い丸＋うすい枠）＝開く前と後で見た目がつながる。
+     画像が読めなかった時は今までどおり「C」に戻る。
+     ②準備中アプリの知らせを**ブラウザ標準の alert からアプリ内ダイアログ（UI.alert）へ**。
    v2.4（2026-07-31）：PitFlow のリンク先を本番の独自ドメイン（pitflow.kobayashi-motors.com）に変更。
    v2.3（2026-07-30）：球のアイコンを絵文字→正式の丸ロゴ画像に差し替え。
      画像は CoreFlow の /icons/ に置いた1組を全アプリで共有（＝直すのはCoreFlowの1箇所だけ）。
@@ -39,7 +50,12 @@
     st.id = 'cf-launcher-img-css';
     st.textContent =
       '.cf-lo-ball>img{width:100%;height:100%;border-radius:50%;display:block;object-fit:cover;pointer-events:none;-webkit-user-drag:none;user-select:none}' +
-      '.cf-lo-sun>img{width:88%;height:88%;display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none}';
+      '.cf-lo-sun>img{width:88%;height:88%;display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none}' +
+      /* v2.5：閉じている時の丸。launcher.css が古いままでもロゴが正しく出るように、ここでも指定する */
+      '.cf-lg-logo{width:28px;height:28px;border-radius:50%;background:#0e1116;border:1.5px solid rgba(255,255,255,.22);'+
+      'box-shadow:0 2px 8px rgba(0,0,0,.5);box-sizing:border-box;padding:3px;display:flex;align-items:center;justify-content:center;'+
+      'font-weight:800;color:#fff;font-size:11px;background-image:none}' +
+      '.cf-lg-logo>img{width:100%;height:100%;display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none;user-select:none}';
     (document.head || document.documentElement).appendChild(st);
   }
 
@@ -61,7 +77,7 @@
 
     mount.innerHTML =
       '<div class="cf-launcher-trigger" id="cf-trigger" title="CoreFlow（クリックで玄関へ／ホバーでアプリ切替）">' +
-        '<div class="cf-lg-logo">C</div>' +
+        '<div class="cf-lg-logo"><img src="'+escAttr(iconURL('coreflow'))+'" alt="CoreFlow" data-cf-emoji="C" draggable="false"></div>' +
         '<div class="cf-lg-text">' +
           '<span class="cf-l1">CoreFlow</span>' +
           '<span class="cf-l2">アプリ切替</span>' +
@@ -107,6 +123,7 @@
     document.body.appendChild(overlay);
     injectCSS();
     fallback(overlay);
+    fallback(mount);      /* v2.5：閉じている時の丸も、画像が読めなければ「C」に戻す */
 
     const root    = document.body;
     const trigger = document.getElementById('cf-trigger');
@@ -158,7 +175,15 @@
         const isDisabled = b.getAttribute('aria-disabled') === 'true';
         const isCurrent  = (b.dataset.app === currentApp);
         if(isCurrent){ e.preventDefault(); return; }
-        if(!url || isDisabled){ e.preventDefault(); alert(b.dataset.app + ' は準備中です。'); return; }
+        if(!url || isDisabled){
+          e.preventDefault();
+          var nm = (b.querySelector('img') && b.querySelector('img').getAttribute('alt')) || b.dataset.app;
+          /* ブラウザ標準の alert は出ている間ページが止まる（PCによっては固まって見える）ので使わない。
+             ui-dialog.js が入っていないアプリのためだけに、最後の逃げ道として標準を残してある。 */
+          if(window.UI && UI.alert){ UI.alert(nm + ' は準備中です。'); }
+          else { alert(nm + ' は準備中です。'); }
+          return;
+        }
       });
     });
   }
