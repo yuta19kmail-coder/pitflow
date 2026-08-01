@@ -432,12 +432,22 @@ function fleetCloseModal(){
   document.getElementById('fleet-modal').classList.remove('show');
 }
 function fleetSubmit(){
-  /* v1.14.0：どこかで例外が出ると、黙って閉じないまま止まって見える。
-     何が起きたか画面に出して、必ず気づけるようにする。 */
-  try { return _fleetSubmitInner(); }
-  catch (err) {
+  /* v1.14.2：保存そのものと「閉じる・描き直し」を分ける。
+     ⚠ これまでは描き直しでコケると『保存できませんでした』と出て、しかも閉じないので
+       押すたびに新しい車両が増えていた。保存が通ったら必ず閉じる。 */
+  var okId;
+  try {
+    okId = _fleetSubmitInner();
+  } catch (err) {
     console.error('[fleet] 保存でエラー', err);
     alert('保存できませんでした。\n' + (err && err.message ? err.message : err));
+    return;
+  }
+  try { fleetCloseModal(); } catch (e) { console.error('[fleet] 閉じるでエラー', e); }
+  try { renderFleet(); }
+  catch (e) {
+    console.error('[fleet] 画面の描き直しでエラー', e);
+    if (window.showToast) showToast('保存しました（画面の更新でつまずいたので、開き直してください）');
   }
 }
 function _fleetSubmitInner(){
@@ -478,6 +488,7 @@ function _fleetSubmitInner(){
       height:height, width:width, length:length, category:category, seats:seats, etc:etc, navi:navi, iso:iso, camera:camera };
     if (dupLoaner && repDate){ rec.replaceOf = dupLoaner.id; rec.replaceDate = repDate; }
     (kind === 'loaner' ? state.loaners : state.companyCars).push(rec);
+    _fleetEditId = id;   /* v1.14.2：万一もう一度押されても、増やさずに同じ車両を直す */
     _flSyncVehEvent(id, 'shakenIn', shaken);
     _flSyncVehEvent(id, 'tenken', tenken);
     // 入替予定＝旧車のカレンダーに「代車入替」イベント（〜入替日）＋新車にも開始予定
@@ -486,8 +497,7 @@ function _fleetSubmitInner(){
     }
   }
   if (window.PitDB) PitDB.save();
-  fleetCloseModal();
-  renderFleet();
+  return _fleetEditId;   /* 閉じる・描き直しは呼び出し元（fleetSubmit）でやる */
 }
 function fleetDelete(id){
   const f = _fleetFind(id);
