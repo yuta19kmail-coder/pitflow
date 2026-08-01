@@ -11,6 +11,9 @@
        保存先は companies/kobayashi_motors/pitSettings/staffProps。
      ⚠ v1.4.0：「区分（スタッフ/幹部/メカのみ）」を廃止（幹部は何の動きにも効いていなかった）。
      ⚠ v1.6.0：部署の手動設定も廃止。人と組織の真実は CoreMembers に一本化。
+     ⚠ v1.9.0：**メンバー一覧は CoreMembers の全員**（ログインしない人も含む）。
+       ログインできる人（CoreFlowの名簿にいて PitFlow が使える人）には「ログイン」の印を付ける。
+       ＝ログインしないアルバイト・回送要員も、担当や付箋で名前を選べる。
      ⚠ v1.7.0：画面に出す名前は CoreMembers の「表示名（通称）」に揃える。
        本名でも引けるように別名（aliases）を持たせてあるので、
        整備ソフト由来の担当（本名）や昔のカードもちゃんと結びつく。
@@ -36,6 +39,7 @@
   var _former = {};       // { id: {id,name,realName,aliases,left:true,leftAt,photo} }
   var _unsubCM = null, _unsubCD = null;
   var _coreLeft = [];     // CoreMembers の退職者（退職日つき）
+  var _portalAll = [];    // CoreFlow の名簿（在籍中ぜんぶ）
 
   /* PitFlow の中での部署の分け方。CoreMembers の部署名から自動で振り分ける。
      ⚠ ここが「1課/2課/受付課/その他」の唯一の定義。増やす時はここに足す。 */
@@ -143,42 +147,65 @@
     window.PIT_FORMER = out;
   }
 
-  /* 名簿＋PitFlow属性 → state.staff を作り直す */
+  /* CoreMembers（全員）＋ CoreFlow のログイン情報 ＋ PitFlow属性 → state.staff を作り直す。
+     ⚠ v1.9.0：一覧の元は **CoreMembers の在籍者ぜんぶ**。
+        ログインしない人（アルバイト・回送要員）も、担当や付箋で名前を選べるようにするため。 */
   function rebuildStaff() {
-    var list = _members.slice().sort(function (a, b) {
-      var sa = (a.pitflow && a.pitflow.sortOrder != null) ? a.pitflow.sortOrder : (a.sortOrder != null ? a.sortOrder : 9999);
-      var sb = (b.pitflow && b.pitflow.sortOrder != null) ? b.pitflow.sortOrder : (b.sortOrder != null ? b.sortOrder : 9999);
-      if (sa !== sb) return sa - sb;
+    var portalById = {}, portalByKey = {};
+    _portalAll.forEach(function (p) {
+      portalById[p.id] = p;
+      var k = keyOf(p.name); if (k) portalByKey[k] = p;
+    });
+
+    var rows = [];
+    var usedPortal = {};
+
+    _coreMembers.forEach(function (cm) {
+      var pm = (cm.portalMemberId && portalById[cm.portalMemberId])
+            || portalByKey[keyOf(cm.dispName)] || portalByKey[keyOf(cm.name)] || null;
+      if (pm) usedPortal[pm.id] = 1;
+      var id = (pm && pm.id) || ('cm_' + cm.id);
+      var disp = String(cm.dispName || '').trim() || String(cm.name || '').trim() || (pm && pm.name) || '(名前なし)';
+      var dv = divisionsOf(pm || { id: id, name: cm.name }, cm);
+      rows.push({
+        id: id,
+        cmId: cm.id,
+        name: disp,
+        realName: String(cm.name || '').trim() || (pm && pm.name) || '',
+        aliases: [cm.name, cm.dispName, pm && pm.name, pm && pm.gname].filter(Boolean).map(String),
+        canLogin: !!(pm && pm._usable),
+        divisions: dv.divisions,
+        division: dv.divisions[0] || '',
+        deptNames: dv.names,
+        photo: (pm && pm.photo) || cm.photo || '',
+        email: (pm && pm.email) || '',
+        sort: (typeof cm.sortOrder === 'number') ? cm.sortOrder : 999999
+      });
+    });
+
+    /* CoreMembers に居ないのに PitFlow が使える人（紐付け漏れ）も落とさない */
+    _members.forEach(function (pm) {
+      if (usedPortal[pm.id]) return;
+      rows.push({
+        id: pm.id, cmId: '', name: pm.name || '(名前なし)', realName: pm.name || '',
+        aliases: [pm.name, pm.gname].filter(Boolean).map(String),
+        canLogin: true, divisions: [], division: '', deptNames: [],
+        photo: pm.photo || '', email: pm.email || '',
+        sort: (typeof pm.sortOrder === 'number') ? pm.sortOrder : 999999
+      });
+    });
+
+    rows.sort(function (a, b) {
+      if (a.sort !== b.sort) return a.sort - b.sort;
       return String(a.name || '').localeCompare(String(b.name || ''), 'ja');
     });
-    window.state.staff = list.map(function (m) {
-      var p = propsOf(m.id);
-      var cm = coreOf(m);
-      var dv = divisionsOf(m, cm);
-      /* v1.7.0：画面に出す名前は CoreMembers の「表示名（通称）」に揃える。
-         ⚠ 昔のカードや整備ソフトのデータは本名で入っているので、
-            本名でも引けるように別名（aliases）を持たせておく。 */
-      var disp = (cm && String(cm.dispName || '').trim()) || (cm && String(cm.name || '').trim()) || m.name || '(名前なし)';
-      var aliases = [];
-      [m.name, m.gname, cm && cm.name, cm && cm.dispName].forEach(function (x) {
-        var t = String(x == null ? '' : x).trim();
-        if (t && aliases.indexOf(t) < 0) aliases.push(t);
-      });
-      return {
-        id: m.id,
-        name: disp,
-        realName: (cm && String(cm.name || '').trim()) || m.name || '',
-        aliases: aliases,
-        divisions: dv.divisions,            // ['div1','div2'...] 兼任ぶん全部（CoreMembers が正）
-        division: dv.divisions[0] || '',    // 代表の1つ（今までの画面がこれを見ている）
-        deptNames: dv.names,                // 実際の部署名（表示用）
-        front: !!p.front,                   // フロント担当に出す
-        reception: !!p.reception,           // 予約担当（電話を取る人）に出す
-        mech: !!p.mech,                     // 点検・整備の担当者に出す
-        photo: m.photo || '',
-        email: m.email || ''
-      };
+
+    window.state.staff = rows.map(function (r) {
+      var p = propsOf(r.id);
+      r.front = !!p.front; r.reception = !!p.reception; r.mech = !!p.mech;
+      return r;
     });
+
     window.PIT_MEMBERS_READY = true;
     /* 名簿が変わったら、お客様データの担当名も今の名前にそろえる（番号が入っている分だけ） */
     try { if (window.pitSyncCustomerStaffNames) window.pitSyncCustomerStaffNames(); } catch (e) { console.warn('[members] 担当名の追従でエラー', e); }
@@ -311,15 +338,17 @@
     if (_unsub) { try { _unsub(); } catch (e) {} _unsub = null; }
     _unsub = window.fb.company().collection('portalMembers')
       .onSnapshot(function (snap) {
-        var out = [], gone = [];
+        var out = [], gone = [], all = [];
         snap.forEach(function (doc) {
           var m = doc.data() || {}; m.id = doc.id;
           var usable = (m.master === true) || !!(m.pitflow && m.pitflow.on === true);
           if (m.active === false) { gone.push(m); return; }   /* 退職＝消さずに控える */
-          if (!usable) return;
-          out.push(m);
+          m._usable = usable;
+          all.push(m);
+          if (usable) out.push(m);
         });
-        _members = out;
+        _members = out;      /* PitFlow にログインできる人 */
+        _portalAll = all;    /* 在籍している人ぜんぶ（ログインの有無を見るため） */
         _formerSrc = gone;
         rebuildFormer();
         console.log('[members] CoreFlowの名簿から', out.length, '人');
@@ -384,9 +413,11 @@
 
     h += '<div class="mb-note">'
        + '<span class="mb-note-ic"><i data-ic=users data-ics=18></i></span>'
-       + '<div><b>名前・写真・在籍は CoreFlow のメンバー管理が元</b>です。'
+       + '<div><b>人と組織は CoreMembers が元</b>です（名前・表示名・所属・在籍）。'
        + 'ここで直すのは「PitFlow の中でできること」（フロント・受付・メカ）だけ。'
        + '<b>部署は CoreMembers の所属から自動</b>で入ります（兼任もそのまま反映）。'
+       + '<b>ログインしない人も全員ここに出ます</b>（担当や付箋で名前を選べます）。'
+       + '「ログイン」の印が付いている人だけ、PitFlow を開けます（権限は CoreFlow 側）。'
        + '人の追加や退職の反映は CoreFlow 側でお願いします。</div>'
        + '<a class="mb-openportal" href="https://coreflow.kobayashi-motors.com" target="_blank" rel="noopener">'
        + '<i data-ic=external data-ics=15></i> CoreFlowのメンバー管理を開く</a>'
@@ -403,9 +434,12 @@
       var dup = list.filter(function (x) { return nameCount[keyOf(x.name)] > 1; }).map(function (x) { return x.name; });
       if (dup.length) warn.push('<b>同じ名前の人がいます</b>：' + esc(Array.from(new Set(dup)).join('、')) +
         '。整備ソフトの担当者を結びつける時に取り違えます。CoreMembers の表示名を変えて区別してください。');
-      var noCore = list.filter(function (x) { return !x.deptNames || !x.deptNames.length; }).map(function (x) { return x.name; });
+      var noCm = list.filter(function (x) { return !x.cmId; }).map(function (x) { return x.name; });
+      if (noCm.length) warn.push('<b>CoreMembers に居ません</b>：' + esc(noCm.join('、')) +
+        '。CoreFlow のアカウントだけある状態です。CoreMembers に社員として登録し、「ログインアカウント」を紐付けてください。');
+      var noCore = list.filter(function (x) { return x.cmId && (!x.deptNames || !x.deptNames.length); }).map(function (x) { return x.name; });
       if (noCore.length) warn.push('<b>部署が入っていません</b>：' + esc(noCore.join('、')) +
-        '。CoreMembers で所属を設定するか、ログインアカウント（portalMembers）との紐付けを確認してください。');
+        '。CoreMembers で所属を設定してください。');
       var other = list.filter(function (x) { return (x.divisions || []).length === 1 && x.divisions[0] === 'other'; }).map(function (x) { return x.name; });
       if (other.length) warn.push('「その他」になっている人：' + esc(other.join('、')) +
         '。1課・2課・受付の人がここに入っていたら、CoreMembers の部署名を確認してください（名前に「1課」等が入っていないと判定できません）。');
@@ -418,12 +452,12 @@
     }
 
     h += '<div class="mb-table-wrap"><table class="mb-table"><thead><tr>'
-       + '<th class="mb-c-name">名前</th><th class="mb-c-div">部署<small>（CoreMembers）</small></th>'
+       + '<th class="mb-c-name">名前<small>（ログイン可否）</small></th><th class="mb-c-div">部署<small>（CoreMembers）</small></th>'
        + '<th class="mb-c-ck">フロント</th><th class="mb-c-ck">受付</th><th class="mb-c-ck">メカ</th>'
        + '</tr></thead><tbody>';
 
     if (!list.length) {
-      h += '<tr><td colspan="5" class="mb-empty">メンバーがいません。CoreFlow のメンバー管理で「PitFlow＝使える」をオンにしてください。</td></tr>';
+      h += '<tr><td colspan="5" class="mb-empty">メンバーがいません。CoreMembers に社員が登録されているか確認してください。</td></tr>';
     }
 
     list.forEach(function (s) {
@@ -436,7 +470,10 @@
         + '<td class="mb-c-name"><span class="mb-av">' + (s.photo ? '<img src="' + esc(s.photo) + '" alt="">' : esc((s.name || '？').slice(0, 2))) + '</span>'
         + '<span class="mb-nm">' + esc(s.name)
         + ((s.realName && s.realName !== s.name) ? '<small class="mb-real">' + esc(s.realName) + '</small>' : '')
-        + '</span></td>'
+        + '</span>'
+        + (s.canLogin ? '<span class="mb-login" title="CoreFlow のアカウントがあり、PitFlow を使えます">ログイン</span>'
+                      : '<span class="mb-login is-off" title="PitFlow は開けません（担当や付箋で名前は選べます）">—</span>')
+        + '</td>'
         + '<td class="mb-c-div" title="' + esc((s.deptNames || []).join('／')) + '">' + dv + '</td>'
         + '<td class="mb-c-ck"><input type="checkbox"' + (s.front ? ' checked' : '') + dis
         + ' onchange="pitMbSet(\'' + esc(s.id) + '\',\'front\',this.checked)"></td>'
