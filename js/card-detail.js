@@ -709,7 +709,8 @@ function _cfsLoanerGanttHtml(today, tStr, c, ro){
   loaners.forEach(function (l) {
     /* 古いtitleは撤去。data-loid でヘッダにマウスオーバー＝代車の詳細ホバーカード（loaner.js）。条件マッチは強調。 */
     const mcls = (sortOn && _cfsLgMatches(l, c)) ? ' cfs-lg-match' : '';
-    h += '<th class="cfs-lg-th' + mcls + '" data-loid="' + l.id + '"><i>' + String(l.name || '').replace('代車', '') + '</i><b>' + (l.model || '') + '</b></th>';
+    const _no = (l.number != null && l.number !== '') ? String(l.number) : String(l.name || '').replace('代車', '');
+    h += '<th class="cfs-lg-th' + mcls + '" data-loid="' + l.id + '"><i>' + _no + '</i><b>' + (l.model || '') + '</b></th>';
   });
   h += '</tr></thead>';
   h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c, ro) + '</tbody>';
@@ -1293,7 +1294,7 @@ function loanerSelect(c, key){
   h += '<option value="">使用代車を選ぶ</option>';
   (state.loaners || []).filter(l => !l.emergency).forEach(l => {   // 緊急車両は予約側に出さない（v0.101.5）
     const sel = c[key] === l.id ? ' selected' : '';
-    h += '<option value="' + l.id + '"' + sel + '>' + l.name + ' ' + l.model + '</option>';
+    h += '<option value="' + l.id + '"' + sel + '>' + (window.pitVehLabel ? pitVehLabel(l) : (l.name + ' ' + l.model)) + '</option>';
   });
   h += '</select>';
   return h;

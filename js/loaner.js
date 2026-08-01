@@ -82,6 +82,45 @@ function _loTeamColor(a){
 function _loMD(s){ const p=String(s).split('-'); return (+p[1])+'/'+(+p[2]); }
 
 function _loPd(s){ const p = String(s).split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+/* ===== v1.11.0 共通の道具 =====================================================
+   ・和暦：車検満了日は現場が和暦で見るので、表示だけ和暦にする（データは西暦のまま）。
+   ・12ヶ月点検：**車検満了日の翌年の同月同日**が点検時期。データとして持たず、その都度計算する。
+   ・代車の呼び名：「代車1」ではなく「1 タント」（通し番号＋車種）を正式な呼び名にする。
+   ============================================================================= */
+window.pitWareki = function (ymdStr, opt) {
+  var m = String(ymdStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return String(ymdStr || '');
+  var y = +m[1], mo = +m[2], d = +m[3];
+  var t = y * 10000 + mo * 100 + d;
+  var era, ey;
+  if (t >= 20190501) { era = '令和'; ey = y - 2018; }
+  else if (t >= 19890108) { era = '平成'; ey = y - 1988; }
+  else if (t >= 19261225) { era = '昭和'; ey = y - 1925; }
+  else return String(ymdStr || '');
+  var yl = (ey === 1 ? '元' : ey);
+  if (opt === 'ym') return era + yl + '年' + mo + '月';
+  if (opt === 'short') return era.charAt(0) + yl + '.' + mo + '.' + d;
+  return era + yl + '年' + mo + '月' + d + '日';
+};
+/* 車検満了日 → 12ヶ月点検の時期（翌年の同月同日）。satisfies 「車検満了日の翌年の同月」 */
+window.pitTenkenFromShaken = function (shakenYmd) {
+  var m = String(shakenYmd || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  var y = +m[1] + 1, mo = +m[2], d = +m[3];
+  var last = new Date(y, mo, 0).getDate();          // その月の末日（2/29 対策）
+  if (d > last) d = last;
+  return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+};
+/* 代車・自社車両の呼び名。代車＝「1 タント」／自社車両＝そのままの名前 */
+window.pitVehLabel = function (v, kind) {
+  if (!v) return '';
+  if (kind === 'company') return v.name || v.model || '';
+  var num = (v.number != null && v.number !== '') ? v.number
+          : (parseInt(String(v.name || '').replace(/[^0-9]/g, ''), 10) || '');
+  var model = v.model || '';
+  return (num !== '' ? String(num) : '') + (num !== '' && model ? ' ' : '') + model || (v.name || '');
+};
+
 function _loEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
 
 /* 代車の装備/寸法（ETC/ナビ/ISO/高さ/幅/長さ/区分/定員）が未設定なら、デモ用に変化を付けて初期化（実車は編集で上書き） */
@@ -90,6 +129,7 @@ function _loEnsureOpts(){
     if (l.etc === undefined)  l.etc  = (i % 2 === 0);
     if (l.navi === undefined) l.navi = (i % 3 !== 0);
     if (l.iso === undefined)  l.iso  = (i % 4 === 0);
+    if (l.camera === undefined) l.camera = (i % 3 === 0);   /* v1.11.0 バックカメラ */
     if (l.height === undefined || l.height === null) l.height = 150 + (i % 6) * 3;    // 150〜165cm
     if (l.width  === undefined || l.width  === null) l.width  = 148 + (i % 5) * 4;    // 148〜164cm
     if (l.length === undefined || l.length === null) l.length = 340 + (i % 8) * 20;   // 340〜480cm
@@ -121,9 +161,18 @@ function _loFiltered(){
   if (_loFilters.etc)  ls = ls.filter(function(l){ return l.etc; });
   if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
   if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });
+  if (_loFilters.camera) ls = ls.filter(function(l){ return l.camera; });
   const anyCat = _loCats.kei || _loCats.normal || _loCats.import;
   if (anyCat) ls = ls.filter(function(l){ return _loCats[l.category]; });
-  if (_loSortKey) ls.sort(function(a, b){ return (a[_loSortKey] != null ? a[_loSortKey] : 99999) - (b[_loSortKey] != null ? b[_loSortKey] : 99999); });
+  if (_loSortKey === 'camera') {
+    /* カメラ付きを先に（同じなら番号順） */
+    ls.sort(function(a, b){ return ((b.camera?1:0) - (a.camera?1:0)) || ((a.number||0) - (b.number||0)); });
+  } else if (_loSortKey === 'shakenDate') {
+    /* 車検満了が近い順（未入力は最後） */
+    ls.sort(function(a, b){ return String(a.shakenDate || '9999').localeCompare(String(b.shakenDate || '9999')); });
+  } else if (_loSortKey) {
+    ls.sort(function(a, b){ return (a[_loSortKey] != null ? a[_loSortKey] : 99999) - (b[_loSortKey] != null ? b[_loSortKey] : 99999); });
+  }
   // 緊急車両は常に一番左
   const emg = ls.filter(function(l){ return l.emergency; });
   const norm = ls.filter(function(l){ return !l.emergency; });
@@ -262,9 +311,10 @@ function loVehHover(headEl){
         + (catLb ? '<span class="lvh-cat ' + _loEsc(l.category) + '">' + catLb + '</span>' : '')
         + (l.seats != null ? '<span class="lvh-seats">定員' + _loEsc(l.seats) + '人</span>' : '')
       + '</div>'
-    + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + '</div>'
+    + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + opt(l.camera, 'カメラ') + '</div>'
     + '<div class="lvh-dims">' + dim('高さ ', l.height != null ? l.height + 'cm' : null) + dim('幅 ', l.width != null ? l.width + 'cm' : null) + dim('長さ ', l.length != null ? l.length + 'cm' : null) + '</div>'
-    + (l.shakenDate ? '<div class="lvh-sub">車検 ' + _loEsc(l.shakenDate) + (l.tenkenDate ? '　12点 ' + _loEsc(l.tenkenDate) : '') + '</div>' : '');
+    + (l.shakenDate ? '<div class="lvh-sub">車検 ' + _loEsc(window.pitWareki(l.shakenDate))
+         + '　<span class="lvh-tenken">12ヶ月点検 ' + _loEsc(window.pitWareki(window.pitTenkenFromShaken(l.shakenDate), 'ym')) + '</span></div>' : '');
   el.classList.add('show');
   const r = headEl.getBoundingClientRect();
   const w = 220, vw = document.documentElement.clientWidth;
@@ -283,7 +333,8 @@ function loRebuild(days){
   grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(96px, 112px))';   // 案A：名前様＋車種＋メモが収まる幅
   let h = '<div class="lo-cell lo-head lo-corner">日付</div>';
   ls.forEach(function(l){
-    const num = String(l.name || '').replace('代車', '') || l.name;
+    const num = (l.number != null && l.number !== '') ? String(l.number)
+              : (String(l.name || '').replace('代車', '') || l.name);
     const emgCls = l.emergency ? ' lo-emg-head' : '';
     const emgTag = l.emergency ? '<div class="lo-emg-tag"><i data-ic=warn data-ics=16></i> 緊急</div>' : '';
     h += '<div class="lo-cell lo-head' + emgCls + '" data-loid="' + l.id + '">' + emgTag + '<div class="lo-car">' + num + '</div><div class="lo-model">' + _loEsc(l.model || '') + '</div></div>';

@@ -64,17 +64,19 @@ function renderFleet(){
     h += '<div class="fl-rows">';
     g.arr.forEach(function(v){
       h += '<div class="fl-row">'
-         + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(v.name) + (v.retired ? '<span class="fl-retired">引退</span>' : '') + (v.replaceDate ? '<span class="fl-retired plan">入替予定 ' + _fleetEsc(v.replaceDate) + '</span>' : '') + '</div>'
-         + '<div class="fl-sub">' + _fleetEsc(v.model || '—') + (v.color ? '（' + _fleetEsc(v.color) + '）' : '') + (v.plate ? ' ・ ' + _fleetEsc(v.plate) : '')
+         + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(gi === 0 ? (window.pitVehLabel ? pitVehLabel(v) : v.name) : v.name) + (v.retired ? '<span class="fl-retired">引退</span>' : '') + (v.replaceDate ? '<span class="fl-retired plan">入替予定 ' + _fleetEsc(v.replaceDate) + '</span>' : '') + '</div>'
+         + '<div class="fl-sub">' + _fleetEsc(gi === 0 ? (v.color || '') : (v.model || '—')) + (gi === 0 && v.color ? '' : (v.color ? '（' + _fleetEsc(v.color) + '）' : '')) + (v.plate ? (gi === 0 && !v.color ? '' : ' ・ ') + _fleetEsc(v.plate) : '')
          + (gi === 0 ? '<br>'
              + (v.category ? '<span class="fl-opttag cat">' + ({kei:'軽',normal:'普通車',import:'輸入車'}[v.category] || '') + '</span>' : '')
              + (v.etc ? '<span class="fl-opttag">ETC</span>' : '') + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '') + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
+             + (v.camera ? '<span class="fl-opttag">カメラ</span>' : '')
              + (v.seats != null ? '<span class="fl-opttag h">定員' + _fleetEsc(v.seats) + '人</span>' : '')
              + (v.height != null ? '<span class="fl-opttag h">高' + _fleetEsc(v.height) + '</span>' : '')
              + (v.width  != null ? '<span class="fl-opttag h">幅' + _fleetEsc(v.width) + '</span>' : '')
              + (v.length != null ? '<span class="fl-opttag h">長' + _fleetEsc(v.length) + '</span>' : '')
            : '')
-         + (v.shakenDate ? '<br>車検 ' + _fleetEsc(v.shakenDate) : '') + (v.tenkenDate ? ' ・ 12点 ' + _fleetEsc(v.tenkenDate) : '') + '</div></div>'
+         + (v.shakenDate ? '<br>車検満了 ' + _fleetEsc(window.pitWareki ? pitWareki(v.shakenDate) : v.shakenDate)
+              + ' ・ <span class="fl-tenken-auto">12ヶ月点検 ' + _fleetEsc(window.pitWareki ? pitWareki(pitTenkenFromShaken(v.shakenDate), 'ym') : '') + '（自動）</span>' : '') + '</div></div>'
          + '<button class="fl-btn" onclick="fleetOpenModal(\'' + v.id + '\')"><i data-ic=pencil data-ics=16></i></button>'
          + '<button class="fl-btn del" onclick="fleetDelete(\'' + v.id + '\')"><i data-ic=trash data-ics=16></i></button>'
          + '</div>';
@@ -119,11 +121,12 @@ function flMonthCalHtml(){
       const first = ym + '-01';
       const last = ym + '-' + String(new Date(y, mo+1, 0).getDate()).padStart(2, '0');
       const sh = v.shakenDate && v.shakenDate.indexOf(ym) === 0;
-      const tk = v.tenkenDate && v.tenkenDate.indexOf(ym) === 0;
+      const tkDate = window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
+      const tk = tkDate && tkDate.indexOf(ym) === 0;
       const evs = _flEvents().filter(function(e){ return e.vehicleId === v.id && e.fromDate <= last && e.toDate >= first; });
       h += '<div class="fl-cal-cell" onclick="flOpenEventModal(\'' + v.id + '\',\'' + first + '\')">';
       if (sh) h += '<span class="fl-bdg shaken" title="車検満了 ' + _fleetEsc(v.shakenDate) + '">車検</span>';
-      if (tk) h += '<span class="fl-bdg tenken" title="12点 ' + _fleetEsc(v.tenkenDate) + '">12点</span>';
+      if (tk) h += '<span class="fl-bdg tenken" title="12ヶ月点検（車検満了の翌年）' + _fleetEsc(window.pitWareki ? pitWareki(tkDate) : tkDate) + '">12ヶ月</span>';
       evs.forEach(function(e){
         const t = FL_EVT_TYPES[e.type] || FL_EVT_TYPES.other;
         h += '<span class="fl-evt" style="background:' + t.color + '" title="' + _fleetEsc(e.fromDate + '〜' + e.toDate) + '" onclick="event.stopPropagation();flOpenEventModal(null,null,\'' + e.id + '\')">' + _fleetEsc(e.label || t.label) + '</span>';
@@ -158,7 +161,7 @@ function flDayCalHtml(y, mo){
     metas.forEach(function(m){
       const ds = m.ds;
       const sh = v.shakenDate === ds;
-      const tk = v.tenkenDate === ds;
+      const tk = (window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '') === ds;
       const evs = _flEvents().filter(function(e){ return e.vehicleId === v.id && e.fromDate <= ds && e.toDate >= ds; });
       // 代車の貸出状況（利用カレンダー）を透かして重ねる
       let useCls = '', useTag = '';
@@ -169,7 +172,7 @@ function flDayCalHtml(y, mo){
       h += '<div class="fl-cal-cell fl-day' + useCls + (m.closed ? ' fl-closedc' : '') + (m.hol ? ' fl-holc' : '') + '" onclick="flOpenEventModal(\'' + v.id + '\',\'' + ds + '\')">';
       h += useTag;
       if (sh) h += '<span class="fl-bdg shaken">車検</span>';
-      if (tk) h += '<span class="fl-bdg tenken">12点</span>';
+      if (tk) h += '<span class="fl-bdg tenken">12ヶ月</span>';
       evs.forEach(function(e){
         const t = FL_EVT_TYPES[e.type] || FL_EVT_TYPES.other;
         h += '<span class="fl-evt" style="background:' + t.color + '" onclick="event.stopPropagation();flOpenEventModal(null,null,\'' + e.id + '\')">' + _fleetEsc((e.label || t.label).slice(0, 4)) + '</span>';
@@ -256,7 +259,7 @@ function _flSyncVehEvent(vehicleId, type, date){
   const evs = _flEvents();
   const i = evs.findIndex(function(e){ return e.id === eid; });
   if (!date){ if (i>=0) evs.splice(i,1); return; }
-  const rec = { id:eid, vehicleId:vehicleId, type:type, label:(FL_EVT_TYPES[type]?FL_EVT_TYPES[type].label:''), fromDate:date, toDate:date, auto:true };
+  const rec = { id:eid, vehicleId:vehicleId, type:type, label:(FL_EVT_TYPES[type]?FL_EVT_TYPES[type].label:''), fromDate:date, toDate:date, auto:true, camera:camera };
   if (i>=0) evs[i]=rec; else evs.push(rec);
 }
 
@@ -277,13 +280,16 @@ function fleetOpenModal(id){
   document.getElementById('fl-pl-main').value   = v.plate || '';
   const _pg = document.getElementById('fl-pl-guide'); if (_pg) _pg.style.display = 'none';
   document.getElementById('fl-shaken').value = v.shakenDate || '';
-  document.getElementById('fl-tenken').value = v.tenkenDate || '';
+  /* v1.11.0：12ヶ月点検は車検満了日から自動計算（入力欄なし）。目安をその場に出す。 */
+  var _tp = document.getElementById('fl-tenken-preview');
+  if (_tp) _tp.textContent = v.shakenDate ? ('12ヶ月点検の目安：' + (window.pitWareki ? pitWareki(pitTenkenFromShaken(v.shakenDate), 'ym') : '')) : '';
   document.getElementById('fl-height').value = (v.height != null ? v.height : '');
   document.getElementById('fl-width').value  = (v.width  != null ? v.width  : '');
   document.getElementById('fl-length').value = (v.length != null ? v.length : '');
   document.getElementById('fl-cat').value    = v.category || 'kei';
   document.getElementById('fl-seats').value  = (v.seats != null ? v.seats : '');
   document.getElementById('fl-etc').checked  = !!v.etc;
+  var _fc = document.getElementById('fl-camera'); if (_fc) _fc.checked = !!v.camera;   /* v1.11.0 バックカメラ */
   document.getElementById('fl-navi').checked = !!v.navi;
   document.getElementById('fl-iso').checked  = !!v.iso;
   document.getElementById('fl-repdate').value = v.replaceDate || '';
@@ -311,12 +317,13 @@ function fleetSubmit(){
   const color  = (document.getElementById('fl-color').value || '').trim();
   const plate  = _flPlateJoin();
   const shaken = document.getElementById('fl-shaken').value || '';
-  const tenken = document.getElementById('fl-tenken').value || '';
+  const tenken = window.pitTenkenFromShaken ? pitTenkenFromShaken(document.getElementById('fl-shaken').value || '') : '';
   const _num = function(id){ const x = document.getElementById(id).value; return (x === '' || x == null) ? null : Number(x); };
   const height=_num('fl-height'), width=_num('fl-width'), length=_num('fl-length');
   const category = document.getElementById('fl-cat').value || 'kei';
   const seats = _num('fl-seats');
   const etc=!!document.getElementById('fl-etc').checked, navi=!!document.getElementById('fl-navi').checked, iso=!!document.getElementById('fl-iso').checked;
+  const camera=!!(document.getElementById('fl-camera')||{}).checked;
   if (!model){ alert('車種名を入れてください（例：タント）'); return; }
   if (!Array.isArray(state.companyCars)) state.companyCars = [];
 
@@ -330,14 +337,14 @@ function fleetSubmit(){
     if (f){
       if (f.kind !== kind){ const fromArr=f.kind==='loaner'?state.loaners:state.companyCars, toArr=kind==='loaner'?state.loaners:state.companyCars; fromArr.splice(fromArr.indexOf(f.v),1); toArr.push(f.v); }
       f.v.name = (kind==='loaner'?'代車'+number:(model||f.v.name)); f.v.number = number; f.v.model = model; f.v.color = color; f.v.plate = plate;
-      f.v.shakenDate = shaken; f.v.tenkenDate = tenken;
-      f.v.height=height; f.v.width=width; f.v.length=length; f.v.category=category; f.v.seats=seats; f.v.etc=etc; f.v.navi=navi; f.v.iso=iso;
+      f.v.shakenDate = shaken; delete f.v.tenkenDate;   /* 12ヶ月点検は持たない（自動計算） */
+      f.v.height=height; f.v.width=width; f.v.length=length; f.v.category=category; f.v.seats=seats; f.v.etc=etc; f.v.navi=navi; f.v.iso=iso; f.v.camera=camera;
       _flSyncVehEvent(f.v.id, 'shakenIn', shaken);
       _flSyncVehEvent(f.v.id, 'tenken', tenken);
     }
   } else {
     const id = (kind === 'loaner' ? 'L' : 'C') + Date.now().toString(36);
-    const rec = { id:id, name:labelName, number:number, model:model, color:color, plate:plate, shakenDate:shaken, tenkenDate:tenken,
+    const rec = { id:id, name:labelName, number:number, model:model, color:color, plate:plate, shakenDate:shaken,
       height:height, width:width, length:length, category:category, seats:seats, etc:etc, navi:navi, iso:iso };
     if (dupLoaner && repDate){ rec.replaceOf = dupLoaner.id; rec.replaceDate = repDate; }
     (kind === 'loaner' ? state.loaners : state.companyCars).push(rec);

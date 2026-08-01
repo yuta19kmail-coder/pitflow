@@ -156,6 +156,7 @@ window.state = {
     { id: 'etc',    label: 'ETC' },
     { id: 'navi',   label: 'ナビ' },
     { id: 'iso',    label: 'ISO' },
+    { id: 'camera', label: 'バックカメラ' },
     { id: 'height', label: '高さ' },
     { id: 'width',  label: '幅' },
     { id: 'length', label: '長さ' },
