@@ -9,11 +9,11 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <link rel="manifest" href="manifest.json?v=1">
 <meta name="theme-color" content="#1f7a4d">
-<link rel="stylesheet" href="css/coreflow-ui.css?v=2"><!-- 見た目の基準（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
+<link rel="stylesheet" href="css/coreflow-ui.css?v=b3f14a2c"><!-- 見た目の基準（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=40">
-<link rel="stylesheet" href="css/polish.css?v=164">
+<link rel="stylesheet" href="css/polish.css?v=165">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
 <link rel="stylesheet" href="css/search.css?v=5">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.14.3</div>
+    <div class="login-ver">v1.14.7</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.14.3</span>
+    <span class="ver">v1.14.7</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -767,7 +767,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 
 <!-- ===== JS ===== -->
-<script src="js/coreflow-icons.js?v=2"></script><!-- 線画アイコン IC()（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
+<script src="js/coreflow-icons.js?v=ee14d53d"></script><!-- 線画アイコン IC()（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
 <script src="js/pit-icons.js?v=2"></script><!-- 画面に線画アイコンを流し込む -->
 <script src="js/state.js?v=56"></script>
 <script src="js/theme.js?v=4"></script>
@@ -813,8 +813,8 @@
 <script src="js/shaken.js?v=16"></script>
 <script src="js/shaken-log.js?v=6"></script>
 <script src="js/outsource.js?v=3"></script>
-<script src="js/loaner.js?v=55"></script>
-<script src="js/fleet.js?v=20"></script>
+<script src="js/loaner.js?v=57"></script>
+<script src="js/fleet.js?v=24"></script>
 <script src="js/auth-pit.js?v=12"></script>
 <script src="js/members-pit.js?v=11"></script>
 <script src="js/oplog-pit.js?v=1"></script>
@@ -850,7 +850,7 @@
 </div>
 <script src="js/reset-pit.js?v=1"></script><!-- 本番データの初期化（管理のみ・settings.js より後ろ） -->
 <script src="js/import-cloud.js?v=3"></script><!-- 顧客データの取込（本番・分割送信／settings.js より後ろ） -->
-<script src="js/coreflow-sync.js?v=1"></script><!-- 同期ランプ共通部品（PitFlowではふきだしだけ借りる。sync-pit.js より後ろ） -->
+<script src="js/coreflow-sync.js?v=ca024d30"></script><!-- 同期ランプ共通部品（PitFlowではふきだしだけ借りる。sync-pit.js より後ろ） -->
 <script>/* 本番（クラウド保存）では開発用の入口を隠す＝実データにサンプルを混ぜないため */
 (function(){ if(!window.PIT_CLOUD) return; var n=document.querySelectorAll("[data-dev-only]");
   for(var i=0;i<n.length;i++) n[i].style.display="none"; })();</script>

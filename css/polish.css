@@ -1498,3 +1498,24 @@ th.cfs-lg-d{ z-index:3; }
 .fl-w-u{ font-size:12px; color:var(--text2); }
 .fl-w-hint{ font-size:11px; color:var(--text3); margin-top:3px; min-height:15px; }
 .fl-w-hint.ng{ color:#fca5a5; }
+
+/* ===== v1.14.6 車両カレンダー：代車／社用車の切り替え線（横方向） ===== */
+.fl-cal-sec{
+  grid-column: 1 / -1;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  background: var(--bg3);
+  border-top: 1px solid var(--border2);
+  border-bottom: 1px solid var(--border2);
+}
+.fl-cal-sec > span{
+  position: sticky;
+  left: 0;
+  padding: 0 10px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: var(--text3);
+  background: var(--bg3);
+}

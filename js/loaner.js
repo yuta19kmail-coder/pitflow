@@ -124,23 +124,37 @@ window.pitWarekiToYmd = function (era, wy, mo, d) {
   return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 };
 
-/* 車検満了日 → 12ヶ月点検の時期（翌年の同月同日）。satisfies 「車検満了日の翌年の同月」 */
-window.pitTenkenFromShaken = function (shakenYmd) {
+/* 車検満了日 → 次の12ヶ月点検の時期。
+   ◎考え方（v1.14.7）
+     12ヶ月点検は「車検の1年後＝次の車検の1年前」にやるもの。
+     なので**まず車検満了日の1年前**を見て、
+       ・それがまだ先（今日より後）なら → その日。車検より手前に点検が来る。
+       ・もう過ぎている（今日より前）なら → 車検満了日の1年後。車検の次の点検になる。
+     ⚠ 2/29 の年は、その月の末日に寄せる。 */
+function _pitAddYear(shakenYmd, diff) {
   var m = String(shakenYmd || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return '';
-  var y = +m[1] + 1, mo = +m[2], d = +m[3];
+  var y = +m[1] + diff, mo = +m[2], d = +m[3];
   var last = new Date(y, mo, 0).getDate();          // その月の末日（2/29 対策）
   if (d > last) d = last;
   return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+window.pitTenkenFromShaken = function (shakenYmd) {
+  var before = _pitAddYear(shakenYmd, -1);
+  if (!before) return '';
+  var t = new Date(); t.setHours(0, 0, 0, 0);
+  var today = t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+  if (before > today) return before;                // まだ先＝車検の手前に点検
+  return _pitAddYear(shakenYmd, 1);                 // もう過ぎている＝車検の次の点検
 };
-/* 代車・自社車両の呼び名。代車＝「1 タント」／自社車両＝そのままの名前 */
+/* 代車・自社車両の呼び名＝「1 タント」。番号が無ければ車種だけ、それも無ければ元の名前。
+   v1.14.5：社用車も番号を持つようになったので、代車と同じ形に揃えた。 */
 window.pitVehLabel = function (v, kind) {
   if (!v) return '';
-  if (kind === 'company') return v.name || v.model || '';
   var num = (v.number != null && v.number !== '') ? v.number
-          : (parseInt(String(v.name || '').replace(/[^0-9]/g, ''), 10) || '');
+          : ((kind === 'company') ? '' : (parseInt(String(v.name || '').replace(/[^0-9]/g, ''), 10) || ''));
   var model = v.model || '';
-  return (num !== '' ? String(num) : '') + (num !== '' && model ? ' ' : '') + model || (v.name || '');
+  return ((num !== '' ? String(num) : '') + (num !== '' && model ? ' ' : '') + model) || (v.name || '');
 };
 
 function _loEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]; }); }
@@ -269,6 +283,7 @@ function pitSyncLoanerAssigns(){
 window.pitSyncLoanerAssigns = pitSyncLoanerAssigns;
 
 function renderLoaner(){
+  try { if (window.pitRefreshAutoTenken) pitRefreshAutoTenken(); } catch (e) {}   /* v1.14.7：12ヶ月点検の位置を今日基準で貼り直す */
   const grid = document.getElementById('loaner-grid');
   if (!grid) return;
   pitSyncLoanerAssigns();   // カードの代車情報を割当に反映してから描画

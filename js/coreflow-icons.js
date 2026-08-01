@@ -189,6 +189,10 @@
     drop:       'M12 3.6s-6.4 7-6.4 10.9a6.4 6.4 0 0 0 12.8 0C18.4 10.6 12 3.6 12 3.6z',
     cup:        'M4.6 6.5h12v6.8a4.6 4.6 0 0 1-4.6 4.6H9.2a4.6 4.6 0 0 1-4.6-4.6z M16.6 8.2h1.6a2.4 2.4 0 0 1 0 4.8h-1.6M3.6 20.4h14',
     hourglass:  'M7 3.6h10M7 20.4h10M8 3.6v3.2c0 2 4 3.5 4 5.2s-4 3.2-4 5.2v3.2M16 3.6v3.2c0 2-4 3.5-4 5.2s4 3.2 4 5.2v3.2',
+    /* ---- 2026-08-01 追加（MHS のアイコン化で必要になった3つ） ---- */
+    bed:        'M3.4 20.2V6.6M3.4 12.8h13a4.6 4.6 0 0 1 4.6 4.6v2.8M3.4 17.4h17.6M7.2 12.8v-2.2a1.6 1.6 0 0 1 1.6-1.6h2.8a1.6 1.6 0 0 1 1.6 1.6v2.2',
+    power:      'M12 3.8v7.4M7.6 6.9a7.2 7.2 0 1 0 8.8 0',
+    sunset:     'M12 8.6V4.2M9.7 6.5l2.3 2.3 2.3-2.3M2.6 17.4h18.8M6.6 17.4a5.4 5.4 0 0 1 10.8 0M4.6 20.4h14.8',
     /* 状態の丸（🔴🟡🟢の置き換え）。色は文字色で付く。塗りで描く。 */
     dot:        { d:'M12 6.4a5.6 5.6 0 1 0 0 11.2 5.6 5.6 0 0 0 0-11.2z', fill:1, nostroke:1 }
   };
@@ -210,6 +214,8 @@
     wash: 'drop', wip: 'cone', holiday: 'parasol', sample: 'dice',
     manual: 'book', idea: 'bulb', tune: 'sliders', purchase: 'cart',
     invoice: 'receipt', morning: 'sunrise', good: 'thumbUp', status: 'dot',
+    /* MHS の言い方（2026-08-01） */
+    shift: 'bed', rest: 'bed', logout: 'power', evening: 'sunset', closed: 'cone',
     parts: 'box', done: 'check', inspect: 'search', cash: 'money'
   };
 
