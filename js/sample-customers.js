@@ -97,6 +97,9 @@
 
   // 起動時：空 or 旧フォーマット（vehicles配列が無い＝1台1レコードの旧型）かつ全部サンプルなら新モデルへ自動入替
   (function () {
+    /* v1.2.1：本番（クラウド保存）では自動投入しない。
+       ボタンからの seedSampleCustomers() は残す（練習用サイト・デモ版で使う）。 */
+    if (window.PIT_CLOUD) return;
     const cs = Array.isArray(state.customers) ? state.customers : [];
     if (cs.length === 0) { window.seedSampleCustomers(400, false); return; }
     // ★実データ保護：取り込み(cu_bl_)など「サンプル(cu_s)以外」の顧客が1件でもあれば、絶対に自動入替しない。

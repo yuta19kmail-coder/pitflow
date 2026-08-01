@@ -13,6 +13,10 @@
    ◎あくまで開発・動作確認用のダミー。実在しない名前・番号です。
    ======================================== */
 (function () {
+  /* v1.2.1：本番（クラウド保存）ではサンプルを一切入れない。
+     ⚠ 入れてしまうと、ログイン直後の一瞬に「サンプル＝新しいデータ」と判断されて
+        クラウドへ書き込まれ、初期化しても復活してしまう。 */
+  if (window.PIT_CLOUD) return;
   const today = new Date();
   const ymd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };

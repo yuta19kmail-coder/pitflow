@@ -128,12 +128,15 @@
     });
     h += '</div>';
 
-    /* ===== 🧪 開発用サンプル（予約の作り直し） ===== */
+    /* ===== 🧪 開発用サンプル（予約の作り直し） =====
+       v1.2.1：本番（クラウド保存）では出さない＝実データの中にサンプルを作ってしまう事故を防ぐ */
+    if (!window.PIT_CLOUD) {
     h += '<div class="ps-card">';
     h += '<div class="ps-h"><i data-ic=flask data-ics=16></i> 開発用サンプル</div>';
     h += '<div class="ps-desc">今のサンプル予約（カード）を全部消して、<b>今の顧客データから</b>直近の入庫実績っぽいサンプルを作り直します。残った車は預かり中ボードに散らします。<br>※開発・動作確認用。実データ運用前の見栄え確認に。</div>';
     h += '<button class="vh-btn" onclick="if(window.seedSampleReservations)seedSampleReservations()"><i data-ic=refresh data-ics=16></i> 予約サンプルを作り直す（顧客データから）</button>';
     h += '</div>';
+    }
 
     /* ===== 概算預かり日数の初期値 ===== */
     h += '<div class="ps-card">';

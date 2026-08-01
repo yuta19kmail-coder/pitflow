@@ -218,6 +218,7 @@
     /* まとめて1枚に入れるもの */
     _SETTINGS_KEYS: ['settings', 'bays', 'floorPlan', 'aiVerdicts', 'boardLabels'],
 
+    _loaded: false,     // v1.2.1：クラウドの中身を読み終わったか（読む前に書かないための鍵）
     _shadow: null,      // 最後にクラウドと合っていた内容（差分を出すための控え）
     _pending: {},       // いま書いている最中のもの（自分の書き込みが跳ね返ってくるのを無視する）
     _unsubs: [],
@@ -249,6 +250,7 @@
       }
       const self = this;
       this.mode = 'cloud';
+      this._loaded = false;                       // 読み終わるまでは書かない
       this._shadow = { docs: {}, settings: null };
       console.log('[PitDB] クラウドから読み込みます…');
 
@@ -285,6 +287,7 @@
         }
         self._applying = false;
 
+        self._loaded = true;                      // ここから先だけ保存を許す
         console.log('[PitDB] 読み込み完了（' + total + '件）');
         if (window.PitSync) PitSync.connected();
         if (!sdoc.exists) self._cloudFlush();     // 初回だけ設定を書き上げる
@@ -300,6 +303,7 @@
       this._unsubs.forEach(function (u) { try { u(); } catch (e) {} });
       this._unsubs = [];
       this.mode = 'cloud-pending';
+      this._loaded = false;
       this._shadow = null;
     },
 
@@ -383,6 +387,10 @@
     /* ---- 変わった所だけ送る ---- */
     _cloudFlush: function () {
       if (this.mode !== 'cloud' || !this._shadow) return false;
+      /* v1.2.1：クラウドを読み終わる前は絶対に書かない。
+         ⚠ 読み込み中は画面にまだサンプルが乗っていることがあり、
+            それを「新しいデータ」と勘違いして丸ごとアップしてしまう事故が起きた。 */
+      if (!this._loaded) { console.warn('[PitDB] 読み込み前なので保存を見送りました'); return false; }
       const self = this;
       const ops = [];
 

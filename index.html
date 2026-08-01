@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.2.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.2.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.2.0</div>
+    <div class="login-ver">v1.2.1</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.2.0</span>
+    <span class="ver">v1.2.1</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -417,7 +417,7 @@
       <div class="view-header">
         <div class="view-title"><span class="icon"><i data-ic=user data-ics=16></i></span>顧客 <span style="font-size:12px;color:var(--text3);font-weight:400">控え（入力補助）</span></div>
         <div class="view-actions">
-          <button class="vh-btn" onclick="seedSampleCustomers(500,true)"><i data-ic=dice data-ics=16></i> サンプル500件</button>
+          <button class="vh-btn" data-dev-only onclick="seedSampleCustomers(500,true)"><i data-ic=dice data-ics=16></i> サンプル500件</button>
           <button class="vh-btn" onclick="clearCustomers()"><i data-ic=trash data-ics=16></i> 全削除</button>
           <button class="vh-btn primary" onclick="openNewReserve()">＋ 新規入庫</button>
         </div>
@@ -446,7 +446,7 @@
         </div>
       </div>
       <div id="view-settings-body"></div>
-      <div class="pit-devtools">
+      <div class="pit-devtools" data-dev-only>
         <h4><i data-ic=cone data-ics=16></i> 開発用ツール（サンプル段階）</h4>
         <p>いまは「サンプルログイン＋この端末のブラウザ内に保存」で動いています。編集した内容はリロードしても残ります。<br>本物の Google ログインと会社の Firebase（carflow-9d500）へのクラウド保存は後日スイッチONします。</p>
         <button onclick="PitDB.resetSample()"><i data-ic=refresh data-ics=16></i> サンプルデータに戻す</button>
@@ -757,12 +757,13 @@
 <script src="js/state.js?v=52"></script>
 <script src="js/theme.js?v=4"></script>
 <script src="js/sync-pit.js?v=3"></script>
-<script src="js/sample-data.js?v=17"></script>
-<script src="js/sample-fleet.js?v=10"></script>
 <meta name="app-key" content="pitflow">
 <script src="js/firebase-init.js?v=9"></script>
+<!-- ⚠ サンプルの読み込みより前に置くこと。ここで window.PIT_CLOUD が決まり、本番ではサンプルを入れない判断に使う -->
+<script src="js/sample-data.js?v=18"></script>
+<script src="js/sample-fleet.js?v=11"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
-<script src="js/db-pit.js?v=39"></script>
+<script src="js/db-pit.js?v=40"></script>
 <script src="js/views.js?v=44"></script>
 <script src="js/work-content.js?v=9"></script>
 <script src="js/card-detail.js?v=97"></script>
@@ -771,7 +772,7 @@
 <script src="js/avail.js?v=6"></script>
 <script src="js/card-tabs.js?v=9"></script>
 <script src="js/customers.js?v=31"></script>
-<script src="js/sample-customers.js?v=7"></script>
+<script src="js/sample-customers.js?v=8"></script>
 <script src="js/sample-reservations.js?v=28"></script>
 <script src="js/dashboard.js?v=16"></script>
 <script src="js/parking.js?v=5"></script>
@@ -782,7 +783,7 @@
 <script src="js/sales-print.js?v=3"></script>
 <script src="js/mech-summary.js?v=2"></script>
 <script src="js/pit-floor.js?v=32"></script>
-<script src="js/settings.js?v=21"></script>
+<script src="js/settings.js?v=22"></script>
 <script src="js/settings-transfer.js?v=1"></script>
 <script src="js/import-bizcloud.js?v=6"></script>
 <script src="js/rules.js?v=10"></script>
@@ -834,5 +835,8 @@
 </div>
 <script src="js/reset-pit.js?v=1"></script><!-- 本番データの初期化（管理のみ・settings.js より後ろ） -->
 <script src="js/coreflow-sync.js?v=1"></script><!-- 同期ランプ共通部品（PitFlowではふきだしだけ借りる。sync-pit.js より後ろ） -->
+<script>/* 本番（クラウド保存）では開発用の入口を隠す＝実データにサンプルを混ぜないため */
+(function(){ if(!window.PIT_CLOUD) return; var n=document.querySelectorAll("[data-dev-only]");
+  for(var i=0;i<n.length;i++) n[i].style.display="none"; })();</script>
 </body>
 </html>
