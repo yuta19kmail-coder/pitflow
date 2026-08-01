@@ -11,7 +11,8 @@
        保存先は companies/kobayashi_motors/pitSettings/staffProps。
      ⚠ v1.4.0：「区分（スタッフ/幹部/メカのみ）」を廃止（幹部は何の動きにも効いていなかった）。
      ⚠ v1.6.0：部署の手動設定も廃止。人と組織の真実は CoreMembers に一本化。
-     ⚠ v1.9.1：**並び順も CoreMembers と同じ**（手動の並び順 → 無ければ本名の五十音順）。
+     ⚠ v1.9.3：**並び順は CoreMembers の「一覧」タブと同じ＝入社日が古い順**
+       （入社日なしは後ろ・同じなら本名の五十音順）。
      ⚠ v1.9.0：**メンバー一覧は CoreMembers の全員**（ログインしない人も含む）。
        ログインできる人（CoreFlowの名簿にいて PitFlow が使える人）には「ログイン」の印を付ける。
        ＝ログインしないアルバイト・回送要員も、担当や付箋で名前を選べる。
@@ -97,6 +98,19 @@
     }
     return d.parentId ? bucketOfDept(d.parentId, seen) : null;
   }
+  /* 主所属を 部(deptId)/課(sectionId) に読み替える（CoreMembers・MHS と同じ規則）。
+     主所属に課が入っていた場合は、部＝その親／課＝その課 として扱う。 */
+  function deptIdsOf(cm) {
+    var pid = (cm && cm.primaryDeptId) || '', sid = (cm && cm.sectionDeptId) || '';
+    var pd = deptById(pid);
+    if (pd && pd.parentId) { if (!sid) sid = pid; pid = pd.parentId; }
+    return { deptId: pid, sectionId: sid };
+  }
+  function deptOrder(id) {
+    var d = deptById(id);
+    return (d && typeof d.order === 'number') ? d.order : 1e9;
+  }
+
   /* portalMember → CoreMembers の社員（portalMemberId で照合。無ければ名前で照合） */
   function coreOf(m) {
     var hit = _coreMembers.find(function (c) { return c.portalMemberId && c.portalMemberId === m.id; });
@@ -169,6 +183,7 @@
       var disp = String(cm.dispName || '').trim() || String(cm.name || '').trim() || (pm && pm.name) || '(名前なし)';
       var dv = divisionsOf(pm || { id: id, name: cm.name }, cm);
       rows.push({
+        joinedAt: String(cm.joinedAt || ''),   /* 並びに使う（CoreMembers の「一覧」＝入社日が古い順） */
         id: id,
         cmId: cm.id,
         name: disp,
@@ -192,15 +207,20 @@
         aliases: [pm.name, pm.gname].filter(Boolean).map(String),
         canLogin: true, divisions: [], division: '', deptNames: [],
         photo: pm.photo || '', email: pm.email || '',
+        joinedAt: '',
         sort: 1e9   /* CoreMembers に居ない人は末尾（並びは CoreMembers が正） */
       });
     });
 
-    /* 並びは CoreMembers と完全に同じ規則（_cmpOrder）：
-       手動の並び順（sortOrder）が先、無ければ 1e9 で後ろ、同点なら本名の五十音順。 */
+    /* 並びは CoreMembers の「一覧」タブと同じ＝**入社日が古い順**。
+       入社日が入っていない人は後ろ。同じ日・未入力どうしは本名の五十音順。
+       （CoreMembers の _cmpJoined と同じ規則） */
     rows.sort(function (a, b) {
-      return (a.sort - b.sort)
-          || String(a.realName || a.name || '').localeCompare(String(b.realName || b.name || ''), 'ja');
+      var aj = a.joinedAt || '', bj = b.joinedAt || '';
+      if (aj && bj) { if (aj < bj) return -1; if (aj > bj) return 1; }
+      else if (aj && !bj) return -1;
+      else if (!aj && bj) return 1;
+      return String(a.realName || a.name || '').localeCompare(String(b.realName || b.name || ''), 'ja');
     });
 
     window.state.staff = rows.map(function (r) {
@@ -474,8 +494,8 @@
         + '<span class="mb-nm">' + esc(s.name)
         + ((s.realName && s.realName !== s.name) ? '<small class="mb-real">' + esc(s.realName) + '</small>' : '')
         + '</span>'
-        + (s.canLogin ? '<span class="mb-login" title="CoreFlow のアカウントがあり、PitFlow を使えます">ログイン</span>'
-                      : '<span class="mb-login is-off" title="PitFlow は開けません（担当や付箋で名前は選べます）">—</span>')
+        + (s.canLogin ? '<span class="mb-login" title="CoreFlow のアカウントがあり、PitFlow を使えます">ログイン可</span>'
+                      : '<span class="mb-login is-off" title="PitFlow は開けません（担当や付箋で名前は選べます）">非ログイン</span>')
         + '</td>'
         + '<td class="mb-c-div" title="' + esc((s.deptNames || []).join('／')) + '">' + dv + '</td>'
         + '<td class="mb-c-ck"><input type="checkbox"' + (s.front ? ' checked' : '') + dis
