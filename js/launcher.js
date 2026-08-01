@@ -1,5 +1,6 @@
 /* ============================================
    CoreFlow アプリランチャー（共通：全アプリで同一）
+   v2.4（2026-07-31）：PitFlow のリンク先を本番の独自ドメイン（pitflow.kobayashi-motors.com）に変更。
    v2.3（2026-07-30）：球のアイコンを絵文字→正式の丸ロゴ画像に差し替え。
      画像は CoreFlow の /icons/ に置いた1組を全アプリで共有（＝直すのはCoreFlowの1箇所だけ）。
      読めなかった時は今までどおり絵文字にフォールバックする。CSS(launcher.css)は無改修
@@ -18,7 +19,7 @@
 
   const APPS = [
     { key:'mhs',        url:'https://mhs.kobayashi-motors.com',       icon:'📅', name:'MHS',        color:'#dc2626', dx:0,   dy:-150 },
-    { key:'pitflow',    url:'https://yuta19kmail-coder.github.io/pitflow/',   icon:'🔧', name:'PitFlow',    color:'#1db97a', dx:68,  dy:-134 },
+    { key:'pitflow',    url:'https://pitflow.kobayashi-motors.com',   icon:'🔧', name:'PitFlow',    color:'#1db97a', dx:68,  dy:-134 },
     { key:'carflow',    url:'https://carflow.kobayashi-motors.com',           icon:'🚙', name:'CarFlow',    color:'#378ADD', dx:121, dy:-88  },
     { key:'stockflow',  url:'https://stockflow.kobayashi-motors.com',         icon:'📦', name:'StockFlow',  color:'#7c3aed', dx:148, dy:-23  },
     { key:'coreboard',  url:'https://coreboard.kobayashi-motors.com', icon:'📋', name:'CoreBoard',  color:'#06b6d4', dx:8,   dy:-235 },
