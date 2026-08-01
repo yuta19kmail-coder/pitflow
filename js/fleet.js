@@ -59,13 +59,14 @@ function renderFleet(){
   ];
   groups.forEach(function(g, gi){
     h += '<div class="fl-card"><div class="fl-h">' + g.name + '（' + g.arr.length + '台）'
-       + (gi === 0 ? '<button class="vh-btn primary" onclick="fleetOpenModal()">＋ 車両を追加</button>' : '') + '</div>';
+       + '</div>';   /* v1.14.3：「＋ 車両を追加」は画面上部にあるので、枠の中からは外した（ダブり） */
     if (!g.arr.length){ h += '<div class="fl-empty">登録なし</div>'; }
     h += '<div class="fl-rows">';
     g.arr.forEach(function(v){
       const _isLo = (gi === 0);
       const _ttl = _isLo ? (window.pitVehLabel ? pitVehLabel(v) : v.name) : v.name;
-      const _no = _isLo ? ((v.number != null && v.number !== '') ? String(v.number) : String(v.name || '').replace(/[^0-9]/g, '')) : '';
+      const _no = (v.number != null && v.number !== '') ? String(v.number)
+                : (_isLo ? String(v.name || '').replace(/[^0-9]/g, '') : '');
       const _cat = { kei: '軽自動車', normal: '普通車', import: '輸入車' }[v.category] || '';
       const _tk = v.shakenDate && window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
       const _dims = [
@@ -76,7 +77,7 @@ function renderFleet(){
       h += '<div class="fl-row fl-row-click" onclick="fleetOpenDetail(\'' + v.id + '\')" title="クリックで詳細">'
          + '<div class="fl-card-top">'
            + (_no ? '<span class="fl-no">' + _fleetEsc(_no) + '</span>' : '')
-           + '<span class="fl-ttl">' + _fleetEsc(_isLo ? (v.model || '（車種未登録）') : _ttl) + '</span>'
+           + '<span class="fl-ttl">' + _fleetEsc(_isLo ? (v.model || '（車種未登録）') : (v.name || v.model || '（名前なし）')) + '</span>'
            + (v.retired ? '<span class="fl-retired">引退</span>' : '')
            + (v.replaceDate ? '<span class="fl-retired plan">入替 ' + _fleetEsc(v.replaceDate) + '</span>' : '')
            + '<span class="fl-more"><i data-ic=right data-ics=16></i></span>'
