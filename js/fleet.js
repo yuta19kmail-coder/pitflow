@@ -414,11 +414,15 @@ function fleetOpenModal(id){
   document.getElementById('fleet-modal').classList.add('show');
   const n = document.getElementById('fl-model'); if (n) n.focus();
 }
-/* 番号入力時：その番号が他の代車で使用中なら「入替予定」欄を出す */
+/* 番号入力時：その番号が**同じ種別の中で**使用中なら「入替予定」欄を出す。
+   ⚠ v1.14.1：代車と社用車は別々に数えるので、社用車の1番を代車の1番と競合させない。
+      入替の仕組みは代車だけの話なので、社用車では出さない。 */
 function flNumberCheck(){
   const num = Number(document.getElementById('fl-number').value);
   const row = document.getElementById('fl-rep-row');
   if (!row) return;
+  const kind = (document.getElementById('fl-kind') || {}).value || 'loaner';
+  if (kind !== 'loaner'){ row.style.display = 'none'; return; }
   const dup = num && (state.loaners||[]).some(function(l){ return _flLoanerNum(l)===num && l.id!==_fleetEditId; });
   row.style.display = dup ? 'block' : 'none';
 }

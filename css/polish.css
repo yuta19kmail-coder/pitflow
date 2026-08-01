@@ -554,8 +554,20 @@
 .fl-in.fl-dim{ width:62px; }
 /* 車両モーダルの装備オプション */
 .fl-opts{ display:flex; gap:14px; margin-top:5px; }
-.fl-opt{ display:flex; align-items:center; gap:5px; font-size:13px; cursor:pointer; }
-.fl-opt input{ width:16px; height:16px; cursor:pointer; }
+/* v1.14.1：装備のチェックは、アプリの他のチップと同じ見た目に（素のチェックボックスをやめる） */
+.fl-opt{ display:inline-flex; align-items:center; gap:7px; font-size:13px; cursor:pointer;
+  padding:7px 12px 7px 9px; border:1px solid var(--border); border-radius:9px; background:var(--bg2);
+  transition:border-color .12s, background .12s; user-select:none; }
+.fl-opt:hover{ border-color:var(--brand); }
+.fl-opt input{ position:absolute; opacity:0; width:0; height:0; }
+.fl-optbox{ width:18px; height:18px; border-radius:5px; border:1px solid var(--border2); background:var(--bg3);
+  display:inline-flex; align-items:center; justify-content:center; color:transparent; transition:all .12s; flex:0 0 auto; }
+.fl-optlb{ font-weight:600; color:var(--text2); }
+.fl-opt:has(input:checked){ border-color:var(--brand); background:var(--brand-soft); }
+.fl-opt:has(input:checked) .fl-optbox{ background:var(--brand); border-color:var(--brand); color:#fff; }
+.fl-opt:has(input:checked) .fl-optlb{ color:var(--text); }
+.fl-opt input:focus-visible + .fl-optbox{ box-shadow:0 0 0 3px var(--brand-soft); }
+.fl-opts{ display:flex; flex-wrap:wrap; gap:8px; }
 .fl-opttag{ display:inline-block; font-size:10px; font-weight:800; color:var(--green); background:rgba(29,185,122,.14); border:1px solid rgba(29,185,122,.45); border-radius:5px; padding:0 5px; margin:2px 4px 0 0; }
 /* 代車モーダル：ナンバーは新規予約と同じ cf-plate 構造を流用（CSSは cf-plate-* をそのまま使用）。入替予定・自動メモ */
 .fl-plate{ margin-top:5px; }   /* ※ナンバーは .cf-plate を使用 */
