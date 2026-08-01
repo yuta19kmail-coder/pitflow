@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.10.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.10.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.10.0</div>
+    <div class="login-ver">v1.10.1</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.10.0</span>
+    <span class="ver">v1.10.1</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -412,13 +412,11 @@
       </div>
     </section>
 
-    <!-- ===== 顧客ビュー（控え・入力補助） ===== -->
+    <!-- ===== 顧客ビュー（顧客一覧） ===== -->
     <section id="view-customers" class="view">
       <div class="view-header">
-        <div class="view-title"><span class="icon"><i data-ic=user data-ics=16></i></span>顧客 <span style="font-size:12px;color:var(--text3);font-weight:400">控え（入力補助）</span></div>
+        <div class="view-title"><span class="icon"><i data-ic=user data-ics=16></i></span>顧客一覧</div>
         <div class="view-actions">
-          <button class="vh-btn" data-dev-only onclick="seedSampleCustomers(500,true)"><i data-ic=dice data-ics=16></i> サンプル500件</button>
-          <button class="vh-btn" onclick="clearCustomers()"><i data-ic=trash data-ics=16></i> 全削除</button>
           <button class="vh-btn primary" onclick="openNewReserve()">＋ 新規入庫</button>
         </div>
       </div>
@@ -771,7 +769,7 @@
 <script src="js/cover-print.js?v=7"></script>
 <script src="js/avail.js?v=6"></script>
 <script src="js/card-tabs.js?v=9"></script>
-<script src="js/customers.js?v=33"></script>
+<script src="js/customers.js?v=34"></script>
 <script src="js/sample-customers.js?v=8"></script>
 <script src="js/sample-reservations.js?v=28"></script>
 <script src="js/dashboard.js?v=16"></script>

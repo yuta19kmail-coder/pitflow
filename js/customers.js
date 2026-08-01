@@ -184,8 +184,6 @@
     h+='<div class="cust-head">'+
        '<input class="cust-search"placeholder="名前・カナ(ひらがなOK)・ナンバー・車・電話で絞り込み"value="'+esc(_q)+'"oninput="custFilter(this.value)">'+
        '<span class="cust-count" id="cust-count"></span>'+
-       '<button class="vh-btn" onclick="custReseed()" title="サンプルを入れ替え"><i data-ic=dice data-ics=16></i> サンプル入替</button>'+
-       '<button class="vh-btn" onclick="clearCustomers()" title="控えを全削除"><i data-ic=trash data-ics=16></i> 全削除</button>'+
        '</div>';
     h+='<div class="cust-filters">'+
        '<select class="cust-fsel" onchange="custSetFilter(\'board\',this.value)"><option value="">区分：すべて</option>'+
