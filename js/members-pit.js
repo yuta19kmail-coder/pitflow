@@ -11,6 +11,9 @@
        保存先は companies/kobayashi_motors/pitSettings/staffProps。
      ⚠ v1.4.0：「区分（スタッフ/幹部/メカのみ）」を廃止（幹部は何の動きにも効いていなかった）。
      ⚠ v1.6.0：部署の手動設定も廃止。人と組織の真実は CoreMembers に一本化。
+     ⚠ v1.10.0：担当が「小林モータース」（＝自社）になっている分の受け皿を1件だけ用意。
+       人ではないので CoreMembers には置かず、PitFlow の中だけの固定メンバー。課を持たないので
+       1課・2課どちらの予約でも候補に出る。
      ⚠ v1.9.3：**並び順は CoreMembers の「一覧」タブと同じ＝入社日が古い順**
        （入社日なしは後ろ・同じなら本名の五十音順）。
      ⚠ v1.9.0：**メンバー一覧は CoreMembers の全員**（ログインしない人も含む）。
@@ -42,6 +45,7 @@
   var _unsubCM = null, _unsubCD = null;
   var _coreLeft = [];     // CoreMembers の退職者（退職日つき）
   var _portalAll = [];    // CoreFlow の名簿（在籍中ぜんぶ）
+  var SELF_ID = 'pit_self', SELF_NAME = '小林モータース';   /* 自社そのものを担当にする時の受け皿 */
 
   /* PitFlow の中での部署の分け方。CoreMembers の部署名から自動で振り分ける。
      ⚠ ここが「1課/2課/受付課/その他」の唯一の定義。増やす時はここに足す。 */
@@ -69,7 +73,7 @@
         role==='mech' だった人 → メカにチェック／フロント・受付はオフ。 */
   function propsOf(id) {
     var p = _props[id];
-    if (!p) return defaultProps();
+    if (!p) return (id === SELF_ID) ? { front: true, reception: false, mech: false } : defaultProps();
     var d = defaultProps();
     var oldMech = (p.mech === undefined && p.role === 'mech');
     return {
@@ -212,10 +216,25 @@
       });
     });
 
+    /* v1.10.0：自社そのものを担当にすることがある（整備ソフト側の都合で「小林モータース」が
+       受付担当として入ってくる）。人ではないので CoreMembers には置かず、PitFlow の中だけの
+       固定メンバーとして最後に足す。1課・2課どちらの予約でも候補に出る（課を持たない）。 */
+    var selfP = propsOf(SELF_ID);
+    rows.push({
+      id: SELF_ID, cmId: '', isSelf: true,
+      name: SELF_NAME, realName: SELF_NAME,
+      aliases: ['小林モータース', '小林モータース 株式会社', '小林モータース株式会社', '(株)小林モータース', 'コバモ'],
+      canLogin: false, divisions: [], division: '', deptNames: [],
+      photo: '', email: '', joinedAt: '', sort: 1e9,
+      front: (selfP.front !== undefined) ? !!selfP.front : true,
+      reception: !!selfP.reception, mech: !!selfP.mech
+    });
+
     /* 並びは CoreMembers の「一覧」タブと同じ＝**入社日が古い順**。
        入社日が入っていない人は後ろ。同じ日・未入力どうしは本名の五十音順。
        （CoreMembers の _cmpJoined と同じ規則） */
     rows.sort(function (a, b) {
+      if (!!a.isSelf !== !!b.isSelf) return a.isSelf ? 1 : -1;   /* 自社は必ず最後 */
       var aj = a.joinedAt || '', bj = b.joinedAt || '';
       if (aj && bj) { if (aj < bj) return -1; if (aj > bj) return 1; }
       else if (aj && !bj) return -1;
@@ -457,10 +476,10 @@
       var dup = list.filter(function (x) { return nameCount[keyOf(x.name)] > 1; }).map(function (x) { return x.name; });
       if (dup.length) warn.push('<b>同じ名前の人がいます</b>：' + esc(Array.from(new Set(dup)).join('、')) +
         '。整備ソフトの担当者を結びつける時に取り違えます。CoreMembers の表示名を変えて区別してください。');
-      var noCm = list.filter(function (x) { return !x.cmId; }).map(function (x) { return x.name; });
+      var noCm = list.filter(function (x) { return !x.cmId && !x.isSelf; }).map(function (x) { return x.name; });
       if (noCm.length) warn.push('<b>CoreMembers に居ません</b>：' + esc(noCm.join('、')) +
         '。CoreFlow のアカウントだけある状態です。CoreMembers に社員として登録し、「ログインアカウント」を紐付けてください。');
-      var noCore = list.filter(function (x) { return x.cmId && (!x.deptNames || !x.deptNames.length); }).map(function (x) { return x.name; });
+      var noCore = list.filter(function (x) { return x.cmId && !x.isSelf && (!x.deptNames || !x.deptNames.length); }).map(function (x) { return x.name; });
       if (noCore.length) warn.push('<b>部署が入っていません</b>：' + esc(noCore.join('、')) +
         '。CoreMembers で所属を設定してください。');
       var other = list.filter(function (x) { return (x.divisions || []).length === 1 && x.divisions[0] === 'other'; }).map(function (x) { return x.name; });
@@ -488,14 +507,15 @@
       /* 部署は CoreMembers から。見るだけ（兼任は並べて出す） */
       var dv = (s.divisions && s.divisions.length)
         ? s.divisions.map(function (id) { return '<span class="mb-div">' + esc(window.pitDivLabel(id)) + '</span>'; }).join('')
-        : '<span class="mb-div is-none">未所属</span>';
+        : (s.isSelf ? '<span class="mb-div">1課・2課 共通</span>' : '<span class="mb-div is-none">未所属</span>');
       h += '<tr data-mid="' + esc(s.id) + '">'
         + '<td class="mb-c-name"><span class="mb-av">' + (s.photo ? '<img src="' + esc(s.photo) + '" alt="">' : esc((s.name || '？').slice(0, 2))) + '</span>'
         + '<span class="mb-nm">' + esc(s.name)
         + ((s.realName && s.realName !== s.name) ? '<small class="mb-real">' + esc(s.realName) + '</small>' : '')
         + '</span>'
-        + (s.canLogin ? '<span class="mb-login" title="CoreFlow のアカウントがあり、PitFlow を使えます">ログイン可</span>'
-                      : '<span class="mb-login is-off" title="PitFlow は開けません（担当や付箋で名前は選べます）">非ログイン</span>')
+        + (s.isSelf ? '<span class="mb-login is-self" title="人ではなく自社そのもの。整備ソフト側で担当が「小林モータース」になっている分の受け皿です">自社</span>'
+           : s.canLogin ? '<span class="mb-login" title="CoreFlow のアカウントがあり、PitFlow を使えます">ログイン可</span>'
+                        : '<span class="mb-login is-off" title="PitFlow は開けません（担当や付箋で名前は選べます）">非ログイン</span>')
         + '</td>'
         + '<td class="mb-c-div" title="' + esc((s.deptNames || []).join('／')) + '">' + dv + '</td>'
         + '<td class="mb-c-ck"><input type="checkbox"' + (s.front ? ' checked' : '') + dis
