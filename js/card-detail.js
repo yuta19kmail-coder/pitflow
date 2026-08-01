@@ -1001,7 +1001,8 @@ function staffSelect(c, key){
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">―</option>';
   state.staff.forEach(s => {
-    if (div && s.division && s.division !== div) return;        // 別の課のメンバーは一覧から消す
+    /* 別の課のメンバーは一覧から消す。受付・その他・未設定の人はどの課でも出す（v1.4.0） */
+    if (div && (s.division === 'div1' || s.division === 'div2') && s.division !== div) return;
     if (frontOnly  && !s.front) return;                         // フロント担当＝フロント業務ありのみ
     if (frontOrRcv && !(s.front || s.reception)) return;        // 予約/完TEL＝受付＋フロント（メカのみは出さない）
     const sel = c[key] === s.name ? ' selected' : '';
@@ -1011,7 +1012,11 @@ function staffSelect(c, key){
   return h;
 }
 /* 担当の名前→その人の課。課が変わったら、別の課の担当はクリア（一覧から消える挙動に合わせる） */
-function _staffDivision(name){ const m = (state.staff || []).find(s => s.name === name); return m ? (m.division || '') : ''; }
+function _staffDivision(name){
+  const m = (state.staff || []).find(s => s.name === name);
+  const d = m ? (m.division || '') : '';
+  return (d === 'div1' || d === 'div2') ? d : '';   // 受付・その他は課に縛られない（v1.4.0）
+}
 function _syncStaffToDivision(c){
   ['frontStaff', 'reserveStaff'].forEach(function(k){
     const d = _staffDivision(c[k]);

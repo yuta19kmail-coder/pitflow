@@ -44,7 +44,6 @@
 
 .mb-c-name{ min-width:170px }
 .mb-c-ck{ text-align:center; width:96px }
-.mb-c-mail{ color:var(--text2); font-size:11.5px; white-space:nowrap }
 
 .mb-av{
   display:inline-flex; align-items:center; justify-content:center;
@@ -73,3 +72,6 @@
   .mb-openportal{ margin-left:0 }
   .mb-table{ min-width:640px }
 }
+
+/* v1.4.0：区分とメール列を廃止。チェックは フロント／受付／メカ の3つ */
+.mb-table .mb-c-ck{ text-align:center; width:84px; }

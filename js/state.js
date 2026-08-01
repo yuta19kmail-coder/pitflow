@@ -123,19 +123,19 @@ window.state = {
   //   ※メカニックのみ（front:false, reception:false）は担当セレクトに出ない。将来は設定/CoreFlowで編集。
   staff: [
     // 1課（国産）
-    { id: 'shacho', name: '社長', role: 'owner', division: 'div1', front: true,  reception: false },
-    { id: 'senmu',  name: '専務', role: 'staff', division: 'div1', front: true,  reception: false },
-    { id: 'shiina', name: '椎名', role: 'staff', division: 'div1', front: true,  reception: false },
-    { id: 'yamada', name: '山田', role: 'mech',  division: 'div1', front: false, reception: false }, // ※メカのみ
+    { id: 'shacho', name: '社長', division: 'div1', front: true,  reception: false, mech: false },
+    { id: 'senmu',  name: '専務', division: 'div1', front: true,  reception: false, mech: false },
+    { id: 'shiina', name: '椎名', division: 'div1', front: true,  reception: false, mech: true  },
+    { id: 'yamada', name: '山田', division: 'div1', front: false, reception: false, mech: true  }, // ※メカだけ
     // 2課（輸入）
-    { id: 'chief',   name: 'チーフ', role: 'staff', division: 'div2', front: true,  reception: false },
-    { id: 'hasunuma',name: '蓮沼',   role: 'staff', division: 'div2', front: true,  reception: true  }, // 2課＋受付
-    { id: 'hakozaki',name: '箱崎',   role: 'staff', division: 'div2', front: true,  reception: false },
-    { id: 'sugaya',  name: '菅谷',   role: 'staff', division: 'div2', front: true,  reception: false },
-    { id: 'yamane',  name: '山根',   role: 'mech',  division: 'div2', front: false, reception: false }, // ※メカのみ
+    { id: 'chief',   name: 'チーフ', division: 'div2', front: true,  reception: false, mech: true  },
+    { id: 'hasunuma',name: '蓮沼',   division: 'div2', front: true,  reception: true,  mech: false }, // 2課＋受付
+    { id: 'hakozaki',name: '箱崎',   division: 'div2', front: true,  reception: false, mech: true  },
+    { id: 'sugaya',  name: '菅谷',   division: 'div2', front: true,  reception: false, mech: true  },
+    { id: 'yamane',  name: '山根',   division: 'div2', front: false, reception: false, mech: true  }, // ※メカだけ
     // 受付（課なし・全社）
-    { id: 'hayashi', name: '林',   role: 'staff', division: '', front: false, reception: true },
-    { id: 'onishi',  name: '大西', role: 'staff', division: '', front: false, reception: true },
+    { id: 'hayashi', name: '林',   division: 'recept', front: false, reception: true, mech: false },
+    { id: 'onishi',  name: '大西', division: 'recept', front: false, reception: true, mech: false },
   ],
 
   divisions: [

@@ -459,7 +459,13 @@
      ・1人選ぶと次の空欄が出る。同じ人を複数回でもOK＝作業割合になる。保持＝c.inspectors[]/c.mechanics[]。
      ・返車済み（実績化後）は「割合表示」に切替（<i data-ic=pencil data-ics=15></i>で編集に戻せる）。配分計算は mech-summary.js。 */
   const MECH_MAX = 10;
-  function mechOpts(){ return (state.staff||[]).map(function(s){ return s.name; }).filter(Boolean); }
+  /* 点検・整備の担当候補＝メンバー画面で「メカ」にチェックした人。
+     まだ誰もチェックしていない時は、今までどおり全員を出す（空にして困らないように）。v1.4.0 */
+  function mechOpts(){
+    var all = (state.staff||[]);
+    var mech = all.filter(function(s){ return s.mech; });
+    return (mech.length ? mech : all).map(function(s){ return s.name; }).filter(Boolean);
+  }
   function mechSel(role, idx, val, opts, no){
     let h = '<div class="cf-mech-row"><span class="cf-mech-no" title="'+no+'人目">'+no+'</span>';
     h += '<select class="cf-input cf-mech-sel" onchange="cvMechPick(\''+role+'\','+idx+',this.value)">';
