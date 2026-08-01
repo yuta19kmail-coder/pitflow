@@ -59,8 +59,14 @@
     renderBoardNotes();
   };
 
-  function _staffById(id) { return (state.staff || []).find(s => s.id === id) || null; }
+  /* v1.8.0：辞めた人も引けるようにする（付箋に残った名前が空欄にならないように） */
+  function _staffById(id) {
+    return (state.staff || []).find(s => s.id === id)
+        || (window.pitStaffById ? window.pitStaffById(id) : null)
+        || null;
+  }
   function _staffName(id) { const s = _staffById(id); return s ? s.name : ''; }
+  function _isLeft(id) { const s = _staffById(id); return !!(s && s.left); }
   function _staffInitial(id) {
     const n = _staffName(id);
     return n ? n.slice(0, 1) : '?';

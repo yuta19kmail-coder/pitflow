@@ -31,6 +31,14 @@
     const m = (v.frontStaffId && window.pitStaffById) ? window.pitStaffById(v.frontStaffId) : null;
     return m ? m.name : (v.frontStaff||'');
   }
+  /* v1.8.0：担当の状態（在籍／退職／名簿外）。表示に印を付けるため。 */
+  function frontMark(v){
+    const nm = frontName(v);
+    if(!nm) return '';
+    const m = window.pitStaffAny ? window.pitStaffAny(v.frontStaffId || nm) : null;
+    if(!m) return '（名簿外）';
+    return m.left ? '（退職）' : '';
+  }
   function primaryTel(cust){ const cs=(cust&&cust.contacts)||[]; const p=cs.find(x=>x.primary)||cs[0]; return p?(p.tel||''):''; }
   function vehLabel(v){ return ((v.maker?v.maker+' ':'')+(v.car||'')).trim() || (v.plate||'—'); }
 
@@ -221,7 +229,7 @@
            '<td class="ct-mut">'+(first?esc(primaryTel(cust)||'—'):'')+'</td>'+
            '<td>'+pillC(t.label,t.color)+'</td>'+
            '<td>'+pillC(t.course,t.courseColor)+'</td>'+
-           '<td>'+(v?esc(frontName(v)||'—'):'—')+'</td>'+
+           '<td>'+(v?(esc(frontName(v)||'—')+(frontMark(v)?'<small style="color:var(--text3)">'+frontMark(v)+'</small>':'')):'—')+'</td>'+
            '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
            '<td class="ct-act">'+
              ((first && (cust.lineStatus||'')==='ok' && (cust.lstepId||'').trim() && window.pitLstepUrl)

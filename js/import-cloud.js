@@ -177,6 +177,19 @@
     var gone = cur.filter(function (c) { return !newIds[c.id]; }).length;
 
     /* 担当者をメンバーに結びつける（ここで c.picId / v.frontStaffId が入る） */
+    /* 同じ名前のメンバーが居ると取り違える。先に気づけるように出す。 */
+    var dupWarn = '';
+    (function () {
+      var cnt = {}, dup = [];
+      ((w.state && w.state.staff) || []).forEach(function (s2) {
+        var k = w.pitStaffKey ? w.pitStaffKey(s2.name) : s2.name;
+        cnt[k] = (cnt[k] || 0) + 1;
+        if (cnt[k] === 2) dup.push(s2.name);
+      });
+      if (dup.length) dupWarn = '<b>同じ名前のメンバーがいます</b>：' + esc(dup.join('、')) +
+        '。担当が取り違えられる可能性があります。CoreMembers の表示名で区別してから取り込むのが安全です。';
+    })();
+
     var link = linkStaff(list);
     var hitNames = Object.keys(link.hit).sort(function (a, b) { return link.hit[b] - link.hit[a]; });
     var missNames = Object.keys(link.miss).sort(function (a, b) { return link.miss[b] - link.miss[a]; });
@@ -189,8 +202,10 @@
       (missNames.length
         ? '<div class="pi-link-ng">メンバーに見つからない担当：' +
           missNames.map(function (n) { return esc(n) + '（' + num(link.miss[n]) + '）'; }).join('、') +
-          '<br>この人たちは<b>名前の文字だけ</b>入ります（表示は今までどおり。あとで直せます）。</div>'
+          '<br>この人たちは<b>名前の文字だけ</b>入ります（表示は今までどおり・「名簿外」の扱い）。' +
+          'CoreMembers に<b>退職として登録すれば、次に開いた時に自動でつながります</b>。</div>'
         : '') +
+      (dupWarn ? '<div class="pi-link-ng">' + dupWarn + '</div>' : '') +
       '</div>';
 
     overlay(

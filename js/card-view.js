@@ -476,7 +476,9 @@
   }
   function mechPicker(c, role, title, icon){
     const arr = Array.isArray(c[role]) ? c[role] : [];
-    const opts = mechOpts();
+    /* v1.8.0：すでに入っている人が候補に無くても（退職・名簿外）選択肢に残す＝消えない */
+    const opts = mechOpts().slice();
+    arr.forEach(function(n){ if (n && opts.indexOf(n) < 0) opts.push(n); });
     const boxes = arr.slice(0, MECH_MAX);
     let h = '<div class="cf-mech-block"><div class="cf-label">'+icon+' '+title+'</div><div class="cf-mech-rows">';
     boxes.forEach(function(nm, i){ h += mechSel(role, i, nm, opts, i+1); });
@@ -504,15 +506,22 @@
     return h;
   }
   function _mechRerender(){ const el = document.getElementById('cv-p-maint'); if (el && _c) el.innerHTML = maintTab(_c); }
+  /* v1.8.0：名前と同じ並びで「メンバーの番号」も持つ（inspectorIds / mechanicIds）。
+     改名しても実績が別人に割れないようにするため。番号が取れない人は '' が入る。 */
+  function _idKey(role){ return role === 'inspectors' ? 'inspectorIds' : 'mechanicIds'; }
+  function _idOf(name){ const m = (name && window.pitStaffByName) ? pitStaffByName(name) : null; return m ? m.id : ''; }
   window.cvMechPick = function(role, idx, val){
     if (!_c) return;
     if (!Array.isArray(_c[role])) _c[role] = [];
     const arr = _c[role];
+    const ik = _idKey(role);
+    if (!Array.isArray(_c[ik])) _c[ik] = arr.map(function(n){ return _idOf(n); });
+    const ids = _c[ik];
     if (idx >= arr.length){
-      if (val && arr.length < MECH_MAX) arr.push(val);   // 末尾の空欄＝追加
+      if (val && arr.length < MECH_MAX) { arr.push(val); ids.push(_idOf(val)); }   // 末尾の空欄＝追加
     } else {
-      if (val === '') arr.splice(idx, 1);                // ―＝削除（順に詰まる）
-      else arr[idx] = val;                                // 差し替え
+      if (val === '') { arr.splice(idx, 1); ids.splice(idx, 1); }                  // ―＝削除（順に詰まる）
+      else { arr[idx] = val; ids[idx] = _idOf(val); }                              // 差し替え
     }
     save();
     _mechRerender();

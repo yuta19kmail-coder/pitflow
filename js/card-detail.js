@@ -1000,6 +1000,10 @@ function staffSelect(c, key){
   const frontOrRcv = (key === 'reserveStaff' || key === 'completeCallStaff');
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">―</option>';
+  /* v1.8.0：いま入っている担当が候補に無い場合（辞めた人・名簿外の元スタッフ・別の課）でも
+     選択肢として残す＝開いただけで担当が消えてしまう事故を防ぐ。 */
+  const _cur = (c[key] || '').trim();
+  let _curFound = false;
   state.staff.forEach(s => {
     /* 別の課のメンバーは一覧から消す。受付課・その他・未所属の人はどの課でも出す。
        兼任（1課かつ2課）の人は両方に出る（v1.6.0） */
@@ -1007,8 +1011,14 @@ function staffSelect(c, key){
     if (frontOnly  && !s.front) return;                         // フロント担当＝フロント業務ありのみ
     if (frontOrRcv && !(s.front || s.reception)) return;        // 予約/完TEL＝受付＋フロント（メカのみは出さない）
     const sel = c[key] === s.name ? ' selected' : '';
+    if (sel) _curFound = true;
     h += '<option value="' + s.name + '"' + sel + '>' + s.name + '</option>';
   });
+  if (_cur && !_curFound) {
+    const _m = window.pitStaffAny ? pitStaffAny(_cur) : null;
+    const _mk = _m && _m.left ? '（退職）' : (_m ? '' : '（名簿外）');
+    h += '<option value="' + _cur + '" selected>' + _cur + _mk + '</option>';
+  }
   h += '</select>';
   return h;
 }
@@ -1343,6 +1353,12 @@ function bindCardFormEvents(root){
       }
       c[key] = v;
       if (window.PitDB) PitDB.save();   // v0.83.1 変更を自動保存
+      /* v1.8.0：担当を選んだら「誰か（メンバーの番号）」も一緒に持つ。
+         ＝結婚などで名前が変わっても、過去のカードの担当が自動でついてくる。 */
+      if (key === 'frontStaff' || key === 'reserveStaff' || key === 'completeCallStaff') {
+        const _m = (v && window.pitStaffByName) ? pitStaffByName(v) : null;
+        c[key + 'Id'] = _m ? _m.id : '';
+      }
       // 担当（フロント/予約）を選んだら、その人の課を自動選択（→課チップ点灯＆もう一方の担当も同課で絞られる）
       if ((key === 'frontStaff' || key === 'reserveStaff') && v) {
         const d = _staffDivision(v);

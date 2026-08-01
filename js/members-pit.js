@@ -29,9 +29,13 @@
   var _props = {};        // { memberId: {front, reception, mech} }
   var _members = [];      // portalMembers の生データ（PitFlow が使える人だけ）
   var _unsub = null;
-  var _coreMembers = [];  // CoreMembers の社員名簿
+  var _coreMembers = [];  // CoreMembers の社員名簿（在籍中）
   var _coreDepts = [];    // CoreMembers の組織（部・課）
+  /* v1.8.0：退職者は「消える」のではなく在籍フラグが落ちるだけ（CoreMembers＝status:'left'／CoreFlow＝active:false）。
+     捨てずにここへ寄せておく＝付箋やカードに残った名前がちゃんと出せる。MHS と同じ考え方。 */
+  var _former = {};       // { id: {id,name,realName,aliases,left:true,leftAt,photo} }
   var _unsubCM = null, _unsubCD = null;
+  var _coreLeft = [];     // CoreMembers の退職者（退職日つき）
 
   /* PitFlow の中での部署の分け方。CoreMembers の部署名から自動で振り分ける。
      ⚠ ここが「1課/2課/受付課/その他」の唯一の定義。増やす時はここに足す。 */
@@ -114,6 +118,31 @@
     return { divisions: divs, names: names };
   }
 
+  /* 退職者の一覧を作る。CoreFlow で在籍なしにした人＋CoreMembers で退職にした人。 */
+  var _formerSrc = [];
+  function rebuildFormer() {
+    var out = {};
+    /* ① CoreMembers 側の退職者（退職日つき） */
+    _coreLeft.forEach(function (cm) {
+      var id = cm.portalMemberId || ('cm_' + cm.id);
+      var disp = String(cm.dispName || '').trim() || String(cm.name || '').trim() || '(名前なし)';
+      out[id] = { id: id, name: disp, realName: String(cm.name || '').trim(),
+                  aliases: [cm.name, cm.dispName].filter(Boolean).map(String),
+                  left: true, leftAt: cm.leftAt || '', photo: cm.photo || '',
+                  divisions: [], deptNames: [], front: false, reception: false, mech: false };
+    });
+    /* ② CoreFlow 側で在籍なしにした人（CoreMembers に無ければこちらの名前で） */
+    _formerSrc.forEach(function (m) {
+      if (out[m.id]) { if (!out[m.id].photo) out[m.id].photo = m.photo || ''; return; }
+      out[m.id] = { id: m.id, name: m.name || '(名前なし)', realName: m.name || '',
+                    aliases: [m.name, m.gname].filter(Boolean).map(String),
+                    left: true, leftAt: '', photo: m.photo || '',
+                    divisions: [], deptNames: [], front: false, reception: false, mech: false };
+    });
+    _former = out;
+    window.PIT_FORMER = out;
+  }
+
   /* 名簿＋PitFlow属性 → state.staff を作り直す */
   function rebuildStaff() {
     var list = _members.slice().sort(function (a, b) {
@@ -179,9 +208,17 @@
 
   window.pitStaffById = function (id) {
     if (!id) return null;
-    return ((window.state && state.staff) || []).find(function (s) { return s.id === id; }) || null;
+    return ((window.state && state.staff) || []).find(function (s) { return s.id === id; })
+        || _former[id] || null;
   };
-  window.pitStaffByName = function (name) {
+  /* 在籍中＋退職者。名前を出したいだけの時はこちらを使う。 */
+  window.pitStaffAny = function (idOrName) {
+    return window.pitStaffById(idOrName) || window.pitStaffByName(idOrName) || null;
+  };
+  window.pitIsFormer = function (id) { return !!(id && _former[id]); };
+  window.pitFormerList = function () { return Object.keys(_former).map(function (k) { return _former[k]; }); };
+  /* その名前が「いま在籍している人」かどうか（カードの担当候補の出し分けに使う） */
+  window.pitStaffActiveByName = function (name) {
     var k = keyOf(name);
     if (!k) return null;
     var list = (window.state && state.staff) || [];
@@ -189,11 +226,38 @@
         || list.find(function (s) { return (s.aliases || []).some(function (a) { return keyOf(a) === k; }); })
         || null;
   };
+  window.pitStaffByName = function (name) {
+    var k = keyOf(name);
+    if (!k) return null;
+    var list = (window.state && state.staff) || [];
+    var f = Object.keys(_former).map(function (x) { return _former[x]; });
+    return list.find(function (s) { return keyOf(s.name) === k; })
+        || list.find(function (s) { return (s.aliases || []).some(function (a) { return keyOf(a) === k; }); })
+        || f.find(function (s) { return keyOf(s.name) === k; })
+        || f.find(function (s) { return (s.aliases || []).some(function (a) { return keyOf(a) === k; }); })
+        || null;
+  };
 
-  /* お客様データの担当名を、番号を頼りに今の名前へ直す。直した件数を返す。 */
+  /* お客様データとカードの担当名を、番号を頼りに今の名前へ直す。直した件数を返す。 */
   window.pitSyncCustomerStaffNames = function (save) {
     var list = (window.state && state.customers) || [];
     var n = 0;
+    /* v1.8.0：予約カードの担当も追従させる（改名しても過去カードがズレない） */
+    ((window.state && state.cards) || []).forEach(function (c) {
+      ['frontStaff', 'reserveStaff', 'completeCallStaff'].forEach(function (k) {
+        var id = c[k + 'Id'];
+        var m = id ? window.pitStaffById(id) : null;
+        if (m && c[k] !== m.name) { c[k] = m.name; n++; }
+      });
+      [['inspectors', 'inspectorIds'], ['mechanics', 'mechanicIds']].forEach(function (pair) {
+        var names = c[pair[0]], ids = c[pair[1]];
+        if (!Array.isArray(names) || !Array.isArray(ids)) return;
+        for (var i = 0; i < names.length && i < ids.length; i++) {
+          var mm = ids[i] ? window.pitStaffById(ids[i]) : null;
+          if (mm && names[i] !== mm.name) { names[i] = mm.name; n++; }
+        }
+      });
+    });
     list.forEach(function (c) {
       var m = c.picId ? window.pitStaffById(c.picId) : null;
       if (m && c.pic !== m.name) { c.pic = m.name; n++; }
@@ -203,7 +267,7 @@
       });
     });
     if (n) {
-      console.log('[members] 担当の名前を', n, '箇所そろえました');
+      console.log('[members] 担当の名前を', n, '箇所そろえました（お客様＋カード）');
       if (save !== false && window.PitDB && window.PitDB._loaded !== false) PitDB.save();
     }
     return n;
@@ -229,9 +293,15 @@
     }
     if (!_unsubCM) {
       _unsubCM = base.collection('coreMembers').onSnapshot(function (snap) {
-        var a = []; snap.forEach(function (d) { var x = d.data() || {}; x.id = d.id; if (x.status === 'left' || x.active === false) return; a.push(x); });
-        _coreMembers = a;
-        console.log('[members] CoreMembers の社員', a.length, '人');
+        var a = [], left = [];
+        snap.forEach(function (d) {
+          var x = d.data() || {}; x.id = d.id;
+          if (x.status === 'left' || x.active === false) { left.push(x); return; }   /* 退職＝控える */
+          a.push(x);
+        });
+        _coreMembers = a; _coreLeft = left;
+        console.log('[members] CoreMembers の社員', a.length, '人／退職', left.length, '人');
+        rebuildFormer();
         rebuildStaff();
       }, function (e) { console.warn('[members] 社員(coreMembers)の購読に失敗（部署なしで続けます）', e); });
     }
@@ -241,15 +311,17 @@
     if (_unsub) { try { _unsub(); } catch (e) {} _unsub = null; }
     _unsub = window.fb.company().collection('portalMembers')
       .onSnapshot(function (snap) {
-        var out = [];
+        var out = [], gone = [];
         snap.forEach(function (doc) {
           var m = doc.data() || {}; m.id = doc.id;
-          if (m.active === false) return;
           var usable = (m.master === true) || !!(m.pitflow && m.pitflow.on === true);
+          if (m.active === false) { gone.push(m); return; }   /* 退職＝消さずに控える */
           if (!usable) return;
           out.push(m);
         });
         _members = out;
+        _formerSrc = gone;
+        rebuildFormer();
         console.log('[members] CoreFlowの名簿から', out.length, '人');
         rebuildStaff();
       }, function (e) {
@@ -323,6 +395,24 @@
     if (!cloud) {
       h += '<div class="mb-warn"><i data-ic=info data-ics=15></i> いまはサンプルの名簿です。本番のアドレスで開くと CoreFlow の実メンバーになります。</div>';
     }
+    /* v1.8.0：気づけるように、あぶない状態を先に出す */
+    if (cloud) {
+      var warn = [];
+      var nameCount = {};
+      list.forEach(function (x) { var k = keyOf(x.name); nameCount[k] = (nameCount[k] || 0) + 1; });
+      var dup = list.filter(function (x) { return nameCount[keyOf(x.name)] > 1; }).map(function (x) { return x.name; });
+      if (dup.length) warn.push('<b>同じ名前の人がいます</b>：' + esc(Array.from(new Set(dup)).join('、')) +
+        '。整備ソフトの担当者を結びつける時に取り違えます。CoreMembers の表示名を変えて区別してください。');
+      var noCore = list.filter(function (x) { return !x.deptNames || !x.deptNames.length; }).map(function (x) { return x.name; });
+      if (noCore.length) warn.push('<b>部署が入っていません</b>：' + esc(noCore.join('、')) +
+        '。CoreMembers で所属を設定するか、ログインアカウント（portalMembers）との紐付けを確認してください。');
+      var other = list.filter(function (x) { return (x.divisions || []).length === 1 && x.divisions[0] === 'other'; }).map(function (x) { return x.name; });
+      if (other.length) warn.push('「その他」になっている人：' + esc(other.join('、')) +
+        '。1課・2課・受付の人がここに入っていたら、CoreMembers の部署名を確認してください（名前に「1課」等が入っていないと判定できません）。');
+      if (warn.length) {
+        h += '<div class="mb-warn mb-warn-check"><i data-ic=warn data-ics=15></i><div>' + warn.join('<br>') + '</div></div>';
+      }
+    }
     if (cloud && !canEdit) {
       h += '<div class="mb-warn"><i data-ic=lock data-ics=15></i> 見るだけの権限です。変更できるのは PitFlow の役割が「管理」の人だけです。</div>';
     }
@@ -358,6 +448,17 @@
     });
 
     h += '</tbody></table></div>';
+
+    /* v1.8.0：辞めた人。消えていないことを見せる＝付箋やカードに残った名前もちゃんと出る。 */
+    var former = (window.pitFormerList ? window.pitFormerList() : []);
+    if (cloud && former.length) {
+      h += '<div class="mb-former"><div class="mb-former-h"><i data-ic=history data-ics=15></i> 退職した人（' + former.length + '人）</div>'
+         + '<div class="mb-former-b">'
+         + former.sort(function (a, b) { return String(b.leftAt || '').localeCompare(String(a.leftAt || '')); })
+                .map(function (f) { return '<span class="mb-former-i">' + esc(f.name) + (f.leftAt ? '<small>' + esc(f.leftAt) + '</small>' : '') + '</span>'; }).join('')
+         + '</div><div class="mb-former-n">名前は消えません。付箋やカード・実績に残った担当はこの名前で表示され、'
+         + '新しい担当の候補には出ません。戻ってきた時は CoreFlow で在籍に戻せば元どおりです。</div></div>';
+    }
     h += '<div class="mb-hint">'
        + '<b>部署</b>は <b>CoreMembers の所属から自動</b>です（ここでは直せません）。'
        + '兼任の人は<b>両方に入ります</b>。1課・2課はカードの課での絞り込みと、付箋の「1課ぜんぶ」「2課ぜんぶ」に使われます。'
