@@ -11,6 +11,9 @@
        保存先は companies/kobayashi_motors/pitSettings/staffProps。
      ⚠ v1.4.0：「区分（スタッフ/幹部/メカのみ）」を廃止（幹部は何の動きにも効いていなかった）。
      ⚠ v1.6.0：部署の手動設定も廃止。人と組織の真実は CoreMembers に一本化。
+     ⚠ v1.7.0：画面に出す名前は CoreMembers の「表示名（通称）」に揃える。
+       本名でも引けるように別名（aliases）を持たせてあるので、
+       整備ソフト由来の担当（本名）や昔のカードもちゃんと結びつく。
      ・この2つを合わせて state.staff を作る。state.staff の形はいままでと同じなので、
        担当セレクト・付箋・ダッシュボードなど既存の画面はそのまま動く。
 
@@ -93,8 +96,8 @@
     return k ? (_coreMembers.find(function (c) { return keyOf(c.name) === k || keyOf(c.dispName) === k; }) || null) : null;
   }
   /* その人の部署（兼任ぶんも全部）。返り値＝{ divisions:['div1',...], names:['整備1課',...] } */
-  function divisionsOf(m) {
-    var cm = coreOf(m);
+  function divisionsOf(m, cm) {
+    if (cm === undefined) cm = coreOf(m);
     if (!cm) return { divisions: [], names: [] };
     var ids = [];
     if (cm.sectionDeptId) ids.push(cm.sectionDeptId);
@@ -121,10 +124,22 @@
     });
     window.state.staff = list.map(function (m) {
       var p = propsOf(m.id);
-      var dv = divisionsOf(m);
+      var cm = coreOf(m);
+      var dv = divisionsOf(m, cm);
+      /* v1.7.0：画面に出す名前は CoreMembers の「表示名（通称）」に揃える。
+         ⚠ 昔のカードや整備ソフトのデータは本名で入っているので、
+            本名でも引けるように別名（aliases）を持たせておく。 */
+      var disp = (cm && String(cm.dispName || '').trim()) || (cm && String(cm.name || '').trim()) || m.name || '(名前なし)';
+      var aliases = [];
+      [m.name, m.gname, cm && cm.name, cm && cm.dispName].forEach(function (x) {
+        var t = String(x == null ? '' : x).trim();
+        if (t && aliases.indexOf(t) < 0) aliases.push(t);
+      });
       return {
         id: m.id,
-        name: m.name || '(名前なし)',
+        name: disp,
+        realName: (cm && String(cm.name || '').trim()) || m.name || '',
+        aliases: aliases,
         divisions: dv.divisions,            // ['div1','div2'...] 兼任ぶん全部（CoreMembers が正）
         division: dv.divisions[0] || '',    // 代表の1つ（今までの画面がこれを見ている）
         deptNames: dv.names,                // 実際の部署名（表示用）
@@ -169,7 +184,10 @@
   window.pitStaffByName = function (name) {
     var k = keyOf(name);
     if (!k) return null;
-    return ((window.state && state.staff) || []).find(function (s) { return keyOf(s.name) === k; }) || null;
+    var list = (window.state && state.staff) || [];
+    return list.find(function (s) { return keyOf(s.name) === k; })
+        || list.find(function (s) { return (s.aliases || []).some(function (a) { return keyOf(a) === k; }); })
+        || null;
   };
 
   /* お客様データの担当名を、番号を頼りに今の名前へ直す。直した件数を返す。 */
@@ -326,7 +344,9 @@
         : '<span class="mb-div is-none">未所属</span>';
       h += '<tr data-mid="' + esc(s.id) + '">'
         + '<td class="mb-c-name"><span class="mb-av">' + (s.photo ? '<img src="' + esc(s.photo) + '" alt="">' : esc((s.name || '？').slice(0, 2))) + '</span>'
-        + '<span class="mb-nm">' + esc(s.name) + '</span></td>'
+        + '<span class="mb-nm">' + esc(s.name)
+        + ((s.realName && s.realName !== s.name) ? '<small class="mb-real">' + esc(s.realName) + '</small>' : '')
+        + '</span></td>'
         + '<td class="mb-c-div" title="' + esc((s.deptNames || []).join('／')) + '">' + dv + '</td>'
         + '<td class="mb-c-ck"><input type="checkbox"' + (s.front ? ' checked' : '') + dis
         + ' onchange="pitMbSet(\'' + esc(s.id) + '\',\'front\',this.checked)"></td>'

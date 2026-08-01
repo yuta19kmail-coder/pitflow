@@ -82,3 +82,7 @@
 .mb-div{ display:inline-block; margin:1px 3px 1px 0; padding:1px 8px; border-radius:999px; font-size:11px;
   background:var(--bg3); border:1px solid var(--border); color:var(--text2); }
 .mb-div.is-none{ opacity:.55; }
+
+/* v1.7.0：通称の下に本名を小さく（違う時だけ） */
+.mb-table .mb-nm{ display:inline-flex; flex-direction:column; line-height:1.25; }
+.mb-table .mb-real{ font-size:10.5px; color:var(--text3); font-weight:400; }
