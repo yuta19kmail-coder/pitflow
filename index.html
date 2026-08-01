@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.0.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.1.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -41,37 +41,39 @@
     background:repeating-linear-gradient(45deg,#1f7a4d,#1f7a4d 8px,#176440 8px,#176440 16px);
     color:#fff;border:1px solid rgba(255,255,255,.25);
   }
-  /* サンプルログイン画面 */
+  /* ===== ログイン画面（v1.1.0：全アプリ共通の形に統一＝アイコン／タイトル／リード／Googleログイン／バージョン） ===== */
   #pit-login{
     position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
-    background:radial-gradient(1200px 600px at 50% -10%, #16412f 0%, #0c1512 55%, #0a0f0d 100%);
+    padding:20px;box-sizing:border-box;
+    padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom));
+    background:linear-gradient(135deg,#0f1117,#1a1d27);
   }
-  #pit-login .pl-card{
-    width:min(92vw,380px);background:rgba(20,30,26,.88);
-    border:1px solid rgba(46,160,103,.35);border-radius:16px;padding:30px 26px;text-align:center;
-    box-shadow:0 20px 60px rgba(0,0,0,.5);color:#e8f0eb;font-family:inherit;
+  #pit-login .login-box{
+    background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+    padding:40px;width:340px;max-width:100%;box-shadow:var(--shadow-card);
   }
-  #pit-login .pl-logo{font-size:30px;font-weight:800}
-  #pit-login .pl-logo .pit{color:#2ea567}
-  #pit-login .pl-sub{margin-top:6px;font-size:13px;color:#9fb3a9}
-  #pit-login .pl-badge{margin:16px auto 0}
-  #pit-login .pl-btn{
-    margin-top:20px;width:100%;padding:12px 14px;border:0;border-radius:10px;
-    background:#1f7a4d;color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:background .15s;
+  #pit-login .login-logo{text-align:center;margin-bottom:24px}
+  #pit-login .login-logo h1{font-size:22px;font-weight:800;letter-spacing:.2px}
+  #pit-login .login-logo p{font-size:12px;color:var(--text2);margin-top:3px}
+  /* 認証状態を確認し終わるまではボタンを出さない（自動ログイン中の二重ポップアップ防止・CarFlow式） */
+  #pit-login .login-loading{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;font-size:13px;color:var(--text3)}
+  #pit-login .login-loading .ll-dot{width:8px;height:8px;border-radius:50%;background:var(--brand);animation:pl-pulse 1.1s ease-in-out infinite}
+  @keyframes pl-pulse{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+  #pit-login .btn-login{
+    width:100%;padding:11px;border:none;border-radius:var(--r);
+    background:linear-gradient(135deg,var(--brand),var(--brand-deep));
+    color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;
   }
-  #pit-login .pl-btn:hover{background:#26935c}
-  #pit-login .pl-btn.ghost{background:transparent;border:1px solid rgba(159,179,169,.35);color:#8aa094;font-weight:600;cursor:not-allowed;margin-top:10px}
-  #pit-login .pl-note{margin-top:16px;font-size:11.5px;line-height:1.6;color:#7f968b}
-  /* サンプル／本番で注意書きを出し分け（クラスは auth-pit.js が付ける） */
-  #pit-login .pl-note-cloud{display:none}
-  #pit-login.pl-cloud .pl-note-sample{display:none}
-  #pit-login.pl-cloud .pl-note-cloud{display:block}
+  #pit-login .btn-login:hover{filter:brightness(1.08)}
+  #pit-login .btn-login:disabled{opacity:.6;cursor:default;filter:none}
   #pit-login .pl-error{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;
-    background:rgba(220,38,38,.14);border:1px solid rgba(248,113,113,.45);color:#fca5a5;text-align:left}
-  #pit-login .pl-inapp{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;
-    background:rgba(234,179,8,.14);border:1px solid rgba(250,204,21,.45);color:#fde68a;text-align:left}
-  #pit-login .pl-btn:disabled{opacity:.6;cursor:default}
-  #pit-login .pl-ver{margin-top:14px;font-size:11px;color:#5f7268}
+    background:rgba(239,68,68,.14);border:1px solid rgba(248,113,113,.45);color:#fca5a5;text-align:left}
+  #pit-login .pl-inapp{margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:12.5px;line-height:1.6;
+    background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.45);color:#fcd34d;text-align:left}
+  #pit-login .pl-note{margin-top:16px;font-size:11px;line-height:1.7;color:var(--text3);text-align:center}
+  #pit-login.pl-cloud .pl-note{display:none}
+  #pit-login .login-ver{margin-top:16px;text-align:center;font-size:10px;color:var(--text3);opacity:.7;letter-spacing:.05em}
   /* 開発ツール（設定内） */
   .pit-devtools{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:14px}
   .pit-devtools h4{margin:0 0 6px;font-size:14px}
@@ -94,20 +96,27 @@
 </head>
 <body>
 
-<!-- ===== サンプルログイン画面 ===== -->
+<!-- ===== ログイン画面（v1.1.0：全アプリ共通の形＝アイコン／タイトル／リード／Googleログイン／バージョン） ===== -->
 <div id="pit-login">
-  <div class="pl-card">
-    <img class="login-appicon" src="apple-touch-icon.png" alt="PitFlow">
-    <div class="pl-logo">PitFlow</div>
-    <div class="pl-sub">整備入庫管理システム</div>
-    <button class="pl-btn" id="pl-google" onclick="pitSampleLogin()">Google でログイン</button>
-    <div class="pl-error" id="pl-error" style="display:none"></div>
-    <div class="pl-inapp" id="pl-inapp" style="display:none">
-      このアプリ内ブラウザでは Google ログインができません。<br>右上のメニューから <b>Safari / Chrome で開く</b> を選んでください。
+  <div class="login-box">
+    <div class="login-logo">
+      <img class="login-appicon" src="apple-touch-icon.png?v=1" alt="PitFlow">
+      <h1>PitFlow</h1><p>整備入庫管理システム</p>
     </div>
+    <!-- 認証状態の初期確認が終わるまでボタンを出さない（自動ログイン中の二重ポップアップ防止） -->
+    <div class="login-loading" id="pl-loading"><span class="ll-dot"></span> 認証状態を確認中…</div>
+    <!-- アプリ内ブラウザ（LINE / Instagram など）では Google が OAuth をブロックする -->
+    <div class="pl-inapp" id="pl-inapp" style="display:none">
+      <b>このブラウザではログインできません</b><br>
+      LINE・Instagram などのアプリ内ブラウザからは Google ログインが使えません。右上のメニューから <b>Safari / Chrome で開く</b> を選んでください。
+    </div>
+    <button class="btn-login" id="pl-google" style="display:none" onclick="pitSampleLogin()">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" style="background:#fff;border-radius:2px;padding:2px;box-sizing:content-box;flex:0 0 auto"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"/></svg>
+      <span class="pl-label">Google でログイン</span>
+    </button>
+    <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="pl-note pl-note-cloud">※ CoreFlow の名簿にいて、PitFlow の利用がオンの人だけ入れます</div>
-    <div class="pl-ver">v1.0.0</div>
+    <div class="login-ver">v1.1.0</div>
   </div>
 </div>
 
@@ -121,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.0.0</span>
+    <span class="ver">v1.1.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -790,7 +799,7 @@
 <script src="js/outsource.js?v=3"></script>
 <script src="js/loaner.js?v=51"></script>
 <script src="js/fleet.js?v=11"></script>
-<script src="js/auth-pit.js?v=10"></script>
+<script src="js/auth-pit.js?v=11"></script>
 <script src="js/members-pit.js?v=1"></script>
 <script src="js/oplog-pit.js?v=1"></script>
 <script src="js/news-pit.js?v=1"></script>

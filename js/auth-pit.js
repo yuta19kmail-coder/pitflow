@@ -1,5 +1,6 @@
 /* ========================================
    auth-pit.js  -  ログイン（PitFlow）
+   v1.1.0：ログイン画面を全アプリ共通の形に統一（確認中→ボタン表示・Googleロゴ入りボタン）
    ----------------------------------------
    2つのモードがある。どちらで動くかは firebase-init.js が決める（window.PIT_CLOUD）。
 
@@ -19,8 +20,18 @@
   var FLAG = 'pitflow_sample_authed';
   var COMPANY_ID = 'kobayashi_motors';
   var _busy = false;
+  var _inapp = false;   /* アプリ内ブラウザ＝ボタンを出さない */
 
   function el(id) { return document.getElementById(id); }
+
+  /* v1.1.0：ログイン画面を全アプリ共通の形に統一。
+     「認証状態を確認中…」→ 確認が終わってから Google ボタンを出す（自動ログイン中の二重ポップアップ防止）。 */
+  function setChecking(on) {
+    var ld = el('pl-loading');
+    if (ld) ld.style.display = on ? 'flex' : 'none';
+    var btn = el('pl-google');
+    if (btn) btn.style.display = (on || _inapp) ? 'none' : 'flex';
+  }
 
   function showApp() {
     var lg = el('pit-login');
@@ -39,7 +50,11 @@
   function setBusy(b) {
     _busy = !!b;
     var btn = el('pl-google');
-    if (btn) { btn.disabled = !!b; btn.textContent = b ? 'ログイン中…' : 'Google でログイン'; }
+    if (!btn) return;
+    btn.disabled = !!b;
+    /* ボタンの中にGoogleロゴ(SVG)が入っているので、文字だけ差し替える */
+    var lb = btn.querySelector('.pl-label');
+    if (lb) lb.textContent = b ? 'ログイン中…' : 'Google でログイン';
   }
 
   /* ---- アプリ内ブラウザ（LINE/Instagram等）は Google ログインが弾かれる ---- */
@@ -72,6 +87,8 @@
     /* サンプルでは「誰でログインしているか」を特定できないので空を返す＝予約担当は空のまま */
     window.pitCurrentStaffName = function () { return ''; };
     window.pitIsAdmin = function () { return true; };   // サンプルは全部さわれる
+
+    setChecking(false);   /* サンプルは確認するものが無いので、すぐボタンを出す */
 
     var authed = false;
     try { authed = localStorage.getItem(FLAG) === '1'; } catch (e) {}
@@ -165,6 +182,7 @@
     setBusy(false);
     try { window.fb.auth.signOut(); } catch (e) {}
     showLogin();
+    setChecking(false);
   }
 
   function onSignedIn(user) {
@@ -187,6 +205,7 @@
 
       setBusy(false);
       loginError('');
+      setChecking(false);
       showApp();
       console.log('[auth-pit] ログイン', member.name, '／管理=' + isAdminRole(member));
 
@@ -202,20 +221,25 @@
     window.fb.currentMember = null;
     setBusy(false);
     showLogin();
+    setChecking(false);   /* 未ログインと分かった時点でボタンを出す */
     if (typeof window.pitOnLogout === 'function') {
       try { window.pitOnLogout(); } catch (e) {}
     }
   }
 
   function initCloudMode() {
-    if (!window.fb || !window.fb.auth) { console.error('[auth-pit] Firebase 未初期化'); showLogin(); return; }
+    if (!window.fb || !window.fb.auth) { console.error('[auth-pit] Firebase 未初期化'); showLogin(); setChecking(false); return; }
 
     var box = el('pit-login');
     if (box) box.classList.add('pl-cloud');   /* 本番用の文言に切り替え（CSSで出し分け） */
 
+    setChecking(true);   /* 認証状態が分かるまでは「確認中…」だけ出す */
+
     if (isInAppBrowser()) {
+      _inapp = true;
       var w = el('pl-inapp'); if (w) w.style.display = 'block';
       var b = el('pl-google'); if (b) b.style.display = 'none';
+      var ld = el('pl-loading'); if (ld) ld.style.display = 'none';
     }
 
     if (window.fb.auth.getRedirectResult) {
