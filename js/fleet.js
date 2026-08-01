@@ -66,8 +66,13 @@ function renderFleet(){
       const _isLo = (gi === 0);
       const _ttl = _isLo ? (window.pitVehLabel ? pitVehLabel(v) : v.name) : v.name;
       const _no = _isLo ? ((v.number != null && v.number !== '') ? String(v.number) : String(v.name || '').replace(/[^0-9]/g, '')) : '';
-      const _cat = { kei: '軽', normal: '普通', import: '輸入' }[v.category] || '';
+      const _cat = { kei: '軽自動車', normal: '普通車', import: '輸入車' }[v.category] || '';
       const _tk = v.shakenDate && window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
+      const _dims = [
+        v.height != null ? '高 ' + _fleetEsc(v.height) : '',
+        v.width  != null ? '幅 ' + _fleetEsc(v.width)  : '',
+        v.length != null ? '長 ' + _fleetEsc(v.length) : ''
+      ].filter(Boolean).join(' / ');
       h += '<div class="fl-row fl-row-click" onclick="fleetOpenDetail(\'' + v.id + '\')" title="クリックで詳細">'
          + '<div class="fl-card-top">'
            + (_no ? '<span class="fl-no">' + _fleetEsc(_no) + '</span>' : '')
@@ -76,25 +81,29 @@ function renderFleet(){
            + (v.replaceDate ? '<span class="fl-retired plan">入替 ' + _fleetEsc(v.replaceDate) + '</span>' : '')
            + '<span class="fl-more"><i data-ic=right data-ics=16></i></span>'
          + '</div>'
-         + '<div class="fl-card-sub">'
-           + (v.color ? '<span>' + _fleetEsc(v.color) + '</span>' : '')
-           + (v.plate ? '<span class="fl-plate">' + _fleetEsc(v.plate) + '</span>' : '')
-           + (!_isLo && v.model ? '<span>' + _fleetEsc(v.model) + '</span>' : '')
-         + '</div>'
-         + (_isLo ? '<div class="fl-card-tags">'
-             + (_cat ? '<span class="fl-opttag cat">' + _cat + '</span>' : '')
-             + (v.etc ? '<span class="fl-opttag">ETC</span>' : '')
-             + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '')
-             + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
-             + (v.camera ? '<span class="fl-opttag">Bカメ</span>' : '')
-             + (v.seats != null ? '<span class="fl-opttag h">定員' + _fleetEsc(v.seats) + '</span>' : '')
-             + (v.height != null ? '<span class="fl-opttag h">高' + _fleetEsc(v.height) + '</span>' : '')
-             + (v.width != null ? '<span class="fl-opttag h">幅' + _fleetEsc(v.width) + '</span>' : '')
-             + (v.length != null ? '<span class="fl-opttag h">長' + _fleetEsc(v.length) + '</span>' : '')
-           + '</div>' : '')
+         + (v.plate ? '<div class="fl-card-plate">' + _fleetEsc(v.plate) + '</div>' : '')
+         + (_isLo
+             ? '<div class="fl-card-line">'
+                 + (_cat ? '<span class="fl-kv"><i>区分</i>' + _cat + '</span>' : '')
+                 + (v.color ? '<span class="fl-kv"><i>カラー</i>' + _fleetEsc(v.color) + '</span>' : '')
+                 + (v.seats != null ? '<span class="fl-kv"><i>定員</i>' + _fleetEsc(v.seats) + '人</span>' : '')
+               + '</div>'
+             : (v.model || v.color
+                 ? '<div class="fl-card-line">'
+                     + (v.model ? '<span class="fl-kv"><i>車種</i>' + _fleetEsc(v.model) + '</span>' : '')
+                     + (v.color ? '<span class="fl-kv"><i>カラー</i>' + _fleetEsc(v.color) + '</span>' : '')
+                   + '</div>' : ''))
+         + (_isLo && (v.etc || v.navi || v.iso || v.camera)
+             ? '<div class="fl-card-tags">'
+                 + (v.etc ? '<span class="fl-opttag">ETC</span>' : '')
+                 + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '')
+                 + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
+                 + (v.camera ? '<span class="fl-opttag">Bカメ</span>' : '')
+               + '</div>' : '')
+         + (_isLo && _dims ? '<div class="fl-card-dims">' + _dims + ' cm</div>' : '')
          + (v.shakenDate ? '<div class="fl-card-foot">'
              + '<span class="fl-fk shaken">車検</span><b>' + _fleetEsc(window.pitWareki ? pitWareki(v.shakenDate) : v.shakenDate) + '</b>'
-             + (_tk ? '<span class="fl-fk tenken">12ヶ月</span><b>' + _fleetEsc(window.pitWareki ? pitWareki(_tk, 'ym') : _tk) + '</b>' : '')
+             + (_tk ? '<span class="fl-fk tenken">点検</span><b>' + _fleetEsc(window.pitWareki ? pitWareki(_tk, 'ym') : _tk) + '</b>' : '')
            + '</div>' : '<div class="fl-card-foot none">車検満了日 未入力</div>')
          + '</div>';
     });
