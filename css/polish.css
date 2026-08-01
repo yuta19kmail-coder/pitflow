@@ -584,7 +584,10 @@
 
 /* ===== 代車・自社車両管理 ===== */
 .fl-card{ background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:14px; }
-.fl-h{ font-size:14px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.fl-h{ font-size:14px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; justify-content:flex-start; gap:7px; }
+/* v1.12.0：見出しはアイコンと文字をくっつける（space-between だと間が大きく空いていた）。
+   右に置きたいもの（ボタン・注記）だけを右端へ寄せる。 */
+.fl-h > .vh-btn, .fl-h > .fl-note{ margin-left:auto; }
 .fl-note{ font-size:11px; color:var(--text3); font-weight:400; line-height:1.6; }
 .fl-form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .fl-in{ background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 10px; font-size:13px; font-family:inherit; }
@@ -614,7 +617,33 @@
 .fl-cal-name{ position:sticky; left:0; z-index:2; background:var(--bg2); font-size:12px; font-weight:600; padding:8px 10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid var(--border); border-right:1px solid var(--border2); }
 .fl-cal-cell{ min-height:36px; border-bottom:1px solid var(--border); border-right:1px solid var(--border); display:flex; align-items:center; justify-content:center; gap:3px; padding:3px; background:var(--bg2); }
 .fl-rows{ display:grid; grid-template-columns:repeat(auto-fill, minmax(270px, 1fr)); gap:7px; }
-.fl-modal{ width:min(440px, 94vw); }
+/* v1.12.0：入力が縦に長くて「保存」が画面の外に出て押せなかった。
+   ポップアップに高さの上限を付けて中身をスクロールさせ、操作ボタンは下に貼り付ける。 */
+.fl-modal{ width:min(440px, 94vw); max-height:88dvh; display:flex; flex-direction:column; }
+.fl-modal .modal-head{ flex:0 0 auto; }
+.fl-modal .modal-body{ flex:1 1 auto; overflow-y:auto; }
+.fl-mact{ position:sticky; bottom:-14px; display:flex; align-items:center; gap:8px; margin-top:8px;
+  padding:10px 0 4px; background:var(--bg2); border-top:1px solid var(--border); z-index:2; }
+.fl-mact .vh-btn.del{ border-color:rgba(239,68,68,.45); color:#fca5a5; background:rgba(239,68,68,.10); }
+.fl-mact .vh-btn.del:hover{ background:rgba(239,68,68,.18); }
+
+/* v1.12.0：車両カードは「クリックで詳細」。編集・削除は詳細→編集画面の中へ移した。 */
+.fl-row-click{ cursor:pointer; }
+.fl-row-click:hover{ border-color:var(--brand); }
+.fl-more{ margin-left:auto; color:var(--text3); display:flex; align-items:center; }
+.fd-box{ width:min(420px,94vw); max-height:88dvh; overflow-y:auto; padding:18px; }
+.fd-head{ display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.fd-title{ font-size:18px; font-weight:800; }
+.fd-kind{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--bg3); border:1px solid var(--border); color:var(--text2); }
+.fd-tbl{ width:100%; border-collapse:collapse; font-size:13px; }
+.fd-tbl td{ padding:6px 0; border-bottom:1px dashed var(--border); }
+.fd-tbl td:first-child{ width:88px; color:var(--text2); font-size:12px; }
+.fd-auto{ color:var(--text3); font-size:11px; margin-left:4px; }
+.fd-opts{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.fd-opt{ font-size:11.5px; padding:2px 9px; border-radius:999px; border:1px solid var(--border); }
+.fd-opt.on{ background:rgba(34,197,94,.12); border-color:rgba(34,197,94,.32); color:#86efac; }
+.fd-opt.off{ color:var(--text3); opacity:.7; }
+.fd-btns{ display:flex; gap:8px; justify-content:flex-end; margin-top:16px; }
 .fl-mform{ display:flex; flex-direction:column; gap:10px; }
 .fl-mlb{ font-size:12px; color:var(--text2); display:flex; flex-direction:column; gap:4px; font-weight:600; }
 .fl-bdg{ font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:5px; color:#fff; white-space:nowrap; }

@@ -311,7 +311,7 @@ function loVehHover(headEl){
         + (catLb ? '<span class="lvh-cat ' + _loEsc(l.category) + '">' + catLb + '</span>' : '')
         + (l.seats != null ? '<span class="lvh-seats">定員' + _loEsc(l.seats) + '人</span>' : '')
       + '</div>'
-    + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + opt(l.camera, 'カメラ') + '</div>'
+    + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + opt(l.camera, 'Bカメ') + '</div>'
     + '<div class="lvh-dims">' + dim('高さ ', l.height != null ? l.height + 'cm' : null) + dim('幅 ', l.width != null ? l.width + 'cm' : null) + dim('長さ ', l.length != null ? l.length + 'cm' : null) + '</div>'
     + (l.shakenDate ? '<div class="lvh-sub">車検 ' + _loEsc(window.pitWareki(l.shakenDate))
          + '　<span class="lvh-tenken">12ヶ月点検 ' + _loEsc(window.pitWareki(window.pitTenkenFromShaken(l.shakenDate), 'ym')) + '</span></div>' : '');
