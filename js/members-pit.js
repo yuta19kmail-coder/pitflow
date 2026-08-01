@@ -11,6 +11,7 @@
        保存先は companies/kobayashi_motors/pitSettings/staffProps。
      ⚠ v1.4.0：「区分（スタッフ/幹部/メカのみ）」を廃止（幹部は何の動きにも効いていなかった）。
      ⚠ v1.6.0：部署の手動設定も廃止。人と組織の真実は CoreMembers に一本化。
+     ⚠ v1.9.1：**並び順も CoreMembers と同じ**（手動の並び順 → 無ければ本名の五十音順）。
      ⚠ v1.9.0：**メンバー一覧は CoreMembers の全員**（ログインしない人も含む）。
        ログインできる人（CoreFlowの名簿にいて PitFlow が使える人）には「ログイン」の印を付ける。
        ＝ログインしないアルバイト・回送要員も、担当や付箋で名前を選べる。
@@ -179,7 +180,7 @@
         deptNames: dv.names,
         photo: (pm && pm.photo) || cm.photo || '',
         email: (pm && pm.email) || '',
-        sort: (typeof cm.sortOrder === 'number') ? cm.sortOrder : 999999
+        sort: (typeof cm.sortOrder === 'number') ? cm.sortOrder : 1e9
       });
     });
 
@@ -191,13 +192,15 @@
         aliases: [pm.name, pm.gname].filter(Boolean).map(String),
         canLogin: true, divisions: [], division: '', deptNames: [],
         photo: pm.photo || '', email: pm.email || '',
-        sort: (typeof pm.sortOrder === 'number') ? pm.sortOrder : 999999
+        sort: 1e9   /* CoreMembers に居ない人は末尾（並びは CoreMembers が正） */
       });
     });
 
+    /* 並びは CoreMembers と完全に同じ規則（_cmpOrder）：
+       手動の並び順（sortOrder）が先、無ければ 1e9 で後ろ、同点なら本名の五十音順。 */
     rows.sort(function (a, b) {
-      if (a.sort !== b.sort) return a.sort - b.sort;
-      return String(a.name || '').localeCompare(String(b.name || ''), 'ja');
+      return (a.sort - b.sort)
+          || String(a.realName || a.name || '').localeCompare(String(b.realName || b.name || ''), 'ja');
     });
 
     window.state.staff = rows.map(function (r) {
