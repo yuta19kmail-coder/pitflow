@@ -535,8 +535,10 @@
     if (quick) {
       const btn = (label, onclick, extra) => `<button type="button" class="bn-actionsheet-btn" style="width:auto;font-size:11px;padding:3px 8px;${extra || ''}" onclick="${onclick}">${label}</button>`;
       let qhtml = btn('全員', 'bnQuickSelectAll()') + btn('クリア', 'bnQuickClear()', 'opacity:.7');
-      (state.divisions || []).forEach(d => { qhtml += btn('<i data-ic=users data-ics=16></i> ' + _esc(d.label), `bnQuickSelectDivision('${_esc(d.id)}')`); });
-      qhtml += btn('<i data-ic=phone data-ics=16></i> 受付', 'bnQuickSelectReception()');
+      /* v1.6.0：部署は CoreMembers 由来の4分類（1課/2課/受付課/その他）。兼任の人は両方に出る。 */
+      const _divs = window.PIT_DIVS || (state.divisions || []);
+      _divs.forEach(d => { qhtml += btn('<i data-ic=users data-ics=16></i> ' + _esc(d.label), `bnQuickSelectDivision('${_esc(d.id)}')`); });
+      qhtml += btn('<i data-ic=phone data-ics=16></i> 受付ぜんぶ', 'bnQuickSelectReception()');
       quick.innerHTML = qhtml;
     }
 
@@ -553,8 +555,10 @@
   window.bnQuickSelectAll = function () { _editor.members = (state.staff || []).map(s => s.id); _renderMemberPicker(); };
   window.bnQuickClear = function () { _editor.members = []; _renderMemberPicker(); };
   window.bnQuickSelectDivision = function (divId) {
-    const inDiv = (state.staff || []).filter(s => s.division === divId).map(s => s.id);
-    if (!inDiv.length) { _toast('この課のメンバーがいません'); return; }
+    const inDiv = (state.staff || []).filter(s =>
+      (Array.isArray(s.divisions) && s.divisions.includes(divId)) || s.division === divId
+    ).map(s => s.id);
+    if (!inDiv.length) { _toast('この部署のメンバーがいません'); return; }
     const allIn = inDiv.every(u => _editor.members.includes(u));
     if (allIn) _editor.members = _editor.members.filter(u => !inDiv.includes(u));
     else inDiv.forEach(u => { if (!_editor.members.includes(u)) _editor.members.push(u); });
