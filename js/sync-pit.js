@@ -96,9 +96,8 @@
     } else if (_state === 'error') {
       msg = '保存できませんでした。通信を確認して、もう一度直してみてください。';
     } else {
-      var who = (w.fb && w.fb.currentMember && w.fb.currentMember.name) || '';
       var when = _lastAt ? '（最後の同期 ' + fmt(_lastAt) + '）' : '（開いてから、まだ保存はしていません）';
-      msg = '全員と共有中です' + when + (who ? ' ／ ' + who + ' でログイン中' : '');
+      msg = '全員と共有中です' + when;   /* v1.1.2：他アプリと同じ文言に（ログイン名は出さない） */
     }
     /* v1.1.1：画面下のトーストではなく、ランプのすぐそばにふきだしで出す（全アプリ共通の部品を借りる） */
     if (w.CFSync && w.CFSync.bubble) w.CFSync.bubble(msg);

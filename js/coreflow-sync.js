@@ -1,7 +1,9 @@
 /* ============================================
    coreflow-sync.js  ―  同期ランプ（全アプリ共通）
+   v1.2（2026-08-01）：ふきだしを**そのアプリのテーマカラー**で出す（色は index.html の
+     theme-color から取る）。文言からログイン中の名前は外した。
    v1.1（2026-08-01）：ランプを押した時の説明を、画面下のトーストではなく
-     **ランプのすぐそば（ふきだし）**に出すように。文言はPitFlowに統一（ログイン中の人の名前も出す）。
+     **ランプのすぐそば（ふきだし）**に出すように。
      すでにアプリ専用のランプ制御がある場合（PitFlow）は、ふきだしだけを提供して他は何もしない。
    v1.0（2026-08-01）：PitFlow で作った「同期中／同期済み／受信／保存エラー」の
      ランプを、CoreFlow系の他アプリにもそのまま持ってくるための共通部品。
@@ -68,13 +70,13 @@
     if (d.getElementById('cf-sync-bubble-css')) return;
     var css =
       '#cf-sync-bubble{position:fixed;z-index:99999;max-width:320px;padding:9px 12px;border-radius:10px;' +
-      'background:var(--bg2,#1a1d27);border:1px solid var(--border,#333650);color:var(--text,#e8eaf6);' +
-      'font-size:12px;line-height:1.65;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;display:none;' +
-      'white-space:normal;text-align:left}' +
+      'background:var(--cf-bc,#3b82f6);border:1px solid rgba(255,255,255,.22);color:#fff;font-weight:600;' +
+      'font-size:12px;line-height:1.65;box-shadow:0 10px 28px rgba(0,0,0,.45);cursor:pointer;display:none;' +
+      'white-space:normal;text-align:left;text-shadow:0 1px 1px rgba(0,0,0,.25)}' +
       '#cf-sync-bubble::after{content:"";position:absolute;left:var(--cf-ax,50%);margin-left:-6px;' +
       'border:6px solid transparent}' +
-      '#cf-sync-bubble.cf-b-below::after{top:-12px;border-bottom-color:var(--border,#333650)}' +
-      '#cf-sync-bubble.cf-b-above::after{bottom:-12px;border-top-color:var(--border,#333650)}';
+      '#cf-sync-bubble.cf-b-below::after{top:-12px;border-bottom-color:var(--cf-bc,#3b82f6)}' +
+      '#cf-sync-bubble.cf-b-above::after{bottom:-12px;border-top-color:var(--cf-bc,#3b82f6)}';
     var st = d.createElement('style');
     st.id = 'cf-sync-bubble-css';
     st.textContent = css;
@@ -114,20 +116,17 @@
     var t = new Date(ms), p = function (n) { return (n < 10 ? '0' : '') + n; };
     return p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
   }
-  /* いまログインしている人の名前（アプリごとに置き場所が違うので順に探す） */
-  function who() {
+  /* そのアプリのテーマカラー（index.html の theme-color → CSSの --brand / --accent の順で探す） */
+  function brandColor() {
     try {
-      var f = w.fb || {};
-      var m = f.currentMember || f.currentStaff || w.currentMember;
-      if (m && (m.name || m.displayName)) return m.name || m.displayName;
-      var ids = ['tb-username', 'u-name', 'me-name'];
-      for (var i = 0; i < ids.length; i++) {
-        var e = d.getElementById(ids[i]);
-        if (e && e.textContent && e.textContent.trim()) return e.textContent.trim();
-      }
-      if (f.currentUser && f.currentUser.displayName) return f.currentUser.displayName;
+      var m = d.querySelector('meta[name="theme-color"]');
+      var c = m && m.getAttribute('content');
+      if (c && c.trim()) return c.trim();
+      var cs = w.getComputedStyle(d.documentElement);
+      c = (cs.getPropertyValue('--brand') || cs.getPropertyValue('--accent') || '').trim();
+      if (c) return c;
     } catch (e) {}
-    return '';
+    return '#3b82f6';
   }
 
   function tipFor(s) {
@@ -236,6 +235,7 @@
     b.style.left = left + 'px';
     b.className = below ? 'cf-b-below' : 'cf-b-above';
     b.style.setProperty('--cf-ax', (r.left + r.width / 2 - left) + 'px');
+    b.style.setProperty('--cf-bc', brandColor());   /* アプリのテーマカラー（テーマ切替にも毎回追従） */
     b.style.visibility = 'visible';
 
     clearTimeout(_tBubble);
@@ -248,9 +248,8 @@
     if (!navigator.onLine)       return 'ネットに繋がっていません。直した内容はこの画面には残っていますが、まだ全員には届いていません。';
     if (_state === 'error')      return '保存できませんでした。通信を確認して、もう一度直してみてください。';
     if (_state === 'local')      return 'この端末の中だけに保存しています（サンプル）。本番のアドレスで開くと全員で共有されます。';
-    var nm = who();
     var when = _lastAt ? '（最後の同期 ' + fmt(_lastAt) + '）' : '（開いてから、まだ保存はしていません）';
-    return '全員と共有中です' + when + (nm ? ' ／ ' + nm + ' でログイン中' : '');
+    return '全員と共有中です' + when;
   }
 
   function bindClick() {
