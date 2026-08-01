@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.12.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.13.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -13,7 +13,7 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=40">
-<link rel="stylesheet" href="css/polish.css?v=161">
+<link rel="stylesheet" href="css/polish.css?v=162">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=1">
 <link rel="stylesheet" href="css/search.css?v=5">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.12.0</div>
+    <div class="login-ver">v1.13.0</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.12.0</span>
+    <span class="ver">v1.13.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -570,8 +570,19 @@
             </div>
           </div>
         </div>
-        <label class="fl-mlb">車検満了日 <input id="fl-shaken" type="date" class="fl-in"> <span class="fl-auto">→自動で予定に</span></label>
-        <div class="fl-mlb" id="fl-tenken-preview" style="align-self:center;color:var(--text3);font-size:12px"></div>
+        <div class="fl-mlb">車検満了日（和暦） <span class="fl-auto">→自動で予定に</span>
+          <input id="fl-shaken" type="hidden">
+          <div class="fl-wareki">
+            <select id="fl-sh-era" class="fl-in fl-w-era" onchange="flWarekiSync()">
+              <option value="令和">令和</option><option value="平成">平成</option>
+            </select>
+            <input id="fl-sh-y" type="number" min="1" max="99" class="fl-in fl-w-n" placeholder="8" inputmode="numeric" oninput="flWarekiSync()"><span class="fl-w-u">年</span>
+            <input id="fl-sh-m" type="number" min="1" max="12" class="fl-in fl-w-n" placeholder="9" inputmode="numeric" oninput="flWarekiSync()"><span class="fl-w-u">月</span>
+            <input id="fl-sh-d" type="number" min="1" max="31" class="fl-in fl-w-n" placeholder="14" inputmode="numeric" oninput="flWarekiSync()"><span class="fl-w-u">日</span>
+          </div>
+          <div class="fl-w-hint" id="fl-sh-hint"></div>
+        </div>
+        <div id="fl-tenken-preview" style="display:none"></div>
         <label class="fl-mlb">区分
           <select id="fl-cat" class="fl-in"><option value="kei">軽</option><option value="normal">普通車</option><option value="import">輸入車</option></select>
         </label>
@@ -802,8 +813,8 @@
 <script src="js/shaken.js?v=16"></script>
 <script src="js/shaken-log.js?v=6"></script>
 <script src="js/outsource.js?v=3"></script>
-<script src="js/loaner.js?v=53"></script>
-<script src="js/fleet.js?v=13"></script>
+<script src="js/loaner.js?v=54"></script>
+<script src="js/fleet.js?v=14"></script>
 <script src="js/auth-pit.js?v=12"></script>
 <script src="js/members-pit.js?v=11"></script>
 <script src="js/oplog-pit.js?v=1"></script>

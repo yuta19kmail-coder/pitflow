@@ -63,21 +63,39 @@ function renderFleet(){
     if (!g.arr.length){ h += '<div class="fl-empty">登録なし</div>'; }
     h += '<div class="fl-rows">';
     g.arr.forEach(function(v){
+      const _isLo = (gi === 0);
+      const _ttl = _isLo ? (window.pitVehLabel ? pitVehLabel(v) : v.name) : v.name;
+      const _no = _isLo ? ((v.number != null && v.number !== '') ? String(v.number) : String(v.name || '').replace(/[^0-9]/g, '')) : '';
+      const _cat = { kei: '軽', normal: '普通', import: '輸入' }[v.category] || '';
+      const _tk = v.shakenDate && window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
       h += '<div class="fl-row fl-row-click" onclick="fleetOpenDetail(\'' + v.id + '\')" title="クリックで詳細">'
-         + '<div class="fl-main"><div class="fl-name">' + _fleetEsc(gi === 0 ? (window.pitVehLabel ? pitVehLabel(v) : v.name) : v.name) + (v.retired ? '<span class="fl-retired">引退</span>' : '') + (v.replaceDate ? '<span class="fl-retired plan">入替予定 ' + _fleetEsc(v.replaceDate) + '</span>' : '') + '</div>'
-         + '<div class="fl-sub">' + _fleetEsc(gi === 0 ? (v.color || '') : (v.model || '—')) + (gi === 0 && v.color ? '' : (v.color ? '（' + _fleetEsc(v.color) + '）' : '')) + (v.plate ? (gi === 0 && !v.color ? '' : ' ・ ') + _fleetEsc(v.plate) : '')
-         + (gi === 0 ? '<br>'
-             + (v.category ? '<span class="fl-opttag cat">' + ({kei:'軽',normal:'普通車',import:'輸入車'}[v.category] || '') + '</span>' : '')
-             + (v.etc ? '<span class="fl-opttag">ETC</span>' : '') + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '') + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
+         + '<div class="fl-card-top">'
+           + (_no ? '<span class="fl-no">' + _fleetEsc(_no) + '</span>' : '')
+           + '<span class="fl-ttl">' + _fleetEsc(_isLo ? (v.model || '（車種未登録）') : _ttl) + '</span>'
+           + (v.retired ? '<span class="fl-retired">引退</span>' : '')
+           + (v.replaceDate ? '<span class="fl-retired plan">入替 ' + _fleetEsc(v.replaceDate) + '</span>' : '')
+           + '<span class="fl-more"><i data-ic=right data-ics=16></i></span>'
+         + '</div>'
+         + '<div class="fl-card-sub">'
+           + (v.color ? '<span>' + _fleetEsc(v.color) + '</span>' : '')
+           + (v.plate ? '<span class="fl-plate">' + _fleetEsc(v.plate) + '</span>' : '')
+           + (!_isLo && v.model ? '<span>' + _fleetEsc(v.model) + '</span>' : '')
+         + '</div>'
+         + (_isLo ? '<div class="fl-card-tags">'
+             + (_cat ? '<span class="fl-opttag cat">' + _cat + '</span>' : '')
+             + (v.etc ? '<span class="fl-opttag">ETC</span>' : '')
+             + (v.navi ? '<span class="fl-opttag">ナビ</span>' : '')
+             + (v.iso ? '<span class="fl-opttag">ISO</span>' : '')
              + (v.camera ? '<span class="fl-opttag">Bカメ</span>' : '')
-             + (v.seats != null ? '<span class="fl-opttag h">定員' + _fleetEsc(v.seats) + '人</span>' : '')
+             + (v.seats != null ? '<span class="fl-opttag h">定員' + _fleetEsc(v.seats) + '</span>' : '')
              + (v.height != null ? '<span class="fl-opttag h">高' + _fleetEsc(v.height) + '</span>' : '')
-             + (v.width  != null ? '<span class="fl-opttag h">幅' + _fleetEsc(v.width) + '</span>' : '')
+             + (v.width != null ? '<span class="fl-opttag h">幅' + _fleetEsc(v.width) + '</span>' : '')
              + (v.length != null ? '<span class="fl-opttag h">長' + _fleetEsc(v.length) + '</span>' : '')
-           : '')
-         + (v.shakenDate ? '<br>車検満了 ' + _fleetEsc(window.pitWareki ? pitWareki(v.shakenDate) : v.shakenDate)
-              + ' ・ <span class="fl-tenken-auto">12ヶ月点検 ' + _fleetEsc(window.pitWareki ? pitWareki(pitTenkenFromShaken(v.shakenDate), 'ym') : '') + '（自動）</span>' : '') + '</div></div>'
-         + '<span class="fl-more"><i data-ic=right data-ics=16></i></span>'
+           + '</div>' : '')
+         + (v.shakenDate ? '<div class="fl-card-foot">'
+             + '<span class="fl-fk shaken">車検</span><b>' + _fleetEsc(window.pitWareki ? pitWareki(v.shakenDate) : v.shakenDate) + '</b>'
+             + (_tk ? '<span class="fl-fk tenken">12ヶ月</span><b>' + _fleetEsc(window.pitWareki ? pitWareki(_tk, 'ym') : _tk) + '</b>' : '')
+           + '</div>' : '<div class="fl-card-foot none">車検満了日 未入力</div>')
          + '</div>';
     });
     h += '</div></div>';
@@ -309,6 +327,33 @@ window.fleetCloseDetail = function () {
   if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
 };
 
+/* ===== v1.13.0 車検満了日を和暦で入力する ===== */
+window.flWarekiFill = function (ymdStr) {
+  var p = window.pitYmdToWarekiParts ? pitYmdToWarekiParts(ymdStr) : { era: '令和', y: '', m: '', d: '' };
+  var e = document.getElementById('fl-sh-era'); if (e) e.value = p.era;
+  var y = document.getElementById('fl-sh-y'); if (y) y.value = p.y || '';
+  var m = document.getElementById('fl-sh-m'); if (m) m.value = p.m || '';
+  var d = document.getElementById('fl-sh-d'); if (d) d.value = p.d || '';
+  flWarekiSync();
+};
+window.flWarekiSync = function () {
+  var era = (document.getElementById('fl-sh-era') || {}).value || '令和';
+  var y = (document.getElementById('fl-sh-y') || {}).value;
+  var m = (document.getElementById('fl-sh-m') || {}).value;
+  var d = (document.getElementById('fl-sh-d') || {}).value;
+  var ymdStr = window.pitWarekiToYmd ? pitWarekiToYmd(era, y, m, d) : '';
+  var hid = document.getElementById('fl-shaken'); if (hid) hid.value = ymdStr;
+  var hint = document.getElementById('fl-sh-hint');
+  if (hint) {
+    hint.textContent = ymdStr
+      ? ('西暦 ' + ymdStr + '　／　12ヶ月点検の目安 ' + (window.pitWareki ? pitWareki(pitTenkenFromShaken(ymdStr), 'ym') : ''))
+      : ((y || m || d) ? '年・月・日をすべて入れてください' : '');
+    hint.classList.toggle('ng', !!((y || m || d) && !ymdStr));
+  }
+  var tp = document.getElementById('fl-tenken-preview');
+  if (tp) tp.textContent = '';
+};
+
 function fleetOpenModal(id){
   _fleetEditId = id || null;
   const f = id ? _fleetFind(id) : null;
@@ -328,6 +373,7 @@ function fleetOpenModal(id){
   document.getElementById('fl-pl-main').value   = v.plate || '';
   const _pg = document.getElementById('fl-pl-guide'); if (_pg) _pg.style.display = 'none';
   document.getElementById('fl-shaken').value = v.shakenDate || '';
+  flWarekiFill(v.shakenDate || '');   /* v1.13.0：入力も和暦で */
   /* v1.11.0：12ヶ月点検は車検満了日から自動計算（入力欄なし）。目安をその場に出す。 */
   var _tp = document.getElementById('fl-tenken-preview');
   if (_tp) _tp.textContent = v.shakenDate ? ('12ヶ月点検の目安：' + (window.pitWareki ? pitWareki(pitTenkenFromShaken(v.shakenDate), 'ym') : '')) : '';

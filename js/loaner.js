@@ -102,6 +102,28 @@ window.pitWareki = function (ymdStr, opt) {
   if (opt === 'short') return era.charAt(0) + yl + '.' + mo + '.' + d;
   return era + yl + '年' + mo + '月' + d + '日';
 };
+/* 西暦(YYYY-MM-DD) → 和暦のパーツ {era,y,m,d}。入力欄の初期値に使う。 */
+window.pitYmdToWarekiParts = function (ymdStr) {
+  var m = String(ymdStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return { era: '令和', y: '', m: '', d: '' };
+  var y = +m[1], mo = +m[2], d = +m[3], t = y * 10000 + mo * 100 + d;
+  if (t >= 20190501) return { era: '令和', y: y - 2018, m: mo, d: d };
+  if (t >= 19890108) return { era: '平成', y: y - 1988, m: mo, d: d };
+  return { era: '昭和', y: y - 1925, m: mo, d: d };
+};
+/* 和暦 → 西暦(YYYY-MM-DD)。年月日が揃っていない時は空を返す。 */
+window.pitWarekiToYmd = function (era, wy, mo, d) {
+  wy = parseInt(wy, 10); mo = parseInt(mo, 10); d = parseInt(d, 10);
+  if (!wy || !mo || !d) return '';
+  var base = { '令和': 2018, '平成': 1988, '昭和': 1925 }[era];
+  if (!base) return '';
+  var y = base + wy;
+  if (mo < 1 || mo > 12) return '';
+  var last = new Date(y, mo, 0).getDate();
+  if (d < 1 || d > last) return '';
+  return y + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+};
+
 /* 車検満了日 → 12ヶ月点検の時期（翌年の同月同日）。satisfies 「車検満了日の翌年の同月」 */
 window.pitTenkenFromShaken = function (shakenYmd) {
   var m = String(shakenYmd || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
