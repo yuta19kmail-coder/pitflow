@@ -56,7 +56,9 @@
     h += '<button class="vh-btn primary" onclick="showView(\'rules\')"><i data-ic=puzzle data-ics=16></i> ルールページを開く</button>';
     h += '</div>';
 
-    /* ===== 顧客データ取込（テスト・ファイルから） ===== */
+    /* ===== 顧客データ取込（テスト・ファイルから） =====
+       v1.3.0：本番では出さない（本番用は「顧客データの取込（本番）」＝import-cloud.js が設定の下に出す） */
+    if (!window.PIT_CLOUD) {
     h += '<div class="ps-card">';
     h += '<div class="ps-h"><i data-ic=card data-ics=16></i> 顧客データ取込（テスト）</div>';
     h += '<div class="ps-desc">bizcloud から書き出した顧客JSON（<code>顧客車両_bizcloud_*.json</code>）を読み込み、<b>この端末のブラウザ内（localStorage）だけ</b>に反映します。本番DBには送りません。現在の顧客控えは<b>全置き換え</b>されます。</div>';
@@ -64,6 +66,7 @@
     h += '<button class="vh-btn primary" onclick="pitImportCustomersFromFile()"><i data-ic=download data-ics=16></i> 顧客JSONを選んで取込</button>';
     h += '<span class="ps-status" id="ps-import-status" style="font-size:12px;color:var(--text2)">現在 ' + ((state.customers||[]).length) + ' 件</span>';
     h += '</div></div>';
+    }
 
     /* ===== 置き場 ===== */
     const lc = s.lotCap || { pit: 4, yard: 12, parking: 8, extra: 4 };
