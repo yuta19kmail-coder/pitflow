@@ -25,6 +25,12 @@
     return { label:'', course:course, color:'#64748b', courseColor:courseColor };
   }
   function frontStaffList(){ return (state.staff||[]).filter(s=>s.front).map(s=>s.name); }
+  /* v1.5.0：担当の表示名。メンバー番号が入っていれば今の名前を優先（改名に追従） */
+  function frontName(v){
+    if(!v) return '';
+    const m = (v.frontStaffId && window.pitStaffById) ? window.pitStaffById(v.frontStaffId) : null;
+    return m ? m.name : (v.frontStaff||'');
+  }
   function primaryTel(cust){ const cs=(cust&&cust.contacts)||[]; const p=cs.find(x=>x.primary)||cs[0]; return p?(p.tel||''):''; }
   function vehLabel(v){ return ((v.maker?v.maker+' ':'')+(v.car||'')).trim() || (v.plate||'—'); }
 
@@ -40,7 +46,8 @@
   function upsertCustomerFromCard(c){
     if(!c) return;
     const name=(c.customer||'').trim();
-    const vehicle={ plate:(c.plate||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(), karteNo:(c.karteNo||'').trim() };
+    const _fm0 = window.pitStaffByName ? window.pitStaffByName(c.frontStaff) : null;   /* v1.5.0：担当をメンバーに結びつける */
+    const vehicle={ plate:(c.plate||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(), frontStaffId:(_fm0?_fm0.id:''), karteNo:(c.karteNo||'').trim() };
     if(!name && !vehicle.plate) return;
     const contacts = Array.isArray(c.contacts)
       ? c.contacts.filter(x=>(x.tel||'').trim()||(x.label||'').trim()).map(x=>({tel:(x.tel||'').trim(),label:(x.label||'').trim(),primary:!!x.primary}))
@@ -54,11 +61,11 @@
     if((c.lstepId||'').trim()) p.lstepId=(c.lstepId||'').trim();
     if(!Array.isArray(p.vehicles)) p.vehicles=[];
     let v = vehicle.plate ? p.vehicles.find(x=>norm(x.plate)===norm(vehicle.plate)) : null;
-    if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff)v.frontStaff=vehicle.frontStaff; if(vehicle.karteNo)v.karteNo=vehicle.karteNo; v.updatedAt=Date.now(); }
+    if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff){v.frontStaff=vehicle.frontStaff; v.frontStaffId=vehicle.frontStaffId||'';} if(vehicle.karteNo)v.karteNo=vehicle.karteNo; v.updatedAt=Date.now(); }
     else if(vehicle.plate||vehicle.maker||vehicle.car){
       const base=p.vehicles[p.vehicles.length-1]||{};   // 新車両：未指定の担当/課/区分は既存からデフォ継承
       p.vehicles.push({ id:'v'+Date.now()+Math.floor(Math.random()*1000), plate:vehicle.plate, maker:vehicle.maker, car:vehicle.car,
-        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', karteNo:vehicle.karteNo||'', updatedAt:Date.now() });
+        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', frontStaffId:vehicle.frontStaffId||base.frontStaffId||'', karteNo:vehicle.karteNo||'', updatedAt:Date.now() });
     }
     p.updatedAt=Date.now();
     c.customerId=p.id;
@@ -146,7 +153,7 @@
       case 'tel':   return norm(primaryTel(cust));
       case 'board': return v.boardId==='default'?'1':(v.boardId==='import'?'2':'9');
       case 'div':   return v.division||'z';
-      case 'front': return norm(v.frontStaff);
+      case 'front': return norm(frontName(v));
       case 'updatedAt': return cust.updatedAt||0;
     }
     return '';
@@ -214,7 +221,7 @@
            '<td class="ct-mut">'+(first?esc(primaryTel(cust)||'—'):'')+'</td>'+
            '<td>'+pillC(t.label,t.color)+'</td>'+
            '<td>'+pillC(t.course,t.courseColor)+'</td>'+
-           '<td>'+(v?esc(v.frontStaff||'—'):'—')+'</td>'+
+           '<td>'+(v?esc(frontName(v)||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
            '<td class="ct-act">'+
              ((first && (cust.lineStatus||'')==='ok' && (cust.lstepId||'').trim() && window.pitLstepUrl)
@@ -320,7 +327,9 @@
       const boardId=row.querySelector('.ce-board').value;
       const division=row.querySelector('.ce-div').value;
       const frontStaff=row.querySelector('.ce-front').value;
-      if(plate||maker||car) vehicles.push({ id:row.dataset.vid||('v'+Date.now()+Math.floor(Math.random()*1000)), plate,maker,car,karteNo,boardId,division,frontStaff });
+      /* v1.5.0：担当はメンバーの番号も一緒に持つ（CoreFlowで改名されても追従できるように） */
+      const _fm = window.pitStaffByName ? window.pitStaffByName(frontStaff) : null;
+      if(plate||maker||car) vehicles.push({ id:row.dataset.vid||('v'+Date.now()+Math.floor(Math.random()*1000)), plate,maker,car,karteNo,boardId,division,frontStaff, frontStaffId:(_fm?_fm.id:'') });
     });
     cust.vehicles=vehicles;
   }
@@ -509,7 +518,7 @@
         h+='<div class="cd-veh'+teamCls+'">'+
            '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
-           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill" style="background:'+esc(t.courseColor)+'22;color:'+esc(t.courseColor)+';border-color:'+esc(t.courseColor)+'66">'+esc(t.course)+'</span>':'')+(v.frontStaff?'<span class="cd-vstaff" title="担当">'+esc(v.frontStaff)+'</span>':'')+'</div>'+
+           '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill" style="background:'+esc(t.courseColor)+'22;color:'+esc(t.courseColor)+';border-color:'+esc(t.courseColor)+'66">'+esc(t.course)+'</span>':'')+(frontName(v)?'<span class="cd-vstaff" title="担当">'+esc(frontName(v))+'</span>':'')+'</div>'+
            ((v.karteNo||'').trim()?'<div class="cd-vkarte" title="カルテNo">'+esc(v.karteNo.trim())+'</div>':'')+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=clock data-ics=16></i> 履歴</span>'+
            '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span></div>'+

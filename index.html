@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.4.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.5.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.4.0</div>
+    <div class="login-ver">v1.5.0</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.4.0</span>
+    <span class="ver">v1.5.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -771,7 +771,7 @@
 <script src="js/cover-print.js?v=7"></script>
 <script src="js/avail.js?v=6"></script>
 <script src="js/card-tabs.js?v=9"></script>
-<script src="js/customers.js?v=31"></script>
+<script src="js/customers.js?v=32"></script>
 <script src="js/sample-customers.js?v=8"></script>
 <script src="js/sample-reservations.js?v=28"></script>
 <script src="js/dashboard.js?v=16"></script>
@@ -801,7 +801,7 @@
 <script src="js/loaner.js?v=51"></script>
 <script src="js/fleet.js?v=11"></script>
 <script src="js/auth-pit.js?v=11"></script>
-<script src="js/members-pit.js?v=2"></script>
+<script src="js/members-pit.js?v=3"></script>
 <script src="js/oplog-pit.js?v=1"></script>
 <script src="js/news-pit.js?v=1"></script>
 <script src="js/launcher.js?v=pit0731"></script>
@@ -834,7 +834,7 @@
   </div>
 </div>
 <script src="js/reset-pit.js?v=1"></script><!-- 本番データの初期化（管理のみ・settings.js より後ろ） -->
-<script src="js/import-cloud.js?v=1"></script><!-- 顧客データの取込（本番・分割送信／settings.js より後ろ） -->
+<script src="js/import-cloud.js?v=2"></script><!-- 顧客データの取込（本番・分割送信／settings.js より後ろ） -->
 <script src="js/coreflow-sync.js?v=1"></script><!-- 同期ランプ共通部品（PitFlowではふきだしだけ借りる。sync-pit.js より後ろ） -->
 <script>/* 本番（クラウド保存）では開発用の入口を隠す＝実データにサンプルを混ぜないため */
 (function(){ if(!window.PIT_CLOUD) return; var n=document.querySelectorAll("[data-dev-only]");

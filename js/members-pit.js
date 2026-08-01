@@ -70,10 +70,60 @@
       };
     });
     window.PIT_MEMBERS_READY = true;
+    /* 名簿が変わったら、お客様データの担当名も今の名前にそろえる（番号が入っている分だけ） */
+    try { if (window.pitSyncCustomerStaffNames) window.pitSyncCustomerStaffNames(); } catch (e) { console.warn('[members] 担当名の追従でエラー', e); }
     if (window.pitRenderTopUser) { try { pitRenderTopUser(); } catch (e) {} }
     if (window.state && state.currentView === 'members') renderMembers();
   }
   window.pitRebuildStaff = rebuildStaff;
+
+  /* =======================================================
+     v1.5.0：お客様データの「担当者」をメンバーに結びつける
+     -------------------------------------------------------
+     ◎考え方
+       これまで担当は「名前の文字」だけで持っていた（昔からの作り）。
+       そこに **メンバーの番号（frontStaffId / picId）** を添えておく。
+       名前の文字はそのまま残すので、既存の画面・絞り込み・印刷は無改修で動く。
+       名簿が読めたら、番号を頼りに **名前の文字を今の名前へ自動で直す**
+       ＝ CoreFlow で改名しても、お客様データの担当がズレない。
+     ======================================================= */
+  var VARIANT = { '﨑': '崎', '髙': '高', '冨': '富', '濵': '浜', '濱': '浜', '邊': '辺', '邉': '辺', '齋': '斎', '齊': '斉', '曻': '昇', '德': '徳', '瀨': '瀬' };
+  function keyOf(name) {
+    var t = String(name == null ? '' : name);
+    try { t = t.normalize('NFKC'); } catch (e) {}
+    t = t.replace(/[\s\u3000]/g, '');
+    return t.replace(/[﨑髙冨濵濱邊邉齋齊曻德瀨]/g, function (c) { return VARIANT[c] || c; });
+  }
+  window.pitStaffKey = keyOf;
+
+  window.pitStaffById = function (id) {
+    if (!id) return null;
+    return ((window.state && state.staff) || []).find(function (s) { return s.id === id; }) || null;
+  };
+  window.pitStaffByName = function (name) {
+    var k = keyOf(name);
+    if (!k) return null;
+    return ((window.state && state.staff) || []).find(function (s) { return keyOf(s.name) === k; }) || null;
+  };
+
+  /* お客様データの担当名を、番号を頼りに今の名前へ直す。直した件数を返す。 */
+  window.pitSyncCustomerStaffNames = function (save) {
+    var list = (window.state && state.customers) || [];
+    var n = 0;
+    list.forEach(function (c) {
+      var m = c.picId ? window.pitStaffById(c.picId) : null;
+      if (m && c.pic !== m.name) { c.pic = m.name; n++; }
+      (c.vehicles || []).forEach(function (v) {
+        var vm = v.frontStaffId ? window.pitStaffById(v.frontStaffId) : null;
+        if (vm && v.frontStaff !== vm.name) { v.frontStaff = vm.name; n++; }
+      });
+    });
+    if (n) {
+      console.log('[members] 担当の名前を', n, '箇所そろえました');
+      if (save !== false && window.PitDB && window.PitDB._loaded !== false) PitDB.save();
+    }
+    return n;
+  };
 
   /* ---- 読み込み（本番モード） ---- */
   function loadProps() {

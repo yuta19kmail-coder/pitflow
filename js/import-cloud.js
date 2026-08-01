@@ -1,6 +1,6 @@
 /* ========================================
    import-cloud.js  -  顧客データの取込（本番＝クラウド用）
-   v1.3.0（2026-08-01）
+   v1.5.0（2026-08-01）：取り込む時に「担当者の名前」を**メンバーに結びつける**（番号を添える）。
    ----------------------------------------
    ◎ なにをするもの
      bizcloud から作った `顧客車両_取込用_YYYY-MM-DD_カルテNo付.json` を選ぶと、
@@ -66,7 +66,13 @@
       '#pit-imp-ovl button.go:disabled{opacity:.4;cursor:default;background:var(--bg3);color:var(--text3);border-color:var(--border)}' +
       '#pit-imp-ovl .pi-bar{height:10px;border-radius:6px;background:var(--bg3);overflow:hidden;margin:6px 0 8px}' +
       '#pit-imp-ovl .pi-bar>span{display:block;height:100%;width:0;background:var(--brand);transition:width .2s}' +
-      '#pit-imp-ovl .pi-stat{font-size:12.5px;color:var(--text2)}';
+      '#pit-imp-ovl .pi-stat{font-size:12.5px;color:var(--text2)}' +
+      '#pit-imp-ovl .pi-link{font-size:11.5px;line-height:1.8;background:var(--bg3);border-radius:8px;padding:9px 11px;margin-bottom:14px}' +
+      '#pit-imp-ovl .pi-link-ok{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}' +
+      '#pit-imp-ovl .pi-link-ok>span{background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.3);color:#86efac;' +
+        'border-radius:999px;padding:1px 8px;font-size:11px}' +
+      '#pit-imp-ovl .pi-link-ok>span i{font-style:normal;opacity:.75}' +
+      '#pit-imp-ovl .pi-link-ng{margin-top:8px;color:#fcd34d}';
     var st = d.createElement('style');
     st.id = 'pit-imp-css';
     st.textContent = css;
@@ -142,6 +148,22 @@
   }
 
   /* ---------- 確認 ---------- */
+  /* 担当者の名前 → メンバー。結びついた数と、結びつかなかった名前を出す。 */
+  function linkStaff(list) {
+    var hit = {}, miss = {};
+    list.forEach(function (c) {
+      var m = w.pitStaffByName ? w.pitStaffByName(c.pic) : null;
+      if (m) { c.picId = m.id; c.pic = m.name; hit[m.name] = (hit[m.name] || 0) + 1; }
+      else { delete c.picId; if ((c.pic || '').trim()) miss[c.pic] = (miss[c.pic] || 0) + 1; }
+      (c.vehicles || []).forEach(function (v) {
+        var vm = w.pitStaffByName ? w.pitStaffByName(v.frontStaff) : null;
+        if (vm) { v.frontStaffId = vm.id; v.frontStaff = vm.name; }
+        else { delete v.frontStaffId; }
+      });
+    });
+    return { hit: hit, miss: miss };
+  }
+
   function confirmBox(list, fname) {
     var cur = (w.state && Array.isArray(w.state.customers)) ? w.state.customers : [];
     var veh = 0, karte = 0;
@@ -154,6 +176,23 @@
     list.forEach(function (c) { newIds[c.id || ('cu_bl_' + c.code)] = 1; });
     var gone = cur.filter(function (c) { return !newIds[c.id]; }).length;
 
+    /* 担当者をメンバーに結びつける（ここで c.picId / v.frontStaffId が入る） */
+    var link = linkStaff(list);
+    var hitNames = Object.keys(link.hit).sort(function (a, b) { return link.hit[b] - link.hit[a]; });
+    var missNames = Object.keys(link.miss).sort(function (a, b) { return link.miss[b] - link.miss[a]; });
+    var linked = hitNames.reduce(function (n, k) { return n + link.hit[k]; }, 0);
+    var linkHtml =
+      '<div class="pi-link"><b>担当者とメンバーの結びつけ</b>' +
+      '<div class="pi-link-ok">' + (hitNames.length
+          ? hitNames.map(function (n) { return '<span>' + esc(n) + ' <i>' + num(link.hit[n]) + '</i></span>'; }).join('')
+          : '<span style="opacity:.7">結びついた人がいません</span>') + '</div>' +
+      (missNames.length
+        ? '<div class="pi-link-ng">メンバーに見つからない担当：' +
+          missNames.map(function (n) { return esc(n) + '（' + num(link.miss[n]) + '）'; }).join('、') +
+          '<br>この人たちは<b>名前の文字だけ</b>入ります（表示は今までどおり。あとで直せます）。</div>'
+        : '') +
+      '</div>';
+
     overlay(
       '<h3>顧客データの取込</h3>' +
       '<div class="pi-lead">ファイル：<b>' + esc(fname) + '</b></div>' +
@@ -163,7 +202,8 @@
         '<tr><td>カルテNo付き</td><td class="n">' + num(karte) + ' 台</td></tr>' +
         '<tr><td>いま入っているお客様</td><td class="n">' + num(cur.length) + ' 人</td></tr>' +
         '<tr><td>入れ替えで消える人</td><td class="n">' + num(gone) + ' 人</td></tr>' +
-      '</table>' +
+        '<tr><td>担当がメンバーと結びついた人</td><td class="n">' + num(linked) + ' 人</td></tr>' +
+      '</table>' + linkHtml +
       '<div class="pi-warn">お客様の控えは<b>この内容に丸ごと入れ替わります</b>。予約カード・代車・自社車両・付箋には触りません。' +
       '送っている間はこの画面を閉じないでください。</div>' +
       '<input class="pi-type" id="pi-type" type="text" placeholder="ここに「取込」と入力してください" autocomplete="off">' +
