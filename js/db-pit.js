@@ -29,9 +29,20 @@
     init: function () {
       if (window.PIT_CLOUD) {
         this.mode = 'cloud-pending';
+        /* v1.13.3：本番では、クラウドから届くまでの間に**初期値のサンプル**（代車20台・社用車4台・
+           サンプル名簿11人）が一瞬見えてしまっていた。state.js の既定はサンプル段階の名残なので、
+           本番では最初に空にしておく。設定・PIT配置図・作業タイプ等の既定はそのまま使う（初回の初期値になる）。 */
+        state.loaners = [];
+        state.companyCars = [];
+        state.staff = [];
+        state.cards = [];
+        state.customers = [];
+        state.loanerAssigns = [];
+        state.fleetEvents = [];
+        state.boardNotes = [];
         this.ready = true;
         this._bindAutosave();
-        console.log('[PitDB] 本番モード：ログイン後にクラウドから読み込みます');
+        console.log('[PitDB] 本番モード：ログイン後にクラウドから読み込みます（初期のサンプルは空にしました）');
         return;
       }
       // state.js の既定（＝自社レイアウト）を退避。古いサンプル端末の移行に使う。
