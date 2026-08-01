@@ -97,9 +97,12 @@
       msg = '保存できませんでした。通信を確認して、もう一度直してみてください。';
     } else {
       var who = (w.fb && w.fb.currentMember && w.fb.currentMember.name) || '';
-      msg = '全員と共有中です（最後の同期 ' + fmt(_lastAt) + '）' + (who ? ' ／ ' + who + ' でログイン中' : '');
+      var when = _lastAt ? '（最後の同期 ' + fmt(_lastAt) + '）' : '（開いてから、まだ保存はしていません）';
+      msg = '全員と共有中です' + when + (who ? ' ／ ' + who + ' でログイン中' : '');
     }
-    if (w.showToast) showToast(msg); else if (w.pitToast) pitToast(msg);
+    /* v1.1.1：画面下のトーストではなく、ランプのすぐそばにふきだしで出す（全アプリ共通の部品を借りる） */
+    if (w.CFSync && w.CFSync.bubble) w.CFSync.bubble(msg);
+    else if (w.showToast) showToast(msg); else if (w.pitToast) pitToast(msg);
   };
 
   w.addEventListener('online', function () { _state = 'idle'; paint(); });

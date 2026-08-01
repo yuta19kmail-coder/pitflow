@@ -1,5 +1,8 @@
 /* ============================================
    coreflow-sync.js  ―  同期ランプ（全アプリ共通）
+   v1.1（2026-08-01）：ランプを押した時の説明を、画面下のトーストではなく
+     **ランプのすぐそば（ふきだし）**に出すように。文言はPitFlowに統一（ログイン中の人の名前も出す）。
+     すでにアプリ専用のランプ制御がある場合（PitFlow）は、ふきだしだけを提供して他は何もしない。
    v1.0（2026-08-01）：PitFlow で作った「同期中／同期済み／受信／保存エラー」の
      ランプを、CoreFlow系の他アプリにもそのまま持ってくるための共通部品。
 
@@ -60,7 +63,26 @@
     for (var i = 0; i < bases.length; i++) out.push(bases[i] + '.' + cls + (sub ? ' ' + sub : ''));
     return out.join(',');
   }
+  /* ふきだし（ランプのすぐそばに出す説明）の見た目 */
+  function injectBubbleCSS() {
+    if (d.getElementById('cf-sync-bubble-css')) return;
+    var css =
+      '#cf-sync-bubble{position:fixed;z-index:99999;max-width:320px;padding:9px 12px;border-radius:10px;' +
+      'background:var(--bg2,#1a1d27);border:1px solid var(--border,#333650);color:var(--text,#e8eaf6);' +
+      'font-size:12px;line-height:1.65;box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;display:none;' +
+      'white-space:normal;text-align:left}' +
+      '#cf-sync-bubble::after{content:"";position:absolute;left:var(--cf-ax,50%);margin-left:-6px;' +
+      'border:6px solid transparent}' +
+      '#cf-sync-bubble.cf-b-below::after{top:-12px;border-bottom-color:var(--border,#333650)}' +
+      '#cf-sync-bubble.cf-b-above::after{bottom:-12px;border-top-color:var(--border,#333650)}';
+    var st = d.createElement('style');
+    st.id = 'cf-sync-bubble-css';
+    st.textContent = css;
+    (d.head || d.documentElement).appendChild(st);
+  }
+
   function injectCSS() {
+    injectBubbleCSS();
     if (d.getElementById('cf-sync-css')) return;
     var css =
       '.sync-indicator{cursor:pointer;transition:background .2s,border-color .2s,color .2s}' +
@@ -92,6 +114,22 @@
     var t = new Date(ms), p = function (n) { return (n < 10 ? '0' : '') + n; };
     return p(t.getHours()) + ':' + p(t.getMinutes()) + ':' + p(t.getSeconds());
   }
+  /* いまログインしている人の名前（アプリごとに置き場所が違うので順に探す） */
+  function who() {
+    try {
+      var f = w.fb || {};
+      var m = f.currentMember || f.currentStaff || w.currentMember;
+      if (m && (m.name || m.displayName)) return m.name || m.displayName;
+      var ids = ['tb-username', 'u-name', 'me-name'];
+      for (var i = 0; i < ids.length; i++) {
+        var e = d.getElementById(ids[i]);
+        if (e && e.textContent && e.textContent.trim()) return e.textContent.trim();
+      }
+      if (f.currentUser && f.currentUser.displayName) return f.currentUser.displayName;
+    } catch (e) {}
+    return '';
+  }
+
   function tipFor(s) {
     if (s === 'local')   return 'この端末の中だけに保存しています';
     if (s === 'offline') return 'ネットに繋がっていません。直した内容はこの画面には残っていますが、まだ全員には届いていません';
@@ -142,6 +180,8 @@
       _state = 'idle'; _lastAt = Date.now(); paint();
     },
     set: function (s) { if (LABEL[s]) { _state = s; paint(); } },
+    bubble: function (msg) { bubble(msg || tellState()); },   /* ランプのそばにふきだしを出す */
+    tell: tellState,
     state: function () { return _state; },
     refresh: paint
   };
@@ -162,20 +202,65 @@
     };
   }
 
-  /* ---------- クリックで状態を教える ---------- */
+  /* ---------- クリックで状態を教える（ランプのすぐそばにふきだし） ---------- */
+  var _tBubble = null;
+  function hideBubble() {
+    var b = d.getElementById('cf-sync-bubble');
+    if (b) b.style.display = 'none';
+  }
+  function bubble(msg) {
+    injectBubbleCSS();
+    var e = lamp();
+    if (!e) return;
+    var b = d.getElementById('cf-sync-bubble');
+    if (!b) {
+      b = d.createElement('div');
+      b.id = 'cf-sync-bubble';
+      b.addEventListener('click', function (ev) { ev.stopPropagation(); hideBubble(); });
+      (d.body || d.documentElement).appendChild(b);
+    }
+    b.textContent = msg;
+    b.style.visibility = 'hidden';
+    b.style.display = 'block';
+    b.style.left = '0px'; b.style.top = '0px';
+
+    var r = e.getBoundingClientRect();
+    var bw = b.offsetWidth, bh = b.offsetHeight;
+    var below = true, top = r.bottom + 10;
+    if (top + bh > w.innerHeight - 8) { top = r.top - bh - 10; below = false; }
+    if (top < 8) { top = r.bottom + 10; below = true; }
+    var left = r.left + r.width / 2 - bw / 2;
+    left = Math.max(8, Math.min(left, w.innerWidth - bw - 8));
+
+    b.style.top = top + 'px';
+    b.style.left = left + 'px';
+    b.className = below ? 'cf-b-below' : 'cf-b-above';
+    b.style.setProperty('--cf-ax', (r.left + r.width / 2 - left) + 'px');
+    b.style.visibility = 'visible';
+
+    clearTimeout(_tBubble);
+    _tBubble = setTimeout(hideBubble, 6000);
+    setTimeout(function () { d.addEventListener('click', hideBubble, { once: true }); }, 0);
+  }
+
+  /* いまの状態を言葉にする（PitFlowと同じ文言） */
+  function tellState() {
+    if (!navigator.onLine)       return 'ネットに繋がっていません。直した内容はこの画面には残っていますが、まだ全員には届いていません。';
+    if (_state === 'error')      return '保存できませんでした。通信を確認して、もう一度直してみてください。';
+    if (_state === 'local')      return 'この端末の中だけに保存しています（サンプル）。本番のアドレスで開くと全員で共有されます。';
+    var nm = who();
+    var when = _lastAt ? '（最後の同期 ' + fmt(_lastAt) + '）' : '（開いてから、まだ保存はしていません）';
+    return '全員と共有中です' + when + (nm ? ' ／ ' + nm + ' でログイン中' : '');
+  }
+
   function bindClick() {
     var e = lamp();
     if (!e || e.__cfClick) return;
     e.__cfClick = 1;
     if (e.getAttribute('onclick')) return;   /* アプリ側で既に決まっているなら触らない */
-    e.addEventListener('click', function () {
-      var msg;
-      if (!navigator.onLine)        msg = 'ネットに繋がっていません。直した内容はこの画面には残っていますが、まだ全員には届いていません。';
-      else if (_state === 'error')  msg = '保存できませんでした。通信を確認して、もう一度やってみてください。';
-      else if (_state === 'local')  msg = 'この端末の中だけに保存しています。';
-      else                          msg = '全員と共有中です（最後の同期 ' + fmt(_lastAt) + '）';
-      var t = w.showToast || w.toast || w.pitToast;
-      if (typeof t === 'function') t(msg);
+    e.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      bubble(tellState());
     });
   }
 
@@ -256,10 +341,18 @@
   w.addEventListener('online',  function () { if (_state === 'offline') _state = 'idle'; paint(); });
   w.addEventListener('offline', function () { paint(); });
 
+  /* すでにアプリ専用のランプ制御がある（＝PitFlow の PitSync）場合は、
+     ランプの描き替えや Firestore への相乗りはやらず、ふきだしだけを貸す。 */
+  var BUBBLE_ONLY = !!w.PitSync;
+
   function boot() {
+    injectBubbleCSS();
+    if (BUBBLE_ONLY) return;
     injectCSS(); hookLegacy(); bindClick(); paint(); tryPatch(25);
   }
   boot();
-  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { hookLegacy(); bindClick(); paint(); });
-  w.addEventListener('load', function () { hookLegacy(); bindClick(); paint(); });
+  if (!BUBBLE_ONLY) {
+    if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { hookLegacy(); bindClick(); paint(); });
+    w.addEventListener('load', function () { hookLegacy(); bindClick(); paint(); });
+  }
 })(window, document);
