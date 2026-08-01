@@ -149,7 +149,9 @@ function flMonthCalHtml(){
       const sh = v.shakenDate && v.shakenDate.indexOf(ym) === 0;
       const tkDate = window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
       const tk = tkDate && tkDate.indexOf(ym) === 0;
-      const evs = _flEvents().filter(function(e){ return e.vehicleId === v.id && e.fromDate <= last && e.toDate >= first; });
+      /* v1.13.2：車検・点検は下の赤/橙バッジで出しているので、自動で作った同じ予定は重ねて出さない
+         （＝「車検」と「車検入庫」が二重に見えていた）。手で足した予定はそのまま出す。 */
+      const evs = _flEvents().filter(function(e){ return !e.auto && e.vehicleId === v.id && e.fromDate <= last && e.toDate >= first; });
       h += '<div class="fl-cal-cell" onclick="flOpenEventModal(\'' + v.id + '\',\'' + first + '\')">';
       if (sh) h += '<span class="fl-bdg shaken" title="車検満了 ' + _fleetEsc(v.shakenDate) + '">車検</span>';
       if (tk) h += '<span class="fl-bdg tenken" title="12ヶ月点検（車検満了の翌年）' + _fleetEsc(window.pitWareki ? pitWareki(tkDate) : tkDate) + '">12ヶ月</span>';
@@ -188,7 +190,7 @@ function flDayCalHtml(y, mo){
       const ds = m.ds;
       const sh = v.shakenDate === ds;
       const tk = (window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '') === ds;
-      const evs = _flEvents().filter(function(e){ return e.vehicleId === v.id && e.fromDate <= ds && e.toDate >= ds; });
+      const evs = _flEvents().filter(function(e){ return !e.auto && e.vehicleId === v.id && e.fromDate <= ds && e.toDate >= ds; });
       // 代車の貸出状況（利用カレンダー）を透かして重ねる
       let useCls = '', useTag = '';
       if (isLoanerVeh){
