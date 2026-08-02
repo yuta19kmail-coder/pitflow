@@ -43,7 +43,8 @@
     '📣':'megaphone','📢':'megaphone','🔔':'bell','🖨':'printer','🖨️':'printer','🖥':'monitor','🖥️':'monitor',
     '❓':'help','📖':'book','📘':'book','💡':'bulb','🤖':'robot','✨':'sparkle','🧪':'flask','🎲':'dice',
     '🎨':'palette','💎':'gem','🧩':'puzzle','🔥':'fire','⭐':'star','🌟':'star','👍':'thumbUp',
-    '📍':'location','📐':'ruler','📏':'ruler','🔤':'textT','🔢':'numbers','🏢':'building','🏪':'shop'
+    '📍':'location','📐':'ruler','📏':'ruler','🔤':'textT','🔢':'numbers','🏢':'building','🏪':'shop',
+    '⏳':'hourglass','⌛':'hourglass'   /* v1.15.1 追加（内容テンプレの「預かり期間」で使う） */
   };
   /* 色つきの丸・四角（色そのものが意味を持つので、色は別に付ける） */
   var EMOJI_DOT = {
@@ -65,6 +66,50 @@
     if (n) return ico(n, size);
     if (w.IC && w.IC.has(s)) return ico(s, size);
     return s;   /* 知らない文字はそのまま出す（消さない） */
+  }
+
+  /* =====================================================================
+     v1.15.1  icoText(文字列) … 「保存データの文字」を安全に描くための入口
+     ---------------------------------------------------------------------
+     🔴 なぜ要るか（2026-08-02 の不具合）
+       設定に保存される文字（駐車場の置き場の名前・内容テンプレの見出し）に、
+       アイコン化のときうっかり `<i data-ic=wrench ...></i>` という**HTMLの文字列そのもの**が
+       入ってしまい、画面には esc() を通して出すので **タグが文字として表示**されていた。
+       （esc() は入力をそのまま文字にする＝ゆうたが打った `<` を守るための正しい処理。悪いのは中身の方）
+
+     🔴 このやり方の約束
+       ① まず必ず esc（＝打ち込まれた文字は絶対にHTMLとして動かさない）
+       ② そのあとで「アイコンのタグに見える所」と「絵文字」だけを線画SVGに差し替える
+       ③ **保存データは書き換えない**（描く時だけ直す）＝古い保存のままで直る
+       ④ 表に無い文字はそのまま出す（ゆうたが自分で入れた文字を消さない）
+
+     ⚠ 属性の中（value="..." title="..."）や <option> の中には使わないこと。SVGは入らない。
+     ===================================================================== */
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  /* esc 済みの「<i data-ic=名前 data-ics=数>…</i>」に見えるもの */
+  var TAG_RE = /&lt;i\s+data-ic=(?:&quot;|&#39;)?([A-Za-z0-9_-]+)(?:&quot;|&#39;)?(?:\s+data-ics=(?:&quot;|&#39;)?(\d+)(?:&quot;|&#39;)?)?\s*\/?&gt;(?:\s*&lt;\s*\/\s*i\s*&gt;)?/g;
+  /* 絵文字1つぶん（囲み数字 1️⃣ ・異体字セレクタ単体も拾う） */
+  var EMO_RE = /[0-9#*]️⃣|[\uD83C-\uD83E][\uDC00-\uDFFF]️?⃣?|[←-⇿⌀-➿⬀-⯿]️?|️/g;
+
+  function icoText(v, size) {
+    if (v == null || v === '') return '';
+    var s = escHtml(v);
+    s = s.replace(TAG_RE, function (m, name, sz) {
+      /* ⚠ 知らないアイコン名は**いじらず元のまま**。IC() は知らない名前だと
+            「点線の四角（ic-miss）」を返すので、ここで has を見ないと文字が消えて原因が分からなくなる。 */
+      if (!(w.IC && w.IC.has && w.IC.has(name))) return m;
+      return ico(name, +(sz || size || DEFAULT_SIZE));
+    });
+    s = s.replace(EMO_RE, function (m) {
+      if (m === '️') return '';   /* 異体字セレクタ単体は落とす */
+      var out = icoE(m, size);
+      return (out && out !== m) ? out : m;
+    });
+    return s;
   }
 
   /* <i data-ic="名前"> の中身を1個ぶん埋める */
@@ -108,6 +153,7 @@
   w.ico = ico;
   w.pitIco = ico;
   w.icoE = icoE;
+  w.icoText = icoText;   /* v1.15.1：保存データの文字を「esc してから」アイコン化する */
   w.icoBoot = icoBoot;
   w.PIT_EMOJI_IC = EMOJI_IC;
 

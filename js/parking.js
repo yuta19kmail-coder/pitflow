@@ -14,14 +14,17 @@
 (function () {
   'use strict';
 
+  /* ⚠ v1.15.1：置き場の名前は **設定として保存される文字**。ここにHTML（<i data-ic=…>）を書かないこと。
+        書くと esc() を通って「タグが文字として」画面に出る（2026-08-02 の不具合）。
+        印は絵文字で持ち、描く時に icoText() が線画アイコンへ読み替える。 */
   const DEFAULT = {
     tiers: [
       { key:'home', name:'① 自社内', note:'ピット＋自社置き場。一番使いたいエリア。',
-        lots:[ {id:'pit', name:'<i data-ic=wrench data-ics=16></i> ピット内', theo:4, reasons:[]}, {id:'jisha', name:'<i data-ic=home data-ics=16></i> 自社置き場（福田P含む）', theo:14, reasons:[]} ] },
+        lots:[ {id:'pit', name:'🔧 ピット内', theo:4, reasons:[]}, {id:'jisha', name:'🏠 自社置き場（福田P含む）', theo:14, reasons:[]} ] },
       { key:'akai', name:'② 歩いて行ける', note:'赤井・斉藤P。徒歩圏だが敷地外。移動はまずここが優先。',
-        lots:[ {id:'akai', name:'<i data-ic=user data-ics=16></i> 赤井・斉藤P', theo:6, reasons:[]} ] },
+        lots:[ {id:'akai', name:'👤 赤井・斉藤P', theo:6, reasons:[]} ] },
       { key:'coin', name:'③ コインパ（最後）', note:'第二P。①②で収まらない時だけ。ここを最小にしたい。',
-        lots:[ {id:'coin', name:'<i data-ic=parking data-ics=16></i> 第二P（コインパ）', theo:10, reasons:[]} ] }
+        lots:[ {id:'coin', name:'🅿️ 第二P（コインパ）', theo:10, reasons:[]} ] }
     ],
     buffer: { weekday:1, weekend:2, afterHoliday:3 },
     dayMemos: {}
@@ -36,6 +39,9 @@
   }
   function save(){ try{ if(window.PitDB) PitDB.save(); }catch(e){} }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  /* v1.15.1：保存されている名前を描く時はこちら。esc したうえで、絵文字と
+     （古い保存に混ざってしまった）<i data-ic=…> を線画アイコンに読み替える。 */
+  function escI(s){ return window.icoText ? icoText(s) : esc(s); }
 
   // ---- 日付ヘルパ（自己完結） ----
   function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -207,11 +213,11 @@
     cfg().tiers.forEach(function(t,ti){
       const tc=t.key==='home'?'t1':(t.key==='akai'?'t2':'t3');
       const col=t.key==='home'?'var(--home)':(t.key==='akai'?'var(--akai)':'var(--coin)');
-      h+='<div class="pk-tier '+tc+'"><div class="pk-tierh"><span>'+esc(t.name)+'</span><span class="pk-eff" style="color:'+col+'">'+tierEff(t)+'台</span></div><div class="pk-tiernote">'+esc(t.note||'')+'</div>';
+      h+='<div class="pk-tier '+tc+'"><div class="pk-tierh"><span>'+escI(t.name)+'</span><span class="pk-eff" style="color:'+col+'">'+tierEff(t)+'台</span></div><div class="pk-tiernote">'+esc(t.note||'')+'</div>';
       t.lots.forEach(function(l,li){
         const adj=(l.reasons||[]).reduce(function(s,r){return s+(r.s||0);},0), eff=lotEff(l);
         let adjs=''; if(adj<0) adjs=' <span class="am">'+adj+'</span>'; else if(adj>0) adjs=' <span class="ap">+'+adj+'</span>';
-        h+='<div class="pk-lot"><div class="pk-lottop"><span class="pk-lotnm">'+esc(l.name)+'</span><span class="pk-loteff">理論'+l.theo+adjs+' → 実効 <b>'+eff+'</b></span></div><div class="pk-reasons">';
+        h+='<div class="pk-lot"><div class="pk-lottop"><span class="pk-lotnm">'+escI(l.name)+'</span><span class="pk-loteff">理論'+l.theo+adjs+' → 実効 <b>'+eff+'</b></span></div><div class="pk-reasons">';
         if(!(l.reasons||[]).length) h+='<span class="pk-noreason">理由なし（実効＝理論）</span>';
         (l.reasons||[]).forEach(function(r,ri){
           const sc=r.s<0?'minus':'plus', sl=r.s<0?'−1':'+1';
@@ -265,9 +271,9 @@
     const box=document.getElementById('pk-settings'); if(!box) return;
     const c=cfg(); let h='';
     c.tiers.forEach(function(t,ti){
-      h+='<div class="pk-set-tier"><div class="pk-set-th">'+esc(t.name)+'</div>';
+      h+='<div class="pk-set-tier"><div class="pk-set-th">'+escI(t.name)+'</div>';
       t.lots.forEach(function(l,li){
-        h+='<label class="pk-set-lot"><span>'+esc(l.name)+'</span><input type="number" min="0" max="99" value="'+(l.theo||0)+'" onchange="pkSetTheo('+ti+','+li+',this.value)"><span class="u">台</span></label>';
+        h+='<label class="pk-set-lot"><span>'+escI(l.name)+'</span><input type="number" min="0" max="99" value="'+(l.theo||0)+'" onchange="pkSetTheo('+ti+','+li+',this.value)"><span class="u">台</span></label>';
       });
       h+='</div>';
     });

@@ -37,18 +37,25 @@
       { name: '白煙/黒煙', parts: ['エンジン', 'マフラー'], sub: ['白煙', '黒煙'] },
       { name: '凹み/ヒビ/割れ/傷', parts: ['ボディ/外装'], sub: ['凹み', 'ヒビ', '割れ', '傷'] }
     ],
+    /* ⚠ v1.15.1：見出し（label）は **設定として保存される文字**。ここにHTML（<i data-ic=…>）を書かないこと。
+          書くと esc() を通って「タグが文字として」画面に出る（2026-08-02 の不具合）。
+          印は絵文字で持ち、描く時に icoText() が線画アイコンへ読み替える。 */
     chipGroups: [
-      { label: '<i data-ic=wrench data-ics=16></i> 作業・依頼', fill: false, items: ['点検', '車検も一緒に', 'テスター診断', '予防整備', 'トルコン太郎（ATF交換）', 'タイベル交換', 'コーティング', '板金'] },
-      { label: '<i data-ic=comment data-ics=16></i> 来店・見積・連絡', fill: false, items: ['概算伝え済み', '点検料伝え済み', '他店見積あり', 'ディーラー見積あり', '現車見せに来店', 'ディーラー保証あり', '連絡は別の人へ'] },
-      { label: '<i data-ic=box data-ics=16></i> 部品 / <i data-ic=flag data-ics=16></i> 条件', fill: false, items: ['中古パーツ', 'リビルト品', '社外品', '持ち込み', 'もしかしたら無理かも', 'パーツ無いかも', '長期休み中の預かりOK', '直るなら依頼'] },
-      { label: '<i data-ic=hourglass data-ics=15></i> 預かり期間', fill: false, items: ['当日仕上げ', '1week', '2week', '直り次第'] },
-      { label: '<i data-ic=car data-ics=16></i> 車両情報（押すと「：」が入る→数値）', fill: true, items: ['車検満了日：', '年式：', '走行距離：', '購入時期：'] }
+      { label: '🔧 作業・依頼', fill: false, items: ['点検', '車検も一緒に', 'テスター診断', '予防整備', 'トルコン太郎（ATF交換）', 'タイベル交換', 'コーティング', '板金'] },
+      { label: '💬 来店・見積・連絡', fill: false, items: ['概算伝え済み', '点検料伝え済み', '他店見積あり', 'ディーラー見積あり', '現車見せに来店', 'ディーラー保証あり', '連絡は別の人へ'] },
+      { label: '📦 部品 / 🚩 条件', fill: false, items: ['中古パーツ', 'リビルト品', '社外品', '持ち込み', 'もしかしたら無理かも', 'パーツ無いかも', '長期休み中の預かりOK', '直るなら依頼'] },
+      { label: '⏳ 預かり期間', fill: false, items: ['当日仕上げ', '1week', '2week', '直り次第'] },
+      { label: '🚗 車両情報（押すと「：」が入る→数値）', fill: true, items: ['車検満了日：', '年式：', '走行距離：', '購入時期：'] }
     ]
   };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
+  /* v1.15.1：保存されている見出しを描く時はこちら。esc したうえで、絵文字と
+     （古い保存に混ざってしまった）<i data-ic=…> を線画アイコンに読み替える。
+     ⚠ 属性の中（value="…"）には使わないこと＝SVGは入らない。そこは esc のまま。 */
+  function escI(s) { return window.icoText ? icoText(s) : esc(s); }
   function cfg() {
     if (!state.settings) state.settings = {};
     const wc = state.settings.workContent;
@@ -108,7 +115,7 @@
     h += '</div>';
     // タグチップ群（従来どおりインライン・内容欄の下に続く）
     c.chipGroups.forEach(function (g) {
-      h += '<div class="wc-flat-h">' + esc(g.label) + '</div><div class="wc-chips">';
+      h += '<div class="wc-flat-h">' + escI(g.label) + '</div><div class="wc-chips">';
       g.items.forEach(function (it) {
         h += '<button type="button" class="wc-chip' + (g.fill ? ' fill' : '') + '" data-fill="' + (g.fill ? 1 : 0) + '" onclick="WorkContent.chip(this)">' + esc(it) + '</button>';
       });
@@ -249,7 +256,7 @@
 
     // チップ群
     c.chipGroups.forEach(function (g, gi) {
-      h += '<div class="wc-s-h" style="margin-top:14px">' + esc(g.label) + '<button class="wc-s-add" onclick="WorkContent.wcAddChip(' + gi + ')">＋ 追加</button></div>';
+      h += '<div class="wc-s-h" style="margin-top:14px">' + escI(g.label) + '<button class="wc-s-add" onclick="WorkContent.wcAddChip(' + gi + ')">＋ 追加</button></div>';
       h += '<div class="wc-s-chips">';
       g.items.forEach(function (it, ii) {
         h += '<span class="wc-s-chip">' + esc(it) + '<button onclick="WorkContent.wcDelChip(' + gi + ',' + ii + ')"><i data-ic=close data-ics=16></i></button></span>';
