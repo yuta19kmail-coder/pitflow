@@ -447,6 +447,7 @@
   }
   function _openReserveWith(over){
     const card=_newReserveBase(); Object.assign(card, over||{});
+    card._draft = true;   /* v1.17.0：保存ボタンを押すまで下書き扱い（views.js の openNewReserve と同じ） */
     if(!Array.isArray(state.cards)) state.cards=[];
     state.cards.push(card);
     if(window.PitDB) PitDB.save(true);

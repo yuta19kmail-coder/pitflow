@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.16.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.17.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.16.0</div>
+    <div class="login-ver">v1.17.0</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.16.0</span>
+    <span class="ver">v1.17.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -525,10 +525,10 @@
     <!-- ===== 入庫カード（全画面・新規予約／編集 共通） ===== -->
     <section id="view-card" class="view">
       <div class="view-header card-page-head">
-        <button class="vh-btn" onclick="closeDetail()">← 戻る</button>
+        <button class="vh-btn" onclick="pitCancelCard()">← やめる</button>
         <div class="view-title" id="card-title" style="flex:1;min-width:0">入庫カード</div>
         <button class="vh-btn" onclick="pitCardCheck()"><i data-ic=search data-ics=16></i> 入力チェック</button>
-        <button class="vh-btn" onclick="closeDetail()"><i data-ic=save data-ics=16></i> 保存する</button>
+        <button class="vh-btn" onclick="pitSaveCard()"><i data-ic=save data-ics=16></i> 保存する</button>
         <button class="vh-btn vh-kari" onclick="pitSaveTentative()"><i data-ic=pencil data-ics=16></i> 仮予約で登録</button>
         <button class="vh-btn primary" onclick="pitSaveAndPrint()"><i data-ic=printer data-ics=16></i> 印刷して保存</button>
       </div>
@@ -781,18 +781,18 @@
 <script src="js/sample-data.js?v=18"></script>
 <script src="js/sample-fleet.js?v=11"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
-<script src="js/db-pit.js?v=41"></script>
-<script src="js/views.js?v=44"></script>
+<script src="js/db-pit.js?v=42"></script>
+<script src="js/views.js?v=45"></script>
 <script src="js/work-content.js?v=10"></script>
-<script src="js/card-detail.js?v=101"></script>
+<script src="js/card-detail.js?v=102"></script>
 <script src="js/card-view.js?v=38"></script>
 <script src="js/cover-print.js?v=7"></script>
 <script src="js/avail.js?v=6"></script>
 <script src="js/card-tabs.js?v=9"></script>
-<script src="js/customers.js?v=34"></script>
+<script src="js/customers.js?v=35"></script>
 <script src="js/sample-customers.js?v=8"></script>
 <script src="js/sample-reservations.js?v=28"></script>
-<script src="js/dashboard.js?v=16"></script>
+<script src="js/dashboard.js?v=17"></script>
 <script src="js/parking.js?v=6"></script>
 <script src="js/board-notes.js?v=6"></script>
 <script src="js/search.js?v=10"></script>
@@ -831,7 +831,7 @@
 <script src="js/return-popup.js?v=4"></script>
 <script src="js/help-content.js?v=2"></script>
 <script src="js/help.js?v=2"></script>
-<script src="js/mydash.js?v=5"></script>
+<script src="js/mydash.js?v=6"></script>
 <script src="js/main.js?v=12"></script>
 <script src="js/auto-update.js?v=1"></script>
 
@@ -851,7 +851,8 @@
     </div>
   </div>
 </div>
-<script src="js/blank-cards.js?v=1"></script><!-- 空の予約カードを残さない（settings.js / views.js / card-detail.js より後ろ） -->
+<script src="js/ui-dialog.js?v=1"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
+<script src="js/blank-cards.js?v=2"></script><!-- 空の予約カードを残さない（settings.js / views.js / card-detail.js より後ろ） -->
 <script src="js/reset-pit.js?v=1"></script><!-- 本番データの初期化（管理のみ・settings.js より後ろ） -->
 <script src="js/import-cloud.js?v=3"></script><!-- 顧客データの取込（本番・分割送信／settings.js より後ろ） -->
 <script src="js/coreflow-sync.js?v=ca024d30"></script><!-- 同期ランプ共通部品（PitFlowではふきだしだけ借りる。sync-pit.js より後ろ） -->

@@ -71,6 +71,8 @@ function closeDetail(){
 function pitSaveTentative(){
   const c = state.cards.find(x => x.id === _editingCardId);
   if (c){
+    if (c._draft) delete c._draft;   /* v1.17.0：ここで初めて確定＝保存される */
+    if (window.pitClearDraftKeep) pitClearDraftKeep();
     c.tentative = true;
     if (window.logFlow) logFlow(c, '仮予約で登録');
     if (window.pitToast) pitToast('仮予約として登録しました');
@@ -79,12 +81,57 @@ function pitSaveTentative(){
 }
 window.pitSaveTentative = pitSaveTentative;
 
+/* ===================================================================
+   v1.17.0  「保存する」と「← やめる」を、はっきり分ける
+   -------------------------------------------------------------------
+   🔴 これまで：ヘッダーの「保存する」と「← 戻る」が **どちらも closeDetail()** を呼んでいた。
+      ＝保存とキャンセルの区別が存在せず、やめたつもりの予約がそのまま残っていた。
+   🔴 これから：新規予約は「下書き（_draft）」で始まり、
+        ・保存する／仮予約で登録／印刷して保存 … 下書きを外す＝ここで初めて保存される
+        ・← やめる                              … カードごと捨てる（書きかけは端末に控えが残る）
+   ⚠ 既にあるカードを開いて編集している時は下書きではないので、今までどおりの動き。
+   =================================================================== */
+function pitSaveCard(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (c && c._draft){
+    delete c._draft;                                   /* ここで初めて「本物の予約」になる */
+    if (window.pitClearDraftKeep) pitClearDraftKeep();  /* 端末の書きかけ控えは役目を終える */
+  }
+  closeDetail();   /* 顧客控えの更新・代車同期・保存・前の画面へ戻る（従来どおり） */
+}
+window.pitSaveCard = pitSaveCard;
+
+function pitCancelCard(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  /* 下書きでなければ（＝既にある予約を開いていただけ）今までどおり閉じる */
+  if (!c || !c._draft){ closeDetail(); return; }
+  const id = c.id;
+  const blank = window.pitIsBlankCard ? pitIsBlankCard(c) : false;
+  /* 何も入れていない＝黙って捨てる（いちいち聞かない） */
+  if (blank){ if (window.pitDropDraft) pitDropDraft(id, true); closeDetail(); return; }
+  /* 何か入っている＝必ず確認する。⚠ 打ち込んだものを無言で消さないこと。 */
+  const msg = 'この予約はまだ保存していません。やめますか？';
+  const detail = '入力した内容は予約になりません。'
+               + '書きかけはこの端末に控えてあるので、次に「＋ 新規予約」を押すと「続きから開きますか？」と聞きます。';
+  const ask = (window.UI && UI.confirm)
+    ? UI.confirm(msg, { title: '保存せずにやめる', detail: detail, ok: 'やめる', cancel: '入力に戻る', danger: true })
+    : Promise.resolve(window.confirm(msg + '\n\n' + detail));
+  ask.then(function (ok){
+    if (!ok) return;                                   /* 「入力に戻る」＝そのまま編集を続ける */
+    if (window.pitDropDraft) pitDropDraft(id, false);   /* false＝端末の控えは残す */
+    closeDetail();
+  });
+}
+window.pitCancelCard = pitCancelCard;
+
 /* 🖨 印刷して保存（新規予約画面の一等地）＝カルテ表紙を印刷しつつ、通常どおり保存して戻る。
    印刷は cover-print.js の pitPrintCover(cardId) を使う（別iframeで印刷ダイアログを出すので画面遷移とは独立）。
    pitPrintCover は cardId を直接受け取るため、先に呼んでおけば closeDetail() が _editingCardId を消しても影響なし。 */
 function pitSaveAndPrint(){
   const c = state.cards.find(x => x.id === _editingCardId);
   const id = c ? c.id : _editingCardId;
+  if (c && c._draft) delete c._draft;   /* v1.17.0：ここで初めて確定＝保存される */
+  if (window.pitClearDraftKeep) pitClearDraftKeep();
   if (c && window.logFlow) logFlow(c, '表紙を印刷して保存');
   if (id && window.pitPrintCover) pitPrintCover(id);   // 表紙を印刷（別iframe＝画面遷移と独立・非同期）
   closeDetail();                                        // 顧客控え更新＋代車同期＋DB保存＋戻る（＝従来の「保存して戻る」）
@@ -497,8 +544,9 @@ function _cfsDayListHtml(c){
   const who = (c.frontStaff || '').trim();
   const toMin = function (s){ s = String(s||'').split('-')[0].trim(); const m = /^(\d{1,2}):(\d{2})/.exec(s); return m ? (+m[1]*60 + +m[2]) : 9999; };
   const live = function (x){ return x.status !== 'returned' && x.status !== 'scrap' && x.status !== 'canceled'; };
-  const intake = (state.cards||[]).filter(function(x){ return x && x.id!==me && x.reserveDate===ds && live(x); });
-  const ret    = (state.cards||[]).filter(function(x){ return x && x.id!==me && x.returnDate===ds && live(x); });
+  /* v1.17.0：他の人が書きかけの下書き（_draft）は、この一覧にも出さない */
+  const intake = (state.cards||[]).filter(function(x){ return x && !x._draft && x.id!==me && x.reserveDate===ds && live(x); });
+  const ret    = (state.cards||[]).filter(function(x){ return x && !x._draft && x.id!==me && x.returnDate===ds && live(x); });
   const BRK = [{from:'12:00',to:'13:00'},{from:'15:30',to:'16:30'}];
   function evHtml(x, t){
     const imp = (x.boardId==='import');

@@ -11,7 +11,9 @@
 function _dashCap(){ return (state.settings && state.settings.lotCapacity) || 20; }
 
 // その車が置き場を占有しているか（返車・廃車は除く）
-function _dashHeld(c){ return c.status !== 'returned' && c.status !== 'scrap'; }
+// ⚠ v1.17.0：まだ保存していない新規予約（_draft）は数えない。
+//    dashOccupancy / dashIntake / _dashHeldOnTeam は全部ここを通るので、1か所直せば全部に効く。
+function _dashHeld(c){ return !c._draft && c.status !== 'returned' && c.status !== 'scrap'; }
 
 // YYYY-MM-DD をローカル日付に
 function _pd(s){ const p = String(s).split('-'); return new Date(+p[0], (+p[1]) - 1, +p[2]); }

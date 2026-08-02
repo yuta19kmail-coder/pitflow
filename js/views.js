@@ -257,8 +257,14 @@ function openNewReserve(){
     tentative: false,   // 仮予約フラグ（仮予約で登録ボタン／詳細の切替でON）v0.100.0
     workSpecials: []   // 特殊（保証/保険）＝作業タイプとセットの時だけ付く。予約詳細/ホバー/印刷にのみ表示 v0.116.0
   };
+  /* v1.17.0：ここで作るカードは「下書き（_draft）」。
+     ⚠ _draft が付いている間は **クラウドにも端末の本保存にも書かない**（db-pit.js が外す）＝
+        「保存する／仮予約で登録／印刷して保存」を押すまで、どこにも数えられないし他の端末にも出ない。
+     ⚠ ただし入力が消えると困るので、書きかけは blank-cards.js が
+        **この端末の中だけ**に控える（次に新規予約を押すと「続きから？」と聞く）。 */
+  card._draft = true;
   state.cards.push(card);
-  if (window.PitDB) PitDB.save(true);   // v0.87.1 作成した瞬間に即保存（デバウンス待ちで取りこぼさない）
+  if (window.PitDB) PitDB.save(true);   // 下書き以外の変化を反映（下書き自体は書かれない）
   openCard(id, 'page');   // 新規入庫予約＝全画面
 }
 function goToday(){

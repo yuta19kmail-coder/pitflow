@@ -127,7 +127,8 @@
             v: 1,
             // v0.97.0 サンプル生成カード（_sample）も保存する＝リロードしても消えない（顧客500人規模で容量に余裕）。
             // ※ _sample フラグはカード開閉時の顧客控え書き戻し防止／サンプル作り直し時の識別に引き続き使用。
-            cards: (state.cards || []),
+            /* v1.17.0：下書き（_draft）は本保存に入れない。書きかけの控えは別のキーで持つ（blank-cards.js） */
+            cards: (state.cards || []).filter(function (c) { return !(c && c._draft); }),
             loanerAssigns: (state.loanerAssigns || []),
             loaners: state.loaners,
             customers: state.customers,
@@ -407,7 +408,9 @@
 
       Object.keys(this._COLS).forEach(function (k) {
         const col = self._COLS[k];
-        const arr = state[k] || [];
+        /* v1.17.0：下書き（_draft）はクラウドに書かない＝他の端末に出さない・どこにも数えさせない。
+           ⚠ 一度も書いていないので _shadow にも無い＝「消えたもの」と誤判定されて delete が飛ぶこともない。 */
+        const arr = (state[k] || []).filter(function (o) { return !(o && o._draft); });
         const alive = {};
         arr.forEach(function (o) {
           if (!o || !o.id) return;

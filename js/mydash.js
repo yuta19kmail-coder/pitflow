@@ -238,7 +238,8 @@
     intake: {
       title: '今日の入庫', icon: '📥', jump: 'today', sizes: ['s', 'm', 'l', 'xl'],
       body: function (sz) {
-        var list = C.cards.filter(function (c) { return c.reserveDate === C.tStr && c.status !== 'scrap'; }).sort(function (a, b) { return (a.reserveTime || '99').localeCompare(b.reserveTime || '99'); });
+        /* ⚠ v1.17.0：まだ保存していない新規予約（_draft）は出さない・数えない */
+        var list = C.cards.filter(function (c) { return !c._draft && c.reserveDate === C.tStr && c.status !== 'scrap'; }).sort(function (a, b) { return (a.reserveTime || '99').localeCompare(b.reserveTime || '99'); });
         var left = list.filter(function (c) { return c.status === 'reserved'; }).length;
         if (sz === 's') return kpi(list.length, '台', '未来店 ' + left + '台', 'g');
         if (!list.length) return empty('本日の入庫予定はありません');
