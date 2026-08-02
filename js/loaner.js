@@ -8,12 +8,12 @@
    ======================================== */
 let _loStart = null, _loCount = 0, _loBound = false, _loDnd = false, _loDragAid = null, _loDragMode = 'move';
 let _loFilters = { etc:false, navi:false, iso:false };
-let _loCats = { kei:false, normal:false, import:false };   // 区分の絞り込み（OR）
+let _loCats = { kei:false, normal:false, import:false, commercial:false };   // 区分の絞り込み（OR）／v1.15.0 商用車を追加
 let _loSortKey = null;   // 並べ替え（低い順）：'height'|'width'|'length'|'seats'|null
 let _loVehBound = false;
 let _loPrepending = false;
 
-const LO_CAT = { kei:'軽', normal:'普通車', import:'輸入車' };
+const LO_CAT = { kei:'軽', normal:'普通車', import:'輸入車', commercial:'商用車' };   /* v1.15.0 商用車を追加 */
 
 /* ===== 下書きモード（動かした瞬間に突入＝保存はしない。一括実行で確定／破棄／やり直し） ===== */
 let _loDraftOrig = null;   // 下書き開始時のスナップショット {aid:{loanerId,fromDate,toDate}}
@@ -169,7 +169,7 @@ function _loEnsureOpts(){
     if (l.height === undefined || l.height === null) l.height = 150 + (i % 6) * 3;    // 150〜165cm
     if (l.width  === undefined || l.width  === null) l.width  = 148 + (i % 5) * 4;    // 148〜164cm
     if (l.length === undefined || l.length === null) l.length = 340 + (i % 8) * 20;   // 340〜480cm
-    if (l.category === undefined) l.category = ['kei','normal','import'][i % 3];
+    if (l.category === undefined) l.category = ['kei','normal','import','commercial'][i % 4];   /* v1.15.0 商用車 */
     if (l.seats === undefined || l.seats === null) l.seats = [4,4,5,5,5,7,8][i % 7];
     if (l.number === undefined || l.number === null){ const n = parseInt(String(l.name||'').replace(/[^0-9]/g,''),10); l.number = isNaN(n)?(i+1):n; }
     if (l.color === undefined) l.color = '';
@@ -198,7 +198,7 @@ function _loFiltered(){
   if (_loFilters.navi) ls = ls.filter(function(l){ return l.navi; });
   if (_loFilters.iso)  ls = ls.filter(function(l){ return l.iso; });
   if (_loFilters.camera) ls = ls.filter(function(l){ return l.camera; });
-  const anyCat = _loCats.kei || _loCats.normal || _loCats.import;
+  const anyCat = Object.keys(_loCats).some(function(k){ return _loCats[k]; });   /* v1.15.0：区分が増えても効くように */
   if (anyCat) ls = ls.filter(function(l){ return _loCats[l.category]; });
   if (_loSortKey === 'camera') {
     /* カメラ付きを先に（同じなら番号順） */
@@ -206,6 +206,11 @@ function _loFiltered(){
   } else if (_loSortKey === 'shakenDate') {
     /* 車検満了が近い順（未入力は最後） */
     ls.sort(function(a, b){ return String(a.shakenDate || '9999').localeCompare(String(b.shakenDate || '9999')); });
+  } else if (_loSortKey === 'seats') {
+    /* v1.15.0：定員は自由入力（「5（2）人」等）になったので、**先頭の数字**で少ない順に並べる。
+       数字が拾えないものは最後。 */
+    const sn = function(x){ var n = window.pitSeatsNum ? pitSeatsNum(x) : null; return (n == null ? 99999 : n); };
+    ls.sort(function(a, b){ return sn(a.seats) - sn(b.seats) || ((a.number||0) - (b.number||0)); });
   } else if (_loSortKey) {
     ls.sort(function(a, b){ return (a[_loSortKey] != null ? a[_loSortKey] : 99999) - (b[_loSortKey] != null ? b[_loSortKey] : 99999); });
   }
@@ -336,6 +341,7 @@ function loVehHover(headEl){
   const opt = function(on, label){ return '<span class="lvh-opt ' + (on ? 'on' : 'off') + '">' + (on ? '✓' : '<i data-ic=close data-ics=16></i>') + ' ' + label + '</span>'; };
   const dim = function(label, v){ return '<span class="lvh-dim">' + label + '<b>' + (v != null ? _loEsc(v) : '—') + '</b></span>'; };
   const catLb = LO_CAT[l.category] || '';
+  const _loSeatTxt = window.pitSeatsText ? pitSeatsText(l.seats) : '';   /* v1.15.0：定員は自由入力 */
   const num = (l.number != null ? l.number : (parseInt(String(l.name||'').replace(/[^0-9]/g,''),10) || ''));
   el.innerHTML =
       '<div class="lvh-head">'
@@ -346,7 +352,7 @@ function loVehHover(headEl){
     + '<div class="lvh-badges">'
         + (l.plate ? '<span class="lvh-plate-badge">' + _loEsc(l.plate) + '</span>' : '')   // ナンバー＝バッジ
         + (catLb ? '<span class="lvh-cat ' + _loEsc(l.category) + '">' + catLb + '</span>' : '')
-        + (l.seats != null ? '<span class="lvh-seats">定員' + _loEsc(l.seats) + '人</span>' : '')
+        + (_loSeatTxt ? '<span class="lvh-seats">定員' + _loEsc(_loSeatTxt) + '</span>' : '')
       + '</div>'
     + '<div class="lvh-opts">' + opt(l.etc, 'ETC') + opt(l.navi, 'ナビ') + opt(l.iso, 'ISO') + opt(l.camera, 'Bカメ') + '</div>'
     + '<div class="lvh-dims">' + dim('長さ ', l.length != null ? l.length + 'cm' : null) + dim('幅 ', l.width != null ? l.width + 'cm' : null) + dim('高さ ', l.height != null ? l.height + 'cm' : null) + '</div>'

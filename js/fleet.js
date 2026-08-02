@@ -83,7 +83,8 @@ function renderFleet(){
       const _ttl = _isLo ? (window.pitVehLabel ? pitVehLabel(v) : v.name) : v.name;
           const _no = (v.number != null && v.number !== '') ? String(v.number)
                 : (_isLo ? String(v.name || '').replace(/[^0-9]/g, '') : '');
-      const _cat = { kei: '軽自動車', normal: '普通車', import: '輸入車' }[v.category] || '';
+      const _cat = { kei: '軽自動車', normal: '普通車', import: '輸入車', commercial: '商用車' }[v.category] || '';
+      const _seat = window.pitSeatsText ? pitSeatsText(v.seats) : '';
       const _tk = v.shakenDate && window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
       const _dims = [
         v.length != null ? '長 ' + _fleetEsc(v.length) : '',
@@ -100,11 +101,11 @@ function renderFleet(){
          + '</div>'
          + (v.plate ? '<div class="fl-card-plate">' + _fleetEsc(v.plate) + '</div>' : '')
          /* v1.14.5：社用車も代車と同じ中身を出す（入力できるものは全部見えるように） */
-         + ((_cat || v.color || v.seats != null)
+         + ((_cat || v.color || _seat)
              ? '<div class="fl-card-line">'
                  + (_cat ? '<span class="fl-kv"><i>区分</i>' + _cat + '</span>' : '')
                  + (v.color ? '<span class="fl-kv"><i>カラー</i>' + _fleetEsc(v.color) + '</span>' : '')
-                 + (v.seats != null ? '<span class="fl-kv"><i>定員</i>' + _fleetEsc(v.seats) + '人</span>' : '')
+                 + (_seat ? '<span class="fl-kv"><i>定員</i>' + _fleetEsc(_seat) + '</span>' : '')
                + '</div>' : '')
          + ((v.etc || v.navi || v.iso || v.camera)
              ? '<div class="fl-card-tags">'
@@ -297,6 +298,37 @@ window.flKindChange = function(){
 function _flPlateParts(p){ const a=String(p||'').trim().split(/\s+/); return { region:a[0]||'', cls:a[1]||'', kana:a[2]||'', num:a[3]||'' }; }
 function _flPlateJoin(){ const v=function(id){return (document.getElementById(id).value||'').trim();}; return [v('fl-pl-region'),v('fl-pl-cls'),v('fl-pl-kana'),v('fl-pl-num')].filter(Boolean).join(' '); }
 function _flZ2H(s){ return String(s==null?'':s).replace(/[０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}); }
+
+/* ===== v1.15.0：数字だけの枠（上下矢印なし・半角数字のみ） =====
+   もともと type="number" だった枠（番号／車検満了日の年月日／寸法）を type="text" にして、
+   ここで「全角→半角」「数字以外は捨てる」「桁数で止める」をやる。
+   ⚠ type="number" のままだと、全角を貼り付けられた時に中身が空っぽ扱いになって黙って消える。 */
+window.flDigits = function(el, max){
+  if (!el) return;
+  var pos = null;
+  try { pos = el.selectionStart; } catch (e) {}
+  var v = _flZ2H(el.value).replace(/[^0-9]/g, '');
+  if (max) v = v.slice(0, max);
+  if (el.value !== v){
+    el.value = v;
+    if (pos != null){ try { el.setSelectionRange(pos, pos); } catch (e) {} }
+  }
+};
+
+/* ===== v1.15.0：定員は自由入力（「5（2）人」等）=====
+   pitSeatsText … 画面に出す文字（末尾に「人」が無ければ足す。空なら空文字）
+   pitSeatsNum  … 並べ替え用の数字（先頭の数字だけ拾う。取れなければ null）
+   ⚠ 昔のデータは数値（5）で入っている。どちらでも同じように扱えるようにしてある。 */
+window.pitSeatsText = function(s){
+  var t = String(s == null ? '' : s).trim();
+  if (!t) return '';
+  return /人\s*$/.test(t) ? t : (t + '人');
+};
+window.pitSeatsNum = function(s){
+  var m = _flZ2H(String(s == null ? '' : s)).match(/\d+/);
+  return m ? parseInt(m[0], 10) : null;
+};
+
 /* ナンバー＝1BOX＋クリックでガイド（新規予約と同じcf-plate構造）。入力ブレ防止：全角→半角・分類3桁・一連4桁 */
 window.flPlateToggle = function(){
   const box=document.getElementById('fl-plate'); if(!box) return;
@@ -333,7 +365,8 @@ window.fleetOpenDetail = function (id) {
   const ttl = window.pitVehLabel ? pitVehLabel(v, f.kind) : v.name;
   const opt = function (on, label) { return '<span class="fd-opt ' + (on ? 'on' : 'off') + '">' + (on ? '✓ ' : '× ') + label + '</span>'; };
   const row = function (k, val) { return val ? '<tr><td>' + k + '</td><td>' + val + '</td></tr>' : ''; };
-  const cat = { kei: '軽', normal: '普通車', import: '輸入車' }[v.category] || '';
+  const cat = { kei: '軽', normal: '普通車', import: '輸入車', commercial: '商用車' }[v.category] || '';
+  const seatTxt = window.pitSeatsText ? pitSeatsText(v.seats) : '';
   const tk = v.shakenDate && window.pitTenkenFromShaken ? pitTenkenFromShaken(v.shakenDate) : '';
   let h = '<div class="fd-head"><div class="fd-title">' + e(ttl) + '</div>'
         + (v.retired ? '<span class="fl-retired">引退</span>' : '')
@@ -345,7 +378,7 @@ window.fleetOpenDetail = function (id) {
         + row('ナンバー', e(v.plate || ''))
         /* v1.14.5：代車／社用車のどちらでも同じ項目を出す */
         + row('区分', e(cat))
-        + (v.seats != null ? row('定員', e(v.seats) + ' 人') : '')
+        + (seatTxt ? row('定員', e(seatTxt)) : '')
         + row('寸法', [v.length != null ? '長 ' + e(v.length) : '', v.width != null ? '幅 ' + e(v.width) : '', v.height != null ? '高 ' + e(v.height) : ''].filter(Boolean).join(' / ') + (v.height != null || v.width != null || v.length != null ? ' cm' : ''))
         + row('車検満了', v.shakenDate ? e(window.pitWareki ? pitWareki(v.shakenDate) : v.shakenDate) : '')
         + row('12ヶ月点検', tk ? (e(window.pitWareki ? pitWareki(tk, 'ym') : tk) + '<span class="fd-auto">（車検の1年前／1年後・自動）</span>') : '')
@@ -505,7 +538,8 @@ function _fleetSubmitInner(){
   const _num = function(id){ const x = document.getElementById(id).value; return (x === '' || x == null) ? null : Number(x); };
   const height=_num('fl-height'), width=_num('fl-width'), length=_num('fl-length');
   const category = document.getElementById('fl-cat').value || 'kei';
-  const seats = _num('fl-seats');
+  /* v1.15.0：定員は自由入力（「5（2）人」のような書き方があるため）。空なら null。 */
+  const seats = ((document.getElementById('fl-seats') || {}).value || '').trim() || null;
   const etc=!!document.getElementById('fl-etc').checked, navi=!!document.getElementById('fl-navi').checked, iso=!!document.getElementById('fl-iso').checked;
   const camera=!!(document.getElementById('fl-camera')||{}).checked;
   if (!model){ alert('車種名を入れてください（例：タント）'); return false; }   /* false＝保存していない（閉じない） */
@@ -557,3 +591,92 @@ function fleetDelete(id){
   if (window.PitDB) PitDB.save();
   renderFleet();
 }
+
+/* ===================================================================
+   v1.15.0  Enter で次の枠へ（車両の追加・編集ポップアップだけ）
+   -------------------------------------------------------------------
+   ゆうた依頼「フォームをEnterで次の枠に飛びたい」。まずこの画面だけで試す。
+
+   🔴 気をつけている点（次に他の画面へ広げる時も同じ）
+    1. 日本語変換の確定 Enter では飛ばない（e.isComposing / keyCode 229 を見る）。
+       これを見ないと「タント」と変換確定した瞬間に次の枠へ飛んでしまう。
+    2. 最後の枠まで来たら「保存」ボタンに枠が移るだけ。**押さない**。
+       Enter 連打で車両が登録されると事故るため。
+    3. 隠れている枠は飛ばす（入替日は番号が重なった時だけ出る）。
+    4. ナンバーは 1BOX ＋ ガイド4枠。ガイドを開いて 地名→分類→かな→ナンバー と
+       順に回り、抜けたらガイドを閉じる。
+   =================================================================== */
+(function(){
+  /* 回る順番。ここに書いた順にしか飛ばない＝あとから枠が増えても勝手に混ざらない。 */
+  var FL_ORDER = [
+    'fl-kind', 'fl-number', 'fl-repdate', 'fl-model', 'fl-color',
+    'fl-pl-main', 'fl-pl-region', 'fl-pl-cls', 'fl-pl-kana', 'fl-pl-num',
+    'fl-sh-era', 'fl-sh-y', 'fl-sh-m', 'fl-sh-d',
+    'fl-cat', 'fl-length', 'fl-width', 'fl-height', 'fl-seats',
+    'fl-etc', 'fl-navi', 'fl-iso', 'fl-camera'
+  ];
+  var PLATE_IDS = { 'fl-pl-main':1, 'fl-pl-region':1, 'fl-pl-cls':1, 'fl-pl-kana':1, 'fl-pl-num':1 };
+
+  function _visible(el){
+    if (!el || el.disabled) return false;
+    /* offsetParent が無い＝親ごと display:none（入替日の行・閉じているナンバーガイド） */
+    return !!(el.offsetParent || el.getClientRects().length);
+  }
+  function _plateOpen(){
+    var b = document.getElementById('fl-plate');
+    return !!(b && b.classList.contains('open'));
+  }
+  /* 次に止まるべき枠を返す（見えないものは飛ばす） */
+  function _next(fromId){
+    var i = FL_ORDER.indexOf(fromId);
+    if (i < 0) return null;
+    for (var k = i + 1; k < FL_ORDER.length; k++){
+      var id = FL_ORDER[k];
+      /* ナンバーのガイド4枠は、ガイドが開いている時だけ回る */
+      if (id !== 'fl-pl-main' && PLATE_IDS[id] && !_plateOpen()) continue;
+      var el = document.getElementById(id);
+      if (el && _visible(el)) return el;
+    }
+    return null;   /* 最後まで来た */
+  }
+  function _focus(el){
+    if (!el) return;
+    try { el.focus(); } catch (e) {}
+    /* テキスト系なら中身を選んでおく＝そのまま打ち直せる */
+    if (el.tagName === 'INPUT' && /^(text|search|tel|url|email)$/.test(el.type || 'text')){
+      try { el.select(); } catch (e) {}
+    }
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.isComposing || e.keyCode === 229) return;         /* ⚠ 変換中の Enter は素通り */
+    var box = document.getElementById('fleet-modal');
+    if (!box || !box.classList.contains('show')) return;
+    var t = e.target;
+    if (!t || !box.contains(t)) return;
+    if (t.tagName === 'TEXTAREA' || t.tagName === 'BUTTON') return;   /* 保存ボタン上の Enter は本来の動き */
+    var id = t.id;
+    if (FL_ORDER.indexOf(id) < 0) return;
+
+    e.preventDefault();     /* ここで止めないと、環境によっては勝手に保存が走る */
+
+    /* ナンバーの1BOXで Enter → ガイドを開いて「地名」から */
+    if (id === 'fl-pl-main'){
+      if (!_plateOpen() && window.flPlateToggle) flPlateToggle();
+      var r = document.getElementById('fl-pl-region');
+      setTimeout(function(){ _focus(r); }, 0);
+      return;
+    }
+    var nx = _next(id);
+    /* ナンバーのガイドから外に出るなら、ガイドを閉じる */
+    if (PLATE_IDS[id] && (!nx || !PLATE_IDS[nx.id])){
+      var pb = document.getElementById('fl-plate');
+      if (pb) pb.classList.remove('open');
+    }
+    if (nx){ _focus(nx); return; }
+    /* 最後の枠＝保存ボタンに枠を移すだけ（押さない） */
+    var save = box.querySelector('.vh-btn.primary');
+    if (save) { try { save.focus(); } catch (err) {} }
+  }, true);
+})();

@@ -543,6 +543,8 @@
 #lo-veh-hover .lvh-cat.kei{ background:rgba(132,204,22,.16); color:#84cc16; border:1px solid rgba(132,204,22,.5); }
 #lo-veh-hover .lvh-cat.normal{ background:rgba(55,138,221,.16); color:var(--blue); border:1px solid rgba(55,138,221,.5); }
 #lo-veh-hover .lvh-cat.import{ background:rgba(236,72,153,.16); color:#ec4899; border:1px solid rgba(236,72,153,.5); }
+/* v1.15.0：区分に「商用車」を追加（軽=黄緑／普通車=青／輸入車=ピンク／商用車=オレンジ） */
+#lo-veh-hover .lvh-cat.commercial{ background:rgba(249,115,22,.16); color:#f97316; border:1px solid rgba(249,115,22,.5); }
 #lo-veh-hover .lvh-seats{ font-size:11px; color:var(--text2); font-weight:700; }
 #lo-veh-hover .lvh-dims{ display:flex; gap:10px; margin-top:8px; }
 #lo-veh-hover .lvh-dim{ font-size:11px; color:var(--text3); }
@@ -604,6 +606,12 @@
 .fl-form{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .fl-in{ background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 10px; font-size:13px; font-family:inherit; }
 .fl-in:focus{ outline:none; border-color:var(--brand); }
+/* v1.15.0：数字の枠に上下矢印（スピナー）は出さない＝打ち込み専用。
+   ⚠ 中身は type="text" ＋ flDigits() で「全角→半角・数字のみ」にしてある。
+      ここは、将来また type="number" が混ざった時のための保険。 */
+.fl-in::-webkit-outer-spin-button,
+.fl-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.fl-in[type=number]{ -moz-appearance:textfield; appearance:textfield; }
 .fl-lb{ font-size:11px; color:var(--text3); display:inline-flex; align-items:center; gap:6px; }
 .fl-empty{ color:var(--text3); font-size:12.5px; padding:8px 0; }
 .fl-row{ display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid var(--border); border-radius:9px; margin-bottom:7px; background:var(--bg); }
