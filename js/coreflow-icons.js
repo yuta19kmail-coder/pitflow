@@ -314,7 +314,7 @@
     '🔢':'numbers','🔤':'textT','🔥':'fire','🔧':'wrench','🔴':'dot','🔶':'dot','🔼':'chevUp',
     '🔽':'chevDown','🕊':'send','🕒':'clock','🕗':'clock','🕘':'clock','🖊':'pen','🖐':'hand',
     '🖥':'monitor','🖨':'printer','🖱':'cursor','🖼':'image','🗂':'files','🗑':'trash','🗒':'sticky',
-    '🗓':'calendar','🗺':'map','😴':'bed','🙅':'ban','🙆':'check','🙋':'hand','🙌':'hand','🚀':'bolt',
+    '🗓':'calendar','🗺':'map','😠':'warn','😡':'warn','😴':'bed','🙅':'ban','🙆':'check','🙋':'hand','🙌':'hand','🚀':'bolt',
     '🚐':'van','🚗':'car','🚘':'car','🚙':'car','🚚':'van','🚦':'signal','🚧':'cone','🚨':'siren',
     '🚪':'external','🚫':'ban','🛑':'cone','🛒':'cart','🛠':'wrench','🛡':'shield','🛻':'van','🟠':'dot',
     '🟡':'dot','🟢':'dot','🟥':'shapeSq','🟦':'shapeSq','🟧':'shapeSq','🟩':'shapeSq','🤖':'robot',

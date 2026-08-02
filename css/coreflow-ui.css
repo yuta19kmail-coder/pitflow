@@ -94,3 +94,49 @@
   width:17px; height:17px; border:1.6px solid currentColor; border-radius:5px;
   font-size:11px; font-weight:700; line-height:1; flex:none; vertical-align:-.18em;
 }
+
+/* =========================================================
+   チェックボックス（全アプリ共通・2026-08-02）
+   ---------------------------------------------------------
+   ブラウザ既定の白い箱・青いチェックはどのアプリでも浮くので、
+   MHS v0.81.0 で決めた「枠だけの控えめな四角」をここで標準にした。
+   ふだんは枠線だけ・押すとアプリの色で塗ってチェックが白く出る。
+
+   使い方： <input type="checkbox" class="ui-cb">
+            <input type="checkbox" class="ui-cb sm">   ← 小さい版（一覧の中など）
+
+   ⚠ 色は --acc（無ければ --brand）を使う。どちらも決めていないアプリでも
+      既定のインディゴで出るので、そのまま貼って構わない。
+   ⚠ 文字と並べる時は、囲みの <label> を display:inline-flex; align-items:center に。
+   ========================================================= */
+.ui-cb{
+  appearance:none; -webkit-appearance:none;
+  width:16px; height:16px; flex:0 0 auto; margin:0; padding:0; position:relative;
+  border:1.5px solid var(--text3, #94a3b8); border-radius:5px;
+  background:transparent; opacity:.65; cursor:pointer;
+  transition:opacity .12s, background .12s, border-color .12s;
+}
+.ui-cb:hover{ opacity:1; }
+.ui-cb:checked,.ui-cb:indeterminate{
+  background:var(--acc, var(--brand, #6366f1));
+  border-color:var(--acc, var(--brand, #6366f1));
+  opacity:1;
+}
+.ui-cb:checked::after{
+  content:''; position:absolute; left:4.5px; top:1px; width:3px; height:7.5px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.ui-cb:indeterminate::after{
+  content:''; position:absolute; left:2.5px; top:5.5px; width:8px; height:2px;
+  background:#fff; border-radius:1px;
+}
+.ui-cb:disabled{ opacity:.35; cursor:default; }
+.ui-cb.sm{ width:14px; height:14px; border-radius:4px; }
+.ui-cb.sm:checked::after{ left:3.8px; top:.5px; width:2.5px; height:6.5px; }
+.ui-cb.sm:indeterminate::after{ left:2.2px; top:5px; width:7px; }
+
+/* 指で押す端末では少しだけ大きく（見た目の細さは変えない） */
+@media (pointer:coarse){
+  .ui-cb{ width:18px; height:18px; }
+  .ui-cb:checked::after{ left:5.2px; top:1.5px; width:3.2px; height:8.4px; }
+}
