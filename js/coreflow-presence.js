@@ -1,12 +1,17 @@
 /* ============================================
    coreflow-presence.js  ―  気配（プレゼンス）／全アプリ共通
    v1.0（2026-08-01）：CoreNote / CoreBoard の「完全リアルタイム同期」用。
+   （版：v1.2 が最新）
    v1.1（2026-08-03）：**いま書いている最中のもの（live）**を足した。
      ・ペンで引いている途中の線／打っている途中の文字を、**相手の画面に薄く見せる**ためだけの入れ物。
      🔴 **ノート・ボードの中身（保存されるデータ）には一切入らない。** 手を離したら消える。
      ・`live` は**文字列1つ**（JSONを文字にしたもの）。Firestore は「配列の中の配列」を持てないので、
        点の並びは必ず文字にしてから入れること。
      ・送るのは最短 120ms おき（＝秒8回まで）。消す時だけ待たずにすぐ送る。
+   v1.2（2026-08-03）：🔴 **setLive に関数を渡せるようにした**。
+     ・前は「指を動かすたびに JSON を作る」→ 送るのは秒8回なのに、**作る作業だけ秒60回**走っていて、
+       iPad でペンが引っかかる原因になっていた。
+     ・関数で渡すと、**本当に送る直前にだけ**中身を作る。ペンの通り道からは重い処理が消える。
 
    ◎ 何をするもの
      「いま誰がどのノート（ボード）を開いていて、どの部品を触っているか」だけを
@@ -59,6 +64,7 @@
   var _room = null, _sel = [], _edit = null, _since = 0;
   var _unsub = null, _beat = null, _sweep = null, _deb = null;
   var _lv = '', _lvSent = '', _lvTimer = null, _lvLast = 0;   // v1.1「書いている最中」
+  var _lvMake = null;                                          // v1.2 送る直前に中身を作る関数
   var _raw = [];                     // 受け取ったままの一覧（自分を除く）
   var _live = [];                    // 生きているものだけ＋色を付けたもの
   var _onChange = null;
@@ -144,6 +150,13 @@
   /* ---------- v1.1：いま書いている最中のもの ---------- */
   function writeLive() {
     if (!_on || !_db || !_uid || !_room) return;
+    /* v1.2：中身を作るのは「本当に送る」この瞬間だけ（ペンの通り道を軽くするため） */
+    if (_lvMake) {
+      var mk = _lvMake; _lvMake = null;
+      var o = null; try { o = mk(); } catch (e) { o = null; }
+      var ss = ''; if (o) { try { ss = JSON.stringify(o); } catch (e2) { ss = ''; } }
+      _lv = (ss.length > LIVE_MAX) ? _lv : ss;
+    }
     if (_lv === _lvSent) return;
     _lvSent = _lv; _lvLast = now(); _wrote = true;
     myDoc().set({
@@ -224,7 +237,7 @@
       erase();
       _room = roomId || null;
       _sel = []; _edit = null; _since = now();
-      _lv = ''; _lvSent = ''; clearTimeout(_lvTimer); _lvTimer = null;
+      _lv = ''; _lvSent = ''; _lvMake = null; clearTimeout(_lvTimer); _lvTimer = null;
       listen();
       if (_room) writeNow(true);
     },
@@ -238,11 +251,18 @@
     /* いま書いている最中のもの。o＝{k:'ink'|'txt', …} ／ 消す時は null。
        🔴 ここに入れたものは保存されない（見せるだけ）。手を離したら必ず null を送ること。 */
     setLive: function (o) {
-      var s = '';
-      if (o) { try { s = JSON.stringify(o); } catch (e) { s = ''; } }
-      if (s.length > LIVE_MAX) return;           /* 大きすぎる時は送らない（保険） */
-      _lv = s;
-      if (!s) { clearTimeout(_lvTimer); _lvTimer = null; writeLive(); return; }   /* 消すのは待たない */
+      /* o は「中身」でも「中身を作る関数」でもよい。
+         🔴 関数で渡すと、**送る直前にだけ**作られる＝指を動かすたびの重い処理が消える。 */
+      if (!o) {                                   /* 消すのは待たない */
+        _lvMake = null; _lv = '';
+        clearTimeout(_lvTimer); _lvTimer = null; writeLive(); return;
+      }
+      if (typeof o === 'function') { _lvMake = o; }
+      else {
+        var s = ''; try { s = JSON.stringify(o); } catch (e) { s = ''; }
+        if (s.length > LIVE_MAX) return;          /* 大きすぎる時は送らない（保険） */
+        _lvMake = null; _lv = s;
+      }
       if (_lvTimer) return;
       var wait = Math.max(0, LIVE_MS - (now() - _lvLast));
       _lvTimer = setTimeout(function () { _lvTimer = null; writeLive(); }, wait);
@@ -287,7 +307,7 @@
     stop: function () {
       erase();
       _on = false; _room = null; _raw = []; _live = [];
-      _lv = ''; _lvSent = ''; clearTimeout(_lvTimer); _lvTimer = null;
+      _lv = ''; _lvSent = ''; _lvMake = null; clearTimeout(_lvTimer); _lvTimer = null;
       clearTimeout(_deb); clearInterval(_beat); clearInterval(_sweep);
       if (_unsub) { try { _unsub(); } catch (e) { } _unsub = null; }
       if (_onChange) { try { _onChange(_live); } catch (e) { } }
