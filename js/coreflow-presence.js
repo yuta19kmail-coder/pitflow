@@ -1,6 +1,12 @@
 /* ============================================
    coreflow-presence.js  ―  気配（プレゼンス）／全アプリ共通
    v1.0（2026-08-01）：CoreNote / CoreBoard の「完全リアルタイム同期」用。
+   v1.1（2026-08-03）：**いま書いている最中のもの（live）**を足した。
+     ・ペンで引いている途中の線／打っている途中の文字を、**相手の画面に薄く見せる**ためだけの入れ物。
+     🔴 **ノート・ボードの中身（保存されるデータ）には一切入らない。** 手を離したら消える。
+     ・`live` は**文字列1つ**（JSONを文字にしたもの）。Firestore は「配列の中の配列」を持てないので、
+       点の並びは必ず文字にしてから入れること。
+     ・送るのは最短 120ms おき（＝秒8回まで）。消す時だけ待たずにすぐ送る。
 
    ◎ 何をするもの
      「いま誰がどのノート（ボード）を開いていて、どの部品を触っているか」だけを
@@ -11,6 +17,7 @@
            uid, name, photo,
            sel   : [部品id, …]（最大20）      ← 選んでいるもの
            edit  : 部品id | null               ← いま書いている／動かしているもの
+           live  : '…JSON…' | ''               ← v1.1 いま引いている線／打っている文字（離すと消える）
            since : 部屋に入った時刻（色の順番を決めるのに使う）
            at    : 生存確認の時刻 }
 
@@ -44,11 +51,14 @@
   var SWEEP_MS = 15000;              // 古い気配の掃除を見に行く間隔
   var DEBOUNCE = 250;                // 選択・編集が変わってから書くまで
   var MAX_SEL  = 20;
+  var LIVE_MS  = 120;                // v1.1「書いている最中」を送る最短の間隔（秒8回まで）
+  var LIVE_MAX = 60000;              // これより大きい時は送らない（1件1MBの保険）
 
   /* ---------- 内部の状態 ---------- */
   var _on = false, _db = null, _cid = 'kobayashi_motors', _uid = null, _me = null;
   var _room = null, _sel = [], _edit = null, _since = 0;
   var _unsub = null, _beat = null, _sweep = null, _deb = null;
+  var _lv = '', _lvSent = '', _lvTimer = null, _lvLast = 0;   // v1.1「書いている最中」
   var _raw = [];                     // 受け取ったままの一覧（自分を除く）
   var _live = [];                    // 生きているものだけ＋色を付けたもの
   var _onChange = null;
@@ -88,9 +98,16 @@
       p.colorName = PALNAME[i % PALNAME.length];
       p.order = i;
     });
-    var before = _live.map(function (p) { return p.uid + ':' + p.color + ':' + (p.edit || '') + ':' + (p.sel || []).join(','); }).join('|');
+    /* ⚠ v1.1：live（書いている最中）も見ないと、線が伸びても描き直されない。
+       中身そのものを比べると重いので、長さと末尾だけの軽い指紋にする。 */
+    var sig = function (p) {
+      var lv = p.live || '';
+      return p.uid + ':' + p.color + ':' + (p.edit || '') + ':' + (p.sel || []).join(',')
+           + ':' + lv.length + (lv ? lv.slice(-12) : '');
+    };
+    var before = _live.map(sig).join('|');
     _live = alive;
-    var after = _live.map(function (p) { return p.uid + ':' + p.color + ':' + (p.edit || '') + ':' + (p.sel || []).join(','); }).join('|');
+    var after = _live.map(sig).join('|');
     if (before !== after && _onChange) { try { _onChange(_live); } catch (e) { } }
   }
 
@@ -103,6 +120,8 @@
       photo: (_me && _me.photo) || '',
       sel: (_sel || []).slice(0, MAX_SEL),
       edit: _edit || null,
+      live: _lvSent || '',
+
       sinceMs: _since,
       at: w.fb && w.fb.serverTimestamp ? w.fb.serverTimestamp() : new Date()
     };
@@ -121,6 +140,18 @@
   function writeSoon() {
     clearTimeout(_deb);
     _deb = setTimeout(function () { writeNow(false); }, DEBOUNCE);
+  }
+  /* ---------- v1.1：いま書いている最中のもの ---------- */
+  function writeLive() {
+    if (!_on || !_db || !_uid || !_room) return;
+    if (_lv === _lvSent) return;
+    _lvSent = _lv; _lvLast = now(); _wrote = true;
+    myDoc().set({
+      room: _room, uid: _uid, name: (_me && _me.name) || '', live: _lvSent,
+      at: (w.fb && w.fb.serverTimestamp) ? w.fb.serverTimestamp() : new Date()
+    }, { merge: true }).catch(function (e) {
+      if (w.console) console.warn('[CFPresence] live', e && (e.code || e.message));
+    });
   }
   function erase() {
     if (!_wrote || !_db || !_uid) return;
@@ -193,6 +224,7 @@
       erase();
       _room = roomId || null;
       _sel = []; _edit = null; _since = now();
+      _lv = ''; _lvSent = ''; clearTimeout(_lvTimer); _lvTimer = null;
       listen();
       if (_room) writeNow(true);
     },
@@ -201,6 +233,27 @@
       var a = (ids || []).slice(0, MAX_SEL);
       if (a.join(',') === (_sel || []).join(',')) return;
       _sel = a; writeSoon();
+    },
+
+    /* いま書いている最中のもの。o＝{k:'ink'|'txt', …} ／ 消す時は null。
+       🔴 ここに入れたものは保存されない（見せるだけ）。手を離したら必ず null を送ること。 */
+    setLive: function (o) {
+      var s = '';
+      if (o) { try { s = JSON.stringify(o); } catch (e) { s = ''; } }
+      if (s.length > LIVE_MAX) return;           /* 大きすぎる時は送らない（保険） */
+      _lv = s;
+      if (!s) { clearTimeout(_lvTimer); _lvTimer = null; writeLive(); return; }   /* 消すのは待たない */
+      if (_lvTimer) return;
+      var wait = Math.max(0, LIVE_MS - (now() - _lvLast));
+      _lvTimer = setTimeout(function () { _lvTimer = null; writeLive(); }, wait);
+    },
+    /* その人が「いま書いている最中のもの」（読めなければ null） */
+    liveOf: function (p) {
+      if (!p || !p.live) return null;
+      if (p._lo && p._loSrc === p.live) return p._lo;
+      var o = null; try { o = JSON.parse(p.live); } catch (e) { o = null; }
+      p._lo = o; p._loSrc = p.live;
+      return o;
     },
 
     setEdit: function (id) {
@@ -234,13 +287,15 @@
     stop: function () {
       erase();
       _on = false; _room = null; _raw = []; _live = [];
+      _lv = ''; _lvSent = ''; clearTimeout(_lvTimer); _lvTimer = null;
       clearTimeout(_deb); clearInterval(_beat); clearInterval(_sweep);
       if (_unsub) { try { _unsub(); } catch (e) { } _unsub = null; }
       if (_onChange) { try { _onChange(_live); } catch (e) { } }
     },
 
     /* テスト用：時間の決まりを外から見る */
-    _const: { STALE_MS: STALE_MS, BEAT_MS: BEAT_MS, DEBOUNCE: DEBOUNCE, PALETTE: PALETTE }
+    _const: { STALE_MS: STALE_MS, BEAT_MS: BEAT_MS, DEBOUNCE: DEBOUNCE, PALETTE: PALETTE,
+              LIVE_MS: LIVE_MS, LIVE_MAX: LIVE_MAX }
   };
 
   w.CFPresence = API;
