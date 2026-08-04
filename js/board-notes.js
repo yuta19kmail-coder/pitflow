@@ -135,12 +135,18 @@
     return reply.uid && reply.uid === _meId();
   }
 
+  /* 👤 アバター。CoreMembers の顔写真があれば写真、無ければ頭文字（v1.21.0）
+     ⚠ 以前は頭文字しか出しておらず、CoreMembers に写真が入っていても反映されなかった。
+        写真は members-pit.js が state.staff[].photo に入れてくれている（他の画面と同じ出どころ）。 */
   function _renderAvatar(id, sizePx) {
-    const name = _staffName(id) || '?';
+    const s = _staffById(id);
+    const name = (s && s.name) || _staffName(id) || '?';
     const init = _staffInitial(id);
     const sz = sizePx || 22;
     const style = `width:${sz}px;height:${sz}px;font-size:${Math.round(sz * 0.42)}px`;
-    return `<span class="bn-av" title="${_esc(name)}" style="${style}">${_esc(init)}</span>`;
+    const photo = s && s.photo;
+    const inner = photo ? `<img src="${_esc(photo)}" alt="" loading="lazy">` : _esc(init);
+    return `<span class="bn-av${photo ? ' has-photo' : ''}" title="${_esc(name)}" style="${style}">${inner}</span>`;
   }
 
   function _renderReplies(note) {
@@ -496,13 +502,21 @@
     const wrap = document.getElementById('bn-inp-photo-preview');
     if (!wrap) return;
     wrap.innerHTML = (note && note.imageURL) ? _imgPreviewHtml(note.imageURL) : '';
+    _setFileName(note && note.imageURL ? '画像あり' : '');
+  }
+  /* 📎 選んだファイル名をボタンの横に出す（v1.21.0）。
+     ⚠ input を隠したので、何も出さないと「選べたのか分からない」状態になる。 */
+  function _setFileName(t) {
+    const el = document.getElementById('bn-file-name');
+    if (el) el.textContent = t || '';
   }
 
   // 画像選択時：縮小（最大長辺1000px）して dataURL 化（localStorage 容量対策）
   window.bnOnPhotoChange = function (input) {
     const file = input && input.files && input.files[0];
     if (!file) return;
-    if (!/^image\//.test(file.type)) { _toast('画像ファイルを選んでください'); return; }
+    if (!/^image\//.test(file.type)) { _toast('画像ファイルを選んでください'); input.value = ''; return; }
+    _setFileName(file.name.length > 26 ? file.name.slice(0, 24) + '…' : file.name);
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
@@ -529,6 +543,10 @@
     _editor.photoChanged = true;
     const wrap = document.getElementById('bn-inp-photo-preview');
     if (wrap) wrap.innerHTML = '';
+    _setFileName('');
+    /* ⚠ input を空に戻さないと「同じ写真をもう一度選ぶ」が効かない（change が起きないため） */
+    const inp = document.querySelector('.bn-file input[type=file]');
+    if (inp) inp.value = '';
   };
 
   function _renderMemberPicker() {

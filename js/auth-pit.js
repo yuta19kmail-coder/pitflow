@@ -39,7 +39,25 @@
   function setBusy(b) {
     _busy = !!b;
     var btn = el('pl-google');
-    if (btn) { btn.disabled = !!b; btn.textContent = b ? 'ログイン中…' : 'Google でログイン'; }
+    if (!btn) return;
+    btn.disabled = !!b;
+    /* ⚠ ここで btn.textContent を書くと Googleロゴの<svg>ごと消える（v1.18.1で修正）。
+       文字は中の .pl-label だけ差し替える。 */
+    var lab = btn.querySelector('.pl-label');
+    if (lab) lab.textContent = b ? 'ログイン中…' : (window.PIT_CLOUD ? 'Google でログイン' : 'サンプルで入る');
+  }
+
+  /* 🔴 認証状態の確認が終わった＝「認証状態を確認中…」を消してログインボタンを出す。
+     ⚠ index.html は #pl-loading を出しっぱなし・#pl-google を display:none で置いている。
+        これを戻すコードがどこにも無かったので、**ログアウト状態だと永久にボタンが出ず、
+        誰もログインできなかった**（v1.18.1で修正）。ログイン済みの人は showApp() で
+        ログイン画面ごと隠れるため、今まで表に出ていなかった。
+     ⚠ 認証の分岐（入れた/入れない/エラー/時間切れ）から必ずここを通すこと。 */
+  function authReady() {
+    var ld = el('pl-loading');
+    if (ld) ld.style.display = 'none';
+    var btn = el('pl-google');
+    if (btn && !isInAppBrowser()) btn.style.display = '';
   }
 
   /* ---- アプリ内ブラウザ（LINE/Instagram等）は Google ログインが弾かれる ---- */
@@ -75,7 +93,7 @@
 
     var authed = false;
     try { authed = localStorage.getItem(FLAG) === '1'; } catch (e) {}
-    if (authed) showApp(); else showLogin();
+    if (authed) { showApp(); } else { showLogin(); setBusy(false); authReady(); }
   }
 
   /* =======================================================
@@ -170,6 +188,7 @@
   function kickOut(msg) {
     loginError(msg);
     setBusy(false);
+    authReady();
     try { window.fb.auth.signOut(); } catch (e) {}
     showLogin();
   }
@@ -209,6 +228,7 @@
     window.fb.currentMember = null;
     setBusy(false);
     showLogin();
+    authReady();
     if (typeof window.pitOnLogout === 'function') {
       try { window.pitOnLogout(); } catch (e) {}
     }
@@ -223,15 +243,29 @@
     if (isInAppBrowser()) {
       var w = el('pl-inapp'); if (w) w.style.display = 'block';
       var b = el('pl-google'); if (b) b.style.display = 'none';
+      authReady();   /* ボタンは出さないが「確認中…」は消す（説明文だけ見せる） */
     }
 
     if (window.fb.auth.getRedirectResult) {
       window.fb.auth.getRedirectResult().catch(function (err) {
         console.error('[auth-pit] リダイレクト戻りでエラー', err);
         loginError('ログインに失敗しました（' + ((err && err.code) || '不明') + '）');
+        authReady();
       });
     }
+
+    /* 🛟 保険：8秒たっても認証の返事が来なければ、とにかくボタンを出す。
+       通信が不安定な時に「認証状態を確認中…」で固まったまま何もできない、を防ぐ。
+       ログイン済みなら showApp() でログイン画面ごと消えているので、この保険は効かない。 */
+    var _t = setTimeout(function () {
+      if (!(window.fb.auth && window.fb.auth.currentUser)) {
+        console.warn('[auth-pit] 認証の返事が8秒来ないのでログインボタンを出します');
+        authReady();
+      }
+    }, 8000);
+
     window.fb.auth.onAuthStateChanged(function (user) {
+      clearTimeout(_t);
       if (user) onSignedIn(user); else onSignedOut();
     });
   }

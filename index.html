@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.18.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.21.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -13,15 +13,15 @@
 <link rel="stylesheet" href="css/base.css?v=8">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=40">
-<link rel="stylesheet" href="css/polish.css?v=166">
+<link rel="stylesheet" href="css/polish.css?v=168">
 <link rel="stylesheet" href="css/floor.css?v=23">
-<link rel="stylesheet" href="css/board-notes.css?v=1">
+<link rel="stylesheet" href="css/board-notes.css?v=2">
 <link rel="stylesheet" href="css/search.css?v=5">
 <link rel="stylesheet" href="css/customer-detail.css?v=8">
 <link rel="stylesheet" href="css/work-content.css?v=6">
 <link rel="stylesheet" href="css/parking.css?v=3">
 <link rel="stylesheet" href="css/launcher.css?v=c679db13">
-<link rel="stylesheet" href="css/card-view.css?v=20">
+<link rel="stylesheet" href="css/card-view.css?v=22">
 <link rel="stylesheet" href="css/card-hover.css?v=19">
 <link rel="stylesheet" href="css/sales.css?v=5">
 <link rel="stylesheet" href="css/shaken.css?v=14">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.18.0</div>
+    <div class="login-ver">v1.23.0</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.18.0</span>
+    <span class="ver">v1.23.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -528,8 +528,33 @@
         <button class="vh-btn" onclick="pitCancelCard()">← やめる</button>
         <div class="view-title" id="card-title" style="flex:1;min-width:0">入庫カード</div>
         <button class="vh-btn" onclick="pitCardCheck()"><i data-ic=search data-ics=16></i> 入力チェック</button>
-        <button class="vh-btn" onclick="pitSaveCard()"><i data-ic=save data-ics=16></i> 保存する</button>
-        <button class="vh-btn vh-kari" onclick="pitSaveTentative()"><i data-ic=pencil data-ics=16></i> 仮予約で登録</button>
+        <!-- 🗂 その他保存＝ふだん使わない保存の仕方をここにまとめる（v1.19.0）。
+             ⚠ 一等地（一番右）は「印刷して保存」。いちばん多い操作を動かさないこと。 -->
+        <div class="vh-menu" id="cs-menu">
+          <button class="vh-btn" id="cs-menu-btn" aria-haspopup="true" aria-expanded="false" onclick="pitSaveMenuToggle(event)">
+            <i data-ic=save data-ics=16></i> その他保存 <i data-ic=chevDown data-ics=14></i>
+          </button>
+          <div class="vh-menu-panel" id="cs-menu-panel" role="menu">
+            <button class="vh-mi" role="menuitem" onclick="pitSaveTentative()">
+              <b><i data-ic=pencil data-ics=16></i> 仮予約で保存</b>
+              <span>まだ確定していない予約。カレンダーに「仮」付きで載る</span></button>
+            <div class="vh-msep"></div>
+            <div class="vh-mhead">もう入庫してしまった車を、あとから記録する</div>
+            <button class="vh-mi" role="menuitem" onclick="pitSaveInWork(true)">
+              <b><i data-ic=printer data-ics=16></i> 入庫中に印刷して保存</b>
+              <span>表紙を印刷して、そのままタスクボードの「点検待ち」へ</span></button>
+            <button class="vh-mi" role="menuitem" onclick="pitSaveInWork(false)">
+              <b><i data-ic=download data-ics=16></i> 入庫中に保存のみ</b>
+              <span>印刷せずに、タスクボードの「点検待ち」へ</span></button>
+            <div class="vh-msep"></div>
+            <button class="vh-mi" role="menuitem" onclick="pitSaveCard()">
+              <b><i data-ic=save data-ics=16></i> 予約保存のみ</b>
+              <span>印刷せずに、ふつうの予約として保存する</span></button>
+            <button class="vh-mi" role="menuitem" onclick="pitPrintCoverOnly()">
+              <b><i data-ic=printer data-ics=16></i> 表紙印刷のみ</b>
+              <span>表紙を刷るだけ。保存はせず、この画面に残る</span></button>
+          </div>
+        </div>
         <button class="vh-btn primary" onclick="pitSaveAndPrint()"><i data-ic=printer data-ics=16></i> 印刷して保存</button>
       </div>
       <div id="md-body" class="card-page-body"></div>
@@ -744,7 +769,13 @@
         </div>
         <div>
           <label class="bn-lb">画像（任意）</label>
-          <input type="file" accept="image/*" onchange="bnOnPhotoChange(this)" style="font-size:12px;color:var(--text2)">
+          <!-- 📎 見た目はアプリのボタンに揃える。input 本体は label の中に隠してある（機能はそのまま） -->
+          <label class="bn-file">
+            <span class="ic"><i data-ic=image data-ics=16></i></span>
+            <span>画像を選ぶ</span>
+            <input type="file" accept="image/*" onchange="bnOnPhotoChange(this)">
+          </label>
+          <span class="bn-file-name" id="bn-file-name"></span>
           <div id="bn-inp-photo-preview" style="margin-top:8px"></div>
         </div>
       </div>
@@ -784,7 +815,7 @@
 <script src="js/db-pit.js?v=42"></script>
 <script src="js/views.js?v=45"></script>
 <script src="js/work-content.js?v=10"></script>
-<script src="js/card-detail.js?v=102"></script>
+<script src="js/card-detail.js?v=105"></script>
 <script src="js/card-view.js?v=38"></script>
 <script src="js/cover-print.js?v=7"></script>
 <script src="js/avail.js?v=6"></script>
@@ -794,7 +825,7 @@
 <script src="js/sample-reservations.js?v=28"></script>
 <script src="js/dashboard.js?v=17"></script>
 <script src="js/parking.js?v=6"></script>
-<script src="js/board-notes.js?v=6"></script>
+<script src="js/board-notes.js?v=7"></script>
 <script src="js/search.js?v=10"></script>
 <script src="js/maintdash.js?v=3"></script>
 <script src="js/sales.js?v=9"></script>
@@ -804,7 +835,7 @@
 <script src="js/settings.js?v=23"></script>
 <script src="js/settings-transfer.js?v=1"></script>
 <script src="js/import-bizcloud.js?v=6"></script>
-<script src="js/rules.js?v=10"></script>
+<script src="js/rules.js?v=11"></script>
 <script src="js/today.js?v=24"></script>
 <script src="js/undetermined.js?v=8"></script>
 <script src="js/reserve.js?v=60"></script>
@@ -818,7 +849,7 @@
 <script src="js/outsource.js?v=3"></script>
 <script src="js/loaner.js?v=58"></script>
 <script src="js/fleet.js?v=25"></script>
-<script src="js/auth-pit.js?v=12"></script>
+<script src="js/auth-pit.js?v=13"></script>
 <script src="js/members-pit.js?v=11"></script>
 <script src="js/oplog-pit.js?v=1"></script>
 <script src="js/news-pit.js?v=1"></script>
@@ -857,6 +888,9 @@
 <script src="js/import-cloud.js?v=3"></script><!-- 顧客データの取込（本番・分割送信／settings.js より後ろ） -->
 <script src="js/coreflow-sync.js?v=ca024d30"></script><!-- 同期ランプ共通部品（PitFlowではふきだしだけ借りる。sync-pit.js より後ろ） -->
 <script src="js/deeplink-pit.js?v=1"></script><!-- ?card= でカードを直接開く（MHS Todayボードの「詳細を見る」の受け口）。card-detail.js / views.js より後ろ -->
+<script src="js/ctxmenu-pit.js?v=1"></script><!-- 🖱 右クリックメニュー（全ビュー共通）。対象を探すだけなので、どのビューのJSより後ろに置く -->
+<script src="js/mhs-pit.js?v=1"></script><!-- 📡 MHSの予定を読む（新規予約の「担当の予定」）。card-detail.js より後ろ -->
+<script src="js/carname-pit.js?v=1"></script><!-- 🚗 メーカー・車種の入力候補（顧客データから）。card-detail.js より後ろ -->
 <script>/* 本番（クラウド保存）では開発用の入口を隠す＝実データにサンプルを混ぜないため */
 (function(){ if(!window.PIT_CLOUD) return; var n=document.querySelectorAll("[data-dev-only]");
   for(var i=0;i<n.length;i++) n[i].style.display="none"; })();</script>

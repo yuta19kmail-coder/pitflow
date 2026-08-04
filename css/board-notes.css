@@ -173,7 +173,26 @@
   border-radius: 50%; background: linear-gradient(135deg, #6abf6a, #378ADD);
   color: #fff; font-weight: 700; border: 1.5px solid #fff; flex-shrink: 0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  overflow: hidden;                 /* v1.21.0：顔写真を丸く切り抜く */
 }
+/* CoreMembers の顔写真。写真がある時は下地のグラデーションを消す（透過画像で色が透けないように） */
+.bn-av.has-photo { background: var(--bg3); }
+.bn-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ===== 📎 画像を添付（v1.21.0）＝アプリのボタンとテイストを揃える =====
+   ⚠ <input type=file> の見た目はブラウザごとにバラバラで揃えられないので、
+      本体は隠して <label> をボタンに見せる（中身は透明な input のまま＝機能はそのまま）。 */
+.bn-file {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 9px;
+  padding: 8px 13px; font-size: 12.5px; color: var(--text); cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.bn-file:hover { border-color: var(--brand); background: var(--bg4, var(--bg3)); }
+.bn-file .ic { color: var(--text2); display: inline-flex; }
+.bn-file:hover .ic { color: var(--brand); }
+.bn-file input[type=file] { display: none; }
+.bn-file-name { font-size: 11.5px; color: var(--text3); margin-left: 8px; }
 
 /* 「済」スタンプ */
 .bn-done-stamp {

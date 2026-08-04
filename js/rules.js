@@ -353,6 +353,10 @@
      戻り値＝確定する日付（やめたら元の日付に戻す） */
   window.pitIntakeGuard = function (card, newDate, oldDate) {
     if (!newDate || newDate === oldDate || !window.pitVerdict) return newDate;
+    /* v1.19.0：過去の日付はそのまま通す。
+       「もう入庫してしまった車をあとから記録する」ための日付なので、
+       これから受け付けられるか（○△×・休業日）を聞いても意味がない。 */
+    if (newDate < ymd(new Date())) return newDate;
     const v = pitVerdict(newDate);
     const team = (card && card.boardId === 'import') ? 'import' : 'default';
     const tv = v[team];

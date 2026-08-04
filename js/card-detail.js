@@ -138,6 +138,117 @@ function pitSaveAndPrint(){
 }
 window.pitSaveAndPrint = pitSaveAndPrint;
 
+/* ===================================================================
+   v1.19.0  右上の保存ボタンの整理と「その他保存」メニュー
+   -------------------------------------------------------------------
+   ◎並び（右から）  印刷して保存 ／ その他保存▾ ／ 入力チェック
+     いちばん多い「印刷して保存」を一等地に置いたまま、ふだん使わない
+     保存の仕方を「その他保存」の中にたたんだ。
+   ◎その他保存の中身
+     仮予約で保存 ／ 入庫中に印刷して保存 ／ 入庫中に保存のみ ／
+     予約保存のみ ／ 表紙印刷のみ
+   =================================================================== */
+
+/* ---- ▾ メニューの開け閉め（外側クリック・Esc で閉じる） ---- */
+function pitSaveMenuClose(){
+  const m = document.getElementById('cs-menu');
+  if (!m) return;
+  m.classList.remove('open');
+  const b = document.getElementById('cs-menu-btn');
+  if (b) b.setAttribute('aria-expanded', 'false');
+}
+window.pitSaveMenuClose = pitSaveMenuClose;
+
+function pitSaveMenuToggle(e){
+  if (e) e.stopPropagation();
+  const m = document.getElementById('cs-menu');
+  if (!m) return;
+  const open = !m.classList.contains('open');
+  m.classList.toggle('open', open);
+  const b = document.getElementById('cs-menu-btn');
+  if (b) b.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+window.pitSaveMenuToggle = pitSaveMenuToggle;
+
+document.addEventListener('click', function (e){
+  const m = document.getElementById('cs-menu');
+  if (m && m.classList.contains('open') && !m.contains(e.target)) pitSaveMenuClose();
+});
+document.addEventListener('keydown', function (e){
+  if (e.key === 'Escape') pitSaveMenuClose();
+});
+
+/* 🖨 表紙印刷のみ＝刷るだけ。保存もせず、画面もそのまま（ゆうた指定）。
+   ⚠ 下書き（_draft）は下書きのまま残す＝ここで確定させないこと。
+      「もう一枚刷りたい」「刷ってから続きを入力する」ための入口。 */
+function pitPrintCoverOnly(){
+  pitSaveMenuClose();
+  const id = _editingCardId;
+  if (!id) return;
+  if (window.pitPrintCover) pitPrintCover(id);
+  if (window.pitToast) pitToast('表紙を印刷しました（保存はしていません）');
+}
+window.pitPrintCoverOnly = pitPrintCoverOnly;
+
+/* 🚗 入庫中に保存＝**もう入庫してしまった車を、あとから記録する**ための保存（v1.19.0）
+   -------------------------------------------------------------------
+   緊急で入れてしまった／登録を忘れていた車を、予約の段階を飛ばして
+   そのまま **1課（国産）/ 2課（輸入）のタスクボードの「点検待ち」** に置く。
+
+   ◎入庫日は過去の日付をそのまま受け取る。カウント（その日の入庫台数）は
+     入力された入庫日で数えられるので、あとから入れても台数が合う。
+   ◎実入庫日（actualInAt）にも同じ日付を入れる＝「いつ入ったか」が残る。
+   ⚠ 国産／輸入が未選択だと、どちらのタスクボードに置くか決まらないので先に選んでもらう。 */
+function pitSaveInWork(alsoPrint){
+  pitSaveMenuClose();
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+
+  if (!c.boardId){
+    const msg = '先に「国産車」か「輸入車」を選んでください。';
+    const detail = 'タスクボードは 1課（国産）と 2課（輸入）に分かれているので、どちらに置くかが決まりません。';
+    if (window.UI && UI.alert) UI.alert(msg, { title: 'どちらの課か決まっていません', detail: detail });
+    else if (window.pitToast) pitToast(msg);
+    return;
+  }
+
+  const today = ymd(new Date());
+  let filled = false;
+  if (!c.reserveDate){ c.reserveDate = today; filled = true; }   /* 空なら今日＝カウントの基準日 */
+
+  c.status     = 'check';          /* タスクボードの最初の列＝点検待ち */
+  c.intakeTbd  = false;            /* 入庫日は決まっている */
+  c.tentative  = false;            /* 仮予約ではない */
+  if (!c.actualInAt) c.actualInAt = c.reserveDate;   /* 実入庫日＝入力された入庫日 */
+  if (c._draft) delete c._draft;                     /* ここで初めて確定＝保存される */
+  if (window.pitClearDraftKeep) pitClearDraftKeep();
+
+  const past  = c.reserveDate < today;
+  const board = (c.boardId === 'import') ? '2課（輸入）' : '1課（国産）';
+  if (window.logFlow) logFlow(c, '入庫中で登録（' + c.reserveDate + '・' + board + 'の点検待ちへ）');
+  if (window.pitLog) pitLog('入庫中で登録', { cardId: c.id, kind: 'in',
+    label: (c.customer ? c.customer + ' 様' : '') + (c.car ? ' / ' + c.car : '') + ' / 入庫日 ' + c.reserveDate + (past ? '（過去日）' : '') });
+
+  if (alsoPrint && window.pitPrintCover) pitPrintCover(c.id);   /* 印刷は別iframe＝画面遷移と独立 */
+
+  if (window.pitToast){
+    pitToast(board + 'の「点検待ち」に入れました'
+      + (past ? '（入庫日 ' + c.reserveDate + ' で記録）' : '')
+      + (filled ? '（入庫日が空だったので今日にしました）' : ''));
+  }
+  closeDetail();   /* 元の画面へ戻る（ゆうた指定） */
+}
+window.pitSaveInWork = pitSaveInWork;
+
+/* 既存の3つもメニューから呼ばれるので、押したらメニューを閉じる */
+(function (){
+  ['pitSaveTentative', 'pitSaveCard'].forEach(function (fn){
+    const orig = window[fn];
+    if (typeof orig !== 'function') return;
+    window[fn] = function (){ pitSaveMenuClose(); return orig.apply(this, arguments); };
+  });
+})();
+
 function renderCardForm(c){
   const body = document.getElementById(_cardBodyId || 'md-body');
   if (!body) return;
@@ -206,13 +317,13 @@ function renderCardForm(c){
   h += '<div class="cf-row">';
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">国産車／輸入車</div>' + chips(c, 'boardId', TEAM_ITEMS) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 6em"><div class="cf-label">カルテNo.</div>' + textIn(c, 'karteNo', 'placeholder="例 1234"') + '</div>';
-  h += '<div class="cf-field" style="flex:0 0 6.5em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ"') + '</div>';
+  h += '<div class="cf-field cf-field-cn" style="flex:0 0 8.5em"><div class="cf-label">メーカー</div>' + textIn(c, 'maker', 'placeholder="トヨタ" data-cn="maker"') + '</div>';
   h += '<div class="cf-field" style="flex:1"><div class="cf-label">ナンバー</div>' + plateInput(c) + '</div>';
   h += '<div class="cf-field" style="flex:0 0 auto"><div class="cf-label">車両注意</div>' + driveChips(c) + '</div>';
   h += '</div>';
   /* 4行目：車種（グレード） */
   h += '<div class="cf-row">';
-  h += '<div class="cf-field" style="flex:1"><div class="cf-label">車種（グレード）</div>' + textIn(c, 'car', 'placeholder="例 アクアGz"') + '</div>';
+  h += '<div class="cf-field cf-field-cn" style="flex:1"><div class="cf-label">車種（グレード）</div>' + textIn(c, 'car', 'placeholder="例 アクアGz" data-cn="car"') + '</div>';
   h += '</div>';
   /* 5行目：入庫日｜入庫時刻(1BOX＋ショートカット)｜予約受付日（変わらず） */
   h += '<div class="cf-row">';
@@ -328,6 +439,26 @@ function renderCardForm(c){
 
   // 🧰 作業内容テンプレート（症状ホイール）を起動（内容セクションがある時だけ）
   if (window.WorkContent && WorkContent.mount) WorkContent.mount(body);
+
+  /* 🚗 メーカー・車種の候補（v1.23.0）。候補の元は取り込んだ顧客データ＝車検証の記載どおり。
+     ⚠ 値の保存は上の input ハンドラに任せている。ここでは「選んだ後の後始末」だけする。 */
+  if (window.PitCarName && PitCarName.mount) PitCarName.mount(body, c, {
+    onMaker: function (v) {
+      /* 国産／輸入がまだなら、メーカーから決めて入れる（すでに選んであれば上書きしない）。
+         ⚠ 車検証どおりの表記なので、ミニは年式で BMW と MINI の両方がある。どちらも輸入。 */
+      if (c.boardId) return;
+      const bd = PitCarName.boardOf(v);
+      if (bd !== 'default' && bd !== 'import') return;
+      c.boardId = bd;
+      c.division = (bd === 'import') ? 'div2' : 'div1';
+      _syncStaffToDivision(c);
+      if (window.PitDB) PitDB.save();
+      renderCardForm(c);
+      /* 描き直しで焦点が飛ぶので、次に打つ車種へ移す */
+      const nx = document.querySelector('.cf-panel[data-tab="basic"] input[data-cn="car"]');
+      if (nx) { try { nx.focus(); } catch (e) {} }
+    }
+  });
 
   // v0.83.1 フォーム再描画のたびに自動保存（チップ＝作業/受付タイプ・相談・Ⓕ・車種固定などの選択を取りこぼさない）。
   //   ※デバウンス保存なので、カレンダー送り等の連続再描画でも localStorage 書き込みは1回にまとまる。
@@ -506,6 +637,14 @@ function _bindAutoKanaSeg(nameEl, kanaEl, onCommit){
   nameEl.addEventListener('input', function(){ if (!nameEl.value){ base = ''; comp = ''; kanaEl.value = ''; if (onCommit) onCommit(); } });
 }
 
+/* 🔁 いま開いているカードを描き直す（外部から呼ぶ入口）。
+   MHSの予定が後から届いた時に、js/mhs-pit.js がこれを呼ぶ。
+   入力途中の値はカード（c）へ随時入っているので、描き直しで消えることはない。 */
+window.pitCardRepaint = function(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (c && typeof renderCardForm === 'function') renderCardForm(c);
+};
+
 function cfSideHtml(c){
   const today = new Date(); today.setHours(0,0,0,0);
   const tStr = ymd(today);
@@ -572,21 +711,46 @@ function _cfsDayListHtml(c){
   return h;
 }
 
-/* v0.84.0 担当フロントのMHS予定（来客以外＝MTG/外出など）。代車カレンダーの上。
-   データは window.pitMhsSchedule(担当名, 日付) フックから取得。本番のMHS連携を入れたらここに実データが流れる。 */
+/* v0.84.0 → v1.22.0 担当フロントのMHS予定（来客以外＝MTG・外出・ルーティン・当番・休み）。代車カレンダーの上。
+   データは js/mhs-pit.js が MHS の配る appSummaries/mhsDigest-YYYY-MM から読んで
+   window.pitMhsSchedule(担当名, 日付) / window.pitMhsStatus(日付) で渡してくる。
+   ⚠ ここは「読んで出すだけ」。予定の展開（繰り返し・当番・休日振替）は MHS 側の仕事。 */
 function _cfsMhsHtml(c){
   const who = (c.frontStaff || '').trim();
   const head = '<div class="mhs-head"><i data-ic=calendar data-ics=16></i> <span>'+(who ? _pe(who)+' の予定' : '担当の予定')+'</span><span class="mhs-tag">MHS</span></div>';
   if (!who) return '<div class="mhs-box">'+head+'<div class="mhs-empty">フロント担当を選ぶと、その人のMHS予定が出ます。</div></div>';
+  const ds = c.reserveDate || ymd(new Date());
   let list = [];
-  if (typeof window.pitMhsSchedule === 'function'){ try { list = window.pitMhsSchedule(who, c.reserveDate || ymd(new Date())) || []; } catch(e){ list = []; } }
-  if (!list.length) return '<div class="mhs-box">'+head+'<div class="mhs-empty">MHS連携は準備中（本番ログイン接続後に予定を表示）。</div></div>';
-  const ic = {mtg:'<i data-ic=clipboard data-ics=16></i>', out:'<i data-ic=car data-ics=16></i>', off:'<i data-ic=cup data-ics=15></i>', desk:'<i data-ic=monitor data-ics=16></i>'};
-  const rows = list.map(function(s){ return '<div class="mhs-row"><span class="mhs-t">'+_pe(s.t||'')+'</span><span class="mhs-ic">'+(ic[s.type]||'•')+'</span><span class="mhs-l">'+_pe(s.label||'')+'</span></div>'; }).join('');
-  return '<div class="mhs-box">'+head+'<div class="mhs-note">来客とは別の予定（MTG・外出など）。</div>'+rows+'</div>';
+  if (typeof window.pitMhsSchedule === 'function'){ try { list = window.pitMhsSchedule(who, ds) || []; } catch(e){ list = []; } }
+  let st = null;
+  if (typeof window.pitMhsStatus === 'function'){ try { st = window.pitMhsStatus(ds); } catch(e){ st = null; } }
+  const foot = _cfsMhsFoot(st);
+  if (!list.length){
+    /* 「予定が無い」のか「まだ届いていない／読めない」のかを、はっきり書き分ける。
+       ここを一緒くたにすると『予定なし』を信じて予約を入れてしまう。 */
+    let msg = 'この日の予定は入っていません。';
+    if (!st || st.state === 'loading')  msg = 'MHSの予定を読み込んでいます…';
+    else if (st.state === 'error')      msg = 'MHSの予定を読めませんでした（通信または権限）。MHS側で確認してください。';
+    else if (st.state === 'none')       msg = 'この月ぶんがMHSからまだ届いていません（誰かがMHSを開くと配られます）。';
+    return '<div class="mhs-box">'+head+'<div class="mhs-empty">'+msg+'</div>'+foot+'</div>';
+  }
+  const ic = {mtg:'<i data-ic=clipboard data-ics=16></i>', out:'<i data-ic=car data-ics=16></i>', off:'<i data-ic=cup data-ics=15></i>',
+              routine:'<i data-ic=recycle data-ics=16></i>', duty:'<i data-ic=flag data-ics=16></i>', desk:'<i data-ic=monitor data-ics=16></i>'};
+  const rows = list.map(function(s){ return '<div class="mhs-row'+(s.type==='off'?' off':'')+'"><span class="mhs-t">'+_pe(s.t||'終日')+'</span><span class="mhs-ic">'+(ic[s.type]||'•')+'</span><span class="mhs-l">'+_pe(s.label||'')+'</span></div>'; }).join('');
+  return '<div class="mhs-box">'+head+'<div class="mhs-note">来客とは別の予定（MTG・外出・ルーティン・当番・休み）。</div>'+rows+foot+'</div>';
 }
 
-/* v0.84.0 MHS予定取得フック（既定は空＝「準備中」表示）。本番のMHS連携でここを実データ取得に差し替える。 */
+/* 「この予定はいつ時点のものか」。MHSを開く人がいない日が続くと古くなるので必ず出す。 */
+function _cfsMhsFoot(st){
+  if (!st || st.state !== 'ok' || !st.updatedAt) return '';
+  const d = new Date(st.updatedAt);
+  const p2 = function(n){ return String(n).padStart(2,'0'); };
+  const t = (d.getMonth()+1)+'/'+d.getDate()+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+  const old = (st.staleDays != null && st.staleDays >= 2);
+  return '<div class="mhs-foot'+(old?' old':'')+'">MHS更新 '+t+(old ? '（'+st.staleDays+'日前・古い可能性）' : '')+'</div>';
+}
+
+/* v0.84.0 MHS予定取得フック。js/mhs-pit.js が読み込まれていない時の保険（空＝出さない）。 */
 if (!window.pitMhsSchedule){ window.pitMhsSchedule = function(staffName, dateStr){ return []; }; }
 
 /* ⏱ 最短入庫カード（チーム別・クリックで入庫日に入る）

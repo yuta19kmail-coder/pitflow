@@ -306,3 +306,63 @@ input.cv-fixinput[type=date]{ color-scheme:dark; }
 .cv-shslot button.on{ background:var(--brand,#1f7a4d); border-color:var(--brand,#1f7a4d); color:#fff; }
 .cv-shpb-act{ display:flex; gap:8px; margin-top:16px; }
 .cv-shpb-act .cv-shbtn{ flex:1; text-align:center; }
+
+
+/* ===== 🗂 「その他保存」メニュー（新規予約カードの右上・v1.19.0） =====
+   ⚠ カードのヘッダ(.card-page-head)は position:sticky なので、パネルは
+      その中で position:absolute にして下へ出す。z-index はヘッダより上。 */
+.vh-menu{ position:relative; display:inline-flex; }
+.vh-menu-panel{
+  position:absolute; top:calc(100% + 6px); right:0; min-width:286px;
+  background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  box-shadow:0 16px 44px rgba(0,0,0,.5); padding:6px; z-index:60;
+  display:none; text-align:left;
+}
+.vh-menu.open .vh-menu-panel{ display:block; }
+.vh-mhead{ font-size:10.5px; font-weight:800; color:var(--text3); padding:6px 12px 3px; letter-spacing:.02em; }
+.vh-mi{
+  display:flex; flex-direction:column; gap:2px; width:100%; text-align:left;
+  background:transparent; border:0; border-radius:9px; padding:9px 12px;
+  cursor:pointer; color:var(--text); font-family:inherit;
+}
+.vh-mi:hover{ background:var(--bg3); }
+.vh-mi b{ font-size:13.5px; font-weight:700; display:inline-flex; align-items:center; gap:7px; }
+.vh-mi span{ font-size:11.5px; color:var(--text3); line-height:1.5; }
+.vh-msep{ height:1px; background:var(--border); margin:5px 8px; }
+@media (max-width:768px){
+  .vh-menu-panel{ right:auto; left:0; min-width:min(88vw,286px); }
+}
+
+/* ===== 🖱 右クリックメニュー（PitFlow 全体・v1.20.0） =====
+   ⚠ body 直下に出す（親の overflow / transform に潰されないように）。
+      位置は JS が画面の内側へ寄せて決める（はみ出したら反転）。 */
+.pcx{
+  position:fixed; z-index:9000; min-width:232px; max-width:320px;
+  background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+  box-shadow:0 18px 48px rgba(0,0,0,.55); padding:6px;
+  font-size:13px; user-select:none;
+  animation:pcxIn .09s ease-out;
+}
+@keyframes pcxIn{ from{ opacity:0; transform:translateY(-3px) } to{ opacity:1; transform:none } }
+.pcx-sub{ z-index:9001; min-width:172px; }
+.pcx-title{
+  font-size:12px; font-weight:800; color:var(--text2);
+  padding:7px 11px 8px; margin-bottom:4px; border-bottom:1px solid var(--border);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pcx-head{ font-size:10.5px; font-weight:800; color:var(--text3); padding:6px 11px 3px; letter-spacing:.02em; }
+.pcx-sep{ height:1px; background:var(--border); margin:5px 7px; }
+.pcx-i{
+  display:flex; align-items:center; gap:9px; width:100%; text-align:left;
+  background:transparent; border:0; border-radius:8px; padding:7px 10px;
+  color:var(--text); font-family:inherit; font-size:13px; cursor:pointer;
+}
+.pcx-i:hover:not(:disabled){ background:var(--bg3); }
+.pcx-i.is-off{ opacity:.42; cursor:default; }
+.pcx-i.danger b{ color:#ef4444; }
+.pcx-ic{ display:inline-flex; width:16px; flex:0 0 16px; color:var(--text2); }
+.pcx-i:hover:not(:disabled) .pcx-ic{ color:var(--brand); }
+.pcx-tx{ display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
+.pcx-tx b{ font-weight:600; font-size:13px; white-space:nowrap; }
+.pcx-tx span{ font-size:11px; color:var(--text3); line-height:1.45; }
+.pcx-arrow{ display:inline-flex; color:var(--text3); flex:0 0 auto; margin-left:2px; }
