@@ -286,7 +286,9 @@ function _todBuildRows(cards, isReturn){
   // 休憩の前→休憩→…→最後、の順にカードを割り振る
   const cut = TODAY_BREAKS.map(b => _todMin(b.from));
   for (let bi = 0; bi <= TODAY_BREAKS.length; bi++){
-    const limit = (bi < TODAY_BREAKS.length) ? cut[bi] : 99999;
+    /* ⚠ 最後の区切りは Infinity。99999 にすると「時刻なし（_todMin が 99999 を返す）」のカードが
+       どの区切りにも入らず、当日ビューから丸ごと消える（v1.18.0 で修正） */
+    const limit = (bi < TODAY_BREAKS.length) ? cut[bi] : Infinity;
     const seg = [];
     while (ci < cards.length && tOf(cards[ci]) < limit){ seg.push(cards[ci]); ci++; }
     blocks.push({ type: 'seg', cards: seg });
