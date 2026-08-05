@@ -49,7 +49,8 @@
   function _meId() {
     let id = null;
     try { id = localStorage.getItem(ME_KEY); } catch (e) {}
-    const staff = state.staff || [];
+    /* 自社（小林モータース）は「自分」になれない＝人ではないので候補から外す */
+    const staff = _bnStaff();
     if (id && staff.some(s => s.id === id)) return id;
     const front = staff.find(s => s.front) || staff[0];
     return front ? front.id : null;
@@ -66,6 +67,14 @@
         || null;
   }
   function _staffName(id) { const s = _staffById(id); return s ? s.name : ''; }
+
+  /* 🔴 v1.51.0（ゆうた指定）：付箋の担当に「小林モータース」を出さない。
+     あれは人ではなく、整備ソフト側で担当が「小林モータース」になっている分の**受け皿**。
+     付箋は「人に伝える」ものなので、受け皿を混ぜない（アカウント扱いしない）。
+     ⚠ フロント担当・予約担当・完TEL担当の候補では今までどおり出る＝state.staff 自体は変えない。
+     ⚠ 名前を出す（_staffName / _renderAvatar）方は素の state.staff を見る＝
+        **昔の付箋に「小林モータース」が入っていても、名前とアイコンはちゃんと出る。** */
+  function _bnStaff() { return ((window.state && state.staff) || []).filter(s => !s.isSelf); }
   function _isLeft(id) { const s = _staffById(id); return !!(s && s.left); }
   function _staffInitial(id) {
     const n = _staffName(id);
@@ -188,7 +197,8 @@
 
     // 「自分」セレクタ
     const meId = _meId();
-    const meOpts = (state.staff || []).map(s =>
+    /* 「自分」の選択肢にも自社（小林モータース）は出さない＝人ではないので自分になれない */
+    const meOpts = _bnStaff().map(s =>
       `<option value="${_esc(s.id)}" ${s.id === meId ? 'selected' : ''}>${_esc(s.name)}</option>`).join('');
 
     // シークレット付箋は作成者本人以外には出さない
@@ -552,7 +562,7 @@
   function _renderMemberPicker() {
     const wrap = document.getElementById('bn-inp-members');
     if (!wrap) return;
-    const list = state.staff || [];
+    const list = _bnStaff();
 
     // 一括選択（全員 / クリア / 1課 / 2課 / 受付）
     const quick = document.getElementById('bn-group-quick');
@@ -576,10 +586,10 @@
     if (!list.length) wrap.innerHTML = '<div style="font-size:11px;color:var(--text3)">メンバーがいません</div>';
   }
 
-  window.bnQuickSelectAll = function () { _editor.members = (state.staff || []).map(s => s.id); _renderMemberPicker(); };
+  window.bnQuickSelectAll = function () { _editor.members = _bnStaff().map(s => s.id); _renderMemberPicker(); };
   window.bnQuickClear = function () { _editor.members = []; _renderMemberPicker(); };
   window.bnQuickSelectDivision = function (divId) {
-    const inDiv = (state.staff || []).filter(s =>
+    const inDiv = _bnStaff().filter(s =>
       (Array.isArray(s.divisions) && s.divisions.includes(divId)) || s.division === divId
     ).map(s => s.id);
     if (!inDiv.length) { _toast('この部署のメンバーがいません'); return; }
@@ -589,7 +599,7 @@
     _renderMemberPicker();
   };
   window.bnQuickSelectReception = function () {
-    const recp = (state.staff || []).filter(s => s.reception).map(s => s.id);
+    const recp = _bnStaff().filter(s => s.reception).map(s => s.id);
     if (!recp.length) { _toast('受付メンバーがいません'); return; }
     const allIn = recp.every(u => _editor.members.includes(u));
     if (allIn) _editor.members = _editor.members.filter(u => !recp.includes(u));

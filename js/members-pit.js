@@ -457,7 +457,12 @@
     if (!box) return;
     var cloud = !!window.PIT_CLOUD;
     var canEdit = !cloud || (window.pitIsAdmin && pitIsAdmin());
-    var list = (window.state && state.staff) || [];
+    /* 🔴 v1.51.0（ゆうた指定）：**「小林モータース」はアカウントではない**。
+       人ではなく「整備ソフト側で担当が『小林モータース』になっている分の受け皿」なので、
+       **メンバー一覧（＝アカウントの一覧）には出さない**。
+       ⚠ フロント担当・予約担当・完TEL担当の候補には**今までどおり出る**（そこでは必要）。
+       ⚠ 会社としてのアカウントは「コバモ」が別に CoreMembers に居るので、そちらが出る。 */
+    var list = ((window.state && state.staff) || []).filter(function (s) { return !s.isSelf; });
 
     var h = '';
 
@@ -468,7 +473,9 @@
        + '<b>部署は CoreMembers の所属から自動</b>で入ります（兼任もそのまま反映）。'
        + '<b>ログインしない人も全員ここに出ます</b>（担当や付箋で名前を選べます）。'
        + '「ログイン」の印が付いている人だけ、PitFlow を開けます（権限は CoreFlow 側）。'
-       + '人の追加や退職の反映は CoreFlow 側でお願いします。</div>'
+       + '人の追加や退職の反映は CoreFlow 側でお願いします。'
+       + '<br>※「小林モータース」は<b>人ではないのでここには出しません</b>（整備ソフト側で担当が'
+       + '「小林モータース」になっている分の受け皿として、フロント担当などの候補にだけ出ます）。</div>'
        + '<a class="mb-openportal" href="https://coreflow.kobayashi-motors.com" target="_blank" rel="noopener">'
        + '<i data-ic=external data-ics=15></i> CoreFlowのメンバー管理を開く</a>'
        + '</div>';
