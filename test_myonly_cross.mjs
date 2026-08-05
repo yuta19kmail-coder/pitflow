@@ -6,7 +6,7 @@
    ◎できること
      ・ON＝**1課・2課の両方から自分の担当を集めて**、**同じ工程の列**に並べる
        （列のIDは1課も2課も同じ＝点検待ち/見積り中/連絡中/パーツ待ち/作業待ち/…）。
-     ・よその課から来たカードには **「1課」「2課」の印**（左の色帯も国産＝緑／輸入＝桃のまま）。
+     ・よその課から来たカードには **「国産」「輸入」の印**（左の色帯も国産＝緑／輸入＝桃のまま）。
      ・OFF＝今までどおり「そのボードのカードだけ」。
    ◎ここが大事
      🔴 **データは1バイトも変えない**＝集めても `boardId` はそのまま。
@@ -100,7 +100,7 @@ console.log('\n── ③ よその課から来たカードには印が付く �
   const marks = await p.evaluate(() => Array.from(document.querySelectorAll('#kanban-cols-1 .kb-xboard'))
     .map(e => ({ id: e.getAttribute('data-card-id'), tag: e.getAttribute('data-xboard') })));
   ok('🔴 2課から来た2枚に印が付いている', marks.length === 2, marks);
-  ok('印の文字は「2課」', marks.every(m => m.tag === '2課'), marks);
+  ok('印の文字は「輸入」（v1.48.1 で 1課/2課 から変えた）', marks.every(m => m.tag === '輸入'), marks);
   ok('印が付いているのは b1 / b2 だけ', JSON.stringify(sorted(marks.map(m => m.id))) === JSON.stringify(['b1','b2']), marks);
   ok('1課のカードには印が付かない',
      (await p.evaluate(() => !document.querySelector('#kanban-cols-1 [data-card-id="a1"]').classList.contains('kb-xboard'))));
@@ -108,7 +108,7 @@ console.log('\n── ③ よその課から来たカードには印が付く �
      (await p.evaluate(() => {
         const el = document.querySelector('#kanban-cols-1 .kb-xboard');
         const cs = getComputedStyle(el, '::after');
-        return cs.content.indexOf('2課') >= 0 || cs.content === 'attr(data-xboard)';
+        return cs.content.indexOf('輸入') >= 0 || cs.content === 'attr(data-xboard)';
      })));
 }
 
@@ -139,7 +139,7 @@ console.log('\n── ⑤ 2課の盤で押しても同じ（対称） ──');
      JSON.stringify(sorted(chk2)) === JSON.stringify(['a1','a2','b1']), chk2);
   const marks2 = await p.evaluate(() => Array.from(document.querySelectorAll('#kanban-cols-2 .kb-xboard'))
     .map(e => e.getAttribute('data-xboard')));
-  ok('🔴 こちらの印は「1課」', marks2.length === 2 && marks2.every(t => t === '1課'), marks2);
+  ok('🔴 こちらの印は「国産」', marks2.length === 2 && marks2.every(t => t === '国産'), marks2);
 }
 
 console.log('\n── ⑥ 動かしても課は変わらない（工程だけ変わる） ──');
@@ -152,8 +152,8 @@ console.log('\n── ⑥ 動かしても課は変わらない（工程だけ変
   ok('🔴 工程を動かしても boardId は変わらない',
      (await p.evaluate(() => state.cards.find(c => c.id === 'a1').boardId)) === before, before);
   ok('動かした先の列に出る', (await inCol('course2', '作業待ち')).indexOf('a1') >= 0, await inCol('course2', '作業待ち'));
-  ok('印は「1課」のまま（元の課を示している）',
-     (await p.evaluate(() => { const e = document.querySelector('#kanban-cols-2 [data-card-id="a1"]'); return e && e.getAttribute('data-xboard'); })) === '1課');
+  ok('印は「国産」のまま（元の課を示している）',
+     (await p.evaluate(() => { const e = document.querySelector('#kanban-cols-2 [data-card-id="a1"]'); return e && e.getAttribute('data-xboard'); })) === '国産');
 }
 
 console.log('\n── ⑦ 解除すると元どおり ──');
@@ -179,6 +179,9 @@ console.log('\n── ⑧ 二度と崩れないように（配線チェック）
   ok('印はHTMLを組み立て直さず class を足すだけ', /replace\('<div class="pit-card pcm'/.test(m));
   const css = fs.readFileSync('css/polish.css', 'utf8');
   ok('印の文字は CSS が data-xboard から出している', /content:attr\(data-xboard\)/.test(css));
+  /* 🔴 v1.48.1 印の言葉を変えたら**色分けのセレクタも一緒に**直すこと（片方だけだと色が付かない） */
+  ok('🔴 印の言葉（JS）と色分け（CSS）がそろっている', /\[data-xboard="国産"\]/.test(css) && /\[data-xboard="輸入"\]/.test(css) &&
+     /'default': '国産', 'import': '輸入'/.test(m));
   const idx = fs.readFileSync('index.html', 'utf8');
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
   const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';

@@ -125,9 +125,11 @@
   font-size:9px; font-weight:800; line-height:1; letter-spacing:.03em; white-space:nowrap;
   color:#fff; background:var(--text3); border-radius:999px; padding:3px 7px;
   box-shadow:0 1px 3px rgba(0,0,0,.4); }
-/* 課の色は左の帯と同じ（国産＝緑／輸入＝桃）＝どっちから来たか一目で分かる */
-.pit-card.pcm.kb-xboard[data-xboard="1課"]::after{ background:#1db97a; }
-.pit-card.pcm.kb-xboard[data-xboard="2課"]::after{ background:#ec4899; }
+/* 色は左の帯と同じ（国産＝緑／輸入＝桃）＝どっちから来たか一目で分かる。
+   ⚠ v1.48.1 印の文字は「1課／2課」から **「国産／輸入」** に変えた（ゆうた指定）。
+      myonly-pit.js の COURSE と**必ずセットで直す**（片方だけだと色が付かない）。 */
+.pit-card.pcm.kb-xboard[data-xboard="国産"]::after{ background:#1db97a; }
+.pit-card.pcm.kb-xboard[data-xboard="輸入"]::after{ background:#ec4899; }
 
 /* 滑り台の斜め縁にグレー線（clip-pathでは線が出ないので別要素で重ねる） */
 .pcm-ear-slide{ position:absolute; top:-13px; left:51px; width:1px; height:15.5px; background:var(--border2);
