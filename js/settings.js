@@ -6,13 +6,14 @@
      ・置ける台数（lotCapacity）　 …… 混雑度ゲージ・2週間バー・最短入庫の基準
      ・最短入庫の預かり想定日数（holdDaysDefault）
      ・概算預かり日数の初期値（作業タイプ別＝estHold表）…… 新規予約時の「予想」軸の初期値
-     ・営業時間（受付開始・受付終了）・定休曜日（※将来はMHS会社カレンダーから取得予定）
+   ◎ここでは変えられなくなったもの（v1.50.0）
+     ・営業時間・定休曜日・長期休み → **MHSの定休日カレンダーが唯一の基準**。
+       ここは「いま何が届いているか」を見るだけの画面になった（直すのはMHS側）。
    ◎保存は「変更した瞬間」に自動（PitDB.save 経由）。✓表示で知らせる。
    ======================================== */
 
 (function () {
 
-  const DOW = ['日', '月', '火', '水', '木', '金', '土'];
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
@@ -192,22 +193,8 @@
     if (!(s.outsourcePartners || []).length) h += '<div class="ps-hint">まだ外注先がありません。「＋ 外注先を追加」で登録してください。</div>';
     h += '</div>';
 
-    /* ===== 営業時間・定休 ===== */
-    h += '<div class="ps-card">';
-    h += '<div class="ps-h"><i data-ic=clock data-ics=16></i> 営業時間・定休</div>';
-    h += '<div class="ps-grid">';
-    h += '<label class="ps-lb">営業開始（この時刻から受付） <input type="time" class="ps-in" id="ps-open" value="' + esc(s.openTime || '09:00') + '" onchange="pitSettingsApply()"></label>';
-    h += '<label class="ps-lb">営業終了（この時刻で受付締切） <input type="time" class="ps-in" id="ps-cutoff" value="' + esc(s.cutoffTime || '17:00') + '" onchange="pitSettingsApply()"></label>';
-    h += '</div>';
-    h += '<div class="ps-hint">※ ここは<b>時刻</b>の設定。日単位の「受付できる/できない（○△×）」は <i data-ic=puzzle data-ics=16></i>入庫ルール ページとダッシュボードの判定が担当。</div>';
-    h += '<div class="ps-dow-row"><span class="ps-dow-t">定休曜日</span>';
-    DOW.forEach(function (d, i) {
-      const on = (s.closedDow || []).indexOf(i) >= 0;
-      h += '<label class="ps-dow' + (on ? ' on' : '') + '"><input type="checkbox" id="ps-dow-' + i + '"' + (on ? ' checked' : '') + ' onchange="pitSettingsApply()">' + d + '</label>';
-    });
-    h += '</div>';
-    h += '<div class="ps-hint">※ 定休曜日は<b>仮の設定</b>です。将来は MHS（会社カレンダー＝全社の基準マスター）から自動で取得する予定。祝日は現在「表示のみ」（営業日判定には使っていません）。</div>';
-    h += '</div>';
+    /* ===== 🚫 営業日・営業時間（v1.50.0 MHSの定休日カレンダーが基準・ここでは直せない） ===== */
+    h += pitCalCardHtml();
 
     // 🧰 作業内容テンプレート（症状ホイール）の編集（work-content.js・v0.70.0）
     h += (window.WorkContent ? WorkContent.settingsCardHtml() : '');
@@ -283,19 +270,8 @@
     eam.import._default  = readNum('ps-eam-default-imp', 100000, 0, 9999999);
     s.estAmount = eam;
 
-    const openEl = document.getElementById('ps-open');
-    const cutEl  = document.getElementById('ps-cutoff');
-    if (openEl && openEl.value) s.openTime  = openEl.value;
-    if (cutEl  && cutEl.value)  s.cutoffTime = cutEl.value;
-
-    const dows = [];
-    for (let i = 0; i < 7; i++) {
-      const el = document.getElementById('ps-dow-' + i);
-      if (el && el.checked) dows.push(i);
-      const lb = el && el.closest('.ps-dow');
-      if (lb) lb.classList.toggle('on', !!(el && el.checked));
-    }
-    s.closedDow = dows;
+    /* 🔴 v1.50.0 営業時間・定休曜日はここでは保存しない（MHSの定休日カレンダーが持ち主）。
+       state.settings.openTime / cutoffTime / closedDow は PitCal が写しているだけの予備値。 */
 
     if (window.PitDB) PitDB.save(true);
     pitSettingsFlash('✓ 保存しました');
@@ -373,6 +349,8 @@
     };
     state.settings = JSON.parse(JSON.stringify(window.PIT_DEFAULT_SETTINGS || state.settings));
     Object.keys(keep).forEach(function (k) { if (keep[k] != null) state.settings[k] = keep[k]; });
+    /* 🚫 v1.50.0 営業日の予備値は初期値（水曜）に戻さず、いま届いている MHS の内容に戻す */
+    if (window.PitCal && PitCal.syncFallback) PitCal.syncFallback();
     if (window.PitDB) PitDB.save(true);
     renderSettings();
     pitSettingsFlash('↩ 初期値に戻しました');

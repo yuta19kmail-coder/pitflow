@@ -56,8 +56,8 @@
   }
   // 預かり(占有)＝実効受付タイプが drop・廃車除く・予約日あり（「待or預」「当or預」など預かり入りも含む）
   function isOccupy(c){ return c && eff(c)==='drop' && c.reserveDate && c.status!=='scrap'; }
-  function closedDow(){ return (state.settings && state.settings.closedDow) || [3]; }
-  function isClosed(dDate){ return closedDow().indexOf(dDate.getDay())>=0; }
+  /* 🚫 v1.50.0 休みは MHS の定休日カレンダー（PitCal）が基準。曜日だけの判定はしない。 */
+  function isClosed(dDate){ return window.PitCal ? PitCal.isClosed(ymd(dDate)) : false; }
   function bufferOf(dDate){
     const bf=cfg().buffer;
     if(isClosed(dDate)) return 0;

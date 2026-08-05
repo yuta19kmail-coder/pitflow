@@ -104,9 +104,12 @@ function _dashCalCols(from, to, today, tStr){
     const d = addDays(today, i);
     const ds = ymd(d);
     const hol = (window.Holidays && Holidays.name) ? Holidays.name(ds) : null;
+    /* 🚫 v1.50.0 休み（MHSの定休日カレンダー）は見出しにも出す＝「なぜ休なのか」が分かるように */
+    const calNote = (window.PitCal ? PitCal.label(ds) : '');
+    const isClosed = (window.PitCal ? PitCal.isClosed(ds) : false);
     const cls = (d.getDay() === 0 || hol) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
     g += '<div class="drc-col' + (ds === tStr ? ' today' : '') + '">';
-    g += '<div class="drc-h'+ cls + '"'+ (hol ? 'title="'+ hol + '"': '') + '>'+ (d.getMonth()+1) + '/'+ d.getDate() + '<br>'+ '日月火水木金土'[d.getDay()] + (ds === tStr ? '・今日': '') + '</div>';
+    g += '<div class="drc-h'+ cls + (isClosed ? ' closed' : '') + '" title="'+ (calNote || hol || '') + '">'+ (d.getMonth()+1) + '/'+ d.getDate() + '<br>'+ '日月火水木金土'[d.getDay()] + (ds === tStr ? '・今日': (calNote ? '・' + calNote : '')) + '</div>';
     g += _dashCalCell('default', 'capDefault', capD, ds);
     g += _dashCalCell('import',  'capImport',  capI, ds);
     g += '</div>';

@@ -46,7 +46,9 @@ function renderReserveDay(){
 
   const dateStr = ymd(state.reserveDate);
   const dow = state.reserveDate.getDay();
-  const isClosed = state.settings.closedDow.includes(dow);
+  /* 🚫 v1.50.0 営業日は MHS の定休日カレンダーが基準（PitCal）。曜日だけの判定はもうしない。 */
+  const isClosed = PitCal.isClosed(dateStr);
+  const dayNote  = PitCal.label(dateStr);   /* '定休' / 'お盆休み' / '午前休み' / '〜15:00締' */
 
   const slots = [];
   for (let h = 9; h <= 18; h++){
@@ -58,12 +60,13 @@ function renderReserveDay(){
   );
 
   let html = '';
+  html += PitCal.noticeHtml();
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html += '<div style="font-size:13px;color:var(--text2);">';
-  if (isClosed) html += '<span style="color:var(--red);"><i data-ic=dot data-ics=12 style=color:#ef4444></i> 定休日</span>　';
+  if (dayNote) html += '<span class="cal-note' + (isClosed ? ' closed' : '') + '"><i data-ic=' + (isClosed ? 'ban' : 'clock') + ' data-ics=14></i> ' + dayNote + '</span>　';
   const holDay = (window.Holidays && Holidays.name(dateStr)) || null;
   if (holDay) html += '<span class="hol-badge"><i data-ic=flag data-ics=16></i> ' + holDay + '</span>　';
-  html += '受付 ' + state.settings.openTime + ' 〜 ' + state.settings.cutoffTime + '　／　予約 ' + todays.length + ' 件';
+  html += '受付 ' + PitCal.openTime(dateStr) + ' 〜 ' + PitCal.cutoffTime(dateStr) + '　／　予約 ' + todays.length + ' 件';
   html += '</div></div>';
 
   /* 🔴 v1.34.0 枠分けは共通の物差し（pitTimeHour）へ。
@@ -73,9 +76,11 @@ function renderReserveDay(){
   slots.forEach(time => {
     const hh = time.slice(0,2);
     const inSlot = todays.filter(c => _hourOf(c) === hh);
-    const cutoffH = parseInt(state.settings.cutoffTime.slice(0,2), 10);
+    /* 🚫 その日の受付時間（午前休み・午後休み・早締めもここに出る） */
+    const cutoffH = PitCal.cutoffHour(dateStr);
+    const openH   = parseInt(String(PitCal.openTime(dateStr)).slice(0,2), 10) || 0;
     const slotH = parseInt(hh, 10);
-    const isCutoff = slotH >= cutoffH;
+    const isCutoff = slotH >= cutoffH || slotH < openH;
     html += '<div class="reserve-slot' + (isClosed ? ' closed' : '') + '">';
     html += '<div class="reserve-slot-time">' + time;
     if (isCutoff) html += ' <span style="color:var(--red);font-size:10px;">受付終了</span>';
@@ -147,12 +152,14 @@ function renderReserveWeek(){
     const dStr = ymd(d);
     const dow = '日月火水木金土'[d.getDay()];
     const isToday = dStr === todayStr;
-    const isClosed = state.settings.closedDow.includes(d.getDay());
+    const isClosed = PitCal.isClosed(dStr);
+    const calNote = PitCal.label(dStr);
     const hol = (window.Holidays && Holidays.name(dStr)) || null;
     html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + '">';
     html += '<span class="dow">' + dow + '</span>';
     html += '<span class="day">' + (d.getMonth()+1) + '/' + d.getDate() + '</span>';
     if (hol) html += '<span class="hol" title="' + hol + '">' + hol + '</span>';
+    if (calNote) html += '<span class="cal-chip' + (isClosed ? ' closed' : '') + '" title="' + calNote + '">' + calNote + '</span>';
     html += '</div>';
   });
 
@@ -161,7 +168,7 @@ function renderReserveWeek(){
     html += '<div class="reserve-week-cell reserve-week-time">' + hh + ':00</div>';
     days.forEach(d => {
       const dStr = ymd(d);
-      const isClosed = state.settings.closedDow.includes(d.getDay());
+      const isClosed = PitCal.isClosed(dStr);
       const inCell = state.cards.filter(c =>
         c.reserveDate === dStr &&
         pitTimeHour(c.reserveTime, 9, 18) === hh &&     /* v1.34.0 ショートカットもここで解決 */
@@ -180,7 +187,7 @@ function renderReserveWeek(){
     if (tbd.some(a => a.length)){
       html += '<div class="reserve-week-cell reserve-week-time rwk-tbd-h">時刻未定</div>';
       days.forEach((d, i) => {
-        const isClosed = state.settings.closedDow.includes(d.getDay());
+        const isClosed = PitCal.isClosed(ymd(d));
         html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="reserveDateTime" data-drop-val="' + ymd(d) + '|">';
         tbd[i].forEach(c => { html += weekMiniCard(c, null); });
         html += '</div>';
@@ -232,7 +239,8 @@ function _rmlRows(from, to){
       html += '<div class="rml-mhead">' + d.getFullYear() + '年 ' + (d.getMonth()+1) + '月</div>';
     }
     const dow = d.getDay();
-    const isClosed = state.settings.closedDow.includes(dow);
+    const isClosed = PitCal.isClosed(ds);
+    const calNote = PitCal.label(ds);
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
       .filter(c => c.reserveDate === ds && c.status === 'reserved')
@@ -247,7 +255,7 @@ function _rmlRows(from, to){
     html += '<div class="rml-row' + (isClosed ? ' closed' : '') + '">';
     html += '<div class="rml-date' + dCls + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + (ds === todayStr ? '・今日' : '') + '</span>'
          + (hol ? '<span class="rml-hol"><i data-ic=flag data-ics=16></i>' + hol + '</span>' : '')
-         + (isClosed ? '<span class="rml-hol">定休</span>' : '') + '</div>';
+         + (calNote ? '<span class="rml-hol' + (isClosed ? '' : ' cal-soft') + '">' + calNote + '</span>' : '') + '</div>';
     html += '<div class="rml-cards" data-drop="reserveDate" data-drop-val="' + ds + '">';
     if (!cardsOfDay.length){
       html += '<span class="rml-empty">' + (isClosed ? '休' : '—') + '</span>';
@@ -320,7 +328,8 @@ function monthGridCells(refDate){
     const dateStr = ymd(dateObj);
     const dow = dateObj.getDay();
     const isToday = dateStr === todayStr;
-    const isClosed = state.settings.closedDow.includes(dow);
+    const isClosed = PitCal.isClosed(dateStr);
+    const calNote = PitCal.label(dateStr);
     let dowClass = '';
     if (dow === 0) dowClass = ' sun';
     if (dow === 6) dowClass = ' sat';
@@ -338,6 +347,7 @@ function monthGridCells(refDate){
          + ' onclick="if(!event.target.closest(\'.reserve-month-event\'))pitReserveDayPopup(\'' + dateStr + '\',\'reserve\')">';
     html += '<div class="day-num">' + dd + '</div>';
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
+    if (calNote) html += '<div class="cal-chip' + (isClosed ? ' closed' : '') + '" title="' + calNote + '">' + calNote + '</div>';
     visible.forEach(c => {
       const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
       const nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';

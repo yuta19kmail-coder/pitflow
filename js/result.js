@@ -41,7 +41,7 @@ function _resultMonthCells(y, mo){
     const dateStr = ymd(dateObj);
     const dow = dateObj.getDay();
     const isToday = dateStr === todayStr;
-    const isClosed = (state.settings.closedDow || []).includes(dow);
+    const isClosed = (window.PitCal ? PitCal.isClosed(dateStr) : false);   /* 🚫 MHSの定休日カレンダー */
     let dowClass = ''; if (dow === 0) dowClass = ' sun'; if (dow === 6) dowClass = ' sat';
 
     const cardsOfDay = _resultDayCards(dateStr);

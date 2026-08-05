@@ -187,13 +187,15 @@ function flMonthCalHtml(){
 function flDayCalHtml(y, mo){
   const last = new Date(y, mo+1, 0).getDate();
   const vehicles = _flAllVehicles();
-  const closedDow = (state.settings && state.settings.closedDow) || [];
   const metas = [];
   for (let d = 1; d <= last; d++){
     const dt = new Date(y, mo, d);
     const dow = dt.getDay();
     const ds = y + '-' + String(mo+1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
-    metas.push({ d: d, ds: ds, dow: dow, hol: (window.Holidays && Holidays.name(ds)) || null, closed: closedDow.indexOf(dow) >= 0 });
+    /* 🚫 v1.50.0 休みは MHS の定休日カレンダー（PitCal）が基準 */
+    metas.push({ d: d, ds: ds, dow: dow, hol: (window.Holidays && Holidays.name(ds)) || null,
+                 closed: (window.PitCal ? PitCal.isClosed(ds) : false),
+                 note: (window.PitCal ? PitCal.label(ds) : '') });
   }
   let h = '<div class="fl-cal-wrap" id="fl-cal-scroll"><div class="fl-cal" style="grid-template-columns:120px repeat(' + last + ', minmax(56px,1fr))">';
   h += '<div class="fl-cal-h fl-cal-corner">車両</div>';

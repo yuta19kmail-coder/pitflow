@@ -1753,3 +1753,32 @@ th.cfs-lg-d{ z-index:3; }
 .cn-v b{color:var(--brand);font-weight:700}
 .cn-n{flex:0 0 auto;font-size:10px;color:var(--text3);font-variant-numeric:tabular-nums}
 .cn-more{padding:5px 8px;font-size:10.5px;color:var(--text3);border-top:1px dashed var(--border)}
+
+/* ===== 🚫 会社の営業日カレンダー（MHSが基準・cal-pit.js / PitCal）v1.50.0 =====
+   ・.cal-warn … MHSが未着／古い時の注意帯（日付を選ぶ画面の上に出る）
+   ・.cal-note … 日ビューの見出しに出す「お盆休み」「午前休み」など
+   ・.cal-chip … 週・月カレンダーのマスに出す小さい札
+   ・.cal-soft … 休業ではない（半休・早締め・特別営業）＝赤くしない
+   🔴 「休みかどうか」と「まだ届いていない」は色も文言も分ける。混ぜると誤予約の元。 */
+.cal-warn{
+  display:flex;align-items:flex-start;gap:7px;
+  margin:0 0 10px;padding:7px 10px;
+  background:rgba(224,163,58,.10);border:1px solid rgba(224,163,58,.45);border-left-width:3px;
+  border-radius:7px;color:#e0a33a;font-size:11.5px;line-height:1.55;
+}
+.cal-warn i{flex:0 0 auto;margin-top:1px}
+.cal-note{
+  display:inline-flex;align-items:center;gap:4px;
+  color:var(--text2);font-weight:600;
+}
+.cal-note.closed{ color:#ef4444; }
+.cal-chip{
+  display:inline-block;max-width:100%;
+  margin-top:2px;padding:0 4px;border-radius:4px;
+  font-size:9.5px;font-weight:700;line-height:1.5;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:rgba(148,163,184,.16);color:var(--text2);
+}
+.cal-chip.closed{ background:rgba(239,68,68,.14); color:#ef4444; }
+.rml-hol.cal-soft,.lo-closed-tag.cal-soft{ color:var(--text3) !important; font-weight:600; }
+.drc-h.closed{ color:#ef4444; font-weight:600; }

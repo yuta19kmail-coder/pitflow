@@ -20,9 +20,11 @@
   function card(id){ return (state.cards||[]).find(function(c){ return c.id===id; }); }
   function save(){ if(window.PitDB) PitDB.save(); }
   function todayIso(){ var t=new Date(); t.setHours(0,0,0,0); return ymdL(t); }
-  function shopClosed(iso){ var arr=(window.state&&state.settings&&state.settings.closedDow)||[3]; return arr.indexOf(new Date(iso+'T00:00:00').getDay())>=0; }
+  /* 🚫 v1.50.0 自社の休みは MHS の定休日カレンダー（PitCal）が基準＝臨時休業・お盆も休みになる */
+  function shopClosed(iso){ return window.PitCal ? PitCal.isClosed(iso) : false; }
+  function shopNote(iso){ return window.PitCal ? PitCal.label(iso) : ''; }
   function isOff(iso){ var w=new Date(iso+'T00:00:00').getDay(); if(w===0||w===6) return true; if(window.Holidays&&Holidays.is&&Holidays.is(iso)) return true; if(shopClosed(iso)) return true; return false; }
-  function offLabel(iso){ var w=new Date(iso+'T00:00:00').getDay(); if(w!==0&&w!==6&&!(window.Holidays&&Holidays.is&&Holidays.is(iso))&&shopClosed(iso)) return '定休'; return '休'; }
+  function offLabel(iso){ var w=new Date(iso+'T00:00:00').getDay(); if(w!==0&&w!==6&&!(window.Holidays&&Holidays.is&&Holidays.is(iso))&&shopClosed(iso)) return shopNote(iso)||'定休'; return '休'; }
   function fmtMD(iso){ var d=new Date(iso+'T00:00:00'); return (d.getMonth()+1)+'/'+d.getDate(); }
 
   function rangeDays(){

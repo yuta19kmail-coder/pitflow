@@ -431,14 +431,16 @@ function _loRenderDays(start, n){
     const dow = d.getDay();
     const hol = (window.Holidays && Holidays.name(dStr)) || null;
     const isToday = dStr === todayStr;
-    const isClosed = ((state.settings && state.settings.closedDow) || []).indexOf(dow) >= 0;
+    /* 🚫 v1.50.0 休みは MHS の定休日カレンダー（PitCal）が基準＝臨時休業・お盆もここに出る */
+    const isClosed = (window.PitCal ? PitCal.isClosed(dStr) : false);
+    const calNote  = (window.PitCal ? PitCal.label(dStr) : '');
     const dayMods = (isClosed ? ' lo-closed' : '') + (hol ? ' lo-holiday' : '');
 
     h += '<div class="lo-cell lo-date' + (isToday ? ' lo-today' : '') + (dow === 0 ? ' sun' : (dow === 6 ? ' sat' : '')) + (isClosed ? ' closed' : '') + '" data-ld="' + dStr + '">'
        + (d.getDate() === 1 ? '<div class="lo-month">' + (d.getMonth()+1) + '月</div>' : '')
        + (d.getMonth()+1) + '/' + d.getDate() + ' <span>' + '日月火水木金土'[dow] + '</span>'
        + (hol ? '<div class="lo-hol">' + hol + '</div>' : '')
-       + (isClosed ? '<div class="lo-closed-tag">定休</div>' : '')
+       + (calNote ? '<div class="lo-closed-tag' + (isClosed ? '' : ' cal-soft') + '">' + calNote + '</div>' : '')
        + '</div>';
 
     ls.forEach(function(l){

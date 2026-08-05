@@ -110,8 +110,9 @@
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var y = today.getFullYear(), m = today.getMonth();
     var wkS = (window.startOfWeek ? startOfWeek(today) : today);
-    var closed = (state.settings && state.settings.closedDow) || [];
-    var nb = new Date(today); do { nb.setDate(nb.getDate() + 1); } while (closed.indexOf(nb.getDay()) >= 0);
+    /* 🚫 v1.50.0 翌営業日は MHS の定休日カレンダー（PitCal）で送る＝臨時休業も飛ばす */
+    var nb = new Date(today);
+    for (var _i = 0; _i < 31; _i++) { nb.setDate(nb.getDate() + 1); if (!(window.PitCal && PitCal.isClosed(ymd(nb)))) break; }
     C = {
       cards: state.cards || [], today: today, tStr: ymd(today), y: y, m: m,
       moS: ymd(new Date(y, m, 1)), moE: ymd(new Date(y, m + 1, 0)),

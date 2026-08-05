@@ -46,7 +46,9 @@ function renderReturnDay(){
 
   const dateStr = ymd(state.returnDate);
   const dow = state.returnDate.getDay();
-  const isClosed = state.settings.closedDow.includes(dow);
+  /* 🚫 v1.50.0 営業日は MHS の定休日カレンダーが基準（PitCal）。 */
+  const isClosed = PitCal.isClosed(dateStr);
+  const dayNote  = PitCal.label(dateStr);
 
   const slots = [];
   for (let h = 9; h <= 18; h++){
@@ -58,9 +60,10 @@ function renderReturnDay(){
   );
 
   let html = '';
+  html += PitCal.noticeHtml();
   html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
   html += '<div style="font-size:13px;color:var(--text2);">';
-  if (isClosed) html += '<span style="color:var(--red);"><i data-ic=dot data-ics=12 style=color:#ef4444></i> 定休日</span>　';
+  if (dayNote) html += '<span class="cal-note' + (isClosed ? ' closed' : '') + '"><i data-ic=' + (isClosed ? 'ban' : 'clock') + ' data-ics=14></i> ' + dayNote + '</span>　';
   const holDay = (window.Holidays && Holidays.name(dateStr)) || null;
   if (holDay) html += '<span class="hol-badge"><i data-ic=flag data-ics=16></i> ' + holDay + '</span>　';
   html += '本日の返車予定 ' + todays.length + ' 件';
@@ -114,7 +117,8 @@ function renderReturnWeek(){
     const dStr = ymd(d);
     const dow = '日月火水木金土'[d.getDay()];
     const isToday = dStr === todayStr;
-    const isClosed = state.settings.closedDow.includes(d.getDay());
+    const isClosed = PitCal.isClosed(dStr);
+    const calNote = PitCal.label(dStr);
     const cnt = state.cards.filter(c =>
       c.returnDate === dStr && c.status !== 'returned' && c.returnStage === 'returnWait'
     ).length;
@@ -123,6 +127,7 @@ function renderReturnWeek(){
     html += '<span class="dow">' + dow + '</span>';
     html += '<span class="day">' + (d.getMonth()+1) + '/' + d.getDate() + '</span>';
     if (hol) html += '<span class="hol" title="' + hol + '">' + hol + '</span>';
+    if (calNote) html += '<span class="cal-chip' + (isClosed ? ' closed' : '') + '" title="' + calNote + '">' + calNote + '</span>';
     if (cnt > 0) html += '<span style="font-size:10px;color:var(--green);font-weight:600;">' + cnt + '台</span>';
     html += '</div>';
   });
@@ -132,7 +137,7 @@ function renderReturnWeek(){
     html += '<div class="reserve-week-cell reserve-week-time">' + hh + ':00</div>';
     days.forEach(d => {
       const dStr = ymd(d);
-      const isClosed = state.settings.closedDow.includes(d.getDay());
+      const isClosed = PitCal.isClosed(dStr);
       const inCell = state.cards.filter(c =>
         c.returnDate === dStr &&
         pitTimeHour(c.returnTime || c.reserveTime, 9, 18) === hh &&   /* v1.34.0 */
@@ -151,7 +156,7 @@ function renderReturnWeek(){
     if (tbd.some(a => a.length)){
       html += '<div class="reserve-week-cell reserve-week-time rwk-tbd-h">時刻未定</div>';
       days.forEach((d, i) => {
-        const isClosed = state.settings.closedDow.includes(d.getDay());
+        const isClosed = PitCal.isClosed(ymd(d));
         html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + ymd(d) + '|">';
         tbd[i].forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c, null, true) : ''); });
         html += '</div>';
@@ -202,7 +207,8 @@ function _rmlRowsReturn(from, to){
       html += '<div class="rml-mhead">' + d.getFullYear() + '年 ' + (d.getMonth()+1) + '月</div>';
     }
     const dow = d.getDay();
-    const isClosed = state.settings.closedDow.includes(dow);
+    const isClosed = PitCal.isClosed(ds);
+    const calNote = PitCal.label(ds);
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
       .filter(c => c.returnDate === ds && c.status !== 'returned' && c.returnStage === 'returnWait')
@@ -217,7 +223,7 @@ function _rmlRowsReturn(from, to){
     html += '<div class="rml-row' + (isClosed ? ' closed' : '') + '">';
     html += '<div class="rml-date' + dCls + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + (ds === todayStr ? '・今日' : '') + '</span>'
          + (hol ? '<span class="rml-hol"><i data-ic=flag data-ics=16></i>' + hol + '</span>' : '')
-         + (isClosed ? '<span class="rml-hol">定休</span>' : '') + '</div>';
+         + (calNote ? '<span class="rml-hol' + (isClosed ? '' : ' cal-soft') + '">' + calNote + '</span>' : '') + '</div>';
     html += '<div class="rml-cards" data-drop="returnDate" data-drop-val="' + ds + '">';
     if (!cardsOfDay.length){
       html += '<span class="rml-empty">' + (isClosed ? '休' : '—') + '</span>';
@@ -290,7 +296,8 @@ function monthGridCellsReturn(refDate){
     const dateStr = ymd(dateObj);
     const dow = dateObj.getDay();
     const isToday = dateStr === todayStr;
-    const isClosed = state.settings.closedDow.includes(dow);
+    const isClosed = PitCal.isClosed(dateStr);
+    const calNote = PitCal.label(dateStr);
     let dowClass = '';
     if (dow === 0) dowClass = ' sun';
     if (dow === 6) dowClass = ' sat';
@@ -308,6 +315,7 @@ function monthGridCellsReturn(refDate){
          + ' onclick="if(!event.target.closest(\'.reserve-month-event\'))pitReserveDayPopup(\'' + dateStr + '\',\'return\')">';
     html += '<div class="day-num">' + dd + '</div>';
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
+    if (calNote) html += '<div class="cal-chip' + (isClosed ? ' closed' : '') + '" title="' + calNote + '">' + calNote + '</div>';
     visible.forEach(c => {
       const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
       const nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';

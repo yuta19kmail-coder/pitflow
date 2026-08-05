@@ -80,7 +80,9 @@
     }));
   }
 
-  function _breaks(cfg) { return (cfg && cfg.longBreaks) || []; }
+  /* 🚫 v1.50.0 長期休み（お盆・年末年始）は **MHSの定休日カレンダー**（期間で入れた休み）が基準。
+     PitFlow 側の longBreaks は編集できなくなった＝古いデータが残っていても見ない。 */
+  function _breaks(cfg) { return (window.PitCal ? PitCal.breaks() : []); }
 
   /* その日が長期休み中なら該当の休みを返す */
   function _inBreak(cfg, dStr) {
@@ -155,15 +157,16 @@
 
   function _match(r, d, dStr, cfg) {
     const dow = d.getDay(), day = d.getDate();
-    const closed = (state.settings.closedDow || []);   // 定休は設定ページの本番値を常に使う
+    /* 🚫 v1.50.0 「定休の前日／翌日」も MHS の営業日カレンダーで見る（臨時休業の前後も効く） */
+    const closed = function (dt) { return window.PitCal ? PitCal.isClosed(_ds(dt)) : false; };
     switch (r.when) {
       case 'weekend':     return dow === 0 || dow === 6;
       case 'q1':          return day <= 7;
       case 'q2':          return day >= 8 && day <= 15;
       case 'q3':          return day >= 16 && day <= 23;
       case 'q4':          return day >= 24;
-      case 'preClosed':   return closed.indexOf(_shift(d, 1).getDay()) >= 0;
-      case 'postClosed':  return closed.indexOf(_shift(d, -1).getDay()) >= 0;
+      case 'preClosed':   return closed(_shift(d, 1));
+      case 'postClosed':  return closed(_shift(d, -1));
       case 'holiday':     return !!_holName(dStr);
       case 'preHoliday':  return !!_holName(_ds(_shift(d, 1)));
       case 'postHoliday': return !!_holName(_ds(_shift(d, -1)));
@@ -203,10 +206,9 @@
     if (target === 'capDefault' || target === 'capImport' || target === 'capBoth') {
       const br = _inBreak(cfg, dateStr);
       if (br) return { value: 0, pct: -100, zero: true, rules: [], closed: '<i data-ic=parasol data-ics=16></i> ' + (br.label || '長期休み') };
-      const pp = String(dateStr).split('-');
-      const dw = new Date(+pp[0], +pp[1] - 1, +pp[2]).getDay();
-      if ((state.settings.closedDow || []).indexOf(dw) >= 0) {
-        return { value: 0, pct: -100, zero: true, rules: [], closed: '定休日' };
+      /* 🚫 v1.50.0 休業日は MHS の定休日カレンダー（定休・祝休・臨時休業・特別営業まで込み） */
+      if (window.PitCal && PitCal.isClosed(dateStr)) {
+        return { value: 0, pct: -100, zero: true, rules: [], closed: PitCal.label(dateStr) || '定休日' };
       }
     }
     const rs = _rulesForC(cfg, dateStr);
@@ -249,9 +251,8 @@
      休み直前・直後の増減は自動でやらず、別途ルールで積む（パーツが来ない等の現場事情はルール側）。 */
 
   function _isBizDay(cfg, dStr) {
-    const p = String(dStr).split('-');
-    const d = new Date(+p[0], +p[1] - 1, +p[2]);
-    if ((state.settings.closedDow || []).indexOf(d.getDay()) >= 0) return false;
+    /* 🚫 v1.50.0 営業日かどうかは MHS の定休日カレンダーだけで決める */
+    if (window.PitCal && PitCal.isClosed(dStr)) return false;
     if (_inBreak(cfg, dStr)) return false;
     return true;
   }
@@ -437,29 +438,18 @@
     h += '</div>';
     h += '</div>';
 
-    /* 🏖 長期休み */
-    const brs = c.longBreaks || [];
+    /* 🏖 長期休み（🚫 v1.50.0 MHSの定休日カレンダーが基準＝ここでは直せない・見るだけ） */
+    const brs = _breaks(c);
     h += '<div class="ps-card">';
     h += '<div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=parasol data-ics=16></i> 長期休み（お盆・年末年始・GWなど）'
-       + (ed ? '<button class="vh-btn" style="margin-left:auto" onclick="pitBreakAdd()">＋ 休みを追加</button>' : '')
-       + '</div>';
-    h += '<div class="ps-desc">期間中＝受付自動0・営業日からも自動除外（置き場は使われたまま）。</div>';
+       + '<span class="rl-ebadge" style="margin-left:auto">MHSが基準</span></div>';
+    h += '<div class="ps-desc"><b>MHSの定休日カレンダー</b>で「期間」で入れた休みがそのまま出ます。期間中＝受付自動0・営業日からも自動除外（置き場は使われたまま）。<b>直すのはMHS側</b>（管理▸定休日カレンダー）。</div>';
+    h += PitCal.noticeHtml();
     if (!brs.length) {
-      h += '<div class="ps-hint">登録なし。' + (ed ? '「＋ 休みを追加」で登録してください。' : '「<i data-ic=pencil data-ics=16></i> 編集する」から登録できます。') + '</div>';
+      h += '<div class="ps-hint">登録なし。MHSの<b>管理▸定休日カレンダー</b>で「休業・期間」で入れると、ここに出ます。</div>';
     }
-    brs.forEach(function (b, i) {
-      if (!ed) {
-        h += '<div class="rl-row rl-vw"><span class="rl-no" style="background:#0e7490"><i data-ic=parasol data-ics=16></i></span><span class="rl-vtxt"><b>' + esc(b.label || '休み') + '</b>　' + esc(b.from || '?') + ' 〜 ' + esc(b.to || '?') + '</span></div>';
-      } else {
-        h += '<div class="rl-row">';
-        h += '<span class="rl-no" style="background:#0e7490"><i data-ic=parasol data-ics=16></i></span>';
-        h += '<input type="text" class="ps-in rl-brk-lb" placeholder="名前（例：お盆）" value="' + esc(b.label || '') + '" onchange="pitBreakEdit(' + i + ',\'label\',this.value)">';
-        h += '<input type="date" class="ps-in" value="' + esc(b.from || '') + '" onchange="pitBreakEdit(' + i + ',\'from\',this.value)">';
-        h += '<span class="rl-jo">〜</span>';
-        h += '<input type="date" class="ps-in" value="' + esc(b.to || '') + '" onchange="pitBreakEdit(' + i + ',\'to\',this.value)">';
-        h += '<button class="rl-del" title="削除" onclick="pitBreakDel(' + i + ')"><i data-ic=trash data-ics=16></i></button>';
-        h += '</div>';
-      }
+    brs.forEach(function (b) {
+      h += '<div class="rl-row rl-vw"><span class="rl-no" style="background:#0e7490"><i data-ic=parasol data-ics=16></i></span><span class="rl-vtxt"><b>' + esc(b.label || '休み') + '</b>　' + esc(b.from || '?') + ' 〜 ' + esc(b.to || '?') + '</span></div>';
     });
     h += '<div class="ps-hint"><i data-ic=warn data-ics=16></i> 休み前週はパーツが来ない → 「長期休みの前1週間 × 預かり入庫 × 気を付ける」ルール推奨。</div>';
     h += '</div>';
@@ -714,29 +704,14 @@
     _flash('削除（未確定・OKで確定）');
   };
 
-  /* 長期休みの編集（下書きにだけ効く） */
-  window.pitBreakAdd = function () {
-    if (!_draft) return;
-    if (!_draft.longBreaks) _draft.longBreaks = [];
-    _draft.longBreaks.push({ label: '', from: '', to: '' });
-    renderRules();
-    _flash('追加（未確定）');
-  };
-  window.pitBreakEdit = function (i, field, val) {
-    if (!_draft) return;
-    const b = (_draft.longBreaks || [])[i];
-    if (!b) return;
-    b[field] = val;
-    if (b.from && b.to && b.to < b.from) b.to = b.from;   // 終わりが始まりより前なら補正
-    renderRules();
-    _flash('プレビューに反映（未確定）');
-  };
-  window.pitBreakDel = function (i) {
-    if (!_draft) return;
-    (_draft.longBreaks || []).splice(i, 1);
-    renderRules();
-    _flash('削除（未確定・OKで確定）');
-  };
+  /* 🚫 v1.50.0 長期休みは MHS の定休日カレンダーが基準になったので、ここでは編集しない。
+     古い画面やブックマークから呼ばれても壊れないよう、入口だけ残して案内を出す。 */
+  function _breakMoved() {
+    _flash('長期休みはMHSの「管理▸定休日カレンダー」で設定します');
+  }
+  window.pitBreakAdd  = _breakMoved;
+  window.pitBreakEdit = _breakMoved;
+  window.pitBreakDel  = _breakMoved;
 
   /* 🗣 肌感ルールの編集（下書きにだけ効く） */
   window.pitFuzzyAdd = function () {
@@ -803,7 +778,7 @@
     days.forEach(function (d) {
       const ds = _ds(d);
       const hol = _holName(ds);
-      const closed = (state.settings.closedDow || []).indexOf(d.getDay()) >= 0;
+      const closed = (window.PitCal ? PitCal.isClosed(ds) : false);
       const brk = _inBreak(c, ds);
       const cls = (d.getDay() === 0 || hol || brk) ? ' red' : (d.getDay() === 6 ? ' sat' : '');
       g += '<div class="rl-g-h' + cls + (window._rlTestDate === ds ? ' sel' : '') + '" onclick="pitRuleDay(\'' + ds + '\')">' + (d.getMonth() + 1) + '/' + d.getDate() + '<br>' + '日月火水木金土'[d.getDay()] + (brk ? '・連休' : (closed ? '・休' : '')) + '</div>';

@@ -19,12 +19,11 @@ function _csEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){re
 
 /* 翌営業日（定休・祝日をスキップ） */
 function _csNextBizDay(){
-  const closed = (state.settings && state.settings.closedDow) || [];
   let d = new Date(); d.setHours(0,0,0,0);
   for (let i=0;i<14;i++){
     d.setDate(d.getDate()+1);
     const ds = ymd(d);
-    const isClosed = closed.includes(d.getDay());
+    const isClosed = (window.PitCal ? PitCal.isClosed(ds) : false);   /* 🚫 MHSの定休日カレンダー */
     const isHol = !!(window.Holidays && Holidays.name && Holidays.name(ds));
     if (!isClosed && !isHol) return d;
   }

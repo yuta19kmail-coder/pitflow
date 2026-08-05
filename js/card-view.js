@@ -828,8 +828,10 @@
   });
 
   // ===== 車検スケジュール =====
-  function shopClosed(d){ const arr = (state.settings && state.settings.closedDow) || [3]; return arr.indexOf(d.getDay())>=0; }
-  function inLongBreak(iso){ const lb=(state.settings&&state.settings.longBreaks)||[]; return lb.some(function(b){ return b.from && b.to && iso>=b.from && iso<=b.to; }); }
+  /* 🚫 v1.50.0 自社の休みは MHS の定休日カレンダー（PitCal）が基準。長期休み・臨時休業も込み。 */
+  function shopClosed(d){ return window.PitCal ? PitCal.isClosed(_isoOf(d)) : false; }
+  function shopNote(iso){ return window.PitCal ? PitCal.label(iso) : ''; }
+  function _isoOf(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
   function dayState(d){
     const iso = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
     const dow = d.getDay();
@@ -838,8 +840,7 @@
     if(holi) return {iso:iso,cls:'off holi',off:true,tag:'祝・休',holiName:holiName};
     if(dow===0) return {iso:iso,cls:'off sun',off:true,tag:'陸運局休'};
     if(dow===6) return {iso:iso,cls:'off sat',off:true,tag:'陸運局休'};
-    if(shopClosed(d)) return {iso:iso,cls:'off shop',off:true,tag:'自社定休'};
-    if(inLongBreak(iso)) return {iso:iso,cls:'off shop',off:true,tag:'休み'};
+    if(shopClosed(d)) return {iso:iso,cls:'off shop',off:true,tag:(shopNote(iso)||'自社定休')};
     return {iso:iso,cls:'valid',off:false,tag:''};
   }
   function cvBuildCal(){
