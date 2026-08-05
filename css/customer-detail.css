@@ -123,6 +123,27 @@
 .cd-vb-lock{ color:var(--text3); cursor:default; }
 .cd-vb-lock:hover{ background:var(--bg3); }
 
-/* ⚠ v1.49.0 ボタンが3つになったので、入りきらない時は折り返す（文字が途中で割れないように） */
-.cd-vacts{ flex-wrap:wrap; }
-.cd-vacts .cd-vb{ flex:1 1 auto; min-width:78px; white-space:nowrap; }
+/* ===== 🔴 v1.49.1 アーカイブ／戻すは「右上に小さいアイコンだけ」（ゆうた指定） =====
+   ⚠ ふだん押すものではないので、編集や履歴と同じ大きさで並べない。
+   ⚠ アイコンだけなので **title を必ず付ける**（JS側）。触ると色が付いて役割が分かる。 */
+.cd-ico{ width:26px; height:26px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text3); cursor:pointer; padding:0; }
+.cd-ico-arch:hover{ border-color:#c08a3e; color:#e0b978; background:rgba(192,138,62,.14); }
+.cd-ico-restore{ color:#1db97a; border-color:#1db97a55; }
+.cd-ico-restore:hover{ background:rgba(29,185,122,.16); border-color:#1db97a; }
+.cd-ico-lock{ cursor:default; }
+
+/* 車カードの右上（角に浮かせる） */
+.cd-veh{ position:relative; }
+.cd-vico{ position:absolute; top:9px; right:9px; z-index:2; width:24px; height:24px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--bg3); border:1px solid var(--border); border-radius:7px; color:var(--text3); cursor:pointer; padding:0;
+  opacity:.55; transition:opacity .12s, color .12s, border-color .12s, background .12s; }
+.cd-veh:hover .cd-vico{ opacity:1; }
+.cd-vico-arch:hover{ border-color:#c08a3e; color:#e0b978; background:rgba(192,138,62,.18); }
+.cd-vico-restore{ color:#1db97a; border-color:#1db97a55; opacity:.9; }
+.cd-vico-restore:hover{ background:rgba(29,185,122,.18); border-color:#1db97a; }
+.cd-vico-lock{ cursor:default; }
+/* アイコンと重ならないように、車カードの右上に少し余白 */
+.cd-veh .cd-vplate{ padding-right:30px; }
+.cd-veh .cd-varch{ padding-right:30px; }

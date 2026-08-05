@@ -28,7 +28,14 @@ const p = await b.newPage({ viewport: { width: 1600, height: 1050 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
-p.on('dialog', d => d.accept());   /* confirm はぜんぶ OK で進める */
+p.on('dialog', d => d.accept());   /* ブラウザ標準の窓が出たら OK（ふだんは出ない） */
+/* 🔴 v1.49.1 確認は**アプリの中のダイアログ（ui-dialog.js）**になった。
+   ⚠ ブラウザの窓ではないので `page.on('dialog')` では取れない。**OKボタンを押す**。 */
+const okDialog = async () => {
+  await p.waitForSelector('#uid-ok', { timeout: 4000 });
+  await p.click('#uid-ok');
+  await p.waitForTimeout(350);
+};
 
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
 await p.goto('http://127.0.0.1:8962/index.html?demo=1');
@@ -174,14 +181,17 @@ console.log('\n── ⑧ 顧客画面：切替ボタンで「アーカイブ済
   await p.evaluate(() => custOpen('cuB'));
   await p.waitForTimeout(500);
   ok('🔴 アーカイブ済みの帯が出る', (await p.locator('.cd-archbar').count()) === 1);
-  const btns = await p.evaluate(() => Array.from(document.querySelectorAll('.cd-btn')).map(e => e.textContent.trim()));
-  ok('🔴 管理者には「戻す」が出る', btns.some(t => t.indexOf('戻す') >= 0), btns);
+  /* 🔴 v1.49.1 アーカイブ／戻すは**右上の小さいアイコン**になった（文字は title に入る） */
+  ok('🔴 管理者には「戻す」のアイコンが出る', (await p.locator('.cd-ico-restore').count()) === 1);
+  ok('アイコンだけなので説明（title）が付いている',
+     (await p.evaluate(() => (document.querySelector('.cd-ico-restore') || {}).title)) === 'アーカイブから戻す');
+  ok('文字の大きいボタンとしては出ていない',
+     (await p.evaluate(() => Array.from(document.querySelectorAll('.cd-btn')).every(e => e.textContent.indexOf('戻す') < 0))));
   await p.evaluate(() => { window.PIT_CLOUD = true; window.pitIsAdmin = function(){ return false; }; });
   await p.evaluate(() => custOpen('cuB'));
   await p.waitForTimeout(400);
-  ok('🔴 権限が無い人には「戻す」を出さない',
-     (await p.evaluate(() => Array.from(document.querySelectorAll('.cd-btn')).every(e => e.textContent.indexOf('戻す') < 0))));
-  ok('かわりに「管理者だけ」と出る', (await p.locator('.cd-lockmsg').count()) === 1);
+  ok('🔴 権限が無い人には「戻す」を出さない', (await p.locator('.cd-ico-restore').count()) === 0);
+  ok('かわりに鍵のアイコンが出る', (await p.locator('.cd-ico-lock').count()) === 1);
   await p.evaluate(() => { window.PIT_CLOUD = false; window.pitIsAdmin = function(){ return true; }; });
   await p.evaluate(() => { PitArchive.restoreCust('cuB'); if (window.custCloseModal) custCloseModal(); });
 }
@@ -202,6 +212,7 @@ console.log('\n── ⑨ 🔴 新規予約：乗り換え／増車 の2択＋�
 
   /* まず「増車」＝前の車はそのまま */
   await p.evaluate(() => cfAddVehicle('add'));
+  await okDialog();                                   /* 🔴 確認ダイアログの「増車で登録」を押す */
   await p.waitForTimeout(500);
   const afterAdd = await p.evaluate(id => { const c = state.cards.find(x => x.id === id); return { plate:c.plate, maker:c.maker, car:c.car, karte:c.karteNo, drive:(c.drive||[]).length, cust:c.customer, tel:c.tel }; }, CID);
   ok('🔴 ナンバー・メーカー・車種が空になる', afterAdd.plate === '' && afterAdd.maker === '' && afterAdd.car === '', afterAdd);
@@ -215,6 +226,7 @@ console.log('\n── ⑨ 🔴 新規予約：乗り換え／増車 の2択＋�
   await p.evaluate(id => { const c = state.cards.find(x => x.id === id); c.plate='所沢500あ2222'; c.maker='ホンダ'; c.car='フィット'; c.karteNo='K222'; renderCardForm(c); }, CID);
   await p.waitForTimeout(400);
   await p.evaluate(() => cfAddVehicle('trade'));
+  await okDialog();                                   /* 🔴 確認ダイアログの「乗り換えで登録」を押す */
   await p.waitForTimeout(600);
   ok('🔴 乗り換えでは前の車がアーカイブされる',
      (await p.evaluate(() => PitArchive.vehSelfArchived(state.customers.find(x=>x.id==='cuA').vehicles.find(v=>v.id==='a2')))) === true);
@@ -259,6 +271,19 @@ console.log('\n── ⑪ 二度と崩れないように（配線チェック）
   const d = fs.readFileSync('js/card-detail.js', 'utf8');
   ok('🔴 車両ごとの欄をぜんぶ空にしている', /c\.plate=''; c\.maker=''; c\.car=''; c\.karteNo='';/.test(d));
   ok('乗り換えは前の車をアーカイブしてから', /PitArchive\.archiveVehByPlate\(c\.customerId, oldPlate, '乗換'\)/.test(d));
+  /* 🔴 v1.49.1 ゆうた指定＝どのアーカイブ操作にも確認を入れる。ブラウザ標準の confirm は使わない。 */
+  ok('🔴 乗り換え／増車にも確認が入る', /UI\.confirm\(kind === 'trade'/.test(d));
+  /* ⚠ 数ではなく「**4つの関数それぞれの中に確認がある**」で見る＝あとで並びが変わっても意味が保たれる。
+     ⚠ 開発用の「サンプル顧客を入れ替え」は別物なので数えない。 */
+  ['custArchive', 'custRestore', 'custVehArchive', 'custVehRestore'].forEach(function (fn) {
+    const i = c.indexOf('window.' + fn + '=');
+    const body = i < 0 ? '' : c.slice(i, i + 1200);
+    ok('🔴 ' + fn + ' に確認が入っている', /_ask\(/.test(body));
+  });
+  ok('確認はアプリの中のダイアログを使っている（画面が止まらない）',
+     /if\(window\.UI && UI\.confirm\) return UI\.confirm\(title/.test(c));
+  ok('切替ボタンの文字が「アーカイブ検索」', /アーカイブ検索/.test(c) && !/アーカイブ済みを見る/.test(c));
+  ok('アーカイブ／戻すは小さいアイコン（cd-ico / cd-vico）', /cd-ico-arch/.test(c) && /cd-vico-arch/.test(c));
   const idx = fs.readFileSync('index.html', 'utf8');
   ok('archive-pit.js を読み込んでいる', /js\/archive-pit\.js\?v=/.test(idx));
   ok('archive-pit.js は customers.js より先', idx.indexOf('js/archive-pit.js') < idx.indexOf('js/customers.js'));

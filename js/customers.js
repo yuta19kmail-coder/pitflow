@@ -200,7 +200,7 @@
        '<input class="cust-search"placeholder="'+(_archMode?'アーカイブ済みから探す（名前・ナンバー・車・電話）':'名前・カナ(ひらがなOK)・ナンバー・車・電話で絞り込み')+'"value="'+esc(_q)+'"oninput="custFilter(this.value)">'+
        /* 🔴 v1.49.0 アーカイブ済みへの切替（ゆうた指定）。押している間は一覧が入れ替わる。 */
        '<button type="button" class="cust-archbtn'+(_archMode?' on':'')+'" onclick="custToggleArchived()" title="'+(_archMode?'ふつうの顧客一覧に戻る':'アーカイブ済みの顧客を探す')+'">'+
-         (_archMode?'<i data-ic=users data-ics=15></i> ふつうの一覧へ':'<i data-ic=box data-ics=15></i> アーカイブ済みを見る')+'</button>'+
+         (_archMode?'<i data-ic=users data-ics=15></i> 通常検索へ':'<i data-ic=box data-ics=15></i> アーカイブ検索')+'</button>'+
        '<span class="cust-count" id="cust-count"></span>'+
        '</div>';
     h+='<div class="cust-filters">'+
@@ -267,36 +267,68 @@
   /* 🔴 v1.49.0 「削除」はやめて「アーカイブ」に（ゆうた指定）。
      ⚠ **データは消さない**＝印を立てるだけ。検索から消えるが、履歴も金額もそのまま残る。
      ⚠ 戻せるのは**管理者だけ**（archive-pit.js が判定）。 */
+  /* 🔴 v1.49.1 確認は**アプリの中のダイアログ（UI.confirm）**で出す（ゆうた指定＝どれにも確認を入れる）。
+     ⚠ ブラウザ標準の confirm() は出ている間 JS が止まって「反応が悪い」体感になるので使わない
+        （ui-dialog.js の注記どおり）。UI が無い環境でだけ confirm() に落とす。
+     ⚠ **アーカイブする・戻す・乗り換え** の3つとも、必ずここを通す。 */
+  function _ask(title, detail, okLabel, danger){
+    if(window.UI && UI.confirm) return UI.confirm(title, { detail:detail, ok:okLabel||'OK', cancel:'やめる', danger:!!danger });
+    return Promise.resolve(window.confirm(title + '\n\n' + (detail||'')));
+  }
+  function _deny(){
+    if(window.UI && UI.alert) UI.alert('戻せるのは管理者だけです', { detail:'アーカイブから戻す操作は、PitFlow の役割が「管理」の人だけができます。' });
+    else alert('戻せるのは管理者だけです。');
+  }
   window.custArchive=function(id){
     const c=list().find(r=>r.id===id); if(!c) return;
-    if(!confirm('「'+(c.name||'(無名)')+'」様をアーカイブしますか？\n\n・検索や顧客呼び出しに出なくなります（この車も全部）\n・データは消えません。履歴も金額もそのまま残ります\n・戻せるのは管理者だけです')) return;
-    if(window.PitArchive) PitArchive.archiveCust(id);
-    _expanded.delete(id);
-    if(window.pitToast) pitToast('アーカイブしました');
-    closeModal(); renderCustomers();
+    _ask('「'+(c.name||'(無名)')+'」様をアーカイブしますか？',
+         '・検索や顧客呼び出しに出なくなります（この方の車も全部）\n・データは消えません。履歴も金額もそのまま残ります\n・戻せるのは管理者だけです',
+         'アーカイブする', true).then(function(okd){
+      if(!okd) return;
+      if(window.PitArchive) PitArchive.archiveCust(id);
+      _expanded.delete(id);
+      if(window.pitToast) pitToast('アーカイブしました');
+      closeModal(); renderCustomers();
+    });
   };
   window.custRestore=function(id){
-    if(window.PitArchive && !PitArchive.canRestore()){ alert('戻せるのは管理者だけです。'); return; }
+    if(window.PitArchive && !PitArchive.canRestore()){ _deny(); return; }
     const c=list().find(r=>r.id===id); if(!c) return;
-    if(!confirm('「'+(c.name||'(無名)')+'」様を元に戻しますか？\n（個別にアーカイブした車は、アーカイブのままです）')) return;
-    if(window.PitArchive) PitArchive.restoreCust(id);
-    if(window.pitToast) pitToast('元に戻しました');
-    closeModal(); renderCustomers();
+    _ask('「'+(c.name||'(無名)')+'」様を元に戻しますか？',
+         '・検索や顧客呼び出しにまた出るようになります\n・1台ずつアーカイブした車は、アーカイブのままです',
+         '元に戻す').then(function(okd){
+      if(!okd) return;
+      if(window.PitArchive) PitArchive.restoreCust(id);
+      if(window.pitToast) pitToast('元に戻しました');
+      closeModal(); renderCustomers();
+    });
   };
   /* 車両ごとのアーカイブ／戻す */
   window.custVehArchive=function(custId,vehId){
     const c=list().find(r=>r.id===custId); if(!c) return;
     const v=(c.vehicles||[]).find(x=>x.id===vehId); if(!v) return;
-    if(!confirm('この車（'+((v.plate||v.car||'車両'))+'）をアーカイブしますか？\n\n・検索や顧客呼び出しに出なくなります\n・入庫の履歴は顧客詳細に残ります\n・戻せるのは管理者だけです')) return;
-    if(window.PitArchive) PitArchive.archiveVeh(custId,vehId);
-    if(window.pitToast) pitToast('この車をアーカイブしました');
-    custOpen(custId);
+    const nm=((v.maker?v.maker+' ':'')+(v.car||'')).trim()||v.plate||'この車';
+    _ask(nm+' をアーカイブしますか？',
+         (v.plate?('ナンバー：'+v.plate+'\n'):'')+'・検索や顧客呼び出しに出なくなります\n・入庫の履歴は顧客詳細に残ります\n・戻せるのは管理者だけです',
+         'アーカイブする', true).then(function(okd){
+      if(!okd) return;
+      if(window.PitArchive) PitArchive.archiveVeh(custId,vehId);
+      if(window.pitToast) pitToast('この車をアーカイブしました');
+      custOpen(custId);
+    });
   };
   window.custVehRestore=function(custId,vehId){
-    if(window.PitArchive && !PitArchive.canRestore()){ alert('戻せるのは管理者だけです。'); return; }
-    if(window.PitArchive) PitArchive.restoreVeh(custId,vehId);
-    if(window.pitToast) pitToast('この車を元に戻しました');
-    custOpen(custId);
+    if(window.PitArchive && !PitArchive.canRestore()){ _deny(); return; }
+    const c=list().find(r=>r.id===custId); if(!c) return;
+    const v=(c.vehicles||[]).find(x=>x.id===vehId); if(!v) return;
+    const nm=((v.maker?v.maker+' ':'')+(v.car||'')).trim()||v.plate||'この車';
+    _ask(nm+' を元に戻しますか？', (v.plate?('ナンバー：'+v.plate+'\n'):'')+'・検索や顧客呼び出しにまた出るようになります',
+         '元に戻す').then(function(okd){
+      if(!okd) return;
+      if(window.PitArchive) PitArchive.restoreVeh(custId,vehId);
+      if(window.pitToast) pitToast('この車を元に戻しました');
+      custOpen(custId);
+    });
   };
   window.custReseed=function(){
     if(!confirm('サンプル顧客を入れ替えます（今の控えは消えます）。よろしいですか？')) return;
@@ -536,13 +568,15 @@
     let h='';
     // 上部バー
     h+='<div class="cd-top"><button class="cd-back" onclick="custCloseModal()">'+backLbl+'</button>'+
+       /* 🔴 v1.49.1（ゆうた指定）アーカイブ／戻すは**右上に小さいアイコンだけ**。
+          ⚠ ふだん押すものではないので、編集ボタンと同じ大きさで並べない。
+          ⚠ 何のボタンか分かるよう title を必ず付ける（アイコンだけなので）。 */
        '<div class="cd-acts"><button class="cd-btn" onclick="custEdit(\''+cust.id+'\')"><i data-ic=pencil data-ics=16></i> 編集</button>'+
-       /* 🔴 v1.49.0 削除→アーカイブ。戻すのは管理者だけ（権限が無い人には出さない） */
        (_archived(cust)
          ? ((window.PitArchive&&PitArchive.canRestore())
-             ? '<button class="cd-btn cd-btn-restore" onclick="custRestore(\''+cust.id+'\')"><i data-ic=undo data-ics=16></i> 戻す</button>'
-             : '<span class="cd-lockmsg"><i data-ic=lock data-ics=15></i> 戻せるのは管理者だけです</span>')
-         : '<button class="cd-btn danger" onclick="custArchive(\''+cust.id+'\')"><i data-ic=box data-ics=16></i> アーカイブ</button>')+
+             ? '<button class="cd-ico cd-ico-restore" title="アーカイブから戻す" aria-label="アーカイブから戻す" onclick="custRestore(\''+cust.id+'\')"><i data-ic=undo data-ics=15></i></button>'
+             : '<span class="cd-ico cd-ico-lock" title="戻せるのは管理者だけです" aria-label="戻せるのは管理者だけです"><i data-ic=lock data-ics=15></i></span>')
+         : '<button class="cd-ico cd-ico-arch" title="この顧客をアーカイブする" aria-label="この顧客をアーカイブする" onclick="custArchive(\''+cust.id+'\')"><i data-ic=box data-ics=15></i></button>')+
        '</div></div>';
     // ヘッダー
     /* 🔴 v1.49.0 アーカイブ済みの顧客は、開いた時にひと目で分かるように帯を出す */
@@ -586,7 +620,13 @@
         const vSelf = window.PitArchive ? PitArchive.vehSelfArchived(v) : !!v.archived;
         const vArc  = window.PitArchive ? PitArchive.vehArchived(cust,v) : (!!v.archived||_archived(cust));
         const canR  = !(window.PitArchive) || PitArchive.canRestore();
-        h+='<div class="cd-veh'+teamCls+(vArc?' cd-veh-arch':'')+'">'+
+        /* 🔴 v1.49.1 車のアーカイブ／戻すも**カードの右上に小さいアイコンだけ**（ゆうた指定） */
+        const vIco = vSelf
+          ? (canR ? '<button class="cd-vico cd-vico-restore" title="アーカイブから戻す" aria-label="アーカイブから戻す" onclick="event.stopPropagation();custVehRestore(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=undo data-ics=14></i></button>'
+                  : '<span class="cd-vico cd-vico-lock" title="戻せるのは管理者だけです" aria-label="戻せるのは管理者だけです"><i data-ic=lock data-ics=14></i></span>')
+          : (_archived(cust) ? ''
+                  : '<button class="cd-vico cd-vico-arch" title="この車をアーカイブする" aria-label="この車をアーカイブする" onclick="event.stopPropagation();custVehArchive(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=box data-ics=14></i></button>');
+        h+='<div class="cd-veh'+teamCls+(vArc?' cd-veh-arch':'')+'">'+ vIco +
            (vSelf?'<div class="cd-varch"><i data-ic=box data-ics=14></i> '+esc(window.PitArchive?PitArchive.noteOf(v):'アーカイブ済み')+'</div>':'')+
            '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
            '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
@@ -594,11 +634,6 @@
            ((v.karteNo||'').trim()?'<div class="cd-vkarte" title="カルテNo">'+esc(v.karteNo.trim())+'</div>':'')+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=clock data-ics=16></i> 履歴</span>'+
            (vArc ? '' : '<span class="cd-vb go" onclick="custNewReserveFor(\''+cust.id+'\',\''+(v.id||'')+'\')">🆕 この車で新規予約</span>')+
-           (vSelf
-             ? (canR ? '<span class="cd-vb cd-vb-restore" onclick="custVehRestore(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=undo data-ics=15></i> 戻す</span>'
-                     : '<span class="cd-vb cd-vb-lock"><i data-ic=lock data-ics=14></i> 戻すのは管理者</span>')
-             : (_archived(cust) ? ''
-                     : '<span class="cd-vb cd-vb-arch" onclick="custVehArchive(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=box data-ics=15></i> アーカイブ</span>'))+
            '</div>'+
            '</div>';
       });

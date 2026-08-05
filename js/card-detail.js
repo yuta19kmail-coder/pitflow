@@ -1607,22 +1607,34 @@ window.cfAddVehicle = function(kind){
   if (window.cfVehMenuClose) cfVehMenuClose();
   const oldPlate = (c.plate||'').trim();
   const oldName  = ((c.maker?c.maker+' ':'')+(c.car||'')).trim() || oldPlate || 'いまの車';
-  if (kind === 'trade'){
-    if (!oldPlate){
-      if (window.pitToast) pitToast('ナンバーが入っていないので、前の車はアーカイブできません（増車として登録します）');
+  /* 入力し直しになる操作なので、どちらも**一度確認してから**進める（v1.49.1 ゆうた指定）。
+     ⚠ アプリの中のダイアログ（UI.confirm）を使う＝ブラウザ標準の confirm は画面が止まるので使わない。 */
+  const ask = (window.UI && UI.confirm)
+    ? UI.confirm(kind === 'trade' ? (oldName + ' から乗り換えますか？') : ('増車として、もう1台を登録しますか？'),
+        { detail: (kind === 'trade'
+            ? ((oldPlate ? 'ナンバー：' + oldPlate + '\n' : '') + '・' + oldName + ' をアーカイブします（入庫の履歴は顧客詳細に残ります）\n・車の欄（ナンバー・メーカー・車種・カルテNo.・車両注意）が空になります\n・お客様の名前・TEL・LINE はそのままです')
+            : (oldName + ' はそのまま残ります。\n・車の欄（ナンバー・メーカー・車種・カルテNo.・車両注意）が空になります\n・お客様の名前・TEL・LINE はそのままです')),
+          ok: (kind === 'trade' ? '乗り換えで登録' : '増車で登録'), cancel: 'やめる', danger: (kind === 'trade') })
+    : Promise.resolve(true);
+  ask.then(function(okd){
+    if (!okd) return;
+    if (kind === 'trade'){
+      if (!oldPlate){
+        if (window.pitToast) pitToast('ナンバーが入っていないので、前の車はアーカイブできません（増車として登録します）');
+      } else {
+        const done = window.PitArchive ? PitArchive.archiveVehByPlate(c.customerId, oldPlate, '乗換') : false;
+        if (window.pitToast) pitToast(done ? (oldName + ' をアーカイブしました。新しい車を入力してください')
+                                           : '前の車はまだ顧客の控えに無いので、そのまま新しい車を入力してください');
+      }
     } else {
-      const done = window.PitArchive ? PitArchive.archiveVehByPlate(c.customerId, oldPlate, '乗換') : false;
-      if (window.pitToast) pitToast(done ? (oldName + ' をアーカイブしました。新しい車を入力してください')
-                                         : '前の車はまだ顧客の控えに無いので、そのまま新しい車を入力してください');
+      if (window.pitToast) pitToast('増車として、新しい車を入力してください（' + oldName + ' はそのまま残ります）');
     }
-  } else {
-    if (window.pitToast) pitToast('増車として、新しい車を入力してください（' + oldName + ' はそのまま残ります）');
-  }
-  /* 車両ごとの欄をぜんぶ空に */
-  c.plate=''; c.maker=''; c.car=''; c.karteNo='';
-  c.drive=[];
-  if(window.PitDB) PitDB.save();
-  renderCardForm(c);
+    /* 車両ごとの欄をぜんぶ空に */
+    c.plate=''; c.maker=''; c.car=''; c.karteNo='';
+    c.drive=[];
+    if(window.PitDB) PitDB.save();
+    renderCardForm(c);
+  });
 };
 /* ---- 2択メニューの開け閉め（右上の保存メニューと同じ作り） ---- */
 function cfVehMenuClose(){
