@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.48.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.49.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -13,11 +13,11 @@
 <link rel="stylesheet" href="css/base.css?v=9">
 <link rel="stylesheet" href="css/layout.css?v=9">
 <link rel="stylesheet" href="css/views.css?v=41">
-<link rel="stylesheet" href="css/polish.css?v=182">
+<link rel="stylesheet" href="css/polish.css?v=183">
 <link rel="stylesheet" href="css/floor.css?v=23">
 <link rel="stylesheet" href="css/board-notes.css?v=2">
 <link rel="stylesheet" href="css/search.css?v=6">
-<link rel="stylesheet" href="css/customer-detail.css?v=8">
+<link rel="stylesheet" href="css/customer-detail.css?v=9">
 <link rel="stylesheet" href="css/work-content.css?v=7">
 <link rel="stylesheet" href="css/parking.css?v=3">
 <link rel="stylesheet" href="css/launcher.css?v=c679db13">
@@ -116,7 +116,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.48.1</div>
+    <div class="login-ver">v1.49.0</div>
   </div>
 </div>
 
@@ -130,7 +130,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.48.1</span>
+    <span class="ver">v1.49.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -819,19 +819,20 @@
 <script src="js/db-pit.js?v=42"></script>
 <script src="js/views.js?v=45"></script>
 <script src="js/work-content.js?v=12"></script>
-<script src="js/card-detail.js?v=113"></script>
+<script src="js/card-detail.js?v=114"></script>
 <script src="js/flow-pit.js?v=1"></script><!-- フロー（進捗ログ）の「足す／直す」。card-view.js（詳細）と card-tabs.js（編集）の両方から呼ぶので先に読む -->
 <script src="js/card-view.js?v=41"></script>
 <script src="js/cover-print.js?v=13"></script>
 <script src="js/avail.js?v=6"></script>
 <script src="js/card-tabs.js?v=11"></script>
-<script src="js/customers.js?v=36"></script>
+<script src="js/archive-pit.js?v=1"></script><!-- 顧客・車両のアーカイブ（customers.js / search.js / card-detail.js から呼ばれるので先に読む） -->
+<script src="js/customers.js?v=37"></script>
 <script src="js/sample-customers.js?v=8"></script>
 <script src="js/sample-reservations.js?v=28"></script>
 <script src="js/dashboard.js?v=17"></script>
 <script src="js/parking.js?v=7"></script>
 <script src="js/board-notes.js?v=7"></script>
-<script src="js/search.js?v=11"></script>
+<script src="js/search.js?v=12"></script>
 <script src="js/maintdash.js?v=3"></script>
 <script src="js/sales.js?v=9"></script>
 <script src="js/sales-print.js?v=3"></script>
@@ -867,7 +868,7 @@
 <script src="js/card-hover.js?v=31"></script>
 <script src="js/phase-popup.js?v=11"></script>
 <script src="js/return-popup.js?v=4"></script>
-<script src="js/help-content.js?v=12"></script>
+<script src="js/help-content.js?v=13"></script>
 <script src="js/help.js?v=2"></script>
 <script src="js/mydash.js?v=8"></script>
 <script src="js/main.js?v=12"></script>

@@ -221,6 +221,12 @@
 .cust-head{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
 .cust-search{ flex:1; background:var(--bg2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 11px; font-size:13px; font-family:inherit; }
 .cust-search:focus{ outline:none; border-color:var(--brand); }
+/* 🔴 v1.49.0 顧客一覧の「アーカイブ済みを見る」切替（ゆうた指定）。
+   ⚠ 押している間は色が付く＝**いまアーカイブ済みを見ている**と一目で分かる。 */
+.cust-archbtn{ flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; background:var(--bg3); border:1px solid var(--border);
+  color:var(--text2); border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer; white-space:nowrap; }
+.cust-archbtn:hover{ border-color:var(--brand); color:var(--brand); }
+.cust-archbtn.on{ background:#8b6d3f; border-color:#c08a3e; color:#fff; }
 .cust-count{ font-size:12px; color:var(--text3); white-space:nowrap; }
 .cust-note{ font-size:12px; color:var(--text3); background:var(--bg2); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:12px; line-height:1.6; }
 .cust-empty{ color:var(--text3); font-size:13px; text-align:center; padding:30px; }
@@ -810,6 +816,11 @@
 /* 「この顧客で新規車両を追加」ボタン（基本情報ヘッダー右端） */
 .cf-addveh-btn{ margin-left:auto; background:var(--brand-soft); border:1px solid var(--brand); color:var(--brand); border-radius:7px; padding:4px 11px; font-size:11.5px; font-weight:600; cursor:pointer; white-space:nowrap; }
 .cf-addveh-btn:hover{ background:var(--brand); color:#fff; }
+/* 🔴 v1.49.0 「＋ この顧客で新規車両」を **乗り換え／増車 の2択メニュー**に（右上の保存メニューと同じ形）。
+   ⚠ 入れ物（.vh-menu）が margin-left:auto を持たないと、見出しの右端に寄らない。 */
+.cf-vehmenu{ margin-left:auto; }
+.cf-vehmenu .cf-addveh-btn{ margin-left:0; display:inline-flex; align-items:center; gap:5px; }
+.cf-vehmenu .vh-menu-panel{ min-width:306px; }
 /* その他連絡先ボタン＋ポップ内の連絡先行 */
 .cf-contacts-btn{ background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:7px 12px; font-size:12.5px; cursor:pointer; white-space:nowrap; }
 .cf-contacts-btn:hover{ border-color:var(--brand); color:var(--brand); }

@@ -99,3 +99,30 @@
   .cd-stats{ border-left:none; border-top:1px solid var(--border); padding-left:0; padding-top:12px; }
   .cd-vehs{ grid-template-columns:1fr; }
 }
+
+
+/* ===== 🔴 v1.49.0 アーカイブ（顧客・車両）＝「消す」のかわりに「片付ける」 =====
+   ⚠ 片付けたものは**薄く出して残す**（消えていないことが見て分かるように）。
+   ⚠ 戻すボタンは**管理者にだけ**出す（JS 側で出し分け）。 */
+.cd-archbar{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 12px; padding:10px 13px;
+  background:rgba(192,138,62,.14); border:1px solid rgba(192,138,62,.5); border-left:4px solid #c08a3e;
+  border-radius:10px; color:#e0b978; font-size:12.5px; font-weight:700; }
+.cd-archsub{ color:var(--text3); font-weight:500; font-size:11.5px; }
+.cd-btn-restore{ color:#1db97a; border-color:#1db97a88; background:rgba(29,185,122,.10); }
+.cd-btn-restore:hover{ background:rgba(29,185,122,.18); }
+.cd-lockmsg{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text3); padding:8px 4px; }
+
+/* 片付けた車＝薄く＋左の帯を灰色に */
+.cd-veh.cd-veh-arch{ opacity:.62; border-left-color:var(--text3) !important; }
+.cd-veh.cd-veh-arch:hover{ opacity:.85; }
+.cd-varch{ display:flex; align-items:center; gap:5px; margin:-2px 0 7px; font-size:10.5px; font-weight:700; color:#e0b978; }
+.cd-vb-arch{ color:#e0b978; border-color:rgba(192,138,62,.5); }
+.cd-vb-arch:hover{ background:rgba(192,138,62,.16); }
+.cd-vb-restore{ color:#1db97a; border-color:#1db97a66; }
+.cd-vb-restore:hover{ background:rgba(29,185,122,.14); }
+.cd-vb-lock{ color:var(--text3); cursor:default; }
+.cd-vb-lock:hover{ background:var(--bg3); }
+
+/* ⚠ v1.49.0 ボタンが3つになったので、入りきらない時は折り返す（文字が途中で割れないように） */
+.cd-vacts{ flex-wrap:wrap; }
+.cd-vacts .cd-vb{ flex:1 1 auto; min-width:78px; white-space:nowrap; }

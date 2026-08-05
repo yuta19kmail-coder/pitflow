@@ -324,7 +324,20 @@ function renderCardForm(c){
   /* === 基本情報（車両もここに統合・v0.27.0） === */
   /* 顧客を呼び出し済み（c.customerId あり）なら、右端に「この顧客で新規車両を追加」ボタン（v0.38.4） */
   h += '<div class="cf-section"><div class="cf-section-head"><i data-ic=user data-ics=16></i> <span>基本情報</span>'
-     + (c.customerId ? '<button type="button" class="cf-addveh-btn" onclick="cfAddVehicle()">＋ この顧客で新規車両を追加</button>' : '')
+     /* 🔴 v1.49.0（ゆうた指定）1つのボタンから **乗り換え／増車 の2択**へ（右上の保存メニューと同じ形）。 */
+     + (c.customerId
+        ? '<div class="vh-menu cf-vehmenu" id="cf-veh-menu">'
+          + '<button type="button" class="cf-addveh-btn" id="cf-veh-menu-btn" aria-haspopup="true" aria-expanded="false" onclick="cfVehMenuToggle(event)">'
+          + '＋ この顧客で新規車両 <i data-ic=chevDown data-ics=14></i></button>'
+          + '<div class="vh-menu-panel" role="menu">'
+          + '<button type="button" class="vh-mi" role="menuitem" onclick="cfAddVehicle(\'trade\')">'
+          + '<b><i data-ic=swap data-ics=16></i> 乗り換え（前の車は降りる）</b>'
+          + '<span>いまの車をアーカイブして、新しい車を登録します。前の車の入庫履歴は顧客詳細に残ります</span></button>'
+          + '<button type="button" class="vh-mi" role="menuitem" onclick="cfAddVehicle(\'add\')">'
+          + '<b><i data-ic=plus data-ics=16></i> 増車（前の車も乗り続ける）</b>'
+          + '<span>いまの車はそのまま残して、2台目として登録します</span></button>'
+          + '</div></div>'
+        : '')
      + '</div><div class="cf-section-body">';
   _ensureNameParts(c);
   /* 1行目：初回／リピーター → お客様名(姓/名・1BOX) → カナ(姓/名・1BOX)。名前は半角空白で合成（v0.74） */
@@ -1579,12 +1592,57 @@ function _prevIntakeLoaner(c){
 }
 /* この顧客で新規車両を追加：ナンバー/メーカー/車種だけクリア（人・連絡先・担当/課/区分は継承）。
    保存すると c.customerId の人に新しいナンバーの車両として upsert される。 */
-window.cfAddVehicle = function(){
+/* ---- ＋ この顧客で新規車両（乗り換え／増車）＝v1.49.0 ゆうた指定 ----
+   🔴 **車両ごとの欄はぜんぶ空にする。**
+      ⚠ v1.48.1 までは ナンバー・メーカー・車種 しか消しておらず、
+         **カルテNo.（車両ごとの番号）が前の車のまま残っていた**（ゆうた指摘）。
+         車両注意（左ハンドル/MT/車高/土禁）も同じ理由で車ごとなので消す。
+      ⚠ 逆に **人につくもの**（お客様名・カナ・TEL・LINE・連絡先）は消さない。
+      ⚠ 担当・課・国産/輸入は「その人の担当」として引き継ぐ＝消さない
+         （車種を打てば carname-pit.js が国産/輸入を入れ直す）。
+   🔴 kind='trade'（乗り換え）＝**いまのナンバーの車をアーカイブしてから**空にする。
+      kind='add'（増車）＝前の車はそのまま。 */
+window.cfAddVehicle = function(kind){
   const c=_cfCard(); if(!c) return;
-  c.plate=''; c.maker=''; c.car='';
+  if (window.cfVehMenuClose) cfVehMenuClose();
+  const oldPlate = (c.plate||'').trim();
+  const oldName  = ((c.maker?c.maker+' ':'')+(c.car||'')).trim() || oldPlate || 'いまの車';
+  if (kind === 'trade'){
+    if (!oldPlate){
+      if (window.pitToast) pitToast('ナンバーが入っていないので、前の車はアーカイブできません（増車として登録します）');
+    } else {
+      const done = window.PitArchive ? PitArchive.archiveVehByPlate(c.customerId, oldPlate, '乗換') : false;
+      if (window.pitToast) pitToast(done ? (oldName + ' をアーカイブしました。新しい車を入力してください')
+                                         : '前の車はまだ顧客の控えに無いので、そのまま新しい車を入力してください');
+    }
+  } else {
+    if (window.pitToast) pitToast('増車として、新しい車を入力してください（' + oldName + ' はそのまま残ります）');
+  }
+  /* 車両ごとの欄をぜんぶ空に */
+  c.plate=''; c.maker=''; c.car=''; c.karteNo='';
+  c.drive=[];
   if(window.PitDB) PitDB.save();
   renderCardForm(c);
 };
+/* ---- 2択メニューの開け閉め（右上の保存メニューと同じ作り） ---- */
+function cfVehMenuClose(){
+  const m=document.getElementById('cf-veh-menu'); if(!m) return;
+  m.classList.remove('open');
+  const b=document.getElementById('cf-veh-menu-btn'); if(b) b.setAttribute('aria-expanded','false');
+}
+window.cfVehMenuClose = cfVehMenuClose;
+window.cfVehMenuToggle = function(e){
+  if(e) e.stopPropagation();
+  const m=document.getElementById('cf-veh-menu'); if(!m) return;
+  const open=!m.classList.contains('open');
+  m.classList.toggle('open', open);
+  const b=document.getElementById('cf-veh-menu-btn'); if(b) b.setAttribute('aria-expanded', open?'true':'false');
+};
+document.addEventListener('click', function(e){
+  const m=document.getElementById('cf-veh-menu');
+  if(m && m.classList.contains('open') && !m.contains(e.target)) cfVehMenuClose();
+});
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') cfVehMenuClose(); });
 window.cfContactsOpen = function(){ const c=_cfCard(); if(!c) return; _cfEnsureContacts(c); _cfRenderContacts(c); };
 window.cfContactToggle = function(el){ const w=el.closest('.cf-tel'); if(w) w.classList.toggle('open'); };
 window.cfContactTel = function(i){

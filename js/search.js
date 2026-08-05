@@ -79,11 +79,17 @@
   function custBlob(cust) {
     const parts = [cust.name, cust.kana];
     (cust.contacts || []).forEach(ct => { parts.push(ct.tel, ct.label); });
-    (cust.vehicles || []).forEach(v => { parts.push(v.plate, v.maker, v.car); });
+    /* 🔴 v1.49.0 アーカイブした車のナンバー・車種では、その顧客を検索に出さない。
+       ⚠ ここを外すと「片付けたはずの車のナンバー」で顧客が引っかかる。 */
+    (cust.vehicles || [])
+      .filter(v => (window.PitArchive ? !PitArchive.vehArchived(cust, v) : true))
+      .forEach(v => { parts.push(v.plate, v.maker, v.car); });
     return norm(parts.filter(Boolean).join(' '));
   }
   function searchCustomers(words) {
-    const list = state.customers || [];
+    /* 🔴 v1.49.0 アーカイブした顧客は検索に出さない（archive-pit.js が判定）。
+       ⚠ 消してはいない＝顧客画面の「アーカイブ済みを見る」から探せる。 */
+    const list = (state.customers || []).filter(c => (window.PitArchive ? PitArchive.custVisible(c) : true));
     const hits = [];
     for (let i = 0; i < list.length; i++) {
       const blob = custBlob(list[i]);
@@ -99,7 +105,9 @@
     const raw = String(qStr || '').trim();
     const words = raw ? raw.split(/\s+/).map(norm).filter(Boolean) : [];
     if (!words.length) return [];
-    const cards = state.cards || [];
+    /* 🔴 v1.49.0 アーカイブした顧客・車両の入庫カードも検索に出さない（ゆうた指定）。
+       ⚠ **実績ビュー・売上などの集計はここを通していない＝今までどおりの数字**。 */
+    const cards = (state.cards || []).filter(c => (window.PitArchive ? PitArchive.cardVisible(c) : true));
     const hits = [];
     for (let i = 0; i < cards.length; i++) {
       const blob = cardBlob(cards[i]);
