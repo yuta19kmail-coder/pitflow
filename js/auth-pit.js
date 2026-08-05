@@ -79,6 +79,11 @@
      ② サンプルモード（今までと同じ）
      ======================================================= */
   function initSampleMode() {
+    /* 🔴 v1.49.2 練習用サイトの時だけ、ログイン画面に注意書きを出す（CSSで出し分け）。
+       ⚠ 既定は「出さない」＝本番で一瞬でも出ないように（ゆうた指摘）。 */
+    var _lb = el('pit-login');
+    if (_lb) _lb.classList.add('pl-sample');
+
     window.pitSampleLogin = function () {
       try { localStorage.setItem(FLAG, '1'); } catch (e) {}
       showApp();
