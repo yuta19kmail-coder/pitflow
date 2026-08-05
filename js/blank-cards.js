@@ -160,7 +160,7 @@
         var keep = (nm === 'openNewReserve') ? readKeep() : null;   /* 顧客から作る時は復元しない（別の客の書きかけを混ぜない） */
         if (!keep) return f.apply(self, args);
         var when = new Date(keep.at);
-        var who  = (keep.card.customer || '').trim();
+        var who  = ((window.pitCustName ? pitCustName(keep.card) : keep.card.customer) || '').trim();
         confirmBox('書きかけの予約があります。続きから開きますか？', {
           title: '書きかけの予約',
           detail: '保存せずに閉じたぶんです（' + (when.getMonth() + 1) + '/' + when.getDate() + ' ' +

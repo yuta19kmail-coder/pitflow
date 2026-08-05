@@ -26,21 +26,19 @@ function fmtFlowTime(ms){
   const d = new Date(ms);
   return (d.getMonth()+1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
 }
-/* フローでワンタップ追加できる「よくあるアクション」。現場の言葉で。 */
-const FLOW_QUICK = [
-  '<i data-ic=phone data-ics=16></i> こちらから電話 → 留守（折り返し待ち）',
-  '<i data-ic=phone data-ics=16></i> こちらから電話 → つながった',
-  '<i data-ic=phone data-ics=16></i> お客様から入電',
-  '<i data-ic=car data-ics=16></i> 来店・相談',
-  '<i data-ic=comment data-ics=16></i> 見積りを連絡',
-  '<i data-ic=check data-ics=16></i> 承認 OK',
-  '<i data-ic=hourglass data-ics=15></i> 部品待ち',
-  '<i data-ic=calendar data-ics=16></i> 日程を調整'
-];
+/* 🔴 v1.43.0 「よくあるアクション」の一覧は **js/flow-pit.js（PitFlowLog.QUICK）へ引っ越した**。
+      カード詳細と編集で同じものを使うため＝ここに二重に持たない。
+   🔴 v1.42.0 の教訓：そこに **HTML（<i data-ic=…>）を書かないこと**。
+      ボタンの文字もフローの記録も esc() を通るので、書くと**タグが文字のまま画面に出る**
+      （CoreTemplate v1.15.1 と同じ落とし穴）。印は `ic`（アイコン名）で持ち、**描く時に線画へ**。 */
 function _flowEsc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 /* タイムライン1行。delIdx を渡すと ✕（手動記録の削除）が付く。 */
 function _flowRow(title, detail, delIdx){
-  let r = '<div class="cf-flowrow"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">' + _flowEsc(title) + '</div>';
+  /* 🔴 v1.42.0 すでに保存されている記録には、古い作りのせいで <i data-ic=…> の文字が
+     そのまま入っていることがある。**データは書き換えず**、描く時に線画アイコンへ読み替える
+     （icoText＝esc したうえでタグと絵文字だけをアイコンに戻す。他アプリと同じ考え方）。 */
+  const _ft = (window.icoText ? icoText(title) : _flowEsc(title));
+  let r = '<div class="cf-flowrow"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">' + _ft + '</div>';
   if (detail) r += '<div class="cf-flowd">' + _flowEsc(detail) + '</div>';
   r += '</div>';
   if (delIdx !== null && delIdx !== undefined){
@@ -48,95 +46,71 @@ function _flowRow(title, detail, delIdx){
   }
   return r + '</div>';
 }
+/* 🔴 v1.43.0 ゆうた指定でこのタブの役目が変わった。
+     ・**用件を足すのは「カード詳細」のフロー欄**（ここにはもう置かない）。
+     ・ここは「**本当の編集**」＝すでに入っている記録の**日時・担当を書き換える／消す**ところ。
+     ・**設定権限（PitFlow の役割＝管理）を持っている人だけ**。ほかの人には今までどおり見えるだけ。
+   ⚠ 中身の作りは `js/flow-pit.js`（PitFlowLog）に置いてある＝**記録の形が3通りある**のを
+      1か所で吸収するため。ここでは呼ぶだけにすること。 */
 function cfFlowHtml(c){
-  let h = sec('フロー（進捗ログ）', '<i data-ic=clock data-ics=16></i>');
+  const canEdit = window.PitFlowLog ? PitFlowLog.canEdit() : true;
+  let h = sec('フロー（進捗ログ）' + (canEdit ? ' ― 記録の編集' : ''), '<i data-ic=clock data-ics=16></i>');
 
-  /* === タイムライン === */
-  h += '<div class="cf-flow">';
-  if (c.bookedAt)    h += _flowRow('予約受付', c.bookedAt);
-  if (c.reserveDate) h += _flowRow('入庫予定', c.reserveDate + (c.reserveTime ? ' ' + c.reserveTime : ''));
-  (c.log || []).forEach(function(l, i){
-    const det = fmtFlowTime(l.at) + (l.staff ? '　・　' + l.staff : '');
-    h += _flowRow(l.label, det, l.manual ? i : null);
-  });
-  if (c.returnDate)  h += _flowRow('返車予定', c.returnDate + (c.returnTime ? ' ' + c.returnTime : ''));
-  h += '<div class="cf-flowrow now"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">現在：' + statusLabel(c.status) + '</div></div></div>';
-  h += '</div>';
+  if (canEdit && window.PitFlowLog){
+    h += '<div class="cf-flownote"><i data-ic=pencil data-ics=15></i> 記録の<b>日時</b>と<b>担当</b>をここで直せます。手で足した記録は<b>言葉</b>も直せます。'
+       + '<br><span class="cf-flownote-sub">用件を足すのは「カード詳細」のフロー欄から。工程の記録（自動）は言葉だけ直せません。</span></div>';
+    h += PitFlowLog.editHtml(c);
+  } else {
+    /* 権限が無い人：今までどおりのタイムライン（見えるだけ） */
+    h += '<div class="cf-flownote cf-flownote-lock"><i data-ic=lock data-ics=15></i> 記録を直せるのは<b>設定権限（管理）</b>のある人だけです。'
+       + '<br><span class="cf-flownote-sub">用件を足すのは「カード詳細」のフロー欄からどうぞ。</span></div>';
+    h += '<div class="cf-flow">';
+    if (c.bookedAt)    h += _flowRow('予約受付', c.bookedAt);
+    if (c.reserveDate) h += _flowRow('入庫予定', c.reserveDate + (c.reserveTime ? ' ' + c.reserveTime : ''));
+    (c.log || []).forEach(function(l){
+      const _t = window.PitFlowLog ? PitFlowLog.atText(l) : fmtFlowTime(l.at);
+      const _w = window.PitFlowLog ? PitFlowLog.byOf(l) : (l.staff || '');
+      /* 🔴 工程の記録は label/text を持っていない＝titleOf を通さないと**見出しが空**になる */
+      const _x = window.PitFlowLog ? PitFlowLog.titleOf(l) : (l.label || '');
+      h += _flowRow(_x, _t + (_w ? '　・　' + _w : ''), null);
+    });
+    if (c.returnDate)  h += _flowRow('返車予定', c.returnDate + (c.returnTime ? ' ' + c.returnTime : ''));
+    h += '<div class="cf-flowrow now"><span class="cf-flowdot"></span><div class="cf-flowmain"><div class="cf-flowt">現在：' + statusLabel(c.status) + '</div></div></div>';
+    h += '</div>';
+  }
 
-  /* === 手動でアクションを残す（ある程度イージーに） === */
-  h += '<div class="cf-flowadd">';
-  h += '<div class="cf-label">アクションを記録（チップをタップ／自由入力で追加）</div>';
-  /* 担当・時刻（既定＝前回の担当＋今。触らなければそのまま） */
-  h += '<div class="cf-flowmeta">';
-  h += '<select id="cf-flow-staff" class="cf-input" title="担当者"><option value="">担当 ―</option>';
-  (state.staff || []).forEach(function(s){
-    h += '<option value="' + _flowEsc(s.name) + '"' + (s.name === _lastFlowStaff ? ' selected' : '') + '>' + _flowEsc(s.name) + '</option>';
-  });
-  h += '</select>';
-  h += '<input id="cf-flow-when" class="cf-input cf-flowwhen" type="datetime-local" value="' + _dtLocalNow() + '" title="記録時刻（既定は今・昨日の留守などはここを変更）">';
-  h += '<button type="button" class="cf-flownow" onclick="cfFlowNow()" title="時刻を今に戻す">今</button>';
-  h += '</div>';
-  h += '<div class="cf-flowquick">';
-  FLOW_QUICK.forEach(function(q, i){
-    h += '<button type="button" class="cf-flowchip" onclick="cfFlowAddQuick(' + i + ')">' + _flowEsc(q) + '</button>';
-  });
-  h += '</div>';
-  h += '<div class="cf-flowcustom">';
-  h += '<input id="cf-flow-input" class="cf-input" placeholder="その他（自由入力）例：代車の件で連絡待ち" onkeydown="if(event.key===\'Enter\'){event.preventDefault();cfFlowAddCustom();}">';
-  h += '<button type="button" class="cf-flowaddbtn" onclick="cfFlowAddCustom()">＋ 追加</button>';
-  h += '</div>';
-  h += '</div>';
-
-  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。担当・時刻は触らなければ「前回の担当＋今」で入り、手動メモは <i data-ic=close data-ics=16></i> で消せます。</div>';
+  h += '<div class="cf-hint">工程を動かす（タスクのドラッグ／「次へ」）と自動でも記録されます。</div>';
   h += secEnd();
   return h;
 }
-/* ===== 手動アクションログ：追加・削除 ===== */
-let _lastFlowStaff = '';   // 次回の既定担当（同じ人が連続で記録するケースが多い）
+/* フローの面だけ描き直す＝タブも巻物の位置もそのまま（card-view.js の cvFlowRepaint と対） */
+window.cfFlowRepaint = function(){
+  const host = document.getElementById((typeof _cardBodyId !== 'undefined' ? _cardBodyId : 'md-body')) || document;
+  const panel = host.querySelector('.cf-panel[data-tab="flow"]');
+  const c = _flowCard();
+  if (panel && c) panel.innerHTML = cfFlowHtml(c);
+};
+/* ===== 手動アクションログ：追加・削除 =====
+   🔴 v1.43.0 中身は **js/flow-pit.js（PitFlowLog）に引っ越した**。
+      ここに残しているのは「今までの呼び名」だけ＝古い呼び出しが残っていても動くようにする受け皿。
+      **新しく書く時は PitFlowLog を直接呼ぶこと。** */
 function _flowCard(){ return state.cards.find(function(x){ return x.id === _editingCardId; }); }
-/* いまの日時を datetime-local 用の "YYYY-MM-DDTHH:MM" に */
-function _dtLocalNow(){
-  const d = new Date(); d.setSeconds(0, 0);
-  const p = function(n){ return String(n).padStart(2, '0'); };
-  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
-}
-/* 追加フォームの担当・時刻を読む（未入力なら担当なし＋今） */
-function _flowMeta(){
-  const staffEl = document.getElementById('cf-flow-staff');
-  const whenEl  = document.getElementById('cf-flow-when');
-  const staff = staffEl ? staffEl.value : '';
-  let at = Date.now();
-  if (whenEl && whenEl.value){ const t = new Date(whenEl.value).getTime(); if (!isNaN(t)) at = t; }
-  return { staff: staff, at: at };
-}
-/* 時刻を今に戻すボタン */
-function cfFlowNow(){ const el = document.getElementById('cf-flow-when'); if (el) el.value = _dtLocalNow(); }
+function cfFlowNow(){ if (window.pitFlowNow) pitFlowNow('cv'); }
 function cfFlowAdd(label){
-  const c = _flowCard(); if (!c) return;
-  label = String(label || '').trim(); if (!label) return;
-  const m = _flowMeta();
-  if (!Array.isArray(c.log)) c.log = [];
-  c.log.push({ label: label, at: m.at, manual: true, staff: m.staff || '' });
-  _lastFlowStaff = m.staff || '';   // 次回の既定に記憶
-  if (window.PitDB) PitDB.save();
-  renderCardForm(c);
+  const c = _flowCard(); if (!c || !window.PitFlowLog) return;
+  PitFlowLog.add(c.id, label, 'cv');
 }
-function cfFlowAddQuick(i){ cfFlowAdd(FLOW_QUICK[i]); }
+function cfFlowAddQuick(i){
+  const c = _flowCard(); if (!c || !window.PitFlowLog) return;
+  PitFlowLog.addQuick(c.id, i, 'cv');
+}
 function cfFlowAddCustom(){
-  const inp = document.getElementById('cf-flow-input');
-  if (!inp) return;
-  const v = inp.value.trim();
-  if (!v) { inp.focus(); return; }
-  inp.value = '';
-  cfFlowAdd(v);
+  const c = _flowCard(); if (!c || !window.PitFlowLog) return;
+  PitFlowLog.addCustom(c.id, 'cv');
 }
 function cfFlowDel(i){
-  const c = _flowCard(); if (!c || !Array.isArray(c.log)) return;
-  const l = c.log[i];
-  if (!l || !l.manual) return;   // 手動記録のみ削除可（自動の工程ログは残す）
-  c.log.splice(i, 1);
-  if (window.PitDB) PitDB.save();
-  renderCardForm(c);
+  const c = _flowCard(); if (!c || !window.PitFlowLog) return;
+  PitFlowLog.del(c.id, i);
 }
 window.cfFlowAdd = cfFlowAdd;
 window.cfFlowAddQuick = cfFlowAddQuick;

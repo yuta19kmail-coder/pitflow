@@ -147,7 +147,7 @@ function _undRow(c, kind){
   if (kind === 'returnTbd') act = '<button class="und-act" onclick="event.stopPropagation();pitUndComplete(\'' + c.id + '\')"><i data-ic=phone data-ics=16></i> 完TEL → 返車日</button>';
 
   let h = '<div class="und-row" style="--team:' + teamColor + '" onclick="openDetail(\'' + c.id + '\')">';
-  h += '<div class="und-main"><div class="und-headline"><b>' + (c.customer || '（未入力）') + ' 様</b>'
+  h += '<div class="und-main"><div class="und-headline"><b>' + ((window.pitCustName?pitCustName(c):c.customer) || '（未入力）') + ' 様</b>'
      + (c.car ? '<span class="und-car">' + (c.maker ? c.maker + ' ' : '') + c.car + '</span>' : '') + '</div>'
      + '<div class="und-sub">' + (c.plate ? c.plate + '　' : '') + (wt ? wt.label : '') + meta + '</div></div>';
   h += '<div class="und-actwrap">' + act + '</div>';

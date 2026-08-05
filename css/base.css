@@ -81,3 +81,27 @@ a:hover{text-decoration:underline}
 .center{display:flex;align-items:center;justify-content:center}
 .muted{color:var(--text2)}
 .tiny{font-size:11px;color:var(--text3)}
+
+/* ===== 日付・時刻の入力欄：カレンダー／時計のボタンをテーマに合わせる（v1.27.0） =====
+   🔴 ブラウザ標準のボタン（📅の絵）は色を直接は指定できない。`color-scheme` で
+      「いまどっち向きの画面か」をブラウザに伝えると、**ダークでは白っぽく・ライトでは黒く**
+      描き分けてくれる。これが無いと常に黒で描かれ、ダークで真っ黒のボタンになる。
+   ⚠ 押して開くカレンダーの中身も同じ向きになる（ダークなら暗い配色）。
+   ⚠ 入力欄だけに付ける＝ページ全体のスクロールバーや他の部品は今までどおり。
+   ・既定（data-theme 未設定）＝ダーク。liquid の2つも同じ扱い。 */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"]{ color-scheme: dark; }
+
+:root[data-theme="light"] input[type="date"],
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="datetime-local"],
+:root[data-theme="light"] input[type="month"],
+:root[data-theme="light"] input[type="week"],
+:root[data-theme="light-liquid"] input[type="date"],
+:root[data-theme="light-liquid"] input[type="time"],
+:root[data-theme="light-liquid"] input[type="datetime-local"],
+:root[data-theme="light-liquid"] input[type="month"],
+:root[data-theme="light-liquid"] input[type="week"]{ color-scheme: light; }

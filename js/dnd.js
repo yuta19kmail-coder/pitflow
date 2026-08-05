@@ -101,11 +101,13 @@
       const p = val.split('|');
       if (p[0] !== c.reserveDate && window.pitIntakeGuard && pitIntakeGuard(c, p[0], c.reserveDate) !== p[0]) return;
       c.reserveDate = p[0];
-      if (p[1]) c.reserveTime = p[1];
+      /* v1.34.0 「時刻未定」の行（"日付|" で時刻が空）へ落としたら、時刻を空に戻す。
+         ⚠ p[1] の真偽ではなく **区切りがあるかどうか** で見る（'' も正式な値だから）。 */
+      if (p.length > 1) c.reserveTime = p[1];
     } else if (kind === 'returnDateTime') {
       const p = val.split('|');
       c.returnDate = p[0];
-      if (p[1]) c.returnTime = p[1];
+      if (p.length > 1) c.returnTime = p[1];
     } else {
       return;
     }

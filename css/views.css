@@ -197,6 +197,10 @@
 .rwk-r{ display:flex; align-items:center; gap:5px; min-width:0; }
 .rwk-r + .rwk-r{ margin-top:3px; }
 .rwk-name, .rwk-car{ flex:1 1 auto; min-width:0; font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* v1.34.0 その行の時刻とぴったり同じでない時だけ出す小さな時刻（朝一・09:30・枠外の8:00 など） */
+.rwk-t{ flex:0 0 auto; font-size:10.5px; font-weight:700; color:var(--brand); background:var(--bg3); border:1px solid var(--border2); border-radius:4px; padding:0 4px; line-height:1.5; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* v1.34.0 週ビューの「時刻未定」行の見出し */
+.reserve-week-time.rwk-tbd-h{ color:#e0a33a; font-weight:700; }
 .rwk-badges{ flex:0 0 auto; display:flex; gap:3px; align-items:center; }
 .rwk-wb, .rwk-lo{ font-size:9.5px; font-weight:700; padding:0 5px; border-radius:4px; line-height:1.55; white-space:nowrap; border:1px solid; }
 .rwk-lo{ background:rgba(245,158,11,.16); color:#f59e0b; border-color:rgba(245,158,11,.55); }

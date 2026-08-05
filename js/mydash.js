@@ -21,7 +21,7 @@
   }
   function teamOf(c) { return c && c.boardId === 'import' ? 'import' : 'default'; }
   function teamColor(c) { return teamOf(c) === 'import' ? '#ec4899' : '#1db97a'; }
-  function nm(c) { return (window.pitSurname ? pitSurname(c.customer) : (c && c.customer)) || '（未入力）'; }
+  function nm(c) { return (window.pitCustSurname ? pitCustSurname(c) : (c && c.customer)) || '（未入力）'; }
   function carOf(c) { return c && c.car ? String(c.car) : ''; }
   function amt(c) {
     if (!c) return 0;
@@ -239,7 +239,7 @@
       title: '今日の入庫', icon: '📥', jump: 'today', sizes: ['s', 'm', 'l', 'xl'],
       body: function (sz) {
         /* ⚠ v1.17.0：まだ保存していない新規予約（_draft）は出さない・数えない */
-        var list = C.cards.filter(function (c) { return !c._draft && c.reserveDate === C.tStr && c.status !== 'scrap'; }).sort(function (a, b) { return (a.reserveTime || '99').localeCompare(b.reserveTime || '99'); });
+        var list = C.cards.filter(function (c) { return !c._draft && c.reserveDate === C.tStr && c.status !== 'scrap'; }).sort(function (a, b) { return pitTimeMin(a.reserveTime) - pitTimeMin(b.reserveTime); });   /* v1.33.0 */
         var left = list.filter(function (c) { return c.status === 'reserved'; }).length;
         if (sz === 's') return kpi(list.length, '台', '未来店 ' + left + '台', 'g');
         if (!list.length) return empty('本日の入庫予定はありません');
@@ -475,7 +475,7 @@
       title: '予約一覧', icon: '📅', person: true, sizes: ['s', 'm', 'l'],
       body: function (sz, item) {
         var ns = targetNames(item);
-        var list = C.cards.filter(function (c) { return (inTarget(c.frontStaff, ns) || inTarget(c.reserveStaff, ns)) && c.status !== 'returned' && c.status !== 'scrap' && c.reserveDate && c.reserveDate >= C.tStr; }).sort(function (a, b) { return (a.reserveDate + (a.reserveTime || '')).localeCompare(b.reserveDate + (b.reserveTime || '')); });
+        var list = C.cards.filter(function (c) { return (inTarget(c.frontStaff, ns) || inTarget(c.reserveStaff, ns)) && c.status !== 'returned' && c.status !== 'scrap' && c.reserveDate && c.reserveDate >= C.tStr; }).sort(function (a, b) { return a.reserveDate === b.reserveDate ? (pitTimeMin(a.reserveTime) - pitTimeMin(b.reserveTime)) : (a.reserveDate < b.reserveDate ? -1 : 1); });   /* v1.33.0 */
         if (sz === 's') return kpi(list.length, '件', '直近の担当予約', 'b');
         if (!list.length) return empty('担当の予約はありません');
         return '<div class="md-list">' + list.slice(0, sz === 'l' ? 12 : 6).map(function (c) { return rowCard(c.id, esc((window.fmtMD ? fmtMD(c.reserveDate) : c.reserveDate)) + (c.reserveTime ? ' ' + esc(c.reserveTime) : '') + '　' + esc(nm(c)) + ' ' + esc(carOf(c)), wtChip(c)); }).join('') + '</div>';
@@ -499,7 +499,7 @@
       title: '返車予定', icon: '📤', person: true, sizes: ['s', 'm', 'l'],
       body: function (sz, item) {
         var ns = targetNames(item);
-        var list = C.cards.filter(function (c) { return inTarget(taskStaff(c), ns) && c.status !== 'returned' && c.status !== 'scrap' && c.returnDate && c.returnDate >= C.tStr; }).sort(function (a, b) { return (a.returnDate + (a.returnTime || '')).localeCompare(b.returnDate + (b.returnTime || '')); });
+        var list = C.cards.filter(function (c) { return inTarget(taskStaff(c), ns) && c.status !== 'returned' && c.status !== 'scrap' && c.returnDate && c.returnDate >= C.tStr; }).sort(function (a, b) { return a.returnDate === b.returnDate ? (pitTimeMin(a.returnTime) - pitTimeMin(b.returnTime)) : (a.returnDate < b.returnDate ? -1 : 1); });   /* v1.33.0 */
         if (sz === 's') return kpi(list.length, '件', '担当の返車予定', 'b');
         if (!list.length) return empty('担当の返車予定はありません');
         return '<div class="md-list">' + list.slice(0, sz === 'l' ? 12 : 6).map(function (c) { return rowCard(c.id, esc((window.fmtMD ? fmtMD(c.returnDate) : c.returnDate)) + (c.returnTime ? ' ' + esc(c.returnTime) : '') + '　' + esc(nm(c)) + ' ' + esc(carOf(c)), wtChip(c)); }).join('') + '</div>';

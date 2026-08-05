@@ -560,7 +560,7 @@
     var staff = c.frontStaff || c.staff || '';
     var loanerBadge = c.needLoaner ? '<span class="pfv-loaner">代車</span>' : '';
     var staffNm = (window.pitSurname ? pitSurname(staff) : staff);
-    var custNm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+    var custNm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
     var staffBadge = staff ? '<span class="pfv-staff">' + esc(staffNm) + '</span>' : '';
     return '<span class="pfv-r"><b class="pfv-cn">' + esc(custNm) + ' 様</b><span class="pfv-badges">' + loanerBadge + dropBadge + wtBadge + '</span></span>'
       + '<span class="pfv-r"><b class="pfv-cc">' + esc(c.car || '') + '</b>' + staffBadge + '</span>';

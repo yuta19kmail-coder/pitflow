@@ -91,7 +91,12 @@
 
   /* ===== カードの「呼び出し」＝候補は車両単位（名前で引けば人の全車両・ナンバーでその車） ===== */
   window.custSuggest=function(qstr){
-    const box=document.getElementById('cf-recall-list'); if(!box) return;
+    /* 🔴 v1.44.0 候補の箱は**いま開いているフォームの中**から探す。
+       入庫カードのフォームは置き場所が2つ（#md-body／#md-body-modal）あり、
+       前に開いた方が残っていると同じ id が2つできて**前のカードの箱**に候補を出してしまう。 */
+    const _hid = (typeof _cardBodyId !== 'undefined' && _cardBodyId) ? _cardBodyId : 'md-body';
+    const _host = document.getElementById(_hid) || document;
+    const box = _host.querySelector('#cf-recall-list'); if(!box) return;
     const q=norm(qstr);
     if(!q){ box.innerHTML=''; box.style.display='none'; return; }
     const entries=[];

@@ -257,7 +257,12 @@ const cd = fs.readFileSync(path.join(dir, 'js', 'card-detail.js'), 'utf8');
 const css = fs.readFileSync(path.join(dir, 'css', 'polish.css'), 'utf8');
 ok('index.html が js/carname-pit.js を読み込んでいる', /<script src="js\/carname-pit\.js/.test(idx));
 ok('carname-pit.js は card-detail.js より後ろ', idx.indexOf('js/carname-pit.js') > idx.indexOf('js/card-detail.js'));
-ok('バージョンが v1.23.0', (idx.match(/v1\.23\.0/g) || []).length === 2, (idx.match(/v1\.23\.0/g) || []).length);
+/* ⚠ 版は上がっていくので数字は固定しない（v1.23.0 決め打ちだと毎回のリリースで落ちる）。
+   「ログイン画面の版・トップバーの版・meta app-version の3つがそろっているか」だけ見る。 */
+const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
+const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
+ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
 ok('card-detail.js のメーカー欄に data-cn="maker" がある', /data-cn=\\?"maker\\?"/.test(cd));
 ok('card-detail.js の車種欄に data-cn="car" がある', /data-cn=\\?"car\\?"/.test(cd));
 ok('card-detail.js が PitCarName.mount を呼んでいる', /PitCarName\.mount\(/.test(cd));

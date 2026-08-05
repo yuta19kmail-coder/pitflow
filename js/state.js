@@ -352,6 +352,127 @@ function pitSurname(name){
 window.pitSurname = pitSurname;
 window.pitCardName = pitSurname;   // 別名（カード表示名の意味で使う用）
 
+/* 🔴 v1.25.0 カードの「お客様名（表示用）」＝画面に出す名前はここを通す。
+   ・新規のお客様は**電話だけで漢字が分からない**ことがあるので、その時はカナだけ入れる運用。
+   ・漢字（c.customer）が空なら、**カナ（c.kana）をそのままお客様名として表示する**。
+   ・保存しているデータは触らない＝あとで漢字が分かったら普通に入れれば、そちらが出るようになる。
+   ⚠ 検索・突き合わせ・保存は今までどおり c.customer / c.kana をそのまま見ること（ここは表示専用）。 */
+function pitCustName(c){
+  if (!c) return '';
+  var k = String(c.customer == null ? '' : c.customer).trim();
+  if (k) return k;
+  return String(c.kana == null ? '' : c.kana).trim();
+}
+window.pitCustName = pitCustName;
+
+/* 上の「表示用の名前」を、カード用の短い表示（姓だけ／法人は略記）にしたもの。
+   これまで各画面が書いていた pitSurname(c.customer) の置き換え。 */
+function pitCustSurname(c){ return pitSurname(pitCustName(c)); }
+window.pitCustSurname = pitCustSurname;
+
+/* 🔴 v1.31.0（ゆうた指定）**紙に印刷する担当の名前**（表紙印刷のフロント担当・予約担当）。
+   基本は**苗字だけ**。CoreMembers に入っているものがあればそちらを優先する。
+     ① 呼び名＝優先表示名（CoreMembers の dispName。例「チーフ」「山田（太）」）
+     ② 姓（CoreMembers の lastName）
+     ③ どちらも無ければ、カードに入っている名前の**先頭のかたまり**（＝苗字。法人はフル）
+   ⚠ 名簿に居ない人（退職者・整備ソフト由来）でも ③ で必ず何か出す＝空欄にしない。
+   ⚠ 自社「小林モータース」は姓を持たないので ③ を通り、法人としてそのまま出る。
+   ⚠ 画面側の表示は今までどおり（ここは印刷専用）。 */
+function pitStaffPrintName(name){
+  var n = String(name == null ? '' : name).trim();
+  if (!n) return '';
+  var m = null;
+  try { if (window.pitStaffAny) m = pitStaffAny(n); } catch (e) {}
+  if (m){
+    var dn = String(m.dispName || '').trim();
+    if (dn) return dn;
+    var ln = String(m.lastName || '').trim();
+    if (ln) return ln;
+    return pitSurname(m.name || n);
+  }
+  return pitSurname(n);
+}
+window.pitStaffPrintName = pitStaffPrintName;
+
+/* ===== 🕐 v1.33.0（ゆうた指定）入庫時間のショートカット =====
+   🔴 **並び順はこの配列のとおり**（画面のボタンの並び）。
+   🔴 **（）内の時間は画面に出さない。並び順の計算にだけ使う。**
+      予約・当日・返車などの「時間順」は、その**いちばん若い時刻（from）**で決める。
+   🔴 **決まり次第・レッカー・鍵ポスト・未定は「時刻が本当に分からない」**扱い＝**その日の最後尾**に付く。
+      その中の並びもこの配列の順。
+   ⚠ 保存の形は今までどおり **文字列ひとつ**（c.reserveTime にラベルがそのまま入る）。
+      だから表紙印刷やカードの表示は、何もしなくても「朝一」「決まり次第」と**文字がそのまま出る**。
+   ⚠ 時刻を直接打つ（9:00 / 900 / 9時半）のも今までどおり。ここは“よく使うもの”の近道。 */
+var PIT_TIME_QUICK = [
+  { label: 'AM',         from: '09:00', to: '12:00' },
+  { label: 'PM',         from: '13:00', to: '19:00' },
+  { label: '朝一',       from: '09:00', to: '09:30' },
+  { label: 'お昼',       from: '12:00', to: '13:00' },
+  { label: '夕方',       from: '16:30', to: '19:00' },
+  { label: '決まり次第', unknown: true },
+  { label: 'レッカー',   unknown: true },
+  { label: '鍵ポスト',   unknown: true },
+  { label: '未定',       unknown: true }
+];
+window.PIT_TIME_QUICK = PIT_TIME_QUICK;
+
+var _pitTimeByLabel = {};
+PIT_TIME_QUICK.forEach(function (t, i) { t.ord = i; _pitTimeByLabel[t.label] = t; });
+
+/* ラベル（朝一 など）ならその定義を返す。時刻や空なら null。 */
+function pitTimeQuick(v){
+  return _pitTimeByLabel[String(v == null ? '' : v).trim()] || null;
+}
+window.pitTimeQuick = pitTimeQuick;
+
+/* 時刻が本当に分からないもの（決まり次第・レッカー・鍵ポスト・未定）か */
+function pitTimeUnknown(v){
+  var q = pitTimeQuick(v);
+  return !!(q && q.unknown);
+}
+window.pitTimeUnknown = pitTimeUnknown;
+
+/* 🔴 **並び順の物差し**。時間順に並べる所は必ずこれを通すこと。
+     ・「09:30」「09:00-10:00」 → 570 / 540（先頭の時刻）
+     ・ショートカット           → （）内のいちばん若い時刻。同じ時刻ならボタンの並び順で決まる
+                                   （AM と 朝一 はどちらも 9:00 → AM が先）
+     ・時刻不明のショートカット → 90000 台＝**その日の最後尾**（その中の並びもボタン順）
+     ・空・読めない文字         → 99999＝いちばん後ろ
+   ⚠ 返す値は「分」。休憩バーの区切り（12:00＝720）などと直接くらべられるようにしてある。
+     同時刻の並びを決めるため 0.01 刻みの端数を足しているだけなので、大小くらべには影響しない。 */
+function pitTimeMin(v){
+  var s = String(v == null ? '' : v).trim();
+  if (!s) return 99999;
+  var q = pitTimeQuick(s);
+  if (q) {
+    if (q.unknown) return 90000 + q.ord;
+    var mq = String(q.from || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (mq) return (+mq[1]) * 60 + (+mq[2]) + q.ord * 0.01;
+  }
+  var m = s.match(/(\d{1,2}):(\d{2})/);
+  if (!m) return 99999;
+  return (+m[1]) * 60 + (+m[2]);
+}
+window.pitTimeMin = pitTimeMin;
+
+/* 🔴 v1.34.0 **「何時の枠に入れるか」を決める共通の物差し。**
+   時間帯で区切って並べる画面（予約・返車の日ビュー／週ビュー）は必ずこれを通すこと。
+   ・戻り値＝'09' のような2桁の「時」。**枠に入れられない時は null**（＝「時刻未定」の枠へ）。
+   ・ショートカットは（）内のいちばん若い時刻の「時」に入る（AM・朝一→09／お昼→12／PM→13／夕方→16）。
+   ・範囲（09:00-10:00）は先頭の時。
+   ・lo / hi（枠の最初と最後の時）を渡すと、**その外の時刻は端の枠へ寄せる**。
+     🔴 これが無いと 08:00 や 19:00 の予約が**どの枠にも入らず画面から消えていた**（v1.33.0 以前からの穴）。
+   ⚠ 決まり次第・レッカー・鍵ポスト・未定・空 は null＝「時刻未定」の枠にまとめる。**消さない。** */
+function pitTimeHour(v, lo, hi){
+  var m = pitTimeMin(v);
+  if (!(m >= 0) || m >= 1440) return null;          // 時刻不明・空・読めない
+  var h = Math.floor(m / 60);
+  if (lo != null && h < lo) h = lo;
+  if (hi != null && h > hi) h = hi;
+  return String(h).padStart(2, '0');
+}
+window.pitTimeHour = pitTimeHour;
+
 /* v0.85.0 受付タイプの表示ラベル。2つ選んだ時は「待or預」のように連結（作業次第でどちらにもなる用）。
    主＝c.dropType、副＝c.dropType2。色や占有判定など既存ロジックは従来どおり主(dropType)を見る。 */
 function pitDropLabel(c){

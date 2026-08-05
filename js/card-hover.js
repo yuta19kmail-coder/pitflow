@@ -139,7 +139,7 @@
     h += '<span class="ph-pill ph-div">'+ku+'</span>';
     if (staff) h += '<span class="ph-staffwrap"><span class="ph-stafflb">担当</span><span class="ph-staff">'+esc(staff)+'</span></span>';
     h += '</div>';
-    h += '<div class="ph-name">'+esc(c.customer||'（未入力）')+' <small>様</small></div>';
+    h += '<div class="ph-name">'+esc((window.pitCustName?pitCustName(c):c.customer)||'（未入力）')+' <small>様</small></div>';
     if (c.kana) h += '<div class="ph-kana">'+esc(c.kana)+'</div>';
     h += '<div class="ph-car">'+carTxt+'</div>';
     if (c.plate || (c.karteNo||'').trim()) h += '<div class="ph-plate-row">'+(c.plate?'<span class="ph-plate">'+esc(c.plate)+'</span>':'')+((c.karteNo||'').trim()?'<span class="ph-karte">'+esc(c.karteNo.trim())+'</span>':'')+'</div>';

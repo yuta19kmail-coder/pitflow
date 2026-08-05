@@ -20,6 +20,13 @@
 
   /* ---- 作業バッジ（SVG userspace）＝フルサイズ→入りきらなければ縮小→下限で2段目に折り返し ---- */
   var BADGE = { x0: 19.2, x1: 244.2, yTop: 99.2, gap: 8, lineGap: 7, full: 21.8, min: 16 };
+  /* ---- 🔴 v1.40.0（ゆうた指定）代車ありの時、「代車管理費」の四角にチェックを入れて印刷する ----
+     ⚠ 様式SVGの中の**7.82×7.82 の小さい四角**（x271.82 y235.66・代車ブロックの中）がその欄。
+        文字はアウトライン化されていて探せないので、**座標で決め打ち**している。
+        様式SVGを差し替えたら、この座標も見直すこと。
+     ⚠ 金額（¥2,200 税込）は様式に印刷済み＝こちらは**チェックだけ**重ねる。 */
+  var LOANER_FEE_BOX = { x: 271.82, y: 235.66, w: 7.82 };
+
   /* ---- 早割スタンプの位置＆大きさ（userspace／モック調整反映 2026-07-17） ---- */
   var STAMP = { x: 34.1, y: 170.8, w: 78 };   // 高さはアスペクト比(720:370)から自動
   /* ---- 名前・車種：中央そろえ＋はみ出したら自動縮小（userspace） ----
@@ -30,9 +37,15 @@
   var NUM_C  = { cx: 334.8, maxW: 150, gap: 6 };
   /* ---- 左の記入罫線（この上に カルテNo→連絡先→LINE→空行→予約内容 を自動記載） ---- */
   var LEFT_LINES = [164.3,189.8,215.3,240.7,266.2,291.6,317.1,342.5,367.9,393.4,418.8,444.3,469.7,495.1,520.6];
-  var MEMO_X = 28, MEMO_FS = 13;   // 書き始めを全角スペース1個ぶん右へ
+  /* ---- 左の罫線メモ（依頼の中身）----
+     🔴 v1.32.0（ゆうた指定）文字を少し小さく（13→11.5）＋**幅からはみ出す行は自動で折り返す**。
+     ⚠ 罫線の実寸＝様式SVGの線が x12.37〜240.4。書き始め 28 なので使える幅は約 212。
+        右端ぎりぎりだと詰まって見えるので **208** で折り返す。
+     ⚠ 折り返した2行目以降は少し右に下げる（MEMO_IND）＝どこからが続きか分かるように。 */
+  var MEMO_X = 28, MEMO_FS = 11.5;   // 書き始めを全角スペース1個ぶん右へ
+  var MEMO_W = 208, MEMO_IND = 10;   // 折り返す幅／続き行の下げ幅
   /* ---- フロント／予約担当：セルからはみ出す長い苗字はフォント縮小（中央そろえ維持） ---- */
-  var FIT_BOX = { 'pcv-front': 48, 'pcv-resStaff': 48 };
+  var FIT_BOX = { 'pcv-front': 48, 'pcv-resStaff': 48, 'pcv-time': 88 };
 
   /* ================= ヘルパー ================= */
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -43,7 +56,14 @@
   function md(s){ var d=parseISO(s); return d?((d.getMonth()+1)+'/'+d.getDate()):''; }
   function dows(s){ var d=parseISO(s); return d?DOW[d.getDay()]:''; }
   function master(arr, id){ var m=(arr||[]).find(function(x){return x.id===id;}); return m?m.label:''; }
-  function loanerName(id){ var l=((window.state&&state.loaners)||[]).find(function(x){return x.id===id;}); return l?(l.name||''):''; }
+  /* 🔴 v1.26.0（ゆうた指定）表紙は通し番号を出さず、**素直に車種名**（アクア など）を書く。
+     アプリの画面側は今までどおり「代車5」等の呼び名のまま＝ここは表紙だけの決めごと。
+     ⚠ 車種が登録されていない代車だけ、呼び名（代車5）で代替する＝空にすると何を貸したか分からなくなるため。 */
+  function loanerName(id){
+    var l=((window.state&&state.loaners)||[]).find(function(x){return x.id===id;});
+    if (!l) return '';
+    return String(l.model==null?'':l.model).trim() || String(l.name==null?'':l.name).trim();
+  }
 
   var DROP_FULL = { wait:'待ち', sameDay:'当日返し', drop:'預かり' };
   function courseLabel(c){
@@ -134,7 +154,7 @@
   function tokenMap(c){
     var pl = splitPlate(c.plate);
     return {
-      name:       c.customer || '',
+      name:       (window.pitCustName ? pitCustName(c) : c.customer) || '',   /* v1.25.0 漢字が空ならカナをお名前欄に */
       maker:      makerDisp(c.maker),
       car:        c.car || '',
       m:          moN(c.reserveDate),
@@ -151,8 +171,9 @@
       loanerCond: loanerCondVal(c),
       fee:        feeVal(c),
       course:     courseLabel(c),
-      front:      c.frontStaff || '',
-      resStaff:   c.reserveStaff || '',
+      /* 🔴 v1.31.0 担当は**苗字だけ**（CoreMembers の呼び名／姓があればそちら優先）＝ state.js の共通関数 */
+      front:      (window.pitStaffPrintName ? pitStaffPrintName(c.frontStaff) : (c.frontStaff || '')),
+      resStaff:   (window.pitStaffPrintName ? pitStaffPrintName(c.reserveStaff) : (c.reserveStaff || '')),
       bm:         moN(c.bookedAt),
       bd:         dayN(c.bookedAt),
       bdow:       dows(c.bookedAt)
@@ -189,6 +210,9 @@
     s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{plateB\}\})/,function(m,rest){ return '<text id="pcv-plateB"'+rest; });
     s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{front\}\})/,  function(m,rest){ return '<text id="pcv-front"'+rest; });
     s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{resStaff\}\})/,function(m,rest){ return '<text id="pcv-resStaff"'+rest; });
+    /* 🔴 v1.33.0 時間欄は「10:00」だけでなく「朝一」「決まり次第」などの**文字がそのまま入る**。
+       入庫日ボックス（x316.6〜414.0）からはみ出さないよう、入り切らない時だけ字を小さくする。 */
+    s = s.replace(/<text\b((?:(?!<\/text>)[\s\S])*?\{\{time\}\})/,  function(m,rest){ return '<text id="pcv-time"'+rest; });
     return s;
   }
 
@@ -207,8 +231,21 @@
     var rows = memoRows(c);
     if (!rows.length) return svg;
     var g = '<g id="pcv-memo" data-x="'+MEMO_X+'" data-fs="'+MEMO_FS+'" '
+          + 'data-w="'+MEMO_W+'" data-ind="'+MEMO_IND+'" '
           + 'data-rows="'+esc(JSON.stringify(rows))+'" data-lines="'+esc(JSON.stringify(LEFT_LINES))+'"></g>';
     return svg.replace(/<\/svg>\s*$/, g+'</svg>');
+  }
+
+  /* v1.40.0 代車管理費のチェック（レ点）を注入。代車ありの時だけ。 */
+  function injectLoanerFeeCheck(svg, c){
+    if (!c || !c.needLoaner) return svg;
+    var b = LOANER_FEE_BOX, x = b.x, y = b.y, w = b.w;
+    var dpath = 'M' + (x + w * 0.18) + ' ' + (y + w * 0.52)
+              + ' L' + (x + w * 0.42) + ' ' + (y + w * 0.78)
+              + ' L' + (x + w * 0.86) + ' ' + (y + w * 0.16);
+    return svg.replace(/<\/svg>\s*$/,
+      '<path id="pcv-loanerfee" d="' + dpath + '" fill="none" stroke="#111" stroke-width="1.4" '
+      + 'stroke-linecap="round" stroke-linejoin="round"/></svg>');
   }
 
   /* 早割スタンプ <image> を </svg> 直前に注入 */
@@ -287,17 +324,40 @@
           + 't.setAttribute("dominant-baseline","central");t.setAttribute("text-anchor","start");'
           + 'x+=bw+gap;'
         + '});}'
+      /* 罫線メモ＝v1.32.0：幅からはみ出す行は自動で折り返す。罫線が足りない分は「…ほか◯行」で知らせる。 */
       + 'function memo(){var g=document.getElementById("pcv-memo");if(!g)return;'
         + 'var rows,lines;try{rows=JSON.parse(g.getAttribute("data-rows")||"[]");lines=JSON.parse(g.getAttribute("data-lines")||"[]");}catch(e){return;}'
         + 'var mx=+g.getAttribute("data-x"),fs=+g.getAttribute("data-fs");'
+        + 'var mw=+g.getAttribute("data-w")||208,ind=+g.getAttribute("data-ind")||0;'
+        /* 幅を測るための見えない文字（同じ書体・同じ大きさ）。最後に消す。 */
+        + 'var meas=document.createElementNS(NS,"text");meas.setAttribute("font-size",fs);'
+        + 'meas.setAttribute("font-weight","700");meas.setAttribute("visibility","hidden");g.appendChild(meas);'
+        + 'var W=function(s){meas.textContent=s;return meas.getComputedTextLength();};'
+        /* 行頭に来てほしくない字（句読点・閉じカッコ・伸ばし棒・小書き） */
+        + 'var NOHEAD="、。，．）」』】〉》〕｝!?！？・ーぁぃぅぇぉっゃゅょァィゥェォッャュョ";'
+        + 'var lay=function(txt){var out=[],s=String(txt),first=true;'
+          + 'while(s.length){var w=first?mw:(mw-ind),x=first?mx:(mx+ind);'
+            + 'if(W(s)<=w){out.push({t:s,x:x});break;}'
+            + 'var lo=1,hi=s.length;while(lo<hi){var mid=(lo+hi+1)>>1;if(W(s.slice(0,mid))<=w)lo=mid;else hi=mid-1;}'
+            /* 行頭禁則は**追い出し**（区切りを左へ戻す）。右へ送ると幅からはみ出すため。 */
+            + 'var n=lo;while(n>1&&NOHEAD.indexOf(s.charAt(n))>=0)n--;if(n<1)n=1;'
+            + 'out.push({t:s.slice(0,n),x:x});s=s.slice(n);first=false;}'
+          + 'return out;};'
         /* バッジの下端を求めて、その下の罫線から書き始める */
         + 'var bottom=90;["pcv-badges","pcv-stamp"].forEach(function(id){var el=document.getElementById(id);if(el&&el.getBBox){try{var bb=el.getBBox();if(bb.x<300){bottom=Math.max(bottom,bb.y+bb.height);}}catch(e){}}});'
         + 'var li=0;while(li<lines.length&&lines[li]<bottom+fs+4)li++;'
-        + 'rows.forEach(function(txt){if(li>=lines.length)return;if(txt==null){li++;return;}'
-          + 'var t=document.createElementNS(NS,"text");t.setAttribute("x",mx);t.setAttribute("y",lines[li]-3);'
+        /* まず全部を「実際に描く行」へ展開してから、入る本数と見比べる */
+        + 'var plan=[];rows.forEach(function(txt){if(txt==null){plan.push({t:"",x:mx});return;}'
+          + 'lay(txt).forEach(function(o){plan.push(o);});});'
+        + 'var avail=lines.length-li;'
+        + 'if(plan.length>avail){var keep=avail-1;if(keep<0)keep=0;var rest=plan.length-keep;'
+          + 'plan=plan.slice(0,keep);if(avail>0)plan.push({t:"…ほか "+rest+"行",x:mx});}'
+        + 'plan.forEach(function(o){if(li>=lines.length)return;if(!o.t){li++;return;}'
+          + 'var t=document.createElementNS(NS,"text");t.setAttribute("x",o.x);t.setAttribute("y",lines[li]-3);'
           + 't.setAttribute("font-size",fs);t.setAttribute("font-weight","700");t.setAttribute("fill","#111");'
-          + 't.textContent=txt;g.appendChild(t);li++;});}'
-      + 'function run(){try{centerName('+NAME_C.cx+','+NAME_C.maxW+','+NAME_C.fs+');centerVeh('+VEH_C.cx+','+VEH_C.maxW+','+VEH_C.makerFs+','+VEH_C.carFs+','+VEH_C.gap+');centerPlate('+NUM_C.cx+','+NUM_C.maxW+','+NUM_C.gap+');fitBox("pcv-front",'+FIT_BOX['pcv-front']+');fitBox("pcv-resStaff",'+FIT_BOX['pcv-resStaff']+');badges();memo();}catch(e){}'
+          + 't.textContent=o.t;g.appendChild(t);li++;});'
+        + 'g.removeChild(meas);}'
+      + 'function run(){try{centerName('+NAME_C.cx+','+NAME_C.maxW+','+NAME_C.fs+');centerVeh('+VEH_C.cx+','+VEH_C.maxW+','+VEH_C.makerFs+','+VEH_C.carFs+','+VEH_C.gap+');centerPlate('+NUM_C.cx+','+NUM_C.maxW+','+NUM_C.gap+');fitBox("pcv-front",'+FIT_BOX['pcv-front']+');fitBox("pcv-resStaff",'+FIT_BOX['pcv-resStaff']+');fitBox("pcv-time",'+FIT_BOX['pcv-time']+');badges();memo();}catch(e){}'
         + (noPrint?'' : 'setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);')
         + '}'
       + 'if(document.readyState==="complete")run();else window.addEventListener("load",run);'
@@ -315,10 +375,11 @@
                  .concat(specialBadges(c).map(function(t){ return {t:t,o:1}; }));
     svg = injectBadgePlaceholder(svg, badges);
     svg = injectMemoPlaceholder(svg, c);
+    svg = injectLoanerFeeCheck(svg, c);   /* v1.40.0 代車ありなら管理費の四角にチェック */
     if (c.earlyDiscount && opts.stampUri) svg = injectStamp(svg, opts.stampUri);
 
     var vmark = opts.vmark ? '<div style="position:fixed;top:6px;left:8px;z-index:9999;background:#e11d48;color:#fff;font:700 12px/1.3 sans-serif;padding:3px 9px;border-radius:5px" data-noprint="1">'+esc(opts.vmark)+'</div><style>@media print{[data-noprint]{display:none!important}}</style>' : '';
-    return '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>表紙 '+esc(c.customer||'')+'様</title><style>'+CSS+'</style></head><body>'
+    return '<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>表紙 '+esc((window.pitCustName?pitCustName(c):c.customer)||'')+'様</title><style>'+CSS+'</style></head><body>'
       + vmark
       + '<div class="pcv-sheet">' + svg + '</div>'
       + '<script>' + layoutScript(!!opts.noPrint) + '<\/script>'

@@ -159,7 +159,7 @@
     return '<div class="psr-row">'
       + '<div class="psr-lead">' + no + stBadge + '</div>'
       + '<div class="psr-main">'
-      + '<div class="psr-l1"><b class="psr-name">' + esc(c.customer || '（未入力）') + ' 様</b>'
+      + '<div class="psr-l1"><b class="psr-name">' + esc((window.pitCustName?pitCustName(c):c.customer) || '（未入力）') + ' 様</b>'
       + (c.car ? '<span class="psr-car">' + esc(c.car) + '</span>' : '')
       + (c.plate ? '<span class="psr-plate">' + esc(c.plate) + '</span>' : '')
       + rowBadges(c)

@@ -150,6 +150,7 @@
       var id = cm.portalMemberId || ('cm_' + cm.id);
       var disp = String(cm.dispName || '').trim() || String(cm.name || '').trim() || '(名前なし)';
       out[id] = { id: id, name: disp, realName: String(cm.name || '').trim(),
+                  lastName: String(cm.lastName || '').trim(), dispName: String(cm.dispName || '').trim(),
                   aliases: [cm.name, cm.dispName].filter(Boolean).map(String),
                   left: true, leftAt: cm.leftAt || '', photo: cm.photo || '',
                   divisions: [], deptNames: [], front: false, reception: false, mech: false };
@@ -192,6 +193,11 @@
         cmId: cm.id,
         name: disp,
         realName: String(cm.name || '').trim() || (pm && pm.name) || '',
+        /* 🔴 v1.31.0 表紙印刷などで「苗字だけ」を出すために、CoreMembers の
+           **姓（lastName）** と **呼び名＝優先表示名（dispName）** をそのまま持っておく。
+           ⚠ name（＝画面に出る名前）は今までどおり dispName 優先のフルネーム扱い。ここは別枠。 */
+        lastName: String(cm.lastName || '').trim(),
+        dispName: String(cm.dispName || '').trim(),
         aliases: [cm.name, cm.dispName, pm && pm.name, pm && pm.gname].filter(Boolean).map(String),
         canLogin: !!(pm && pm._usable),
         divisions: dv.divisions,
@@ -208,6 +214,7 @@
       if (usedPortal[pm.id]) return;
       rows.push({
         id: pm.id, cmId: '', name: pm.name || '(名前なし)', realName: pm.name || '',
+        lastName: '', dispName: '',            /* CoreMembers に居ない人は姓・呼び名を持たない */
         aliases: [pm.name, pm.gname].filter(Boolean).map(String),
         canLogin: true, divisions: [], division: '', deptNames: [],
         photo: pm.photo || '', email: pm.email || '',
@@ -223,6 +230,7 @@
     rows.push({
       id: SELF_ID, cmId: '', isSelf: true,
       name: SELF_NAME, realName: SELF_NAME,
+      lastName: '', dispName: '',              /* 自社（人ではない）は姓を持たない＝そのまま出す */
       aliases: ['小林モータース', '小林モータース 株式会社', '小林モータース株式会社', '(株)小林モータース', 'コバモ'],
       canLogin: false, divisions: [], division: '', deptNames: [],
       photo: '', email: '', joinedAt: '', sort: 1e9,
@@ -543,7 +551,8 @@
        + '<b>部署</b>は <b>CoreMembers の所属から自動</b>です（ここでは直せません）。'
        + '兼任の人は<b>両方に入ります</b>。1課・2課はカードの課での絞り込みと、付箋の「1課ぜんぶ」「2課ぜんぶ」に使われます。'
        + '<b>受付課</b>・<b>その他</b>の人は、どの課の予約でも候補に出ます。部署を直すときは CoreMembers で。<br>'
-       + '<b>フロント</b>＝予約カードのフロント欄に出る人。<b>受付</b>＝予約担当（電話を取る人）に出る人。'
+       + '<b>フロント</b>＝予約カードのフロント欄に出る人。<b>受付</b>＝予約担当（電話を取る人）に出る人'
+       + '（<b>予約担当だけは課で絞りません。チェックが入っている人は全員出ます</b>）。'
        + '<b>メカ</b>＝整備タブの点検担当者・整備担当者に出る人。<br>'
        + '3つとも自由に組み合わせられます（フロントもやるメカ、受付もやるフロント、など）。'
        + '使える／管理などの権限は CoreFlow 側で決めます。'

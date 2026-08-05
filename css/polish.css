@@ -114,6 +114,21 @@
   background:var(--bg2); border:1px solid var(--border2); border-bottom:none; border-left:4px solid var(--green);
   border-radius:8px 0 0 0; padding:0 16px 2px 9px;
   clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 100%, 0 100%); }
+/* 🔴 v1.48.0 「担当車両」で**別の課から集めてきたカード**の印（myonly-pit.js が data-xboard を付ける）。
+   ⚠ 文字は CSS が `data-xboard` から出す＝カードのHTMLは組み立て直していない。
+   ⚠ 置き場所は**右上の外側**（左上は予約番号の耳、右上の中はバッジで埋まっているため）。
+      耳が無いカードは上に隙間が無いので、その時だけ 9px 空ける。 */
+.pit-card.pcm.kb-xboard{ position:relative; }
+.pit-card.pcm.kb-xboard:not(.pcm-tab){ margin-top:9px; }
+.pit-card.pcm.kb-xboard::after{
+  content:attr(data-xboard); position:absolute; top:-7px; right:7px; z-index:2; pointer-events:none;
+  font-size:9px; font-weight:800; line-height:1; letter-spacing:.03em; white-space:nowrap;
+  color:#fff; background:var(--text3); border-radius:999px; padding:3px 7px;
+  box-shadow:0 1px 3px rgba(0,0,0,.4); }
+/* 課の色は左の帯と同じ（国産＝緑／輸入＝桃）＝どっちから来たか一目で分かる */
+.pit-card.pcm.kb-xboard[data-xboard="1課"]::after{ background:#1db97a; }
+.pit-card.pcm.kb-xboard[data-xboard="2課"]::after{ background:#ec4899; }
+
 /* 滑り台の斜め縁にグレー線（clip-pathでは線が出ないので別要素で重ねる） */
 .pcm-ear-slide{ position:absolute; top:-13px; left:51px; width:1px; height:15.5px; background:var(--border2);
   transform:rotate(-32.9deg); transform-origin:top left; pointer-events:none; }
@@ -395,8 +410,14 @@
 .lo-cell{ border-bottom:1px solid var(--border); border-right:1px solid var(--border); min-height:38px; padding:3px 4px; font-size:11px; position:relative; }
 .lo-head{ position:sticky; top:0; z-index:4; background:var(--bg3); border-bottom:1px solid var(--border2); text-align:center; }
 .lo-corner{ position:sticky; left:0; top:0; z-index:6; }
-.lo-car{ font-weight:800; font-size:13px; white-space:nowrap; }
-.lo-model{ font-size:9px; color:var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* 🔴 v1.46.0 代車カレンダーの列見出し＝**車種名がメイン／番号は小さく下に**（ゆうた指定）。
+   ⚠ 列の幅は 96〜112px しかないので、車種名は1行で入りきらない時だけ「…」で詰める。
+   ⚠ 番号は鍵タグや車両管理と突き合わせるのに要るので消さない＝小さく残す。 */
+.lo-model{ font-weight:800; font-size:12.5px; line-height:1.25; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lo-no{ font-size:9.5px; line-height:1.3; color:var(--text3); white-space:nowrap; margin-top:1px; }
+/* 車種が未登録の代車＝番号を主役に戻す（列が真っ白にならないように） */
+.lo-model-none{ color:var(--text2); }
+.lo-no-sub{ color:var(--text3); opacity:.8; }
 /* v0.98.0 緊急車両の列ヘッダ＝赤で強調／予約以外の貸出の用途ラベル */
 .lo-emg-head{ background:#3a1417; box-shadow:inset 0 -2px 0 #ef4444; }
 .lo-emg-tag{ font-size:9px; font-weight:800; color:#fff; background:#ef4444; border-radius:5px; padding:0 5px; margin:2px auto 1px; display:inline-block; }
@@ -752,6 +773,23 @@
 .mhs-foot.old{color:#e0a33a}
 .mhs-row.off .mhs-l{color:#e0a33a}
 
+/* 🔴 v1.29.0 休み欄＝MHS と同じく「顔（アバター）を並べる」（当番の行は出さなくなった）
+   ⚠ .bn-av は board-notes.css の共通アバター。ここでは大きさと並びだけ足す。 */
+.mhs-off{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px;padding-top:6px;border-top:1px solid var(--border)}
+.mhs-off-h{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:#e0a33a;flex:0 0 auto}
+.mhs-off-av{display:flex;flex-wrap:wrap;align-items:center}
+.mhs-off-av .mhs-av{width:24px;height:24px;font-size:10px;margin-right:-4px}
+.mhs-off-av .mhs-av:last-child{margin-right:0}
+/* 🔴 選んでいる担当その人が休みの日＝アバターに混ぜず、**大きく知らせる**（見落とし防止） */
+.mhs-big{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  margin:7px 0 8px;padding:9px 11px;border-radius:8px;
+  color:#e0a33a;background:rgba(224,163,58,.13);border:1.5px solid rgba(224,163,58,.55);
+}
+.mhs-big-t{font-size:16px;font-weight:800;letter-spacing:.04em}
+.mhs-big-n{font-size:12px;font-weight:700;opacity:.9}
+.mhs-big-sub{font-size:11px;font-weight:600;opacity:.85;margin-left:auto}
+
 /* v0.83.0 ナンバーガイドの右に「新規車両」スイッチ列を足す（既存グリッドは無変更） */
 .cf-plate-row{ display:flex; gap:12px; align-items:flex-end; }
 .cf-plate-side{ display:flex; flex-direction:column; align-items:stretch; justify-content:flex-end; gap:5px; border-left:1px solid var(--border2); padding-left:12px; }
@@ -813,8 +851,13 @@
 .cf-time-l{ font-size:10px; color:var(--text3); margin-bottom:5px; }
 .cf-time-l + .cf-time-pick{ margin-bottom:9px; }
 .cf-time-pick{ width:auto; }
-.cf-time-quick{ display:flex; gap:5px; flex-wrap:wrap; }
+/* v1.33.0 ショートカットが9個になったので、はみ出さないよう幅を決めて折り返す */
+.cf-time-quick{ display:flex; gap:5px; flex-wrap:wrap; max-width:260px; }
 .cf-chip-tm.active{ background:var(--brand); border-color:var(--brand); color:#fff; font-weight:600; }
+/* 時刻が本当に分からないもの（決まり次第・レッカー・鍵ポスト・未定）＝薄い見た目で見分ける。
+   ⚠ 選ぶと今までどおり緑（.active）になる。 */
+.cf-chip-tm.cf-chip-tbd{ border-style:dashed; color:var(--text2); }
+.cf-chip-tm.cf-chip-tbd.active{ color:#fff; border-style:solid; }
 /* セクション内のサブ見出し（例：予約内容の中の「🚙 代車」） */
 .cf-subhead{ font-size:11px; font-weight:700; color:var(--text2); letter-spacing:.04em; margin:14px 0 6px; padding-top:10px; border-top:1px dashed var(--border); }
 /* v0.91.0 基本情報：顧客情報(上)と車両情報(下)を点線で区切る */
@@ -871,6 +914,48 @@
 .cf-flowcustom .cf-input{ flex:1; }
 .cf-flowaddbtn{ flex:0 0 auto; background:var(--brand); border:1px solid var(--brand); color:#fff; border-radius:8px; padding:0 14px; font-size:13px; font-weight:600; cursor:pointer; }
 .cf-flowaddbtn:hover{ filter:brightness(1.07); }
+
+/* ===== フロー v1.43.0 ＝「詳細で足す／編集で直す」 =====
+   ⚠ カード詳細（.cv-…）と編集画面（.cf-…）の両方に同じ形を置くので、
+      ここのクラスは **pf-** で始める（どちらの画面に入れても崩れないように）。 */
+/* 用件を足すブロック */
+.pf-flowadd{ margin-top:14px; padding:12px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; }
+.pf-flowlabel{ font-size:12px; color:var(--text2); font-weight:600; margin-bottom:8px; }
+.pf-flowmeta{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; align-items:center; }
+.pf-fin{ background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:6px 9px; font-size:13px; font-family:inherit; box-sizing:border-box; }
+.pf-fin:focus{ outline:none; border-color:var(--brand); background:var(--bg2); }
+.pf-flowmeta select.pf-fin{ flex:0 0 auto; width:7.5em; min-width:0; }
+.pf-flowwhen{ flex:1 1 200px; min-width:180px; width:auto; }
+.pf-flownow{ flex:0 0 auto; background:var(--bg3); border:1px solid var(--border); color:var(--text2); border-radius:8px; padding:6px 10px; font-size:12px; cursor:pointer; }
+.pf-flownow:hover{ background:var(--brand-soft); border-color:var(--brand); color:var(--brand); }
+.pf-flowquick{ display:flex; flex-wrap:wrap; gap:7px; }
+.pf-flowchip{ background:var(--bg3); border:1px solid var(--border); color:var(--text); border-radius:999px; padding:6px 11px; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:background .12s,border-color .12s; }
+.pf-flowchip:hover{ background:var(--brand-soft); border-color:var(--brand); }
+.pf-flowcustom{ display:flex; gap:8px; margin-top:10px; }
+.pf-flowcustom .pf-fin{ flex:1; min-width:0; }
+.pf-flowaddbtn{ flex:0 0 auto; background:var(--brand); border:1px solid var(--brand); color:#fff; border-radius:8px; padding:0 14px; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.pf-flowaddbtn:hover{ filter:brightness(1.07); }
+.cv-fhint{ margin-top:9px; font-size:11.5px; color:var(--text3); line-height:1.6; }
+
+/* 「本当の編集」の表（設定権限のある人だけ） */
+.cf-flownote{ display:block; margin:2px 0 12px; padding:9px 11px; background:var(--brand-soft); border:1px solid var(--border); border-left:3px solid var(--brand); border-radius:8px; font-size:12px; color:var(--text); line-height:1.7; }
+.cf-flownote-lock{ background:var(--bg3); border-left-color:var(--text3); color:var(--text2); }
+.cf-flownote-sub{ color:var(--text3); font-size:11.5px; }
+.pf-flowedit{ display:flex; flex-direction:column; gap:8px; }
+.pf-flowempty{ padding:14px; text-align:center; color:var(--text3); font-size:12.5px; }
+.pf-ferow{ background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:9px 10px; }
+.pf-ferow:hover{ border-color:var(--border2); }
+.pf-fetop{ display:flex; align-items:center; gap:8px; }
+.pf-fekind{ flex:0 0 auto; font-size:10.5px; padding:2px 7px; border-radius:999px; border:1px solid var(--border2); color:var(--text3); white-space:nowrap; }
+.pf-fekind-man{ color:var(--brand); border-color:var(--brand); }
+.pf-fettl{ flex:1; min-width:0; font-size:13px; font-weight:600; display:inline-flex; align-items:center; gap:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pf-fettlin{ flex:1; min-width:0; font-weight:600; }
+.pf-fedel{ flex:0 0 auto; background:transparent; border:none; color:var(--text3); cursor:pointer; padding:3px 6px; border-radius:6px; display:inline-flex; align-items:center; }
+.pf-fedel:hover{ background:var(--bg3); color:#ef4444; }
+.pf-febot{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
+.pf-fef{ display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--text3); }
+.pf-fef .pf-fin{ font-size:12.5px; padding:5px 8px; }
+.pf-feamt{ font-size:12px; color:var(--text2); }
 
 /* ===== 入庫カード 全画面ページ（新規予約／編集 共通） ===== */
 .card-page-head{ position:sticky; top:0; z-index:5; background:var(--bg); padding-bottom:12px; margin-bottom:4px; border-bottom:1px solid var(--border); align-items:center; }
@@ -1142,6 +1227,23 @@ th.cfs-lg-d{ z-index:3; }
 .cfs-lg-free{ background:transparent; cursor:pointer; }
 .cfs-lg-free:hover{ background:rgba(29,185,122,.18); }
 .cfs-lg-pick{ background:#1db97a !important; }
+
+/* ===== 🔵 v1.35.0 代車カレンダーの「選択している列・行」（ゆうた指定・エクセルの列選択のイメージ）=====
+   ⚠ 背景色は塗らない＝緑（このカードの貸出予定）とオレンジ（貸出中）がそのまま見えるように。
+      囲うのは**点線の枠だけ**。
+   ⚠ 下端は無限スクロールで切れるので、列は左右＋上だけ引く。 */
+.cfs-lg th.cfs-lg-thpick{ cursor:pointer; }
+.cfs-lg th.cfs-lg-thpick:hover{ background:rgba(55,138,221,.16); }
+.cfs-lg td.cfs-lg-colsel,
+.cfs-lg th.cfs-lg-colsel{ border-left:2px dashed #378ADD !important; border-right:2px dashed #378ADD !important; }
+.cfs-lg th.cfs-lg-colsel{ border-top:2px dashed #378ADD !important; background:rgba(55,138,221,.18) !important; color:#cfe2ff; }
+/* 日付の行（左端の日付を押した時） */
+.cfs-lg .cfs-lg-dpick{ cursor:pointer; }
+.cfs-lg .cfs-lg-dpick:hover{ background:rgba(55,138,221,.16) !important; }
+.cfs-lg tr.cfs-lg-rowsel > td{ border-top:2px dashed #378ADD !important; border-bottom:2px dashed #378ADD !important; }
+.cfs-lg tr.cfs-lg-rowsel > td.cfs-lg-d{ background:rgba(55,138,221,.18) !important; color:#cfe2ff !important; }
+/* 列と行がぶつかるマス＝どちらの点線も見えるように角を強調 */
+.cfs-lg tr.cfs-lg-rowsel > td.cfs-lg-colsel{ box-shadow:inset 0 0 0 1px rgba(55,138,221,.55); }
 .cfs-lg{ user-select:none; }
 .cfs-day.today{ outline:1px dashed #1db97a; }
 /* 選んだ入庫日＝ベタ塗りでドンと目立たせる（v0.28.0） */
@@ -1193,13 +1295,78 @@ th.cfs-lg-d{ z-index:3; }
 .cs-doneitem{ opacity:.5; }
 
 /* ===== タスクボード：完TEL済／完TEL依頼 ドラッグエリア（v0.99.34） ===== */
+/* ⚠ v1.47.0 ここだけは**破線のまま**＝「投げ込む場所」だと分かる形は崩さない。
+   ただし枠 2px→1.5px・幅と余白を少し詰めて、隣のボタンと背の高さを近づける。 */
 .kb-droparea{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
-  min-width:104px; padding:5px 12px; border:2px dashed var(--border2); border-radius:10px;
-  background:transparent; color:var(--text2); line-height:1.2; }
-.kb-droparea-t{ font-size:12px; font-weight:800; color:var(--text); white-space:nowrap; }
-.kb-droparea-s{ font-size:9.5px; color:var(--text3); }
+  min-width:94px; padding:4px 11px; border:1.5px dashed var(--border2); border-radius:var(--r, 8px);
+  background:transparent; color:var(--text2); line-height:1.25; }
+.kb-droparea-t{ font-size:11.5px; font-weight:700; color:var(--text); white-space:nowrap; }
+.kb-droparea-s{ font-size:9px; color:var(--text3); }
 .kb-droparea.dnd-over{ border-color:var(--brand); background:rgba(29,185,122,.14); color:var(--brand); }
 .kb-droparea.dnd-over .kb-droparea-t{ color:var(--brand); }
+
+/* ===== 🎛 v1.47.0 タスクボード右上の並び＝ぜんぶ同じ寸法に揃える（ゆうた指定「もうちょい小さく・調和よく」）
+   🔴 **ふつうのボタン（.vh-btn）と同じ物差し**にする＝枠1px・角8px・padding 5/11・12px。
+      今まで＝枠2px・角10px・padding 9/16・太さ800・min-width 96〜104px で**ぼってり**していた。
+   ⚠ 並びは `align-items:center`＝**背の高い「完TEL済」に引っぱられて縦に伸びない**
+      （既定の stretch のせいで、どのボタンも 44px まで伸びていたのが「やぼったさ」の正体）。
+   ⚠ 区切りラインの**オレンジは残す**（用途がひと目で分かる目印）。ただし
+      2px の輪郭 → **1px＋うっすら地色**にして主張を弱める。 */
+#view-course1 > .view-header > .view-actions,
+#view-course2 > .view-header > .view-actions,
+#view-task    > .view-header > .view-actions{ align-items:center; gap:7px; }
+
+.kb-myonly, .kb-lineadd{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:5px 11px; border:1px solid var(--border); border-radius:var(--r, 8px);
+  background:var(--bg3); color:var(--text2);
+  font-size:12px; font-weight:700; line-height:1.5; white-space:nowrap; }
+/* 🙋 担当車両（myonly-pit.js）＝押している間だけ色が変わる。フロントの人にだけ出る（JS 側で display:none） */
+.kb-myonly{ cursor:pointer; }
+.kb-myonly:hover{ border-color:var(--brand); color:var(--brand); }
+.kb-myonly.on{ border-color:var(--brand); background:var(--brand); color:#fff; }
+/* ▬ 区切りライン（board-line.js）＝掴んでカードのあいだへ落とす。
+   🔴 v1.37.0（ゆうた指定）実線・文字だけ（アイコンも「ここからドラッグ」も出さない）。
+   ⚠ 完TEL済との間隔は残す（用途が別なので、くっつけない）。 */
+.kb-lineadd{ cursor:grab; user-select:none;
+  color:#e0a33a; border-color:rgba(224,163,58,.55); background:rgba(224,163,58,.09);
+  margin-right:14px; }
+.kb-lineadd:active{ cursor:grabbing; }
+.kb-lineadd:hover{ background:rgba(224,163,58,.18); border-color:#e0a33a; }
+/* ⚠ 明るいテーマだと #e0a33a は下地に溶けて読みにくいので、文字と枠だけ一段濃くする（色みは同じ橙のまま） */
+[data-theme^="light"] .kb-lineadd{ color:#a86a10; border-color:rgba(168,106,16,.5); background:rgba(224,163,58,.14); }
+[data-theme^="light"] .kb-lineadd:hover{ background:rgba(224,163,58,.26); border-color:#a86a10; }
+
+/* 盤面に入ったライン。カードとカードのあいだに挟まる。
+   ⚠ v1.37.0 ✕ は廃止（消すのは枠の外へドラッグ）。名前は入っている時だけ出る。 */
+.kb-line{ display:flex; align-items:center; gap:7px; margin:5px 2px; padding:3px 2px; cursor:grab; user-select:none; }
+.kb-line:active{ cursor:grabbing; }
+.kb-line-bar{ flex:1 1 auto; height:0; border-top:2px dashed #e0a33a; }
+.kb-line-t{ flex:0 0 auto; max-width:60%; font-size:10.5px; font-weight:800; color:#e0a33a;
+  background:rgba(224,163,58,.14); border:1px solid rgba(224,163,58,.5); border-radius:999px;
+  padding:1px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.kb-line:hover .kb-line-bar{ border-top-color:#f0bb6a; }
+.kb-line.kb-line-drag{ opacity:.3; }
+/* 🔴 v1.37.0 ドラッグ中に「そこに入るよ」と先に見せるゴースト */
+.kb-line-ghost{ pointer-events:none; margin:5px 2px; }
+.kb-line-ghost .kb-line-bar{ border-top:3px solid #e0a33a; box-shadow:0 0 8px rgba(224,163,58,.7); }
+/* 落とし先の列を光らせる（カードのドラッグとは別の色＝取り違えない） */
+.kanban-col-body.kb-line-over{ box-shadow:inset 0 0 0 2px rgba(224,163,58,.75); border-radius:8px; }
+
+/* 💬 v1.38.0 ボタンをクリックした時の使い方の吹き出し（board-line.js）
+   ⚠ 盤面から離れずに読めるよう、その場に出す。くわしく読みたい人にはヘルプへのボタンを置く。 */
+.kb-linehelp{ position:fixed; z-index:9000; width:288px; max-width:calc(100vw - 16px);
+  background:var(--bg2); border:1px solid #e0a33a; border-radius:12px;
+  box-shadow:0 14px 40px rgba(0,0,0,.5); padding:12px 14px; color:var(--text); }
+.kb-linehelp-h{ display:flex; align-items:center; font-size:12.5px; font-weight:800; color:#e0a33a;
+  padding-bottom:7px; margin-bottom:8px; border-bottom:1px dashed rgba(224,163,58,.5); }
+.kb-linehelp-x{ margin-left:auto; border:0; background:transparent; color:var(--text3);
+  font-size:15px; line-height:1; cursor:pointer; padding:0 2px; }
+.kb-linehelp-x:hover{ color:#ef4444; }
+.kb-linehelp-l{ margin:0; padding-left:18px; font-size:11.5px; line-height:1.6; color:var(--text2); }
+.kb-linehelp-l li{ margin-bottom:5px; }
+.kb-linehelp-l b{ color:var(--text); }
+/* v1.39.0 簡易表示にしたので「くわしいヘルプ」ボタンは廃止（説明はヘルプ画面にある） */
 
 /* ===== 返車ビュー：未定タブ＝完TEL待ち／返車未定の2カラム（v0.99.34） ===== */
 .ret-tbd-cols{ display:flex; gap:16px; align-items:flex-start; padding:4px 2px 30px; flex-wrap:wrap; }
@@ -1534,8 +1701,11 @@ th.cfs-lg-d{ z-index:3; }
 
 /* ===== v1.23.0 メーカー／車種の入力候補（carname-pit.js） =====
    ⚠ 見た目は .cf-input のまま。▼と候補リストを足しているだけ＝他の入力欄と並んで浮かない。
-   ⚠ .cn-dd は入力欄の**下**に絶対配置。親（.cf-field）に position:relative を入れると
-      .cf-row の flex 計算が変わるので、包み側（.cn-wrap）で受けている。 */
+   🔴 v1.28.0 .cn-dd は入力欄の**上**に絶対配置（既定）。Windows の変換候補（IMEの予測）が
+      入力欄の下に出るので、そこと重ならないようにするため（ゆうた指定）。
+      上の余白が足りない時だけ carname-pit.js が `.cn-down` を付けて下に出す。
+   ⚠ 親（.cf-field）に position:relative を入れると .cf-row の flex 計算が変わるので、
+      包み側（.cn-wrap）で受けている。 */
 .cn-wrap{position:relative;width:100%}
 .cn-wrap>.cf-input{padding-right:24px}                     /* ▼のぶん右を空ける */
 .cn-arrow{
@@ -1548,12 +1718,17 @@ th.cfs-lg-d{ z-index:3; }
 .cn-dd{
   /* ⚠ 幅は入力欄以上・中身なり。メーカー欄は8.5emと狭く、「ホンダオブザユーケー」のような
      長い車検証表記が「…」で切れて読めなくなるため、はみ出してよい作りにしている。 */
-  display:none;position:absolute;left:0;top:calc(100% + 3px);z-index:60;
+  display:none;position:absolute;left:0;bottom:calc(100% + 3px);z-index:60;
   min-width:100%;width:max-content;max-width:min(320px,62vw);
   max-height:262px;overflow:auto;
   background:var(--bg2);border:1px solid var(--border2);border-radius:8px;
-  box-shadow:0 10px 28px rgba(0,0,0,.38);
+  box-shadow:0 -10px 28px rgba(0,0,0,.38);   /* 上に出るので影も上向き */
   padding:3px;
+}
+/* 上の余白が足りない時だけ下に出す（carname-pit.js が付ける） */
+.cn-dd.cn-down{
+  bottom:auto;top:calc(100% + 3px);
+  box-shadow:0 10px 28px rgba(0,0,0,.38);
 }
 .cn-dd.show{display:block}
 .cn-i{

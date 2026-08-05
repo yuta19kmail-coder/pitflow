@@ -238,7 +238,7 @@
       const wt=(state.workTypes||[]).find(function(w){return w.id===c.workType;});
       const wl=wt?wt.label:(c.workType||'—'); const wc=wt?wt.color:'#64748b';
       const loa=c.needLoaner?'<span class="pk-lo"><i data-ic=van data-ics=16></i>代車</span>':'';
-      h+='<div class="pk-brkrow" onclick="openDetail(\''+c.id+'\')"><span class="pk-wt" style="background:'+wc+'">'+esc(wl)+'</span><span class="pk-nm">'+esc(c.customer||'（未入力）')+' 様</span><span class="pk-meta">'+esc(c.car||'')+(c.plate?' ・ '+esc(c.plate):'')+'</span>'+loa+'</div>';
+      h+='<div class="pk-brkrow" onclick="openDetail(\''+c.id+'\')"><span class="pk-wt" style="background:'+wc+'">'+esc(wl)+'</span><span class="pk-nm">'+esc((window.pitCustName?pitCustName(c):c.customer)||'（未入力）')+' 様</span><span class="pk-meta">'+esc(c.car||'')+(c.plate?' ・ '+esc(c.plate):'')+'</span>'+loa+'</div>';
     });
     h+='</div>';
     return h;

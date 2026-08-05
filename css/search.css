@@ -3,11 +3,18 @@
  * ダッシュボード最上部のマスター検索BOX
  * ======================================== */
 
-#pit-search-wrap {
+/* 🔴 v1.45.0 検索の入れ物は**必ず前に出す**。
+   ⚠ 結果パネルは position:absolute で「浮いている」だけ＝**z-index を付けないと、
+      あとに並ぶ付箋（.bn-card）やダッシュボードのBOX（.md-box）に隠れる**
+      （どれも position:relative なので、同じ高さなら**後ろに書いてある方が上**に乗る。
+        2026-08-04 の不具合＝検索結果がBOXの下に回り込む）。
+   ⚠ 数字は 50（モーダル・トースト＝60以上より下、ふつうの中身＝0 より上）。 */
+#pit-search-wrap,
+.md-search {
   position: relative;
-  margin: 0 0 14px;
-  z-index: 30;
+  z-index: 50;
 }
+#pit-search-wrap { margin: 0 0 14px; }
 
 #pit-search-input {
   width: 100%;
@@ -35,6 +42,7 @@
   left: 0;
   right: 0;
   top: calc(100% + 6px);
+  z-index: 50;   /* ⚠ 入れ物に z-index が付いていない画面でも隠れないように、ここにも付けておく */
   max-height: 62vh;
   overflow-y: auto;
   background: var(--bg2);

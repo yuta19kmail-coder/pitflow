@@ -70,9 +70,11 @@ function renderReturnDay(){
     html += '<div style="text-align:center;color:var(--text3);padding:30px;">本日の返車予定はありません</div>';
   } else {
     const tkey = c => (c.returnTime || c.reserveTime || '');
+    /* v1.34.0 枠分けは共通の物差しへ（ショートカット・枠の外の時刻もちゃんと入る） */
+    const _hourOf = c => pitTimeHour(tkey(c), 9, 18);
     slots.forEach(time => {
       const hh = time.slice(0,2);
-      const inSlot = todays.filter(c => tkey(c).startsWith(hh));
+      const inSlot = todays.filter(c => _hourOf(c) === hh);
       html += '<div class="reserve-slot' + (isClosed ? ' closed' : '') + '">';
       html += '<div class="reserve-slot-time">' + time + '〜</div>';
       html += '<div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="' + time + '">';
@@ -84,7 +86,7 @@ function renderReturnDay(){
       html += '</div></div>';
     });
     // 時刻未定のカードを末尾に（ここへドロップで時刻を未定に戻せる）
-    const noTime = todays.filter(c => !tkey(c).match(/^\d/));
+    const noTime = todays.filter(c => _hourOf(c) === null);   /* v1.34.0 */
     if (noTime.length > 0){
       html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
       html += noTime.map(c => cardHtml(c, { compact: true })).join('');
@@ -133,13 +135,28 @@ function renderReturnWeek(){
       const isClosed = state.settings.closedDow.includes(d.getDay());
       const inCell = state.cards.filter(c =>
         c.returnDate === dStr &&
-        (c.returnTime || c.reserveTime || '').startsWith(hh) &&
+        pitTimeHour(c.returnTime || c.reserveTime, 9, 18) === hh &&   /* v1.34.0 */
         c.status !== 'returned' && c.returnStage === 'returnWait'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
-      inCell.forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c) : ''); });
+      inCell.forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c, hh, true) : ''); });
       html += '</div>';
     });
+  }
+  /* 🔴 v1.34.0 時刻未定の行（返車側も同じ）。枠に入らないカードを消さない。 */
+  {
+    const tbd = days.map(d => state.cards.filter(c =>
+      c.returnDate === ymd(d) && c.status !== 'returned' && c.returnStage === 'returnWait' &&
+      pitTimeHour(c.returnTime || c.reserveTime, 9, 18) === null));
+    if (tbd.some(a => a.length)){
+      html += '<div class="reserve-week-cell reserve-week-time rwk-tbd-h">時刻未定</div>';
+      days.forEach((d, i) => {
+        const isClosed = state.settings.closedDow.includes(d.getDay());
+        html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + ymd(d) + '|">';
+        tbd[i].forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c, null, true) : ''); });
+        html += '</div>';
+      });
+    }
   }
 
   wrap.innerHTML = html;
@@ -189,7 +206,8 @@ function _rmlRowsReturn(from, to){
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
       .filter(c => c.returnDate === ds && c.status !== 'returned' && c.returnStage === 'returnWait')
-      .sort((a, b) => ((a.returnTime || a.reserveTime || '99:99') < (b.returnTime || b.reserveTime || '99:99') ? -1 : 1));
+      /* v1.33.0 ショートカットも正しく並ぶよう共通の物差しで */
+      .sort((a, b) => pitTimeMin(a.returnTime || a.reserveTime) - pitTimeMin(b.returnTime || b.reserveTime));
 
     let dCls = '';
     if (ds === todayStr) dCls += ' today';
@@ -209,7 +227,7 @@ function _rmlRowsReturn(from, to){
         const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
         const wt = state.workTypes.find(w => w.id === _wid);
         const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
-        const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+        const nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
         let side = '';
         if (c.needLoaner) side += '<span class="rme-loaner">代</span>';
         if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
@@ -292,7 +310,7 @@ function monthGridCellsReturn(refDate){
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
       const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
-      const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+      const nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
       const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
       const wt = state.workTypes.find(w => w.id === _wid);
       let side = '';

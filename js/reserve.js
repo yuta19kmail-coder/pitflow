@@ -66,9 +66,13 @@ function renderReserveDay(){
   html += '受付 ' + state.settings.openTime + ' 〜 ' + state.settings.cutoffTime + '　／　予約 ' + todays.length + ' 件';
   html += '</div></div>';
 
+  /* 🔴 v1.34.0 枠分けは共通の物差し（pitTimeHour）へ。
+     これで「朝一」「AM」も 9時の枠に入り、8:00・19:00 のような枠の外の時刻も端の枠に寄る。
+     時刻不明（決まり次第・レッカー・鍵ポスト・未定・空）は下の「時刻未定」の枠へまとめる。 */
+  const _hourOf = c => pitTimeHour(c.reserveTime, 9, 18);
   slots.forEach(time => {
     const hh = time.slice(0,2);
-    const inSlot = todays.filter(c => c.reserveTime.startsWith(hh));
+    const inSlot = todays.filter(c => _hourOf(c) === hh);
     const cutoffH = parseInt(state.settings.cutoffTime.slice(0,2), 10);
     const slotH = parseInt(hh, 10);
     const isCutoff = slotH >= cutoffH;
@@ -84,14 +88,27 @@ function renderReserveDay(){
     }
     html += '</div></div>';
   });
+  /* 時刻未定のカード＝いちばん下にまとめて出す（ここへドロップで時刻を空に戻せる）。
+     🔴 v1.34.0 まで、この枠が無かったので**画面から消えていた**。 */
+  const _noTime = todays.filter(c => _hourOf(c) === null);
+  if (_noTime.length > 0){
+    html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div>';
+    html += '<div class="reserve-slot-cards" data-drop="reserveTime" data-drop-val="">';
+    html += _noTime.map(c => cardHtml(c, { compact: true })).join('');
+    html += '</div></div>';
+  }
 
   list.innerHTML = html;
 }
 
 /* 週ビュー用ミニカード（C案）＝当日タブのタスクカードを週グリッド向けに縮めた版。
    左ライン＝国産緑/輸入ピンク／1段目=客名様＋代車・作業バッジ（設定色）／2段目=車種＋担当。時刻はスロット行で分かるので出さない。 */
-function weekMiniCard(c){
+/* v1.34.0 slotHH（その行の「時」）を渡すと、**その行とぴったり同じ時刻でない場合だけ**時刻を出す。
+   ＝「朝一」「09:30」「08:00（9時の行に寄せた分）」が、どれか分かるようにするため。 */
+function weekMiniCard(c, slotHH, isRet){
   const at = (window.escAttr ? escAttr : function(s){ return String(s==null?'':s); });
+  const _tv = String((isRet ? (c.returnTime || c.reserveTime) : c.reserveTime) || '').trim();
+  const _showT = _tv && !(slotHH && _tv === slotHH + ':00');
   const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';
   const wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
   let badges = '';
@@ -102,10 +119,11 @@ function weekMiniCard(c){
     if (w) badges += '<span class="rwk-wb" style="background:' + w.color + '22;color:' + w.color + ';border-color:' + w.color + '66;">' + at(w.label) + '</span>';
   });
   const staff = c.frontStaff || c.staff || '';
-  const _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+  const _nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
   const _stf = (window.pitSurname ? pitSurname(staff) : staff);
   let h = '<div class="rwk-card' + (c.codeRed ? ' rwk-claim' : '') + '" draggable="true" data-card-id="' + c.id + '" onclick="openDetail(\'' + c.id + '\')" style="border-left-color:' + teamColor + ';">';
-  h += '<div class="rwk-r"><span class="rwk-name">' + _nm + ' 様</span><span class="rwk-badges">' + badges + '</span></div>';
+  h += '<div class="rwk-r">' + (_showT ? '<span class="rwk-t">' + at(_tv) + '</span>' : '')
+     + '<span class="rwk-name">' + _nm + ' 様</span><span class="rwk-badges">' + badges + '</span></div>';
   h += '<div class="rwk-r"><span class="rwk-car">' + (c.car || '') + '</span>' + (_stf ? '<span class="rwk-front">' + at(_stf) + '</span>' : '') + '</div>';
   h += '</div>';
   return h;
@@ -146,13 +164,28 @@ function renderReserveWeek(){
       const isClosed = state.settings.closedDow.includes(d.getDay());
       const inCell = state.cards.filter(c =>
         c.reserveDate === dStr &&
-        c.reserveTime.startsWith(hh) &&
+        pitTimeHour(c.reserveTime, 9, 18) === hh &&     /* v1.34.0 ショートカットもここで解決 */
         c.status === 'reserved'
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="reserveDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
-      inCell.forEach(c => { html += weekMiniCard(c); });
+      inCell.forEach(c => { html += weekMiniCard(c, hh); });
       html += '</div>';
     });
+  }
+  /* 🔴 v1.34.0 時刻未定の行（決まり次第・レッカー・鍵ポスト・未定）。
+     いちばん下に1行足す＝時間の枠に入らないカードが**消えない**ようにする。 */
+  {
+    const tbd = days.map(d => state.cards.filter(c =>
+      c.reserveDate === ymd(d) && c.status === 'reserved' && pitTimeHour(c.reserveTime, 9, 18) === null));
+    if (tbd.some(a => a.length)){
+      html += '<div class="reserve-week-cell reserve-week-time rwk-tbd-h">時刻未定</div>';
+      days.forEach((d, i) => {
+        const isClosed = state.settings.closedDow.includes(d.getDay());
+        html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="reserveDateTime" data-drop-val="' + ymd(d) + '|">';
+        tbd[i].forEach(c => { html += weekMiniCard(c, null); });
+        html += '</div>';
+      });
+    }
   }
 
   wrap.innerHTML = html;
@@ -203,7 +236,8 @@ function _rmlRows(from, to){
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
       .filter(c => c.reserveDate === ds && c.status === 'reserved')
-      .sort((a, b) => (a.reserveTime || '99:99') < (b.reserveTime || '99:99') ? -1 : 1);
+      /* v1.33.0 ショートカット（AM・朝一・決まり次第…）も正しく並ぶよう共通の物差しで */
+      .sort((a, b) => pitTimeMin(a.reserveTime) - pitTimeMin(b.reserveTime));
 
     let dCls = '';
     if (ds === todayStr) dCls += ' today';
@@ -222,7 +256,7 @@ function _rmlRows(from, to){
         const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
         const wt = state.workTypes.find(w => w.id === _wid);
         const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 左ライン＝国産緑/輸入ピンク
-        const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+        const nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
         let side = '';
         if (c.needLoaner) side += '<span class="rme-loaner">代</span>';   // 2ヶ月と同じ並び＝代→作業
         if (wt) side += '<span class="rme-wt" style="color:' + wt.color + '">' + wt.label + '</span>';
@@ -306,7 +340,7 @@ function monthGridCells(refDate){
     if (hol) html += '<div class="hol-name" title="' + hol + '">' + hol + '</div>';
     visible.forEach(c => {
       const teamColor = (c.boardId === 'import') ? '#ec4899' : '#1db97a';   // 国産緑/輸入ピンク
-      const nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+      const nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
       const _wid = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
       const wt = state.workTypes.find(w => w.id === _wid);
       let side = '';
@@ -340,7 +374,8 @@ function monthGridCells(refDate){
    mode='reserve'（入庫予定）/'return'（返車予定）。カードはタスクボードと同じコンパクトカード。 */
 window.pitReserveDayPopup = function(dateStr, mode){
   mode = (mode === 'return') ? 'return' : 'reserve';
-  const _min = function(t){ const m = String(t || '').match(/^(\d{1,2}):(\d{2})/); return m ? (+m[1] * 60 + +m[2]) : 9999; };
+  /* v1.33.0 物差しは state.js に一本化（ショートカットの時間もここで解決される） */
+  const _min = function(t){ return window.pitTimeMin ? pitTimeMin(t) : 99999; };
   const cards = state.cards.filter(function(c){
     if (mode === 'return') return c.returnDate === dateStr && c.status !== 'returned' && c.status !== 'scrap';
     return c.reserveDate === dateStr && c.status === 'reserved';
@@ -448,7 +483,7 @@ function cardHtml(c, opts){
     if (_dr.indexOf('noShoes') >= 0) _ct.push('土禁');
     if (_ct.length) h += '<div class="pcm-cau">' + _ct.slice(0, 3).map(function(x){ return '<span class="pcm-caut">' + x + '</span>'; }).join('') + '</div>';
     /* 名前・車種・担当の title は撤去（ホバー情報カード card-hover.js で全文表示するため二重ツールチップを防ぐ） */
-    var _nm = (window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）';
+    var _nm = (window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）';
     var _stf = (window.pitSurname ? pitSurname(staff) : staff);
     // 仮予約は「様」のすぐ後ろに小さな「仮」をインライン表示。名前が長い時は名前だけ…省略し「…様 仮」は必ず残る（v0.100.1）
     var _kn = c.tentative ? '<span class="kari-name" title="仮予約">仮</span>' : '';
@@ -481,7 +516,7 @@ function cardHtml(c, opts){
   html += '<span class="pc-status" style="--sc:' + statusColor(c.status) + ';">' + statusLabel(c.status) + '</span>';
   if (c.urgent) html += '<span class="pc-urg">緊急</span>';
   html += '</div>';
-  html += '<div class="pc-customer">' + (c.customer || '（未入力）') + ' 様</div>';
+  html += '<div class="pc-customer">' + ((window.pitCustName?pitCustName(c):c.customer) || '（未入力）') + ' 様</div>';
   html += '<div class="pc-car">' + (c.car || '') + (c.menu ? ' ／ ' + c.menu : '') + '</div>';
   html += '<div class="pc-tags">';
   if (wt) html += '<span class="tag-work" style="background:' + wt.color + '22;color:' + wt.color + ';border-color:' + wt.color + ';">' + wt.label + '</span>';

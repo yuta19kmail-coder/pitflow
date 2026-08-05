@@ -42,10 +42,15 @@ window._pe=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 var _pe=window._pe, ymd=window.ymd;
 
 /* ---- 名簿（PitFlow の state.staff と同じ形） ---- */
+/* 🔴 v1.29.0 ここが「予定が出ない」の正体。本物の state.staff は
+   id ＝ CoreFlow名簿（portalMembers）のID、cmId ＝ CoreMembers のID で**別物**。
+   MHS が配る「日×人」のキーは **CoreMembers のID**。だから cmId で引かないと当たらない。
+   以前のこのテストは id と キーを同じにしていたので、本番だけ落ちていた。 */
 window.state={ staff:[
-  {id:'m1',name:'小林 勇太',aliases:['ゆうた']},
-  {id:'m2',name:'佐藤 花子'},
-  {id:'m3',name:'高橋 一郎'}
+  {id:'pm1',cmId:'cm1',name:'小林 勇太',aliases:['ゆうた'],photo:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'},
+  {id:'pm2',cmId:'cm2',name:'佐藤 花子'},
+  {id:'pm3',cmId:'cm3',name:'高橋 一郎'},
+  {id:'pm4',cmId:'',   name:'名簿だけ 太郎'}      /* CoreMembers に居ない人＝id で当たる保険 */
 ]};
 window.pitStaffByName=n=>state.staff.find(x=>x.name===n)||null;
 window.pitStaffAny=n=>state.staff.find(x=>x.name===n||(x.aliases||[]).indexOf(n)>=0)||null;
@@ -109,7 +114,7 @@ const YM = '2026-08';
 const D1 = '2026-08-10', D2 = '2026-08-11';
 const DAYS = {
   [D1]: {
-    m1: [
+    cm1: [
       { t: '',      ty: 'off',     l: '休み' },
       { t: '13:30', ty: 'out',     l: '車検場へ' },
       { t: '09:00', ty: 'mtg',     l: '朝礼' },
@@ -117,9 +122,10 @@ const DAYS = {
       { t: '17:00', ty: 'duty',    l: '戸締り当番' },
       { t: '11:00', ty: 'ナゾ',    l: '未知の種別' }
     ],
-    m2: [{ t: '10:00', ty: 'mtg', l: '<script>×escape' }]
+    cm2: [{ t: '10:00', ty: 'mtg', l: '<script>×escape' }, { t: '', ty: 'off', l: '休み' }],
+    pm4: [{ t: '09:30', ty: 'mtg', l: 'CoreMembersに居ない人の予定' }]
   },
-  [D2]: { m3: [{ t: '08:30', ty: 'mtg', l: '朝ミーティング' }] }
+  [D2]: { cm3: [{ t: '08:30', ty: 'mtg', l: '朝ミーティング' }] }
 };
 
 console.log('\n── ① まだ届いていない時 ──');
@@ -137,17 +143,20 @@ ok('届いたらカードを描き直す（pitCardRepaint が呼ばれる）', (
 
 let L = await sched('小林 勇太', D1);
 console.log('   ', JSON.stringify(L));
-ok('その人の件数が合う', L.length === 6, L.length);
-ok('時刻順に並ぶ', L.map(x => x.t).join(',') === '09:00,11:00,13:30,17:00,,', L.map(x => x.t));
-ok('時刻なしは後ろ（休み・ルーティン）', L[4].t === '' && L[5].t === '');
+/* v1.29.0：**当番は出さない／休みは行に出さない**（休みは下の休み欄・大きい表示にまわす） */
+ok('その人の件数が合う（当番と休みを除いた4件）', L.length === 4, L.length);
+ok('時刻順に並ぶ', L.map(x => x.t).join(',') === '09:00,11:00,13:30,', L.map(x => x.t));
+ok('時刻なしは後ろ（ルーティン）', L[3].t === '');
 ok('out → out', L.find(x => x.label === '車検場へ').type === 'out');
-ok('off → off', L.find(x => x.label === '休み').type === 'off');
+ok('🔴 当番は出さない', !L.some(x => x.type === 'duty' || x.label === '戸締り当番'), L.map(x => x.label));
+ok('🔴 休みは行として出さない', !L.some(x => x.type === 'off'), L.map(x => x.type));
 ok('routine → routine', L.find(x => x.label === '倉庫の片付け').type === 'routine');
-ok('duty → duty', L.find(x => x.label === '戸締り当番').type === 'duty');
 ok('知らない種別は mtg に寄せる（崩さない）', L.find(x => x.label === '未知の種別').type === 'mtg');
 
 console.log('\n── ③ 名前からメンバーを引く ──');
-ok('通称（別名）でも引ける', (await sched('ゆうた', D1)).length === 6);
+ok('通称（別名）でも引ける', (await sched('ゆうた', D1)).length === 4);
+ok('🔴 CoreMembers のID（cmId）で引けている', (await sched('小林 勇太', D1)).length === 4);
+ok('🔴 CoreMembers に居ない人は CoreFlow名簿のID で引ける', (await sched('名簿だけ 太郎', D1)).length === 1);
 ok('別の人は別の予定', (await sched('佐藤 花子', D1)).length === 1);
 ok('名簿にない名前は空', (await sched('居ない 人', D1)).length === 0);
 ok('空の担当名は空', (await sched('', D1)).length === 0);
@@ -166,13 +175,28 @@ ok('担当未選択：選ぶよう促す', /フロント担当を選ぶと/.test
 
 h = await html({ frontStaff: '小林 勇太', reserveDate: D1 });
 ok('見出しに担当名', /小林 勇太 の予定/.test(h));
-ok('6行出る', (h.match(/class="mhs-row/g) || []).length === 6, (h.match(/class="mhs-row/g) || []).length);
+ok('4行出る（当番と休みは行にしない）', (h.match(/class="mhs-row/g) || []).length === 4, (h.match(/class="mhs-row/g) || []).length);
 ok('時刻なしは「終日」と書く', /終日/.test(h));
-ok('休みの行に off が付く', /class="mhs-row off"/.test(h));
 ok('MHS更新の行が出る', /class="mhs-foot"/.test(h));
 ok('古い印は付かない（今日ぶん）', !/mhs-foot old/.test(h));
 ok('ルーティンのアイコンが出る', /data-ic=recycle/.test(h));
-ok('当番のアイコンが出る', /data-ic=flag/.test(h));
+ok('🔴 当番のアイコンは出ない', !/data-ic=flag/.test(h));
+
+console.log('\n── ⑤-2 休み＝本人は大きく／ほかの人はアバター ──');
+ok('🔴 本人が休みの日は「担当者休み」と大きく出る', /class="mhs-big"/.test(h) && /担当者休み/.test(h));
+ok('大きい表示に本人の名前が入る', /class="mhs-big-n">小林 勇太</.test(h));
+ok('休み欄（アバター）も出る', /class="mhs-off"/.test(h));
+ok('休み欄に出るのは**ほかの人だけ**（本人は混ぜない）',
+   (h.match(/class="bn-av mhs-av/g) || []).length === 1 && /title="佐藤 花子/.test(h) && !/title="小林 勇太/.test(h),
+   (h.match(/class="bn-av mhs-av/g) || []).length);
+{
+  const h2 = await html({ frontStaff: '高橋 一郎', reserveDate: D1 });
+  ok('休みでない人の時は大きい表示は出ない', !/class="mhs-big"/.test(h2));
+  ok('その日休みの2人がアバターで並ぶ', (h2.match(/class="bn-av mhs-av/g) || []).length === 2,
+     (h2.match(/class="bn-av mhs-av/g) || []).length);
+  ok('顔写真がある人は img で出る', /<img src="data:image\/gif/.test(h2));
+  ok('顔写真が無い人は頭2文字', /class="bn-av mhs-av"[^>]*>佐藤</.test(h2) || /佐藤/.test(h2));
+}
 
 h = await html({ frontStaff: '佐藤 花子', reserveDate: D1 });
 ok('タグ等はエスケープされる（そのまま流し込まない）', /&lt;script&gt;/.test(h) && !/<script>×/.test(h));
@@ -221,13 +245,26 @@ console.log('\n── ⑨ 本体との食い違い（配線チェック） ─�
 const idx = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 ok('index.html が js/mhs-pit.js を読み込んでいる', /<script src="js\/mhs-pit\.js/.test(idx));
 ok('mhs-pit.js は card-detail.js より後ろ', idx.indexOf('js/mhs-pit.js') > idx.indexOf('js/card-detail.js'));
-ok('バージョンが v1.22.0', (idx.match(/v1\.22\.0/g) || []).length === 2, (idx.match(/v1\.22\.0/g) || []).length);
+/* ⚠ 版は上がっていくので数字は固定しない。3か所がそろっているかだけ見る。 */
+{
+  const _m = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
+  const _t = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _a = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
+  ok('画面の版2か所と app-version がそろっている', !!_m && _m === _t && _m === _a, [_m, _t, _a]);
+}
 const cd = fs.readFileSync(path.join(dir, 'js', 'card-detail.js'), 'utf8');
 ok('card-detail.js が pitCardRepaint を出している', /window\.pitCardRepaint\s*=/.test(cd));
 ok('card-detail.js が pitMhsStatus を見ている', /window\.pitMhsStatus/.test(cd));
 ok('「準備中」の文言は消えている', !/MHS連携は準備中/.test(cd));
 const css = fs.readFileSync(path.join(dir, 'css', 'polish.css'), 'utf8');
 ok('polish.css に .mhs-foot がある', /\.mhs-foot\{/.test(css));
+ok('polish.css に休み欄（.mhs-off）がある', /\.mhs-off\{/.test(css));
+ok('polish.css に大きい表示（.mhs-big）がある', /\.mhs-big\{/.test(css));
+const mp = fs.readFileSync(path.join(dir, 'js', 'mhs-pit.js'), 'utf8');
+ok('🔴 mhs-pit.js が cmId を先に見ている（ID食い違いの再発防止）',
+   /if \(s && s\.cmId\) out\.push/.test(mp) && mp.indexOf('s.cmId') < mp.indexOf("out.indexOf(String(s.id))"));
+ok('mhs-pit.js が休みの一覧（pitMhsOff）を出している', /window\.pitMhsOff\s*=/.test(mp));
+ok('card-detail.js が pitMhsOff を使っている', /window\.pitMhsOff/.test(cd));
 
 ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
 

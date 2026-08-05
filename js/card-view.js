@@ -92,7 +92,7 @@
     let h = '';
 
     // 1行目：名前＋予約を編集
-    h += '<div class="cv-id1"><span class="cv-nm">'+esc(c.customer||'（未入力）')+' <small>様</small></span>'
+    h += '<div class="cv-id1"><span class="cv-nm">'+esc((window.pitCustName?pitCustName(c):c.customer)||'（未入力）')+' <small>様</small></span>'
        + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')"><i data-ic=pencil data-ics=16></i> 予約を編集</span></div>';
     // 2行目：車種＋ナンバー＋カルテNo
     h += '<div class="cv-id2"><span class="cv-car">'+esc(c.car||'（車種未入力）')+'</span>'
@@ -417,14 +417,18 @@
     return '<div class="cv-pickrow"><span class="cv-pk">'+esc(label)+'</span><div class="cv-chips">'+chips+'</div></div>';
   }
 
+  /* 🔴 v1.43.0 ゆうた指定＝**用件を足すのはこの「カード詳細」のフロー欄**。
+     （「予約を編集」の方のフローは、すでに入っている記録の日時・担当を直す“本当の編集”に回した） */
   function flowTab(c){
     const log = c.log || [];
     let h = '<div class="cv-sec"><div class="cv-sect"><i data-ic=clock data-ics=16></i> フロー（進捗ログ）</div><div class="cv-flow">';
     if (!log.length){ h += '<div class="cv-wl cv-muted">記録はまだありません。</div>'; }
-    else log.slice().reverse().forEach(function(e){
+    else log.map(function(e,i){ return {e:e,i:i}; }).reverse().forEach(function(r){
+      var e = r.e, _i = r.i;
       var pad=function(n){return(n<10?'0':'')+n;};
       // 時刻：数値タイムスタンプは M/D HH:MM に整形（旧ログ対策）
-      var when = e.atTxt || e.at || '';
+      // ⚠ v1.43.0 読み方は PitFlowLog.atText に一本化（記録の形が3通りあるため）
+      var when = window.PitFlowLog ? PitFlowLog.atText(e) : (e.atTxt || e.at || '');
       if (typeof when === 'number'){ var dd=new Date(when); when=(dd.getMonth()+1)+'/'+dd.getDate()+' '+pad(dd.getHours())+':'+pad(dd.getMinutes()); }
       var title, amtTxt='';
       if (e.type === 'phase'){
@@ -433,12 +437,27 @@
         title = e.from ? (esc(fl)+' <span class="cv-farrow">→</span> '+esc(tl)) : (esc(tl)+' へ');
         if (e.amount != null && e.amount !== '') amtTxt = '　'+(e.amountKind||'')+' ¥'+Number(e.amount).toLocaleString();
       } else {
-        title = esc(e.text||e.label||'');
+        /* 🔴 v1.42.0 古い記録には <i data-ic=…> の文字がそのまま入っていることがある。
+           **データは書き換えず**、描く時に線画アイコンへ読み替える（新規予約カード側と同じ）。 */
+        title = (window.icoText ? icoText(e.text || e.label || '') : esc(e.text || e.label || ''));
       }
-      h += '<div class="cv-frow done"><span class="cv-fdot"></span><div><div class="cv-ft">'+title+(amtTxt?'<span class="cv-famt">'+esc(amtTxt)+'</span>':'')+'</div><div class="cv-fd">'+esc(String(when)+(e.by?' ・ '+e.by:''))+'</div></div></div>';
+      var who = window.PitFlowLog ? PitFlowLog.byOf(e) : (e.by || '');
+      /* 手で足した記録だけ ✕ を付ける＝打ち間違いをその場で消せる（自動の工程記録は残す） v1.43.0 */
+      var del = (window.PitFlowLog && PitFlowLog.isManual(e))
+        ? '<button type="button" class="cv-fdel" title="この記録を消す" onclick="pitFlowDel(\''+esc(c.id)+'\','+_i+')">'+(window.ico?ico('close',15):'×')+'</button>' : '';
+      h += '<div class="cv-frow done"><span class="cv-fdot"></span><div class="cv-fmain"><div class="cv-ft">'+title+(amtTxt?'<span class="cv-famt">'+esc(amtTxt)+'</span>':'')+'</div><div class="cv-fd">'+esc(String(when)+(who?' ・ '+who:''))+'</div></div>'+del+'</div>';
     });
-    return h + '</div></div>';
+    h += '</div>';
+    /* === 用件を足す（チップ／自由入力）＝ここが入口 v1.43.0 === */
+    if (window.PitFlowLog) h += PitFlowLog.addHtml(c, 'cv');
+    h += '<div class="cv-fhint">記録した日時や担当を直すのは「予約を編集」→フロー（設定権限のある人だけ）。</div>';
+    return h + '</div>';
   }
+  /* フローの面だけ描き直す＝タブも巻物の位置もそのまま（整備タブの _mechRerender と同じ考え方） */
+  window.cvFlowRepaint = function(){
+    const el = document.getElementById('cv-p-flow');
+    if (el && _c) el.innerHTML = flowTab(_c);
+  };
 
   function maintTab(c){
     const wt = workType(c);
@@ -572,7 +591,7 @@
   }
 
   function popsHtml(c){
-    const link = (c.resNo?c.resNo+' ・ ':'') + (c.customer||'') + '様 ' + (c.car||'');
+    const link = (c.resNo?c.resNo+' ・ ':'') + ((window.pitCustName?pitCustName(c):c.customer)||'') + '様 ' + (c.car||'');
     return '<div class="cv-fusenpop" id="cv-fusenpop"><div class="cv-fph"><i data-ic=sticky data-ics=16></i> 付箋を発行（この車両にリンク）</div>'
       + '<div class="cv-fplink"><i data-ic=link data-ics=16></i> '+esc(link)+'</div>'
       + '<textarea class="cv-fpbody" id="cv-fpbody" placeholder="付箋の内容（例：部品が入荷したら連絡）"></textarea>'
@@ -768,7 +787,7 @@
       title:'', body:body, color:color, noteType:'execute', deadline:null,
       memberUids:[], doneByUids:[], authorUid:(window.bnMe||null), status:'open',
       order:maxOrder+1, imageURL:'', replies:[],
-      linkResNo:(_c.resNo||''), linkLabel:((_c.resNo?_c.resNo+' ・ ':'')+(_c.customer||'')+'様 '+(_c.car||''))
+      linkResNo:(_c.resNo||''), linkLabel:((_c.resNo?_c.resNo+' ・ ':'')+((window.pitCustName?pitCustName(_c):_c.customer)||'')+'様 '+(_c.car||''))
     });
     save(); if(window.renderBoardNotes) try{ renderBoardNotes(); }catch(e){}
     cvCloseFusen();
@@ -797,7 +816,7 @@
 
   window.cvDeleteCard = function(){
     if(!_c) return; const idx = state.cards.findIndex(c=>c.id===_c.id);
-    if(window.pitLog) pitLog('予約カードを削除', { kind:'delete', label: (_c.resNo? '['+_c.resNo+'] ':'') + (_c.customer? _c.customer+' 様':'') + (_c.car? ' / '+_c.car:'') });
+    if(window.pitLog) pitLog('予約カードを削除', { kind:'delete', label: (_c.resNo? '['+_c.resNo+'] ':'') + ((window.pitCustName?pitCustName(_c):_c.customer)? (window.pitCustName?pitCustName(_c):_c.customer)+' 様':'') + (_c.car? ' / '+_c.car:'') });
     if(idx>=0) state.cards.splice(idx,1);
     cvCloseDel();
     if(window.closeDetail) closeDetail(); else save();

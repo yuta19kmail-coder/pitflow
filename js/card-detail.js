@@ -5,6 +5,10 @@
 
 let _editingCardId = null;
 let _returnView = 'today';   // 全画面カードを閉じたとき戻る先
+/* 🔴 v1.44.0 全画面フォームが「どのカードを出していたか」。
+   ポップアップを開いた時に全画面の中身を空にする（下の _cardClearOtherBody）ので、
+   ポップアップを閉じて全画面に戻る時は、これを見て**描き直す**（空のページにしない）。 */
+let _pageCardId = null;
 let _cardTab = 'basic';      // カード内タブの現在地（card-tabs.js が参照）
 let _cardMode = 'page';      // 'page'＝新規入庫(全画面) / 'modal'＝各ビューから(ポップアップ)
 let _cardBodyId = 'md-body'; // フォームの描画先（card-tabs.js も参照）
@@ -13,7 +17,7 @@ let _cardCheckOn = false;    // 入力チェックON中＝未入力を赤枠表�
 function _cardTitleHtml(card){
   const no = card.resNo ? '<span title="予約番号" style="font-size:12px;font-weight:700;letter-spacing:.5px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:1px 8px;margin-left:8px;font-family:ui-monospace,Menlo,Consolas,monospace;">' + card.resNo + '</span>' : '';
   return '<span style="font-size:13px;color:var(--text3);font-weight:400;">入庫カード</span>' + no + '<br>' +
-    (card.customer || '（未入力）') + ' 様 / ' + (card.car || '（車種未入力）');
+    ((window.pitCustName ? pitCustName(card) : card.customer) || '（未入力）') + ' 様 / ' + (card.car || '（車種未入力）');
 }
 
 /* mode: 'page'＝全画面（新規入庫予約） / 'modal'＝ポップアップ（各ビューから開く） */
@@ -27,12 +31,14 @@ function openCard(cardId, mode){
 
   if (_cardMode === 'modal'){
     _cardBodyId = 'md-body-modal';
+    _cardClearOtherBody('md-body-modal');   /* 🔴 v1.44.0 全画面フォームを残さない（下の注記を参照） */
     document.getElementById('card-title-modal').innerHTML = _cardTitleHtml(card);
     if (window.renderCardView) renderCardView(card, 'md-body-modal');
     else renderCardForm(card);
     document.getElementById('modal-detail').classList.add('show');
   } else {
     _cardBodyId = 'md-body';
+    _cardClearOtherBody('md-body');         /* 🔴 v1.44.0 ポップアップの中身を残さない */
     window._cfsYM = null;    // 右パネルのカレンダーは今月から
     window._cfsLgN = null;   // 代車ガントは今日から28日ぶんで仕切り直し
     if (state.currentView && state.currentView !== 'card') _returnView = state.currentView;
@@ -59,8 +65,14 @@ function closeDetail(){
   if (window.PitDB) PitDB.save();
   if (modalOpen){
     modal.classList.remove('show');
+    /* 🔴 v1.44.0 背後が全画面カードだった場合、その中身は空にしてあるので描き直す */
+    if (state.currentView === 'card' && _pageCardId && state.cards.some(x => x.id === _pageCardId)){
+      openCard(_pageCardId, 'page');
+      return;
+    }
     if (state.currentView) showView(state.currentView);   // 背後のビューを更新して反映
   } else {
+    _pageCardId = null;
     showView(_returnView || 'today');
   }
 }
@@ -227,7 +239,7 @@ function pitSaveInWork(alsoPrint){
   const board = (c.boardId === 'import') ? '2課（輸入）' : '1課（国産）';
   if (window.logFlow) logFlow(c, '入庫中で登録（' + c.reserveDate + '・' + board + 'の点検待ちへ）');
   if (window.pitLog) pitLog('入庫中で登録', { cardId: c.id, kind: 'in',
-    label: (c.customer ? c.customer + ' 様' : '') + (c.car ? ' / ' + c.car : '') + ' / 入庫日 ' + c.reserveDate + (past ? '（過去日）' : '') });
+    label: ((window.pitCustName?pitCustName(c):c.customer) ? (window.pitCustName?pitCustName(c):c.customer) + ' 様' : '') + (c.car ? ' / ' + c.car : '') + ' / 入庫日 ' + c.reserveDate + (past ? '（過去日）' : '') });
 
   if (alsoPrint && window.pitPrintCover) pitPrintCover(c.id);   /* 印刷は別iframe＝画面遷移と独立 */
 
@@ -249,9 +261,25 @@ window.pitSaveInWork = pitSaveInWork;
   });
 })();
 
+/* 🔴 v1.44.0 入庫カードのフォームは置き場所が2つある（全画面＝md-body／ポップアップ＝md-body-modal）。
+     **両方に中身が残っていると、同じ id・同じ data-key の入力欄が2つできる**。
+     すると `document.querySelector(...)` は**先に見つかる方＝前に開いていたカードの欄**を掴んでしまい、
+     症状ホイールのチップ（「車検満了日：」等）や顧客呼び出しの候補が
+     **別のカードに入ってしまう**（2026-08-04 の不具合）。
+     ⚠ **描く直前に、使わない方の入れ物を必ず空にする。**
+     ⚠ 入力は打った瞬間にカード（state.cards の中身）へ入っているので、空にしても書きかけは消えない。 */
+function _cardClearOtherBody(keepId){
+  ['md-body', 'md-body-modal'].forEach(function(id){
+    if (id === keepId) return;
+    const el = document.getElementById(id);
+    if (el && el.innerHTML !== '') el.innerHTML = '';
+  });
+}
 function renderCardForm(c){
   const body = document.getElementById(_cardBodyId || 'md-body');
   if (!body) return;
+  _cardClearOtherBody(_cardBodyId || 'md-body');
+  if ((_cardBodyId || 'md-body') === 'md-body') _pageCardId = c.id;   /* 戻り先を覚える（v1.44.0） */
 
   /* 再描画前にスクロール位置を控える（ボタン操作で先頭に飛ばないように・v0.28.1） */
   const _pm = body.querySelector('.cfp-main');
@@ -480,7 +508,9 @@ const DRIVE_ITEMS = [
   { id: 'noShoes',  label: '土禁' },
 ];
 /* 入庫時刻のショートカット（メインBOXに直接入力も可） */
-const TIME_QUICK = ['AM', 'PM', '決まり次第', '未定'];
+/* 🔴 v1.33.0 入庫時間のショートカット。**中身と並び順は state.js の PIT_TIME_QUICK が正**。
+   （）内の時間は画面に出さない＝ここではラベルだけ使う（時間は並び順の計算にだけ使われる）。 */
+const TIME_QUICK = (window.PIT_TIME_QUICK || []).map(function (t){ return t.label; });
 
 /* 既存データ（customer/kana のみ）を開く時、姓名・カナへ分割（先頭の半角/全角空白で区切る） */
 function _ensureNameParts(c){
@@ -577,15 +607,31 @@ function timeField(c){
   h += '<div class="cf-time-guide">';
   h += '<div class="cf-time-l">時間で選ぶ</div><input type="time" class="cf-input cf-time-pick" value="' + _pe(_timePickVal(c.reserveTime)) + '">';
   h += '<div class="cf-time-l">ショートカット</div><div class="cf-time-quick">';
-  TIME_QUICK.forEach(t => { h += '<button type="button" class="cf-chip cf-chip-tm' + (c.reserveTime === t ? ' active' : '') + '" data-val="' + t + '">' + t + '</button>'; });
+  /* ⚠ ボタンに出すのは**ラベルだけ**。（）内の時間は出さない（マウスを乗せた時の説明にだけ入れる）。
+     ⚠ 時刻不明のもの（決まり次第・レッカー・鍵ポスト・未定）は薄い見た目にして、時間もの と見分けやすく。 */
+  TIME_QUICK.forEach(t => {
+    const q = (window.pitTimeQuick ? pitTimeQuick(t) : null) || {};
+    const tip = q.unknown ? '時間が決まっていない扱い（その日のいちばん後ろに並びます）'
+              : (q.from ? ('目安 ' + q.from + '〜' + (q.to || '') + '（この時間で並びます）') : '');
+    h += '<button type="button" class="cf-chip cf-chip-tm' + (q.unknown ? ' cf-chip-tbd' : '')
+       + (c.reserveTime === t ? ' active' : '') + '" data-val="' + _pe(t) + '"'
+       + (tip ? ' title="' + _pe(tip) + '"' : '') + '>' + _pe(t) + '</button>';
+  });
   h += '</div></div></div>';
   return h;
 }
 /* 全角→半角（数字・コロン・ハイフン）。９：００→9:00 */
 function _timeHalf(s){
-  return String(s == null ? '' : s)
+  var t = String(s == null ? '' : s)
     .replace(/[０-９]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); })
-    .replace(/[：]/g, ':').replace(/[－ー―〜～]/g, '-');
+    .replace(/[：]/g, ':');
+  /* 🔴 v1.33.0 「レッカー」のような**言葉の長音（ー）を - に変えない**こと。
+     変えると「レッカ-」になり、範囲（9:00-10:00）とみなされて後ろが消える。
+     数字・コロン・区切り・時分半 だけでできている＝**時刻の書き方の時だけ** - に寄せる。 */
+  if (/^[0-9:\s\-－ー―〜～時分半〇一二三四五六七八九十]+$/.test(t)) {
+    t = t.replace(/[－ー―〜～]/g, '-');
+  }
+  return t;
 }
 /* v0.95.0 入庫時刻の賢い自動補正。全角/半角不問で「9」「900」「0900」「9時」「9時半」「九時半」「0915」「0900-1000」等を HH:MM（範囲は HH:MM-HH:MM）に。
    AM/PM/決まり次第/未定 などの語はそのまま残す。 */
@@ -615,11 +661,19 @@ function _normTimePart(t){
   return String(t == null ? '' : t).trim();   // 解釈できない（AM等）はそのまま
 }
 function _normTime(raw){
+  /* 🔴 v1.33.0 ショートカットの言葉（AM・朝一・レッカー…）はそのまま返す＝時刻に直そうとしない */
+  const raw0 = String(raw == null ? '' : raw).trim();
+  if (window.pitTimeQuick && pitTimeQuick(raw0)) return raw0;
   const s = _timeHalf(raw).trim();
   if (!s) return '';
   if (s.indexOf('-') >= 0) return s.split('-').map(function(p){ return _normTimePart(p); }).filter(Boolean).join('-');
   return _normTimePart(s);
 }
+/* v1.34.0 外へ出す。card-hover.js / card-view.js（返車時間の直接入力）が
+   `window._normTime` を呼ぶ作りになっていたのに**代入されておらず、ずっと素通り**していた。
+   これでどこから入れても同じ整形（900→09:00／ショートカットの言葉はそのまま）になる。 */
+window._normTime = _normTime;
+
 /* 時間ピッカー(input type=time)用の値。単一のHH:MMの時だけ返す（範囲や語は空＝ピッカーは空表示） */
 function _timePickVal(v){
   const n = _normTime(v || '');
@@ -681,7 +735,8 @@ function _cfsDayListHtml(c){
   if (!ds) return '';   // 入庫日が未選択なら出さない（最短カレンダーで日を選んでから）
   const me = c.id;
   const who = (c.frontStaff || '').trim();
-  const toMin = function (s){ s = String(s||'').split('-')[0].trim(); const m = /^(\d{1,2}):(\d{2})/.exec(s); return m ? (+m[1]*60 + +m[2]) : 9999; };
+  /* v1.33.0 物差しは state.js の pitTimeMin に一本化（ショートカットの時間も解決される） */
+  const toMin = function (s){ return window.pitTimeMin ? pitTimeMin(s) : 99999; };
   const live = function (x){ return x.status !== 'returned' && x.status !== 'scrap' && x.status !== 'canceled'; };
   /* v1.17.0：他の人が書きかけの下書き（_draft）は、この一覧にも出さない */
   const intake = (state.cards||[]).filter(function(x){ return x && !x._draft && x.id!==me && x.reserveDate===ds && live(x); });
@@ -692,7 +747,7 @@ function _cfsDayListHtml(c){
     const isHl = who && (x.frontStaff||'').trim()===who;
     const front = (window.pitSurname ? pitSurname(x.frontStaff||'') : (x.frontStaff||'')) || '—';
     const car = (x.car || '').trim();   // v0.84.1 メーカーは出さない＝車種のみ
-    const nm = ((window.pitSurname ? pitSurname(x.customer) : (x.customer||'')) || '（未入力）');   // v0.86.1 名字だけ（法人はフル）
+    const nm = ((window.pitCustSurname ? pitCustSurname(x) : (x.customer||'')) || '（未入力）');   // v0.86.1 名字だけ（法人はフル）
     return '<div class="dl-ev'+(imp?' imp':'')+(isHl?' hl':'')+'">'
       + '<div class="dl-top"><span class="dl-time">'+_pe(t||'—')+'</span><span class="dl-badge">'+_pe(front)+'</span></div>'
       + '<div class="dl-line">'+_pe(nm)+' 様 <span class="dl-car">'+_pe(car)+'</span></div></div>';
@@ -711,19 +766,24 @@ function _cfsDayListHtml(c){
   return h;
 }
 
-/* v0.84.0 → v1.22.0 担当フロントのMHS予定（来客以外＝MTG・外出・ルーティン・当番・休み）。代車カレンダーの上。
+/* v0.84.0 → v1.29.0 担当フロントのMHS予定（来客以外＝MTG・外出・ルーティン）。代車カレンダーの上。
+   🔴 v1.29.0（ゆうた指定）**当番は出さない**。**休みは MHS と同じく「休み欄」に顔（アバター）を並べる**。
    データは js/mhs-pit.js が MHS の配る appSummaries/mhsDigest-YYYY-MM から読んで
    window.pitMhsSchedule(担当名, 日付) / window.pitMhsStatus(日付) で渡してくる。
    ⚠ ここは「読んで出すだけ」。予定の展開（繰り返し・当番・休日振替）は MHS 側の仕事。 */
 function _cfsMhsHtml(c){
   const who = (c.frontStaff || '').trim();
   const head = '<div class="mhs-head"><i data-ic=calendar data-ics=16></i> <span>'+(who ? _pe(who)+' の予定' : '担当の予定')+'</span><span class="mhs-tag">MHS</span></div>';
-  if (!who) return '<div class="mhs-box">'+head+'<div class="mhs-empty">フロント担当を選ぶと、その人のMHS予定が出ます。</div></div>';
-  const ds = c.reserveDate || ymd(new Date());
+  const _ds0 = c.reserveDate || ymd(new Date());
+  if (!who) return '<div class="mhs-box">'+head+'<div class="mhs-empty">フロント担当を選ぶと、その人のMHS予定が出ます。</div>'+_cfsMhsOffHtml(_cfsMhsOffList(_ds0), '')+'</div>';
+  const ds = _ds0;
   let list = [];
   if (typeof window.pitMhsSchedule === 'function'){ try { list = window.pitMhsSchedule(who, ds) || []; } catch(e){ list = []; } }
   let st = null;
   if (typeof window.pitMhsStatus === 'function'){ try { st = window.pitMhsStatus(ds); } catch(e){ st = null; } }
+  const _offs = _cfsMhsOffList(ds);
+  const bigHtml = _cfsMhsOffBigHtml(_offs, who);
+  const offHtml = _cfsMhsOffHtml(_offs, who);
   const foot = _cfsMhsFoot(st);
   if (!list.length){
     /* 「予定が無い」のか「まだ届いていない／読めない」のかを、はっきり書き分ける。
@@ -732,12 +792,50 @@ function _cfsMhsHtml(c){
     if (!st || st.state === 'loading')  msg = 'MHSの予定を読み込んでいます…';
     else if (st.state === 'error')      msg = 'MHSの予定を読めませんでした（通信または権限）。MHS側で確認してください。';
     else if (st.state === 'none')       msg = 'この月ぶんがMHSからまだ届いていません（誰かがMHSを開くと配られます）。';
-    return '<div class="mhs-box">'+head+'<div class="mhs-empty">'+msg+'</div>'+foot+'</div>';
+    return '<div class="mhs-box">'+head+bigHtml+'<div class="mhs-empty">'+msg+'</div>'+offHtml+foot+'</div>';
   }
-  const ic = {mtg:'<i data-ic=clipboard data-ics=16></i>', out:'<i data-ic=car data-ics=16></i>', off:'<i data-ic=cup data-ics=15></i>',
-              routine:'<i data-ic=recycle data-ics=16></i>', duty:'<i data-ic=flag data-ics=16></i>', desk:'<i data-ic=monitor data-ics=16></i>'};
-  const rows = list.map(function(s){ return '<div class="mhs-row'+(s.type==='off'?' off':'')+'"><span class="mhs-t">'+_pe(s.t||'終日')+'</span><span class="mhs-ic">'+(ic[s.type]||'•')+'</span><span class="mhs-l">'+_pe(s.label||'')+'</span></div>'; }).join('');
-  return '<div class="mhs-box">'+head+'<div class="mhs-note">来客とは別の予定（MTG・外出・ルーティン・当番・休み）。</div>'+rows+foot+'</div>';
+  const ic = {mtg:'<i data-ic=clipboard data-ics=16></i>', out:'<i data-ic=car data-ics=16></i>',
+              routine:'<i data-ic=recycle data-ics=16></i>', desk:'<i data-ic=monitor data-ics=16></i>'};
+  const rows = list.map(function(s){ return '<div class="mhs-row"><span class="mhs-t">'+_pe(s.t||'終日')+'</span><span class="mhs-ic">'+(ic[s.type]||'•')+'</span><span class="mhs-l">'+_pe(s.label||'')+'</span></div>'; }).join('');
+  return '<div class="mhs-box">'+head+bigHtml+'<div class="mhs-note">来客とは別の予定（MTG・外出・ルーティン）。</div>'+rows+offHtml+foot+'</div>';
+}
+
+/* 🔴 v1.29.0 その日「休み」の人を、MHS の休み欄と同じく**顔（アバター）を並べて**出す（ゆうた指定）。
+   ⚠ 担当ひとりではなく**その日休みの人ぜんぶ**＝誰に振り替えられるかが一目で分かる。
+   ⚠ いま選んでいる担当が休みの時は、その丸を光らせる（見落とし防止）。
+   ⚠ 顔写真は CoreMembers 由来（state.staff[].photo）。無い人は名前の頭2文字。 */
+function _cfsMhsOffList(ds){
+  if (!ds || typeof window.pitMhsOff !== 'function') return [];
+  try { return window.pitMhsOff(ds) || []; } catch(e){ return []; }
+}
+function _cfsMhsOffHtml(offs, who){
+  if (!offs || !offs.length) return '';
+  const wk = String(who || '').trim();
+  /* ほかの人＝アバターを並べる／本人＝大きく知らせる（下の _cfsMhsOffBigHtml） */
+  const others = offs.filter(function(m){ return !(wk && (m.name || '') === wk); });
+  if (!others.length) return '';
+  const av = others.map(function(m){
+    const nm = (m.name || '？');
+    const inner = m.photo ? '<img src="'+_pe(m.photo)+'" alt="" loading="lazy">' : _pe(nm.slice(0, 2));
+    return '<span class="bn-av mhs-av'+(m.photo ? ' has-photo' : '')
+         + '" title="'+_pe(nm + (m.label ? '（'+m.label+'）' : ''))+'">'+inner+'</span>';
+  }).join('');
+  return '<div class="mhs-off">'
+       + '<span class="mhs-off-h"><i data-ic=cup data-ics=15></i> 休み</span>'
+       + '<span class="mhs-off-av">'+av+'</span>'
+       + '</div>';
+}
+/* 🔴 v1.29.0（ゆうた指定）**選んでいる担当その人が休みの日は、予定欄に大きく出す**。
+   顔を並べるだけだと見落とすため。名前も添えて、何の休みか（振替など）が入っていれば出す。 */
+function _cfsMhsOffBigHtml(offs, who){
+  const wk = String(who || '').trim();
+  if (!wk || !offs || !offs.length) return '';
+  const me = offs.find(function(m){ return (m.name || '') === wk; });
+  if (!me) return '';
+  const sub = (me.label && me.label !== '休み') ? '<span class="mhs-big-sub">'+_pe(me.label)+'</span>' : '';
+  return '<div class="mhs-big"><i data-ic=cup data-ics=22></i>'
+       + '<span class="mhs-big-t">担当者休み</span>'
+       + '<span class="mhs-big-n">'+_pe(wk)+'</span>' + sub + '</div>';
 }
 
 /* 「この予定はいつ時点のものか」。MHSを開く人がいない日が続くと古くなるので必ず出す。 */
@@ -839,19 +937,24 @@ function _cfsLgRows(from, to, today, tStr, c, ro){
     const ds = ymd(d);
     const dow = d.getDay();
     const dCls = (dow === 0) ? ' red' : (dow === 6 ? ' sat' : '');
-    h += '<tr data-ds="' + ds + '"><td class="cfs-lg-d' + dCls + (ds === tStr ? ' today' : '') + '">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + '</span></td>';
+    /* v1.35.0 日付を押すと、その日の行を点線で囲う（もう一度押すと消える） */
+    h += '<tr data-ds="' + ds + '"><td class="cfs-lg-d cfs-lg-dpick' + dCls + (ds === tStr ? ' today' : '') + '" data-lgrow="' + ds + '" title="クリックでこの日の行を目立たせる">' + (d.getMonth()+1) + '/' + d.getDate() + '<span>' + '日月火水木金土'[dow] + '</span></td>';
     loaners.forEach(function (l) {
       const a = assigns.find(function (x) { return x.loanerId === l.id && x.fromDate <= ds && x.toDate >= ds; });
+      /* 🔴 v1.35.0 どのマスにも「どの代車の列か」の目印を付ける（貸出中のマスも）。
+         列まるごと点線で囲う（エクセルの列選択のような表示）ために要る。
+         ⚠ 選択やドラッグに使う data-lgl / data-lgd は**今までどおり空きマスだけ**＝挙動は変えない。 */
+      const col = ' data-lgcol="' + l.id + '"';
       if (a){
         /* 古いtitle（誰に・いつまで）は撤去＝情報はヘッダのホバー詳細カードへ */
-        h += '<td class="cfs-lg-busy"></td>';
+        h += '<td class="cfs-lg-busy"' + col + '></td>';
       } else if (ro){
         /* 空きカレンダービュー＝読み取り専用（クリック選択なし） */
-        h += '<td class="cfs-lg-free cfs-lg-ro"></td>';
+        h += '<td class="cfs-lg-free cfs-lg-ro"' + col + '></td>';
       } else {
         /* このカードの貸出予定（使用代車＋から/まで）と一致するマスは緑＝双方向（ドラッグでもテキスト入力でも光る） */
         const pick = c && c.loanerId === l.id && c.loanerFrom && c.loanerTo && ds >= c.loanerFrom && ds <= c.loanerTo;
-        h += '<td class="cfs-lg-free' + (pick ? ' cfs-lg-pick' : '') + '" data-lgl="' + l.id + '" data-lgd="' + ds + '"></td>';
+        h += '<td class="cfs-lg-free' + (pick ? ' cfs-lg-pick' : '') + '"' + col + ' data-lgl="' + l.id + '" data-lgd="' + ds + '"></td>';
       }
     });
     h += '</tr>';
@@ -879,7 +982,8 @@ function _cfsLgLoaners(c){
       return av - bv;
     });
   }
-  const bools = conds.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; });
+  /* v1.35.0 Bカメ（camera）が抜けていて、選んでも並べ替えが効かなかった */
+  const bools = conds.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso' || k === 'camera'; });
   if (!bools.length) return ls;
   const match = [], rest = [];
   ls.forEach(function(l){ (bools.every(function(k){ return l[k]; }) ? match : rest).push(l); });
@@ -887,7 +991,7 @@ function _cfsLgLoaners(c){
 }
 /* 代車条件があり「ソート有」の時、条件に合う代車かどうか（緑チェック用） */
 function _cfsLgMatches(l, c){
-  const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso'; }) : [];
+  const conds = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return k === 'etc' || k === 'navi' || k === 'iso' || k === 'camera'; }) : [];
   if (!conds.length) return false;
   return conds.every(function(k){ return l[k]; });
 }
@@ -902,13 +1006,14 @@ window.cfsLgRerender = function(){
   const c = ro ? { reserveDate:'', boardId:null, needLoaner:true } : (state.cards.find(function(x){ return x.id === _editingCardId; }) || null);
   old.outerHTML = _cfsLoanerGanttHtml(t, ymd(t), c, ro);
   if (window.cfsLgFill) cfsLgFill();
+  if (window.pitLgSync) pitLgSync(c);   /* v1.35.0 並べ替えたあとも選択の色を保つ */
 };
 
 function _cfsLoanerGanttHtml(today, tStr, c, ro){
   const loaners = _cfsLgLoaners(c);
   if (!window._cfsLgN) window._cfsLgN = 28;
   // 代車条件（ETC/ナビ/ISO/高さ/幅/長さ）が入っていれば「ソート有/無」トグルを出す（デフォルト＝条件ありでソート有）
-  const condKeys = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return ['etc','navi','iso','height','width','length'].indexOf(k) >= 0; }) : [];
+  const condKeys = (c && Array.isArray(c.loanerConditions)) ? c.loanerConditions.filter(function(k){ return ['etc','navi','iso','camera','height','width','length'].indexOf(k) >= 0; }) : [];
   const sortOn = (window._cfsLgSort !== false);
   const sortBtn = (!ro && condKeys.length)
     ? '<button type="button" class="cfs-sortbtn' + (sortOn ? ' on' : '') + '" onclick="cfsLgToggleSort()" title="条件で並べ替え（サイズは低い順／装備は合う車を先頭）">' + (sortOn ? '✓ 条件で並べ替え' : '並べ替えなし') + '</button>'
@@ -922,14 +1027,18 @@ function _cfsLoanerGanttHtml(today, tStr, c, ro){
     /* 古いtitleは撤去。data-loid でヘッダにマウスオーバー＝代車の詳細ホバーカード（loaner.js）。条件マッチは強調。 */
     const mcls = (sortOn && _cfsLgMatches(l, c)) ? ' cfs-lg-match' : '';
     const _no = (l.number != null && l.number !== '') ? String(l.number) : String(l.name || '').replace('代車', '');
-    h += '<th class="cfs-lg-th' + mcls + '" data-loid="' + l.id + '"><i>' + _no + '</i><b>' + (l.model || '') + '</b></th>';
+    /* v1.35.0 クリックで「この代車を使う」＝列を点線で囲い、使用代車の欄に入れる（ro では押せない） */
+    h += '<th class="cfs-lg-th' + mcls + (ro ? '' : ' cfs-lg-thpick') + '" data-loid="' + l.id + '" data-lgcol="' + l.id + '"'
+       + (ro ? '' : ' title="クリックでこの代車を使う（列が青い点線で囲まれます）"')
+       + '><i>' + _no + '</i><b>' + (l.model || '') + '</b></th>';
   });
   h += '</tr></thead>';
   h += '<tbody id="cfs-lg-body">' + _cfsLgRows(0, window._cfsLgN, today, tStr, c, ro) + '</tbody>';
   h += '</table></div>';
   h += '<div class="cfs-hint">' + (ro
         ? '色付き＝貸出中（マウスで誰に・いつまでか）／空白＝空き。下にスクロールで先の日付まで見られます。'
-        : '色付き＝貸出中（マウスで誰に・いつまでか）／<b style="color:#1db97a">緑＝このカードの貸出予定</b>。空きマスを<b>クリック→そのままドラッグ</b>で「使用代車＋貸出から/まで」に自動で入ります（下の入力欄に日付を打っても緑が追従）。') + '</div>';
+        : '色付き＝貸出中（マウスで誰に・いつまでか）／<b style="color:#1db97a">緑＝このカードの貸出予定</b>。空きマスを<b>クリック→そのままドラッグ</b>で「使用代車＋貸出から/まで」に自動で入ります（下の入力欄に日付を打っても緑が追従）。'
+          + '<br><b style="color:#378ADD">上の車種をクリック</b>＝その代車を使う（列が青い点線で囲まれ、使用代車の欄にも入ります。もう一度押すと解除）。<b style="color:#378ADD">左の日付をクリック</b>＝その日の行を目立たせる（見やすくするだけ）。') + '</div>';
   h += '</div>';
   return h;
 }
@@ -944,6 +1053,7 @@ function _cfsLgAppend (count) {
   const ro = (state.currentView === 'availcal');   // 空きカレンダービューは読み取り専用
   const c = ro ? null : state.cards.find(x => x.id === _editingCardId);
   body.insertAdjacentHTML('beforeend', _cfsLgRows(from, window._cfsLgN, today, ymd(today), c, ro));
+  if (window.pitLgSync) pitLgSync(c);   /* v1.35.0 継ぎ足した行にも選択の色を乗せる */
 }
 /* 代車ガント：下端近くで21日ずつ継ぎ足し */
 window.cfsLgScroll = function (sc) {
@@ -960,6 +1070,35 @@ window.cfsLgFill = function () {
   let guard = 0;
   while (sc.scrollHeight <= sc.clientHeight + 20 && guard < 40){ _cfsLgAppend(21); guard++; }
 };
+/* 🔴 v1.35.0（ゆうた指定）代車カレンダーの「いま選ばれているもの」を塗り直す共通処理。
+   ・緑のマス  … 使用代車＋貸出から/まで（今までどおり）
+   ・青い点線の列 … いま選んでいる使用代車の列を、エクセルの列選択のように囲う
+   ・青い点線の行 … 日付を押した時、その日の行を囲う
+   🔴 **日付欄を打っている最中にも呼ぶ**＝リニアに追従する（再描画は待たない）。
+   ⚠ 行を継ぎ足した後（無限スクロール）にも呼ぶこと。付け直さないと下の行に色が乗らない。 */
+window.pitLgSync = function (c) {
+  const card = c || (window.state && state.cards ? state.cards.find(function (x) { return x.id === _editingCardId; }) : null);
+  const table = document.querySelector('#cfs-lg-card table.cfs-lg');
+  if (!table) return;
+  const lid  = (card && card.loanerId) || '';
+  const from = (card && card.loanerFrom) || '';
+  const to   = (card && card.loanerTo) || '';
+  const rowSel = window._cfsLgRowSel || '';
+  /* 緑（このカードの貸出予定） */
+  table.querySelectorAll('td[data-lgd]').forEach(function (td) {
+    const on = lid && from && to && td.dataset.lgl === lid && td.dataset.lgd >= from && td.dataset.lgd <= to;
+    td.classList.toggle('cfs-lg-pick', !!on);
+  });
+  /* 青い点線の列 */
+  table.querySelectorAll('[data-lgcol]').forEach(function (el) {
+    el.classList.toggle('cfs-lg-colsel', !!lid && el.getAttribute('data-lgcol') === lid);
+  });
+  /* 青い点線の行 */
+  table.querySelectorAll('tr[data-ds]').forEach(function (tr) {
+    tr.classList.toggle('cfs-lg-rowsel', !!rowSel && tr.getAttribute('data-ds') === rowSel);
+  });
+};
+
 /* 代車ガント：今日（一番上）へ戻る */
 window.cfsLgToday = function () {
   const sc = document.getElementById('cfs-lg-scroll');
@@ -971,7 +1110,9 @@ window.cfsLgToday = function () {
 function _cardMarkMisses(c, root){
   if (!root) return [];
   const need = [
-    ['customer',    'お客様名',        !!(c.customer || '').trim()],
+    /* 🔴 v1.25.0 新規のお客様は電話だけで漢字が分からないことがある。
+       その時は**カナだけ**入れれば通す（漢字が空でもカナが入っていればOK）。両方空なら今までどおり赤。 */
+    ['customer',    'お客様名',        !!((c.customer || '').trim() || (c.kana || '').trim())],
     ['tel',         'TEL',             !!(c.tel || '').trim()],
     ['boardId',     '国産車／輸入車',  c.boardId === 'default' || c.boardId === 'import'],
     ['maker',       'メーカー',        !!(c.maker || '').trim()],
@@ -985,9 +1126,16 @@ function _cardMarkMisses(c, root){
     need.push(['loanerFrom', '貸出から', !!c.loanerFrom]);
     need.push(['loanerTo',   '貸出まで', !!c.loanerTo]);
   }
-  // 代車を「不要」にした時など、対象外になったキーの赤は消す
+  /* 🔴 v1.40.0（ゆうた指定）**車検の時だけ諸費用も必須**。
+     ⚠ 車検以外は今までどおり任意（入れなくても赤くならない）。
+     ⚠ 0 は「0円と決めた」ことがあるので通す＝空っぽ（未入力）だけを赤にする。 */
+  const _wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
+  if (_wts.indexOf('shaken') >= 0){
+    need.push(['feeAmount', '諸費用（車検）', !(c.feeAmount == null || c.feeAmount === '')]);
+  }
+  // 代車を「不要」にした時・車検を外した時など、対象外になったキーの赤は消す
   const activeKeys = need.map(n => n[0]);
-  ['loanerId', 'loanerFrom', 'loanerTo'].forEach(function (k){
+  ['loanerId', 'loanerFrom', 'loanerTo', 'feeAmount'].forEach(function (k){
     if (activeKeys.indexOf(k) < 0){ const el = root.querySelector('[data-key="' + k + '"]'); if (el) el.classList.remove('cf-miss'); }
   });
   const misses = [];
@@ -1208,9 +1356,13 @@ function toggle(c, key, onLabel, offLabel){
 
 function staffSelect(c, key){
   const div = c.division || '';   // 課が選ばれていれば、その課＋全社(課なし)のメンバーだけ出す
-  // 役割で絞る：フロント担当＝フロントのみ／予約担当・完TEL担当＝受付＋フロント
+  // 役割で絞る：フロント担当＝フロントのみ／完TEL担当＝受付＋フロント
   const frontOnly  = (key === 'frontStaff');
-  const frontOrRcv = (key === 'reserveStaff' || key === 'completeCallStaff');
+  const frontOrRcv = (key === 'completeCallStaff');
+  /* 🔴 v1.24.0（ゆうた指定）：予約担当だけは特別扱い。
+     ＝メンバー画面で「受付」にチェックが入っている人を、1課/2課に関係なく全員出す。
+     電話は課を問わず取るので、課で絞ると候補から消えてしまうため。 */
+  const rcvOnly    = (key === 'reserveStaff');
   let h = '<select class="cf-input" data-key="' + key + '">';
   h += '<option value="">―</option>';
   /* v1.8.0：いま入っている担当が候補に無い場合（辞めた人・名簿外の元スタッフ・別の課）でも
@@ -1220,9 +1372,10 @@ function staffSelect(c, key){
   state.staff.forEach(s => {
     /* 別の課のメンバーは一覧から消す。受付課・その他・未所属の人はどの課でも出す。
        兼任（1課かつ2課）の人は両方に出る（v1.6.0） */
-    if (div && !_staffInDiv(s, div)) return;
+    if (div && !rcvOnly && !_staffInDiv(s, div)) return;        // v1.24.0 予約担当は課で絞らない
     if (frontOnly  && !s.front) return;                         // フロント担当＝フロント業務ありのみ
-    if (frontOrRcv && !(s.front || s.reception)) return;        // 予約/完TEL＝受付＋フロント（メカのみは出さない）
+    if (rcvOnly    && !s.reception) return;                     // v1.24.0 予約担当＝「受付」チェックの人だけ
+    if (frontOrRcv && !(s.front || s.reception)) return;        // 完TEL＝受付＋フロント（メカのみは出さない）
     const sel = c[key] === s.name ? ' selected' : '';
     if (sel) _curFound = true;
     h += '<option value="' + s.name + '"' + sel + '>' + s.name + '</option>';
@@ -1249,8 +1402,9 @@ function _staffDivision(name){
   const course = ds.filter(x => x === 'div1' || x === 'div2');
   return course.length === 1 ? course[0] : '';   // 兼任・受付課などは課に縛られない（v1.6.0）
 }
+/* v1.24.0 予約担当は課に縛られないので、課を変えても消さない（フロント担当だけ） */
 function _syncStaffToDivision(c){
-  ['frontStaff', 'reserveStaff'].forEach(function(k){
+  ['frontStaff'].forEach(function(k){
     const d = _staffDivision(c[k]);
     if (c[k] && d && c.division && d !== c.division) c[k] = '';
   });
@@ -1572,8 +1726,9 @@ function bindCardFormEvents(root){
         const _m = (v && window.pitStaffByName) ? pitStaffByName(v) : null;
         c[key + 'Id'] = _m ? _m.id : '';
       }
-      // 担当（フロント/予約）を選んだら、その人の課を自動選択（→課チップ点灯＆もう一方の担当も同課で絞られる）
-      if ((key === 'frontStaff' || key === 'reserveStaff') && v) {
+      // 担当（フロント）を選んだら、その人の課を自動選択（→課チップ点灯）
+      // v1.24.0 予約担当は課に縛られないので、選んでも課は動かさない
+      if (key === 'frontStaff' && v) {
         const d = _staffDivision(v);
         if (d && c.division !== d) c.division = d;
       }
@@ -1892,7 +2047,46 @@ function bindCardFormEvents(root){
       if (b < a){ const t = a; a = b; b = t; }
       if (rangeFree(drag.l, a, b)){ drag.a = a; drag.b = b; paint(drag); }   // 途中に貸出中があれば伸ばさない
     });
+
+    /* 🔴 v1.35.0（ゆうた指定）日付（左端のマス）を押すと、その日の行を点線で囲う。
+       同じ日をもう一度押すと消える。**データは何も変えない＝見やすくするだけ。** */
+    lgBody.addEventListener('click', (e) => {
+      const dtd = e.target.closest('td[data-lgrow]');
+      if (!dtd) return;
+      const ds = dtd.getAttribute('data-lgrow');
+      window._cfsLgRowSel = (window._cfsLgRowSel === ds) ? '' : ds;
+      pitLgSync(c);
+    });
   }
+
+  /* 🔴 v1.35.0（ゆうた指定）車種の見出しを押す＝その代車を使う。
+     列が青い点線で囲まれ、**使用代車の欄にも自動で入る**（逆に欄で選んでも列が囲まれる）。
+     ⚠ 見出しはホバーで代車の詳細カードも出る（loaner.js）。そちらは触っていない。 */
+  const lgCard = root.querySelector('#cfs-lg-card');
+  if (lgCard){
+    lgCard.addEventListener('click', (e) => {
+      const th = e.target.closest('th.cfs-lg-thpick[data-loid]');
+      if (!th) return;
+      const id = th.getAttribute('data-loid');
+      c.needLoaner = true;
+      c.loanerId = (c.loanerId === id) ? '' : id;     /* もう一度押すと選択解除 */
+      const sel = root.querySelector('select[data-key="loanerId"]');
+      if (sel) sel.value = c.loanerId;
+      if (window.PitDB) PitDB.save();
+      pitLgSync(c);
+      _cardReapplyCheck(root);
+    });
+  }
+
+  /* 🔴 v1.35.0 使用代車・貸出から/まで を触ったら、**打っている最中から**カレンダーの色を追従させる。
+     ⚠ 値の保存は既存の input ハンドラに任せている＝ここは塗り直すだけ（保存の道を二重に作らない）。 */
+  ['loanerId', 'loanerFrom', 'loanerTo'].forEach(function (k){
+    const el = root.querySelector('[data-key="' + k + '"]');
+    if (!el) return;
+    ['input', 'change'].forEach(function (ev){
+      el.addEventListener(ev, function (){ setTimeout(function (){ pitLgSync(c); }, 0); });
+    });
+  });
 
   // トグル
   root.querySelectorAll('.cf-toggle').forEach(group => {
@@ -1900,10 +2094,21 @@ function bindCardFormEvents(root){
     group.querySelectorAll('.cf-tg').forEach(btn => {
       btn.addEventListener('click', () => {
         c[key] = btn.dataset.val === '1';
+        /* 🔴 v1.35.0（ゆうた指定）入庫日が決まっている状態で「代車必要」を押したら、
+           **貸出開始日に入庫日をそのまま入れる**（同日から貸す運用がほとんどのため）。
+           ⚠ すでに貸出開始日が入っている時は上書きしない＝手で直した値を消さない。 */
+        if (key === 'needLoaner' && c.needLoaner && c.reserveDate && !c.loanerFrom){
+          c.loanerFrom = c.reserveDate;
+        }
         renderCardForm(c);
       });
     });
   });
+
+  /* v1.35.0 描き直した直後にも、代車カレンダーの選択（緑・青い点線）を乗せ直す。
+     ⚠ 表の高さが決まってから＝行を埋めたあとに呼ぶ。 */
+  if (window.cfsLgFill) { try { cfsLgFill(); } catch (e) {} }
+  if (window.pitLgSync) { try { pitLgSync(c); } catch (e) {} }
 
   // 入力チェックON中なら、再描画のたびに未入力だけ赤枠を貼り直す
   // （チップ/トグルを押しても全部消えず、埋めた項目だけ赤が外れる）

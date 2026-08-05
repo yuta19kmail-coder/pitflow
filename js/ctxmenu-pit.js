@@ -115,6 +115,12 @@
       }
     }
 
+    /* v1.36.0 タスクボードの区切りライン（board-line.js）。盤面に乗っているカードだけ。 */
+    if (window.PitBoardLine && st !== 'reserved' && st !== 'returned'){
+      var _bl = PitBoardLine.ctxItem(c);
+      if (_bl) items.push(_bl);
+    }
+
     items.push({ ic: c.urgent ? 'ban' : 'bolt', label: c.urgent ? '急ぎを外す' : '急ぎにする',
       run: function(){ var cc = card(c.id); if (!cc) return; cc.urgent = !cc.urgent; refresh();
         toast(cc.urgent ? '急ぎにしました' : '急ぎを外しました'); } });

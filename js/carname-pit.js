@@ -193,6 +193,7 @@
       dd.innerHTML = html;
       dd.classList.add('show');
       open = true;
+      place();
       Array.prototype.forEach.call(dd.querySelectorAll('.cn-i'), function (el) {
         el.addEventListener('mouseenter', function () { mark(+el.dataset.i); });
         /* pointerdown＋preventDefault＝blur より先に拾う（PCもタブレットも同じ動き） */
@@ -200,6 +201,26 @@
       });
       var act = dd.querySelector('.cn-i.on');
       if (act && act.scrollIntoView) { try { act.scrollIntoView({ block: 'nearest' }); } catch (e) {} }
+    }
+
+    /* 🔴 v1.28.0（ゆうた指定）候補は**入力欄の上**に出す。
+       Windows の変換候補（IMEの予測）が入力欄の**下**に出るので、そこと重なると読めなくなるため。
+       ⚠ 上の余白が足りない時だけ下に出す（画面の外へはみ出して読めなくなるのを防ぐ）。
+       ⚠ 高さは残っている余白に合わせて縮める＝どちら向きでも切れずに収まる。
+       ⚠ CSS の既定が「上」。ここは下に出す時だけ `cn-down` を付ける。 */
+    function place() {
+      dd.classList.remove('cn-down');
+      dd.style.maxHeight = '';
+      var GAP = 3, MINH = 110, MAXH = 262;
+      var r = inp.getBoundingClientRect();
+      var vh = w.innerHeight || (d.documentElement && d.documentElement.clientHeight) || 0;
+      var up = r.top - GAP;            /* 入力欄より上に残っている高さ */
+      var down = vh - r.bottom - GAP;  /* 入力欄より下に残っている高さ */
+      var h = dd.offsetHeight;
+      var useDown = (h > up) && (down > up);
+      if (useDown) dd.classList.add('cn-down');
+      var room = useDown ? down : up;
+      if (h > room) dd.style.maxHeight = Math.max(MINH, Math.min(MAXH, room)) + 'px';
     }
 
     function mark(i) {

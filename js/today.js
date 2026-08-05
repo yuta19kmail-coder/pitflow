@@ -20,8 +20,11 @@ window._todayFull = false; // false=コンパクト（詰め・既定）/ true=�
 
 function _todTeamColor(c){ return (c.boardId === 'import') ? '#ec4899' : '#1db97a'; }
 
-/* "09:30" や "09:00-10:00" の先頭時刻を分に。空は大きい値（末尾送り） */
+/* "09:30" や "09:00-10:00" の先頭時刻を分に。空は大きい値（末尾送り）。
+   🔴 v1.33.0 ショートカット（AM・朝一・決まり次第 など）も扱えるよう、
+      **物差しは state.js の pitTimeMin に一本化**した。ここで独自に数えないこと。 */
 function _todMin(t){
+  if (window.pitTimeMin) return pitTimeMin(t);
   const m = String(t || '').match(/(\d{1,2}):(\d{2})/);
   if (!m) return 99999;
   return (+m[1]) * 60 + (+m[2]);
@@ -176,7 +179,7 @@ window.pitTodayTap = function(id, isReturn){
   const cancelSub   = isReturn ? '返車予定を外して「返車・未定」へ戻す' : '「未入庫」へ（1ヶ月後に自動アーカイブ）';
   back.innerHTML =
     '<div class="ta-sheet">' +
-      '<div class="ta-head"><b>' + (c.customer || '（未入力）') + ' 様</b>　' +
+      '<div class="ta-head"><b>' + ((window.pitCustName?pitCustName(c):c.customer) || '（未入力）') + ' 様</b>　' +
         (c.maker ? c.maker + ' ' : '') + (c.car || '') + (c.plate ? '<span class="ta-plate">' + c.plate + '</span>' : '') +
         '<div class="ta-sub">' + team + (wt ? '・' + wt.label : '') + (isReturn ? '・返車' : '・入庫') + '</div>' +
       '</div>' +
@@ -200,7 +203,7 @@ window.pitTodayEditDt = function(id, isReturn){
   back.innerHTML =
     '<div class="ta-sheet">' +
       '<div class="ta-head"><b><i data-ic=clock data-ics=16></i> ' + (isReturn ? '返車' : '入庫') + 'の日時変更</b>' +
-        '<div class="ta-sub">' + (c.customer || '') + ' 様　' + (c.car || '') + '</div></div>' +
+        '<div class="ta-sub">' + ((window.pitCustName?pitCustName(c):c.customer) || '') + ' 様　' + (c.car || '') + '</div></div>' +
       '<label class="ta-f">日付<input type="date" id="ta-dt-d" value="' + dVal + '"></label>' +
       '<label class="ta-f">時間<input type="text" id="ta-dt-t" value="' + tVal + '" placeholder="例 09:30 / 09:00-10:00"></label>' +
       '<button class="ta-btn primary" onclick="pitTodaySaveDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b><i data-ic=save data-ics=16></i> 保存</b></button>' +
@@ -258,7 +261,7 @@ window.pitTodayCheckIn = function(id){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitLog) pitLog('入庫済みにした', { cardId: c.id, kind: 'in', label: (c.customer? c.customer+' 様':'') + (c.car? ' / '+c.car:'') });
+  if (window.pitLog) pitLog('入庫済みにした', { cardId: c.id, kind: 'in', label: ((window.pitCustName?pitCustName(c):c.customer)? (window.pitCustName?pitCustName(c):c.customer)+' 様':'') + (c.car? ' / '+c.car:'') });
   if (window.pitToast) pitToast('入庫済み → タスク「点検待ち」へ移動しました');
 };
 /* 返車済み：実績へ。completedAtを今日に・売上を確定値で固める */
@@ -274,7 +277,7 @@ window.pitTodayReturn = function(id){
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitLog) pitLog('返車済みにした（実績へ）', { cardId: c.id, kind: 'out', label: (c.customer? c.customer+' 様':'') + (c.car? ' / '+c.car:'') + (c.amountFinal? ' / ¥'+Number(c.amountFinal).toLocaleString():'') });
+  if (window.pitLog) pitLog('返車済みにした（実績へ）', { cardId: c.id, kind: 'out', label: ((window.pitCustName?pitCustName(c):c.customer)? (window.pitCustName?pitCustName(c):c.customer)+' 様':'') + (c.car? ' / '+c.car:'') + (c.amountFinal? ' / ¥'+Number(c.amountFinal).toLocaleString():'') });
   if (window.pitToast) pitToast('返車済み → 実績（確定売上）に固めました');
 };
 
@@ -367,7 +370,7 @@ function todayRow(c, isReturn, inBreak){
     h += '<div class="tr-front empty"></div>';
   }
   h += '<div class="tr-main">';
-  h += '<div class="tr-headline"><span class="tr-customer">' + ((window.pitSurname ? pitSurname(c.customer) : (c.customer || '')) || '（未入力）') + ' 様</span>'
+  h += '<div class="tr-headline"><span class="tr-customer">' + ((window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）') + ' 様</span>'
      + (c.car ? '<span class="tr-carname">' + c.car + '</span>' : '') + '</div>';
   // ナンバー＋当日メモ（クイック引継ぎ）を1行で。メモはクリックで直入力＝当日ビュー内だけの簡単メモ v0.123.0
   h += '<div class="tr-plateline">' + (c.plate ? '<span class="tr-plate">' + c.plate + '</span>' : '') + _todNoteSpan(c) + '</div>';

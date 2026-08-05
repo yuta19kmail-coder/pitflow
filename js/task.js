@@ -29,7 +29,17 @@ function _renderKanban(board, cols){
 
   function renderCol(col){
     // returnStage（完TEL待ち/返車待ち）が付いたカードは盤面から外れ、返車ビューへ移る
-    const inCol = state.cards.filter(c => c.status === col.id && c.boardId === board.id && !c.returnStage);
+    /* v1.41.0 →🔴 v1.48.0 「担当車両」スイッチ（myonly-pit.js）。
+       ・OFF＝このボードのカードだけ（今までどおり）。
+       ・ON ＝**1課・2課をまたいで自分の担当を集めて**、同じ工程の列に並べる。
+       ⚠ どの列に入れるかの判断は myonly-pit.js の colCards に任せる（ここは呼ぶだけ）。
+       ⚠ 絞ってから数えるので、列の見出しの件数も**出ている数**と合う。 */
+    const inCol = (window.PitMyOnly && PitMyOnly.colCards)
+      ? PitMyOnly.colCards(board, col)
+      : state.cards.filter(c => c.status === col.id && c.boardId === board.id && !c.returnStage);
+    /* よその課から来たカードに印を付ける（見た目だけ・ONの時だけ付く） */
+    const _card = (c, o) => (window.PitMyOnly && PitMyOnly.decorate)
+      ? PitMyOnly.decorate(c, board, cardHtml(c, o)) : cardHtml(c, o);
     const hasTD = !col.terminal && !col.side;   // 試運転エリアを付ける＝完了以外のフロー列
     let colClass = 'kanban-col';
     if (col.terminal) colClass += ' terminal';
@@ -41,19 +51,26 @@ function _renderKanban(board, cols){
       const main = inCol.filter(c => !c.testDrive);
       const td   = inCol.filter(c => c.testDrive);
       html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
-      html += main.length ? main.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-empty">なし</div>';
+      /* v1.36.0 区切りライン（board-line.js）をカードのあいだに挟む。無ければ今までどおり。 */
+      html += main.length
+        ? (window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, main, c => _card(c, { kanban:true, compact:true }))
+                               : main.map(c => _card(c, { kanban:true, compact:true })).join(''))
+        : ((window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, [], function(){ return ''; }) : '') + '<div class="kanban-empty">なし</div>');
       html += '</div>';
       // 試運転を「選ぶ」2枠（上＝通常/無タイトル・下＝🚗試運転）。どちらに落とすかで試運転の要否が直感的に分かる
       html += '<div class="kanban-td2">';
       html += '<div class="kanban-td2-box kanban-td2-normal" data-drop="status" data-drop-val="' + col.id + '"><div class="kanban-td2-ph">ここにドラッグ</div></div>';
       html += '<div class="kanban-td2-box kanban-td2-test' + (td.length ? ' has' : '') + '" data-drop="testdrive" data-drop-val="' + col.id + '">';
       html += '<div class="kanban-td2-lb"><i data-ic=car data-ics=16></i> 試運転</div>';
-      html += td.length ? td.map(c => cardHtml(c, { kanban:true, compact:true })).join('') : '<div class="kanban-td2-ph">ここにドラッグ</div>';
+      html += td.length ? td.map(c => _card(c, { kanban:true, compact:true })).join('') : '<div class="kanban-td2-ph">ここにドラッグ</div>';
       html += '</div>';
       html += '</div>';
     } else {
       html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
-      html += inCol.length ? inCol.map(c => cardHtml(c, { kanban: !col.side, compact:true })).join('') : '<div class="kanban-empty">なし</div>';
+      html += inCol.length
+        ? (window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, inCol, c => _card(c, { kanban: !col.side, compact:true }))
+                               : inCol.map(c => _card(c, { kanban: !col.side, compact:true })).join(''))
+        : ((window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, [], function(){ return ''; }) : '') + '<div class="kanban-empty">なし</div>');
       html += '</div>';
     }
     html += '</div>';

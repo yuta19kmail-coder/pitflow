@@ -66,9 +66,17 @@ function _loDedupeAssigns(){
 }
 function _loAssignLabel(a){
   const card = a.cardId ? (state.cards||[]).find(function(c){return c.id===a.cardId;}) : null;
-  return card ? ((window.pitSurname?pitSurname(card.customer):(card.customer||''))||'予約') : (a.customer || '予約');
+  return card ? ((window.pitCustSurname?pitCustSurname(card):(card.customer||''))||'予約') : (a.customer || '予約');
 }
-function _loName(id){ const l=(state.loaners||[]).find(function(x){return x.id===id;}); return l?l.name:id; }
+/* 代車の呼び名。🔴 v1.46.0 **車種名が主・番号は括弧**（「タント（5）」）＝現場の呼び方に合わせる。
+   ⚠ 車種が未登録なら今までどおり元の名前（「代車5」）。 */
+function _loName(id){
+  const l=(state.loaners||[]).find(function(x){return x.id===id;});
+  if(!l) return id;
+  const model=String(l.model||'').trim();
+  const num=(l.number!=null&&l.number!=='')?String(l.number):(String(l.name||'').replace('代車','')||'');
+  return model ? (model + (num?'（'+num+'）':'')) : (l.name||id);
+}
 function _loAbbr(s, n){ s = String(s == null ? '' : s); return s.length > n ? (s.slice(0, n) + '…') : s; }
 /* 当日かぶり（後発）：この割当の開始日に、同じ代車で別予約の返却(toDate)が重なるか＝後発は初日が「耳」・実質翌日開始 */
 function _loHandoffLater(a){
@@ -376,11 +384,19 @@ function loRebuild(days){
   grid.style.gridTemplateColumns = '64px repeat(' + Math.max(1, ls.length) + ', minmax(96px, 112px))';   // 案A：名前様＋車種＋メモが収まる幅
   let h = '<div class="lo-cell lo-head lo-corner">日付</div>';
   ls.forEach(function(l){
+    /* 🔴 v1.46.0 ゆうた指定＝**数字より車種名をメイン**。
+       現場は「代車5」ではなく「タント」で呼ぶので、**車種名を大きく・番号は小さく下に**。
+       ⚠ 車種が未登録の代車は車種欄が空になるので、その時だけ番号を主役に戻す（列が真っ白にならないように）。
+       ⚠ 番号は鍵タグ・車両管理と突き合わせるのに要るので**消さない**。 */
     const num = (l.number != null && l.number !== '') ? String(l.number)
               : (String(l.name || '').replace('代車', '') || l.name);
+    const model = String(l.model || '').trim();
     const emgCls = l.emergency ? ' lo-emg-head' : '';
     const emgTag = l.emergency ? '<div class="lo-emg-tag"><i data-ic=warn data-ics=16></i> 緊急</div>' : '';
-    h += '<div class="lo-cell lo-head' + emgCls + '" data-loid="' + l.id + '">' + emgTag + '<div class="lo-car">' + num + '</div><div class="lo-model">' + _loEsc(l.model || '') + '</div></div>';
+    const body = model
+      ? '<div class="lo-model">' + _loEsc(model) + '</div><div class="lo-no">' + _loEsc(num) + '</div>'
+      : '<div class="lo-model lo-model-none">' + _loEsc(num) + '</div><div class="lo-no lo-no-sub">車種未登録</div>';
+    h += '<div class="lo-cell lo-head' + emgCls + '" data-loid="' + l.id + '" title="' + _loEsc((model ? model + ' ' : '') + '（' + num + '）') + '">' + emgTag + body + '</div>';
   });
   grid.insertAdjacentHTML('beforeend', h);
   _loCount = 0;
@@ -464,8 +480,8 @@ function _loRenderDays(start, n){
         const fixed = !!(card && card.loanerFixed);
         const returned = !!a.returned;
         const teamColor = _loTeamColor(a);
-        const _nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || (isEmg ? '緊急' : '貸出'));
-        const fullName = card ? (card.customer || _nm) : (a.customer || _nm);
+        const _nm = card ? ((window.pitCustSurname ? pitCustSurname(card) : (card.customer || '')) || '予約') : (a.customer || (isEmg ? '緊急' : '貸出'));
+        const fullName = card ? ((window.pitCustName?pitCustName(card):card.customer) || _nm) : (a.customer || _nm);
         const carTxt = card ? (card.car || '') : (a.car || '');
         const memoTxt = card ? (card.loanerOther || '') : (a.purpose || '');
         let labelHtml = '';
@@ -809,7 +825,7 @@ window.loBadgeMenu = function(ev, aid){
   if (!a) return;
   loInfoHide();
   const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
+  const nm = card ? ((window.pitCustSurname ? pitCustSurname(card) : (card.customer || '')) || '予約') : (a.customer || '貸出');
   const carTxt = card ? (card.car || '') : (a.car || '');
   const ret = !!a.returned;
   let h = '<div class="lo-bpop-h">' + _loEsc(nm) + ' 様' + (carTxt ? ' <small>' + _loEsc(carTxt) + '</small>' : '') + (ret ? ' <small>（返却済）</small>' : '') + '</div>';
@@ -824,7 +840,7 @@ window.loInfoHover = function(el, aid){
   if (!el || !el.classList.contains('mini')) return;   // 省スペース(1〜2日)だけ
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; }); if (!a) return;
   const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
+  const nm = card ? ((window.pitCustSurname ? pitCustSurname(card) : (card.customer || '')) || '予約') : (a.customer || '貸出');
   const car = card ? (card.car || '') : (a.car || '');
   const memo = card ? (card.loanerOther || '') : (a.purpose || '');
   const fixed = !!(card && card.loanerFixed);
@@ -885,7 +901,7 @@ window.loCancelLoaner = function(aid){
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
   if (!a) { _loBadgePopClose(); return; }
   const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || 'この予約') : (a.customer || 'この貸出');
+  const nm = card ? ((window.pitCustSurname ? pitCustSurname(card) : (card.customer || '')) || 'この予約') : (a.customer || 'この貸出');
   if (!confirm(nm + ' の代車をキャンセルします（カレンダーから外します）。\nよろしいですか？')) return;
   state.loanerAssigns = (state.loanerAssigns || []).filter(function(x){ return x.id !== aid; });
   if (card){ card.needLoaner = false; card.loanerId = ''; card.loanerFrom = ''; card.loanerTo = ''; card.loanerFixed = false; }
@@ -914,7 +930,7 @@ function _loConflictAssigns(loanerId, from, to, excludeAid){
 function _loConflictMsg(list){
   const lines = list.slice(0, 3).map(function(a){
     const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-    const nm = card ? ((window.pitSurname ? pitSurname(card.customer) : (card.customer || '')) || '予約') : (a.customer || '貸出');
+    const nm = card ? ((window.pitCustSurname ? pitCustSurname(card) : (card.customer || '')) || '予約') : (a.customer || '貸出');
     return '・' + _loMD(a.fromDate) + '〜' + _loMD(a.toDate) + '　' + nm + (a.purpose ? '（' + a.purpose + '）' : (card ? ' 様' : ''));
   });
   return lines.join('\n') + (list.length > 3 ? ('\n…他 ' + (list.length - 3) + ' 件') : '');

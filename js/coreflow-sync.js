@@ -1,5 +1,9 @@
 /* ============================================
    coreflow-sync.js  ―  同期ランプ（全アプリ共通）
+   v1.3（2026-08-04）：🔴 **ランプの幅を一定に**（ゆうた指定）。文字の長さ（同期済み／受信／
+     オフライン…）で幅が変わり、そのたび**隣のアバターや名前の位置が動いて気持ち悪い**のを直した。
+     文字の入れ物に min-width を持たせて中央寄せ。**この部品を読んでいる全アプリに効く**
+     （ランプを自前で描くアプリでも効くよう、CSSは必ず流し込む）。
    v1.2（2026-08-01）：ふきだしを**そのアプリのテーマカラー**で出す（色は index.html の
      theme-color から取る）。文言からログイン中の名前は外した。
    v1.1（2026-08-01）：ランプを押した時の説明を、画面下のトーストではなく
@@ -65,6 +69,32 @@
     for (var i = 0; i < bases.length; i++) out.push(bases[i] + '.' + cls + (sub ? ' ' + sub : ''));
     return out.join(',');
   }
+  /* ---------- 🔴 v1.3（2026-08-04・ゆうた指定）ランプの大きさを一定にする ----------
+     ◎なにが困っていたか
+       文字が「同期済み」「同期中」「受信」「オフライン」…と**長さが変わる**ので、
+       そのたびにランプの幅が変わり、**隣のアバターや名前の位置がぬるっと動いて気持ち悪い**。
+     ◎直し
+       文字の入れ物（.sync-text）に **min-width を持たせて中央寄せ**にする。
+       いちばん長い言葉（「オフライン」「保存エラー」「キャッシュ」＝5文字）に少し余裕を足した幅が入る幅に合わせてあるので、
+       **どの状態でもカプセルの幅が変わらない**＝隣のものが動かない。
+     ⚠ **全アプリ共通**（この部品を読んでいるアプリは何もしなくていい）。
+        そのため、ランプの描き替えをしないアプリ（PitFlow＝自前の PitSync を持つ）でも
+        **必ず流し込む**＝boot() の中で BUBBLE_ONLY より**前**に呼ぶこと。
+     ⚠ 幅は文字数（em）で決める＝アプリごとに文字の大きさが違っても崩れない。
+     ⚠ 長い言葉が増えた時は **カプセルが伸びる**（切れない）。切ると読めなくなるので min-width にしてある。 */
+  function injectSizeCSS() {
+    if (d.getElementById('cf-sync-size-css')) return;
+    var css =
+      '.sync-indicator,#sync-indicator,#sync-ind{justify-content:center}' +
+      '.sync-indicator .sync-text,#sync-indicator .sync-text,#sync-ind .sync-text{' +
+        'display:inline-block;min-width:5.6em;text-align:center;white-space:nowrap}' +
+      '.sync-indicator .sync-dot,#sync-indicator .sync-dot,#sync-ind .sync-dot{flex:0 0 auto}';
+    var st = d.createElement('style');
+    st.id = 'cf-sync-size-css';
+    st.textContent = css;
+    (d.head || d.documentElement).appendChild(st);
+  }
+
   /* ふきだし（ランプのすぐそばに出す説明）の見た目 */
   function injectBubbleCSS() {
     if (d.getElementById('cf-sync-bubble-css')) return;
@@ -84,6 +114,7 @@
   }
 
   function injectCSS() {
+    injectSizeCSS();
     injectBubbleCSS();
     if (d.getElementById('cf-sync-css')) return;
     var css =
@@ -345,6 +376,7 @@
   var BUBBLE_ONLY = !!w.PitSync;
 
   function boot() {
+    injectSizeCSS();      /* 🔴 大きさを一定にするCSSは**どのアプリでも**流し込む（下の BUBBLE_ONLY より前） */
     injectBubbleCSS();
     if (BUBBLE_ONLY) return;
     injectCSS(); hookLegacy(); bindClick(); paint(); tryPatch(25);
