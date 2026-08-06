@@ -1,9 +1,15 @@
 /* ========================================
    phase-popup.js
    フェーズ移動時の入力ポップアップ（CarFlowの売約ポップアップ挙動を参照）。
-   ・見積り中(estim) → 連絡中(contact)：見積金額を入力 → c.amountFinal
+   ・見積り中(estim) → 連絡中(contact)：見積金額を入力 → c.amountQuote
    ・連絡中(contact) → パーツ待ち(parts)＝受注完了：確定見積金額 + 客に伝えた返車予定日
-       → c.amountFinal / c.returnDateFinal（returnDate 未設定なら同値も入れる）
+       → c.amountOrder / c.returnDateFinal（returnDate 未設定なら同値も入れる）
+   ・🔴 v1.62.0 **クイック受注**（ゆうた指定）
+       オイル交換のような簡単なものは、点検待ちから作業待ち・作業完了へ**一気に飛ぶ**。
+       そのとき今までは**受注金額を聞く関門を素通り**していたので、金額が空のまま実績に乗っていた。
+       → **受注の関門（パーツ待ち）を飛び越えた時は、受注金額だけを1回聞く。**
+         入れた金額は **見積額にも同じ値を入れる**（見積＝受注として扱う）。
+         返車予定日は **当日**をあらかじめ入れておく（そのままOKでよい）。
    ・OKで移動を確定（呼び出し元の commit() を実行）、キャンセルで移動しない。
    既存の .modal-backdrop / .modal-box 流儀を流用。dnd.js / task.js から intercept。
    ======================================== */
@@ -67,6 +73,20 @@
 
   function statusName(s){ return (window.statusLabel ? statusLabel(s) : s); }
 
+  /* 🔴 v1.62.0 「受注の関門を飛び越えたか」を決める、ここ1本の物差し。
+        受注の関門＝パーツ待ち（parts）に入った時点で受注が成立している、という社内の決めごと。
+        飛び越え＝受注前（点検待ち・見積り中・連絡中）から、受注済み（パーツ待ち以降）へ**一足飛び**に動いた時。
+        ⚠ 連絡中→パーツ待ちは“関門をきちんと通った”ので飛び越えではない（今までどおりの受注ポップアップ）。 */
+  var FLOW = ['check','estim','contact','parts','work','workDone'];
+  function isJump(from, to){
+    var i = FLOW.indexOf(from), j = FLOW.indexOf(to);
+    if (i < 0 || j < 0) return false;               // 外注・キャンセルなど流れの外は対象外
+    if (i >= 3) return false;                        // もう受注済みから動いただけ
+    if (j < 3) return false;                         // 受注前どうしの移動
+    return !(from === 'contact' && to === 'parts');  // 関門をきちんと通った時だけ除く
+  }
+  window.pitIsOrderJump = isJump;
+
   function openModal(card, mode){
     build();
     var fromL = statusName(pending.from), toL = statusName(pending.to);
@@ -104,10 +124,11 @@
     // 金額プレフィル＝直前段の金額を引き継ぐ（見積=quote→est／受注=order→quote→est／確定=final→order→quote→est）
     var firstOf = function(){ for (var i=0;i<arguments.length;i++){ var v=arguments[i]; if (v!=null && v!=='') return v; } return ''; };
     var amtPrefill = (mode==='estimate') ? firstOf(card.amountQuote, card.estAmount)
-                   : (mode==='order')    ? firstOf(card.amountOrder, card.amountQuote, card.estAmount)
+                   : (mode==='order' || mode==='quick') ? firstOf(card.amountOrder, card.amountQuote, card.estAmount)
                                          : firstOf(card.amountFinal, card.amountOrder, card.amountQuote, card.estAmount);
     el('pp-amt').value = (amtPrefill!=='' && amtPrefill!=null) ? Number(amtPrefill).toLocaleString() : '';
     el('pp-amt-ref').innerHTML = (mode==='estimate') ? '概算 '+yen(card.estAmount)
+                                : (mode==='quick')    ? '概算 '+yen(card.estAmount)+'　（見積は受注と同じ額で記録）'
                                 : (mode==='order')    ? '概算 '+yen(card.estAmount)+'　見積 '+yen(card.amountQuote)
                                                       : '見積 '+yen(card.amountQuote)+'　受注 '+yen(card.amountOrder);
 
@@ -135,6 +156,15 @@
       _sh += '<label class="pp-check"><input type="checkbox" id="pp-salesreq"' + (card.salesReq ? ' checked' : '') + '> <i data-ic=cart data-ics=16></i> その他 車販依頼</label>';
       _sh += '<input class="pp-salesmemo" id="pp-salesmemo" type="text" placeholder="依頼メモ（1行・任意）" value="' + esc(card.salesReqMemo || '') + '">';
       if (_sf){ _sf.innerHTML = _sh; _sf.style.display = ''; }
+    } else if (mode === 'quick'){
+      /* 🔴 v1.62.0 クイック受注＝受注の関門（パーツ待ち）を飛び越えた時。
+         聞くのは**受注金額ひとつだけ**。見積額には同じ値を入れる（見積＝受注の扱い）。 */
+      el('pp-title').textContent = 'クイック受注';
+      el('pp-amt-lb').textContent = '受注金額';
+      el('pp-ret-field').style.display = '';
+      el('pp-ret').value = card.returnDateFinal || card.returnDate || todayISO();   /* 当日をあらかじめ入れておく */
+      el('pp-note').textContent = '見積を挟まずに進みます。受注金額を入れれば、見積金額も同じ額として記録します。返車予定日は当日を入れてあります（変えられます）。';
+      el('pp-ok').textContent = statusName(pending.to) + 'へ';
     } else { // final（作業完了）
       el('pp-title').textContent = '作業完了 — 確定金額';
       el('pp-amt-lb').textContent = '確定金額（請求額）';
@@ -154,6 +184,11 @@
       else if (from === 'contact' && to === 'parts') mode = 'order';
       // 作業完了(workDone)への移動は確定金額プロンプトを出さず単純移動（v0.99.34）。確定金額は完TELポップアップで入れる。
       else if (to === 'outsource') mode = 'outsource';
+      /* 🔴 v1.62.0 クイック受注＝**受注の関門（パーツ待ち）を飛び越えた**時（ゆうた指定）。
+            オイル交換のような簡単なものは 点検待ち → 作業待ち／作業完了 まで一気に動く。
+            そのまま通すと受注金額が空のまま実績に乗るので、ここで1回だけ聞く。
+         ⚠ 連絡中→パーツ待ち（＝関門をきちんと通った）は今までどおり 'order'。 */
+      else if (isJump(from, to)) mode = 'quick';
       if (!mode) return false;
       pending = { card: card, from: from, to: to, commit: commit, mode: mode };
       openModal(card, mode);
@@ -188,7 +223,23 @@
         if (amt !== ''){
           if (p.mode === 'estimate') card.amountQuote = Number(amt);
           else if (p.mode === 'order') card.amountOrder = Number(amt);
+          else if (p.mode === 'quick'){
+            /* 🔴 クイック受注＝見積を挟んでいないので、**見積額にも同じ値を入れる**（見積＝受注の扱い）。
+               こうしておかないと「見積との差」がぜんぶ取りこぼしに見えてしまう。 */
+            card.amountOrder = Number(amt);
+            card.amountQuote = Number(amt);
+          }
           else card.amountFinal = Number(amt);
+        }
+        /* 🔴 クイック受注＝返車予定日を入れる（既定は当日）。実績の月がここで決まる（v1.61.0）ので必ず入れる。 */
+        if (p.mode === 'quick'){
+          var rq = el('pp-ret') ? el('pp-ret').value : '';
+          if (rq){ card.returnDate = rq; card.returnDateFinal = rq; }
+          try {
+            if (window.logFlow) logFlow(card, 'クイック受注（見積を挟まず ' + statusName(p.to) + ' へ）'
+              + (amt !== '' ? '　受注＝見積 ¥' + Number(amt).toLocaleString() : '')
+              + (rq ? '　返車予定 ' + rq : ''));
+          } catch(e){}
         }
         // 返車予定日（order時のみ）＋車販依頼トリガー
         if (p.mode === 'order'){

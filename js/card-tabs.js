@@ -215,6 +215,13 @@ window.logPhaseMove = function(card, fromStatus, toStatus){
   if (toStatus === 'contact'  && card.amountQuote != null && card.amountQuote !== ''){ entry.amount = card.amountQuote; entry.amountKind = '見積'; }
   if (toStatus === 'parts'    && card.amountOrder != null && card.amountOrder !== ''){ entry.amount = card.amountOrder; entry.amountKind = '受注'; }
   if (toStatus === 'workDone' && card.amountFinal != null && card.amountFinal !== ''){ entry.amount = card.amountFinal; entry.amountKind = '確定'; }
+  /* 🔴 v1.62.0 クイック受注＝受注の関門（パーツ待ち）を飛び越えた移動。
+     この時は受注額をフローにも残す（飛ばした先が作業待ち・作業完了でも「いくらで受けたか」が残る）。
+     ⚠ 判定は phase-popup.js の `pitIsOrderJump` 1本。ここで条件を書き写さないこと。 */
+  if (entry.amount == null && window.pitIsOrderJump && pitIsOrderJump(fromStatus, toStatus)
+      && card.amountOrder != null && card.amountOrder !== ''){
+    entry.amount = card.amountOrder; entry.amountKind = '受注'; entry.quick = true;
+  }
   card.log.push(entry);
   card.phaseAt = d.getTime();
 };

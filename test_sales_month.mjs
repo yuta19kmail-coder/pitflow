@@ -152,7 +152,9 @@ console.log('\n── 🧭 他のビューも同じ物差しを通っている �
   });
   ok('sales-count.js は使う側より先に読まれている', wired.loadedBeforeUsers === true, wired);
   ok('物差しが window に出ている', wired.hasCount === true, wired);
-  ok('版が v1.61.0 になっている', wired.ver === '1.61.0', wired);
+  /* ⚠ 版は上がっていくので数字を打ち込まない（v1.61.0 以降かどうかだけ見る） */
+  const vnum = String(wired.ver || '').split('.').map(Number);
+  ok('版が v1.61.0 以降になっている', vnum[0] > 1 || (vnum[0] === 1 && vnum[1] >= 61), wired);
 
   /* 画面を一通り開いて、エラーが出ないこと */
   for (const v of ['mydash', 'sales', 'maintdash', 'mechsummary']) {

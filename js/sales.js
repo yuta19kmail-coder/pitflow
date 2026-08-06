@@ -410,7 +410,7 @@
         var cTot=WGROUPS.reduce(function(a,x){return a+w.g[x.id][cs].sum;},0)||1;
         WGROUPS.forEach(function(x){ var o=w.g[x.id][cs]; var avg=o.cnt?o.sum/o.cnt:0;
           h+='<tr><td class="sv-td-name"><span class="sv-cc-dot" style="background:'+x.color+'"></span> '+x.label+'</td><td class="sv-num">'+o.cnt+'</td><td class="sv-num" style="color:#1db97a">'+man(o.sum)+'</td><td class="sv-num">'+man(avg)+'</td><td class="sv-num">'+(o.cnt?man(o.lo):'—')+'</td><td class="sv-num">'+(o.cnt?man(o.hi):'—')+'</td><td class="sv-num">'+pct(o.sum,cTot)+'%</td></tr>';
-          if(x.id==='general'){ Object.keys(w.sub).sort(function(a,b){return w.sub[b][cs].sum-w.sub[a][cs].sum;}).forEach(function(sl){ var ss=w.sub[sl][cs]; if(!ss.cnt)return; h+='<tr class="sv-sub"><td class="sv-td-name">└ '+esc(wtLabel(sl))+'</td><td class="sv-num">'+ss.cnt+'</td><td class="sv-num">'+man(ss.sum)+'</td><td class="sv-num">'+man(ss.sum/ss.cnt)+'</td><td class="sv-num">'+man(ss.lo)+'</td><td class="sv-num">'+man(ss.hi)+'</td><td class="sv-num"></td></tr>'; }); }
+          if(x.id==='general'){ Object.keys(w.sub).sort(function(a,b){return w.sub[b][cs].sum-w.sub[a][cs].sum;}).forEach(function(sl){ var ss=w.sub[sl][cs]; if(!ss.cnt)return; h+='<tr class="sv-qn"><td class="sv-td-name">└ '+esc(wtLabel(sl))+'</td><td class="sv-num">'+ss.cnt+'</td><td class="sv-num">'+man(ss.sum)+'</td><td class="sv-num">'+man(ss.sum/ss.cnt)+'</td><td class="sv-num">'+man(ss.lo)+'</td><td class="sv-num">'+man(ss.hi)+'</td><td class="sv-num"></td></tr>'; }); }
         });
         h+='</tbody></table></div>';
       });
@@ -470,14 +470,147 @@
     });
     return F;
   }
-  function frontBody(F){
+  /* ================= 受注の質（v1.62.0・ゆうた指定） =================
+     🎯 ねらい＝「自分の受注は、会社の平均より高いのか低いのか」「見積のうち、どれだけ取りこぼしたのか」を数字にする。
+
+     ◎軸1＝**会社平均との差** … 国産／輸入 × 車検／12点／一般 の **6つのバケツ**ごとに会社平均単価を出し、
+        1台ずつ「自分の単価 − そのバケツの会社平均」を足す。
+        🔴 バケツで割ってから比べるので、**車検ばかりやった／一般ばかりやった、という“持ち球の違い”が消える**。
+           純粋に「同じ内容で、いくらで取れたか」の勝負になる。
+     ◎軸2＝**見積との差** … 見積り中→連絡中で入れた見積額（`amountQuote`）と、確定額（`amountFinal`）の差。
+        マイナス＝見積から落ちた（取りこぼし）。プラス＝見積より積めた。
+        ⚠ **見積額が入っていない車は分母から外す**（比べようがないため）。
+
+     ◎ゆうた確認済み（2026-08-06）
+        ・測る対象＝**返車まで終わった車の確定額**（＝フロントビューの他の数字と同じ母集団）
+        ・会社平均＝**いま見ている期間と同じ**（当月を見ていれば当月の会社平均）
+        ・見積と比べる最終金額＝**確定額（請求額）**
+     ⚠ 期間の絞り込みは `pitSalesInRange`（sales-count.js）の物差しを通す。**写しを作らないこと。** */
+  function bucketOf(c){ return course(c) + '/' + workGroupOf(c); }     // 例 'div1/shaken'
+
+  function collectQuality(fromStr,toStr){
+    var _td=new Date(); _td.setHours(0,0,0,0); var todayStr=ymdL(_td);
+    var cards=[];
+    (state.cards||[]).forEach(function(c){
+      if(!c || c.status!=='returned') return;
+      if(!inRange(c, fromStr, toStr, todayStr)) return;
+      cards.push(c);
+    });
+    // ① 会社平均単価（バケツ別／作業グループ別／全体）
+    var bk={}, gAll={}, all={sum:0,cnt:0};
+    WGROUPS.forEach(function(w){ gAll[w.id]={sum:0,cnt:0}; });
+    cards.forEach(function(c){
+      var a=actAmt(c), b=bucketOf(c), g=workGroupOf(c);
+      if(!bk[b]) bk[b]={sum:0,cnt:0};
+      bk[b].sum+=a; bk[b].cnt++;
+      gAll[g].sum+=a; gAll[g].cnt++;
+      all.sum+=a; all.cnt++;
+    });
+    function coAvg(b){ return (bk[b] && bk[b].cnt) ? bk[b].sum/bk[b].cnt : 0; }
+    // ② フロント別に積む
+    var Q={};
+    function ens(n){
+      if(!Q[n]){
+        Q[n]={ name:n, all:{cnt:0,sum:0,base:0, qCnt:0,qSum:0,qFinal:0} , grp:{} };
+        WGROUPS.forEach(function(w){ Q[n].grp[w.id]={cnt:0,sum:0,base:0, qCnt:0,qSum:0,qFinal:0}; });
+      }
+      return Q[n];
+    }
+    cards.forEach(function(c){
+      var f=ens(c.frontStaff||c.staff||'（未割当）');
+      var g=workGroupOf(c), a=actAmt(c), base=coAvg(bucketOf(c));
+      [f.all, f.grp[g]].forEach(function(o){ o.cnt++; o.sum+=a; o.base+=base; });
+      var q=num(c.amountQuote);
+      if(q>0){ [f.all, f.grp[g]].forEach(function(o){ o.qCnt++; o.qSum+=q; o.qFinal+=a; }); }
+    });
+    return { rows:Object.keys(Q).map(function(k){ return Q[k]; }), bk:bk, gAll:gAll, all:all, cards:cards.length };
+  }
+
+  function diffPct(a,b){ return b>0 ? Math.round((a-b)/b*1000)/10 : 0; }    // 小数1桁の％
+  function signMan(v){ return (v>0?'＋':v<0?'−':'±')+man(Math.abs(v)); }
+  function signPct(v){ return (v>0?'＋':v<0?'−':'±')+Math.abs(v).toFixed(1)+'%'; }
+  function diffCls(v){ return v>0?'sv-dup':(v<0?'sv-ddn':'sv-dfl'); }
+
+  function qualityBody(Q, fromStr, toStr){
+    var h='';
+    if(!Q.rows.length) return '<div class="sv-card"><div class="sv-empty">対象データがありません（返車まで終わった車がこの期間にありません）</div></div>';
+    // 会社平均の物差しそのものを先に見せる（何と比べているのかが分からないと数字を信じられない）
+    h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=ruler data-ics=16></i> 会社平均単価（この期間・比べるものさし）</span>'
+      +'<span class="sv-legend">'+Q.cards+'台から作成</span></div>';
+    h+='<table class="sv-table"><thead><tr><th>区分</th>'+WGROUPS.map(function(w){return '<th>'+w.label+'</th>';}).join('')+'<th>合計</th></tr></thead><tbody>';
+    [{id:'div1',label:'1課（国産）'},{id:'div2',label:'2課（輸入）'}].forEach(function(d){
+      h+='<tr><td class="sv-td-name">'+d.label+'</td>';
+      var cs=0,cn=0;
+      WGROUPS.forEach(function(w){ var b=Q.bk[d.id+'/'+w.id]; var v=(b&&b.cnt)?b.sum/b.cnt:0; cs+=(b?b.sum:0); cn+=(b?b.cnt:0);
+        h+='<td class="sv-num">'+(v>0?man(v)+'<i class="sv-qn">'+b.cnt+'台</i>':'—')+'</td>'; });
+      h+='<td class="sv-num">'+(cn?man(cs/cn)+'<i class="sv-qn">'+cn+'台</i>':'—')+'</td></tr>';
+    });
+    h+='<tr class="sv-tr-total"><td class="sv-td-name">全体</td>';
+    WGROUPS.forEach(function(w){ var g=Q.gAll[w.id]; h+='<td class="sv-num">'+(g.cnt?man(g.sum/g.cnt)+'<i class="sv-qn">'+g.cnt+'台</i>':'—')+'</td>'; });
+    h+='<td class="sv-num">'+(Q.all.cnt?man(Q.all.sum/Q.all.cnt)+'<i class="sv-qn">'+Q.all.cnt+'台</i>':'—')+'</td></tr>';
+    h+='</tbody></table><div class="sv-note">国産／輸入 × 車検／12点／一般 の6つに分けた、この期間の会社平均単価。下の「差」はこの表と比べています。</div></div>';
+
+    // 並び順＝会社平均との差が大きい順
+    var rows=Q.rows.slice().sort(function(a,b){ return (b.all.sum-b.all.base)-(a.all.sum-a.all.base); });
+
+    h+='<div class="sv-qcards2">';
+    rows.forEach(function(r){
+      var A=r.all;
+      var d1=A.sum-A.base, p1=diffPct(A.sum,A.base);
+      var d2=A.qFinal-A.qSum, p2=diffPct(A.qFinal,A.qSum);
+      h+='<div class="sv-qcard2">';
+      h+='<div class="sv-fcard-h"><span class="sv-fcard-name">'+esc(r.name)+'</span><span class="sv-fcard-cnt">'+A.cnt+'台</span></div>';
+      // 2軸のヒーロー
+      h+='<div class="sv-q2">';
+      h+='<div class="sv-qax"><div class="sv-qax-lb">会社平均との差</div>'
+        +'<div class="sv-qax-num '+diffCls(d1)+'">'+signMan(d1)+'<span>円</span></div>'
+        +'<div class="sv-qax-sub '+diffCls(p1)+'">'+signPct(p1)+'</div>'
+        +'<div class="sv-qax-note">自分 '+man(A.cnt?A.sum/A.cnt:0)+' ／ 平均 '+man(A.cnt?A.base/A.cnt:0)+'（1台あたり）</div></div>';
+      h+='<div class="sv-qax"><div class="sv-qax-lb">見積との差（取りこぼし）</div>'
+        +(A.qCnt
+          ? '<div class="sv-qax-num '+diffCls(d2)+'">'+signMan(d2)+'<span>円</span></div>'
+            +'<div class="sv-qax-sub '+diffCls(p2)+'">'+signPct(p2)+'</div>'
+            +'<div class="sv-qax-note">見積 '+man(A.qSum)+' → 確定 '+man(A.qFinal)+'（'+A.qCnt+'台）</div>'
+          : '<div class="sv-qax-num sv-dfl">—</div><div class="sv-qax-sub"></div><div class="sv-qax-note">見積額が入っている車がありません</div>')
+        +'</div>';
+      h+='</div>';
+      // 内容ごと
+      h+='<table class="sv-table sv-qtbl"><thead><tr><th>内容</th><th>台数</th><th>平均との差</th><th>％</th><th>見積との差</th><th>％</th></tr></thead><tbody>';
+      WGROUPS.forEach(function(w){
+        var o=r.grp[w.id]; if(!o.cnt) return;
+        var g1=o.sum-o.base, gp1=diffPct(o.sum,o.base);
+        var g2=o.qFinal-o.qSum, gp2=diffPct(o.qFinal,o.qSum);
+        h+='<tr><td class="sv-td-name"><i class="sv-dot2" style="background:'+w.color+'"></i>'+w.label+'</td>'
+          +'<td class="sv-num">'+o.cnt+'</td>'
+          +'<td class="sv-num '+diffCls(g1)+'">'+signMan(g1)+'</td><td class="sv-num '+diffCls(gp1)+'">'+signPct(gp1)+'</td>'
+          +(o.qCnt
+            ? '<td class="sv-num '+diffCls(g2)+'">'+signMan(g2)+'</td><td class="sv-num '+diffCls(gp2)+'">'+signPct(gp2)+'</td>'
+            : '<td class="sv-num">—</td><td class="sv-num">—</td>')
+          +'</tr>';
+      });
+      h+='</tbody></table>';
+      h+='</div>';
+    });
+    h+='</div>';
+    h+='<div class="sv-foot"><b>会社平均との差</b>＝国産／輸入 × 車検／12点／一般 に分けた会社平均単価と、自分が取った金額の差を1台ずつ足したもの。'
+      +'内容の偏りを消してから比べるので、<b>同じ内容でいくらで取れたか</b>の勝負になる。<br>'
+      +'<b>見積との差</b>＝見積り中→連絡中で入れた見積額と、確定額（請求額）の差。マイナス＝見積から落ちた／プラス＝見積より積めた。<b>見積額が空の車は数えない</b>。<br>'
+      +'どちらも<b>返車まで終わった車の確定額</b>で計算。期間は上のナビで変えられる。</div>';
+    return h;
+  }
+
+  function frontBody(F, fromStr, toStr){
     var view=window._svFrontView||'info';
     var DOW=['日','月','火','水','木','金','土'];
     var rows=Object.keys(F).map(function(n){ var f=F[n]; var gt=f.grp.shaken+f.grp['12pt']+f.grp.general; var dsum=f.dow.reduce(function(a,b){return a+b;},0);
       return { name:n, f:f, cnt:f.cnt, sum:f.sum, hi:f.hi, avg:f.cnt?f.sum/f.cnt:0, hold:f.holdN?f.hold/f.holdN:null, holdMax:f.holdMax, od:f.odN?f.odDays/f.odN:null, gt:gt, dsum:dsum };
     });
     rows.sort(function(a,b){return b.sum-a.sum;});
-    var h='<div class="sv-viewsw"><button class="sv-vbtn'+(view==='info'?' on':'')+'" onclick="svSetFrontView(\'info\')">インフォグラフィック</button><button class="sv-vbtn'+(view==='table'?' on':'')+'" onclick="svSetFrontView(\'table\')">表</button></div>';
+    /* 🔴 v1.62.0 3つ目の入口＝受注の質（会社平均との差／見積との差） */
+    var h='<div class="sv-viewsw"><button class="sv-vbtn'+(view==='info'?' on':'')+'" onclick="svSetFrontView(\'info\')">インフォグラフィック</button>'
+         +'<button class="sv-vbtn'+(view==='quality'?' on':'')+'" onclick="svSetFrontView(\'quality\')">受注の質</button>'
+         +'<button class="sv-vbtn'+(view==='table'?' on':'')+'" onclick="svSetFrontView(\'table\')">表</button></div>';
+    if(view==='quality') return h+qualityBody(collectQuality(fromStr,toStr), fromStr, toStr);
     if(!rows.length){ return h+'<div class="sv-card"><div class="sv-empty">対象データがありません</div></div>'; }
     if(view==='table'){
       h+='<div class="sv-card"><table class="sv-table"><thead><tr><th>フロント</th><th>台数</th><th>売上</th><th>平均単価</th><th>最高単価</th><th>預り平均</th><th>預り最長</th><th>受注まで</th><th>車検%</th><th>12点%</th><th>一般%</th></tr></thead><tbody>';
@@ -511,8 +644,8 @@
     h+='</div><div class="sv-foot">台数・売上・単価・預かり＝返車済み実績。受注まで日数・受注曜日＝連絡中→パーツ待ち（受注）に移った日。作業構成比＝売上ベース。</div>';
     return h;
   }
-  function renderFrontMonth(wrap){ var ym=window._svYM; wrap.innerHTML=header('month',ym)+frontBody(collectFront(ymdL(new Date(ym.y,ym.m,1)),ymdL(new Date(ym.y,ym.m+1,0)))); }
-  function renderFrontYear(wrap){ var Y=window._svYear; wrap.innerHTML=header('year',{y:Y})+frontBody(collectFront(ymdL(new Date(Y-1,11,1)),ymdL(new Date(Y,11,0)))); }
+  function renderFrontMonth(wrap){ var ym=window._svYM; var a=ymdL(new Date(ym.y,ym.m,1)), b=ymdL(new Date(ym.y,ym.m+1,0)); wrap.innerHTML=header('month',ym)+frontBody(collectFront(a,b),a,b); }
+  function renderFrontYear(wrap){ var Y=window._svYear; var a=ymdL(new Date(Y-1,11,1)), b=ymdL(new Date(Y,11,0)); wrap.innerHTML=header('year',{y:Y})+frontBody(collectFront(a,b),a,b); }
 
   // ===== 共通ヘッダ（タブ＋当月/月間トグル＋期間ナビ） =====
   function header(mode, ctx){
