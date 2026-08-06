@@ -371,3 +371,10 @@ input.cv-fixinput[type=date]{ color-scheme:dark; }
 .pcx-tx b{ font-weight:600; font-size:13px; white-space:nowrap; }
 .pcx-tx span{ font-size:11px; color:var(--text3); line-height:1.45; }
 .pcx-arrow{ display:inline-flex; color:var(--text3); flex:0 0 auto; margin-left:2px; }
+
+/* 🔴 v1.52.0 都度車両変動のお客様＝ナンバー欄の代わりに印と案内を出す（card-detail.js の plateInput） */
+.cf-plate.cf-plate-pv{ display:flex; flex-direction:column; gap:5px; }
+.cf-pv-badge{ display:inline-flex; align-items:center; gap:6px; align-self:flex-start; font-size:12px; font-weight:800;
+  color:#a5b4fc; background:rgba(124,140,248,.14); border:1px solid rgba(124,140,248,.45); border-radius:8px; padding:5px 11px; }
+.cf-pv-hint{ font-size:11px; line-height:1.6; color:var(--text3); }
+.cf-pv-hint b{ color:var(--text2); }

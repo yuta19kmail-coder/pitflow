@@ -42,6 +42,24 @@
   function primaryTel(cust){ const cs=(cust&&cust.contacts)||[]; const p=cs.find(x=>x.primary)||cs[0]; return p?(p.tel||''):''; }
   function vehLabel(v){ return ((v.maker?v.maker+' ':'')+(v.car||'')).trim() || (v.plate||'—'); }
 
+  /* 🔴 v1.52.0 アーカイブした車の扱い（ゆうた指定）
+     ・**顧客一覧には出さない**＝1人1行に戻る（前は「現所有＋アーカイブ」で2行になっていた）。
+     ・**顧客詳細では車のカードから外し**、来店履歴の下の「アーカイブ車両」欄にまとめる。
+     ⚠ ここで見るのは **その車自身が片付いているか**（`vehSelfArchived`）だけ。
+        顧客ごとアーカイブされている時は、車は「持ち主のとばっちり」なので**ふつうに出す**
+        （顧客を戻せば車も戻る＝archive-pit.js の決めごとと同じ考え方）。 */
+  function vehArchivedSelf(v){ return window.PitArchive ? PitArchive.vehSelfArchived(v) : !!(v && v.archived); }
+  function liveVehs(cust){ return ((cust&&cust.vehicles)||[]).filter(function(v){ return !vehArchivedSelf(v); }); }
+  function archVehs(cust){ return ((cust&&cust.vehicles)||[]).filter(function(v){ return  vehArchivedSelf(v); }); }
+  window.pitLiveVehicles = liveVehs;
+
+  /* 🔴 v1.52.0 「都度車両変動」＝同業の法人など、来るたびに入る車が違うお客様（ゆうた指定）
+     ・車の登録は **1件だけ**。**カルテNo.・担当・課・区分は共通**で、**ナンバーは持たない**。
+     ・車種名は **予約のたびに手で入れる**。その名前が予約カード・表紙・実績・履歴にそのまま出る。
+     ⚠ 車の側は書き換えない（前回の名前を `lastCar` に控えるだけ）＝**過去の予約は当時の車種名のまま残る**。 */
+  function isPerVisit(v){ return !!(v && v.perVisit); }
+  window.pitIsPerVisitVeh = isPerVisit;
+
   /* ===== 入庫カードから upsert（人を特定→車両を upsert） ===== */
   function _findPerson(c, vehicle){
     const arr=list();
@@ -68,6 +86,25 @@
     if(c.lineStatus) p.lineStatus=c.lineStatus;
     if((c.lstepId||'').trim()) p.lstepId=(c.lstepId||'').trim();
     if(!Array.isArray(p.vehicles)) p.vehicles=[];
+    /* 🔴 v1.52.0 都度車両変動の車は **ナンバーが無い**ので、ふつうに突き合わせると
+       予約のたびに「新しい車」として増えてしまう。カードが持っている車両ID（`vehId`）で引き当て、
+       **車種名は車の側に書き戻さない**（`lastCar` に控えるだけ）。 */
+    if(c.perVisit && c.vehId){
+      const pv = p.vehicles.find(x=>x && x.id===c.vehId);
+      if(pv){
+        pv.perVisit = true;
+        if(vehicle.karteNo) pv.karteNo = vehicle.karteNo;
+        if(vehicle.boardId) pv.boardId = vehicle.boardId;
+        if(vehicle.division) pv.division = vehicle.division;
+        if(vehicle.frontStaff){ pv.frontStaff = vehicle.frontStaff; pv.frontStaffId = vehicle.frontStaffId||''; }
+        const nm = ((vehicle.maker?vehicle.maker+' ':'')+(vehicle.car||'')).trim();
+        if(nm) pv.lastCar = nm;                 /* 前回どんな車が来たか（表示の参考だけ） */
+        pv.updatedAt = Date.now();
+        p.updatedAt = Date.now(); c.customerId = p.id;
+        if(window.PitDB) PitDB.save();
+        return;
+      }
+    }
     let v = vehicle.plate ? p.vehicles.find(x=>norm(x.plate)===norm(vehicle.plate)) : null;
     if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff){v.frontStaff=vehicle.frontStaff; v.frontStaffId=vehicle.frontStaffId||'';} if(vehicle.karteNo)v.karteNo=vehicle.karteNo; v.updatedAt=Date.now(); }
     else if(vehicle.plate||vehicle.maker||vehicle.car){
@@ -136,9 +173,20 @@
       c.contacts=cust.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary}));
       const pri=c.contacts.find(x=>x.primary)||c.contacts[0]; c.tel=pri?(pri.tel||''):'';
     }
-    const v=(cust.vehicles||[]).find(x=>x.id===vehId)||(cust.vehicles||[])[0];
+    const v=(cust.vehicles||[]).find(x=>x.id===vehId)||liveVehs(cust)[0]||(cust.vehicles||[])[0];
     // フロント担当は「その車両に登録済みのものだけ」入れる（推測での自動入力はしない・ゆうた方針 2026-06-23）。
-    if(v){ c.plate=v.plate||c.plate; c.maker=v.maker||c.maker; c.car=v.car||c.car; if(v.boardId)c.boardId=v.boardId; if(v.division)c.division=v.division; if(v.frontStaff)c.frontStaff=v.frontStaff; if(v.karteNo)c.karteNo=v.karteNo; }
+    if(v){
+      /* 🔴 v1.52.0 都度車両変動の車を呼び出した時は、**ナンバー・メーカー・車種を空にする**。
+         毎回ちがう車なので、車種名はこのあと手で打ってもらう（打った名前がカード・表紙・実績に出る）。 */
+      if(isPerVisit(v)){
+        c.perVisit=true; c.vehId=v.id; c.plate=''; c.maker=''; c.car='';
+        if(window.pitToast) pitToast('都度車両変動のお客様です。今回の車種名を入力してください');
+      } else {
+        c.perVisit=false; c.vehId=v.id;
+        c.plate=v.plate||c.plate; c.maker=v.maker||c.maker; c.car=v.car||c.car;
+      }
+      if(v.boardId)c.boardId=v.boardId; if(v.division)c.division=v.division; if(v.frontStaff)c.frontStaff=v.frontStaff; if(v.karteNo)c.karteNo=v.karteNo;
+    }
     renderCardForm(c);
   };
 
@@ -150,14 +198,15 @@
   function fmtDate(ms){ if(!ms) return '—'; const d=new Date(ms); return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(); }
   function _distinctVeh(key){ const s=new Set(); list().forEach(cust=>(cust.vehicles||[]).forEach(v=>{ const x=(v[key]||'').trim(); if(x) s.add(x); })); return Array.from(s).sort((a,b)=>norm(a).localeCompare(norm(b),'ja')); }
   function custMatchFilter(cust){
-    const vs=cust.vehicles||[];
+    /* 🔴 v1.52.0 絞り込みも「いま持っている車」だけで見る（アーカイブした車は一覧に出さないため） */
+    const vs=liveVehs(cust);
     if(_filters.board && !vs.some(v=>(v.boardId||'')===_filters.board)) return false;
     if(_filters.div   && !vs.some(v=>(v.division||'')===_filters.div)) return false;
     if(_filters.front && !vs.some(v=>(v.frontStaff||'')===_filters.front)) return false;
     if(_filters.maker && !vs.some(v=>(v.maker||'')===_filters.maker)) return false;
     return true;
   }
-  function firstVeh(cust){ return (cust.vehicles||[])[0]||{}; }
+  function firstVeh(cust){ return liveVehs(cust)[0] || (cust.vehicles||[])[0] || {}; }
   function sortVal(cust,k){
     const v=firstVeh(cust);
     switch(k){
@@ -232,7 +281,10 @@
     let shownRows=0;
     for(let ri=0; ri<rows.length && shownRows<400; ri++){
       const cust=rows[ri];
-      const vs=(cust.vehicles&&cust.vehicles.length)?cust.vehicles:[null];
+      /* 🔴 v1.52.0（ゆうた指定）**アーカイブした車は一覧に出さない**。
+         ⚠ 前は「現所有＋アーカイブ」で1人が2行になっていた。いま持っている車だけ並べる。 */
+      const _live=liveVehs(cust);
+      const vs=_live.length?_live:[null];
       vs.forEach(function(v,vi){
         const first=vi===0, last=vi===vs.length-1;
         const t=teamInfo(v||{});
@@ -242,19 +294,23 @@
            '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
            '<td>'+(v?esc(v.maker||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?esc(v.karteNo||'—'):'—')+'</td>'+
-           '<td>'+(v?esc(v.car||'—'):'—')+'</td>'+
-           '<td class="ct-mut">'+(v?esc(v.plate||'—'):'—')+'</td>'+
+           '<td>'+(v?esc(v.car||(isPerVisit(v)?(v.lastCar?('前回：'+v.lastCar):'—'):'—')):'—')+'</td>'+
+           /* 🔴 v1.52.0 都度車両変動の車は**ナンバーを持たない**ので、代わりに印を出す */
+           '<td class="ct-mut">'+(v?(isPerVisit(v)?'<span class="ct-pv">都度変動</span>':esc(v.plate||'—')):'—')+'</td>'+
            '<td class="ct-mut">'+(first?esc(primaryTel(cust)||'—'):'')+'</td>'+
            '<td>'+pillC(t.label,t.color)+'</td>'+
            '<td>'+pillC(t.course,t.courseColor)+'</td>'+
            '<td>'+(v?(esc(frontName(v)||'—')+(frontMark(v)?'<small style="color:var(--text3)">'+frontMark(v)+'</small>':'')):'—')+'</td>'+
            '<td class="ct-mut">'+(v?fmtDate(v.updatedAt):(first?fmtDate(cust.updatedAt):''))+'</td>'+
-           '<td class="ct-act">'+
+           /* 🔴 v1.52.0（ゆうた指定）**Lステップは新規予約の「右」**。
+              ⚠ Lステップが有る人と無い人で新規予約の位置がガタつかないよう、
+                 無い人にも**同じ幅の空きマス**を置いて位置を固定する。 */
+           '<td class="ct-act"><div class="ct-actrow">'+
+             '<button class="ct-b ct-bnew" onclick="event.stopPropagation();custNewReserveFor(\''+cust.id+'\',\''+((v&&v.id)||'')+'\')" title="この車で新規予約">🆕 新規予約</button>'+
              ((first && (cust.lineStatus||'')==='ok' && (cust.lstepId||'').trim() && window.pitLstepUrl)
                ? '<a class="ct-licon" href="'+esc(pitLstepUrl(cust.lstepId))+'" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Lステップを開く">L</a>'
-               : '')+
-             '<button class="ct-b ct-bnew" onclick="event.stopPropagation();custNewReserveFor(\''+cust.id+'\',\''+((v&&v.id)||'')+'\')" title="この車で新規予約">🆕 新規予約</button>'+
-           '</td>'+
+               : '<span class="ct-licon-none" aria-hidden="true"></span>')+
+           '</div></td>'+
            '</tr>';
         shownRows++;
       });
@@ -348,6 +404,8 @@
     if(_detailFromSearch){ _detailFromSearch=false; if(window.pitSearchReopen) pitSearchReopen(); }   // 検索結果に戻す
   }
   window.custCloseModal=closeModal;
+  /* 🔴 v1.52.0 顧客・車両の登録画面（cust-reg.js）から同じモーダルの器を使うために外へ出す */
+  window.custShowModal=openModal;
 
   /* ===== 編集（人＋連絡先＋車両） ===== */
   function _boardSel(v){ return '<select class="ce-board"><option value="">—</option><option value="default"'+(v==='default'?' selected':'')+'>国産</option><option value="import"'+(v==='import'?' selected':'')+'>輸入</option></select>'; }
@@ -378,8 +436,11 @@
     // 車両
     h+='<div class="ce-sec">車両（複数台OK）</div><div id="ce-vehicles">';
     (cust.vehicles||[]).forEach(function(v){
-      h+='<div class="ce-veh" data-vid="'+esc(v.id||'')+'"><div class="ce-veh-l">'+
-         '<input class="ce-plate" value="'+esc(v.plate||'')+'" placeholder="野田 300 ひ 5555">'+
+      /* 🔴 v1.52.0 片付けた車・都度変動の車は、編集画面でもひと目で分かるように印を出す */
+      const vTag = (vehArchivedSelf(v)?'<span class="ce-vtag arch"><i data-ic=box data-ics=13></i> アーカイブ済み</span>':'')
+                 + (isPerVisit(v)?'<span class="ce-vtag pv"><i data-ic=swap data-ics=13></i> 都度車両変動（ナンバーなし）</span>':'');
+      h+='<div class="ce-veh'+(vehArchivedSelf(v)?' ce-veh-arch':'')+'" data-vid="'+esc(v.id||'')+'">'+(vTag?'<div class="ce-vtags">'+vTag+'</div>':'')+'<div class="ce-veh-l">'+
+         '<input class="ce-plate" value="'+esc(v.plate||'')+'" placeholder="'+(isPerVisit(v)?'（都度変動＝ナンバーなし）':'野田 300 ひ 5555')+'"'+(isPerVisit(v)?' disabled':'')+'>'+
          '<input class="ce-maker" value="'+esc(v.maker||'')+'" placeholder="メーカー">'+
          '<input class="ce-car" value="'+esc(v.car||'')+'" placeholder="車種">'+
          '<input class="ce-karte" value="'+esc(v.karteNo||'')+'" placeholder="カルテNo">'+
@@ -415,7 +476,14 @@
       const frontStaff=row.querySelector('.ce-front').value;
       /* v1.5.0：担当はメンバーの番号も一緒に持つ（CoreFlowで改名されても追従できるように） */
       const _fm = window.pitStaffByName ? window.pitStaffByName(frontStaff) : null;
-      if(plate||maker||car) vehicles.push({ id:row.dataset.vid||('v'+Date.now()+Math.floor(Math.random()*1000)), plate,maker,car,karteNo,boardId,division,frontStaff, frontStaffId:(_fm?_fm.id:'') });
+      const vid=row.dataset.vid||('v'+Date.now()+Math.floor(Math.random()*1000));
+      /* 🔴 v1.52.0 **元の車のデータに上書きする**（作り直さない）。
+         ⚠ 前は毎回まっさらな車を組み立て直していたので、編集して保存するだけで
+            **アーカイブの印（archived）や「都度車両変動」の印が消えていた**。
+            画面に無い項目は触らない、が鉄則。 */
+      const prev=((cust.vehicles||[]).find(x=>x&&x.id===vid))||{};
+      const isPV=!!prev.perVisit;
+      if(plate||maker||car||isPV||(karteNo&&prev.id)) vehicles.push(Object.assign({}, prev, { id:vid, plate,maker,car,karteNo,boardId,division,frontStaff, frontStaffId:(_fm?_fm.id:'') }));
     });
     cust.vehicles=vehicles;
   }
@@ -540,8 +608,14 @@
       if(cust.lineStatus!=null) over.lineStatus=cust.lineStatus;
       if((cust.lstepId||'')!=='') over.lstepId=String(cust.lstepId).trim();
       if(Array.isArray(cust.contacts)&&cust.contacts.length){ over.contacts=cust.contacts.map(x=>({tel:x.tel,label:x.label,primary:!!x.primary})); const p=over.contacts.find(x=>x.primary)||over.contacts[0]; over.tel=p?(p.tel||''):''; }
-      const v=(cust.vehicles||[]).find(x=>x.id===vehId)||(cust.vehicles||[])[0];
-      if(v){ over.plate=v.plate||''; over.maker=v.maker||''; over.car=v.car||''; if(v.boardId)over.boardId=v.boardId; if(v.division)over.division=v.division; if(v.frontStaff)over.frontStaff=v.frontStaff; if((v.karteNo||'').trim())over.karteNo=v.karteNo.trim(); }
+      const v=(cust.vehicles||[]).find(x=>x.id===vehId)||liveVehs(cust)[0]||(cust.vehicles||[])[0];
+      if(v){
+        /* 🔴 v1.52.0 都度車両変動＝**ナンバーと車種は入れない**（毎回ちがう車なので、その場で打つ）。
+           カルテNo.・担当・課・区分だけ引き継ぐ。 */
+        if(isPerVisit(v)){ over.perVisit=true; over.vehId=v.id; over.plate=''; over.maker=''; over.car=''; }
+        else { over.plate=v.plate||''; over.maker=v.maker||''; over.car=v.car||''; over.vehId=v.id; }
+        if(v.boardId)over.boardId=v.boardId; if(v.division)over.division=v.division; if(v.frontStaff)over.frontStaff=v.frontStaff; if((v.karteNo||'').trim())over.karteNo=v.karteNo.trim();
+      }
     }
     _openReserveWith(over);
   };
@@ -558,7 +632,10 @@
     const cust=list().find(x=>x.id===id); if(!cust) return;
     _detailFromSearch = !!window._pitReturnToSearch; window._pitReturnToSearch=false;   // 検索由来かを取り込む
     const backLbl = _detailFromSearch ? '← 検索結果へ戻る' : '← 顧客一覧へ戻る';
-    const vehicles=cust.vehicles||[];
+    /* 🔴 v1.52.0 車のカードに出すのは「いま持っている車」だけ。
+       アーカイブした車は下の「アーカイブ車両」欄にまとめる（ゆうた指定）。 */
+    const vehicles=liveVehs(cust);
+    const archived=archVehs(cust);
     const cards=_custCards(cust);
     const visits=cards.length;
     const total=cards.reduce(function(s,c){ const a=(c.amountFinal!=null&&c.amountFinal!=='')?Number(c.amountFinal):(Number(c.estAmount)||0); return s+(isFinite(a)?a:0); },0);
@@ -605,7 +682,11 @@
     } else { h+='<div class="cd-empty">連絡先は未登録です</div>'; }
     h+='</div>';
     // 車両
-    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=car data-ics=16></i> 車両 <span class="cd-cnt">'+vehicles.length+'台</span></div></div>';
+    /* 🔴 v1.52.0（ゆうた指定）車の追加はここから＝新設した「顧客・車両の登録」画面を開く。
+       ⚠ 顧客がアーカイブ済みの時は出さない（片付けた人に車を足す操作は要らない）。 */
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=car data-ics=16></i> 車両 <span class="cd-cnt">'+vehicles.length+'台</span></div>'+
+       (_archived(cust)?'':'<button class="cd-btn cd-addveh" onclick="custAddVehicleFor(\''+cust.id+'\')"><i data-ic=plus data-ics=15></i> 車両を追加</button>')+
+       '</div>';
     if(vehicles.length){
       h+='<div class="cd-vehs">';
       vehicles.forEach(function(v){
@@ -626,10 +707,14 @@
                   : '<span class="cd-vico cd-vico-lock" title="戻せるのは管理者だけです" aria-label="戻せるのは管理者だけです"><i data-ic=lock data-ics=14></i></span>')
           : (_archived(cust) ? ''
                   : '<button class="cd-vico cd-vico-arch" title="この車をアーカイブする" aria-label="この車をアーカイブする" onclick="event.stopPropagation();custVehArchive(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=box data-ics=14></i></button>');
-        h+='<div class="cd-veh'+teamCls+(vArc?' cd-veh-arch':'')+'">'+ vIco +
+        /* 🔴 v1.52.0 都度車両変動の車は、ナンバーの代わりに印を出し、車種は「毎回入力」と伝える */
+        const pv = isPerVisit(v);
+        h+='<div class="cd-veh'+teamCls+(vArc?' cd-veh-arch':'')+(pv?' cd-veh-pv':'')+'">'+ vIco +
            (vSelf?'<div class="cd-varch"><i data-ic=box data-ics=14></i> '+esc(window.PitArchive?PitArchive.noteOf(v):'アーカイブ済み')+'</div>':'')+
-           '<div class="cd-vplate">'+esc(v.plate||'—')+'</div>'+
-           '<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>'+
+           (pv?'<div class="cd-vplate cd-vplate-pv"><span class="cd-pvbadge"><i data-ic=swap data-ics=14></i> 都度車両変動</span></div>'
+              :'<div class="cd-vplate">'+esc(v.plate||'—')+'</div>')+
+           (pv?'<div class="cd-vcar cd-vcar-pv">'+(v.lastCar?('前回：'+esc(v.lastCar)):'車種は予約のたびに入力します')+'</div>'
+              :'<div class="cd-vcar">'+esc(((v.maker?v.maker+' ':'')+(v.car||'')).trim()||'—')+'</div>')+
            '<div class="cd-vpills">'+teamPill+(t.course?'<span class="cd-pill" style="background:'+esc(t.courseColor)+'22;color:'+esc(t.courseColor)+';border-color:'+esc(t.courseColor)+'66">'+esc(t.course)+'</span>':'')+(frontName(v)?'<span class="cd-vstaff" title="担当">'+esc(frontName(v))+'</span>':'')+'</div>'+
            ((v.karteNo||'').trim()?'<div class="cd-vkarte" title="カルテNo">'+esc(v.karteNo.trim())+'</div>':'')+
            '<div class="cd-vacts"><span class="cd-vb" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')"><i data-ic=clock data-ics=16></i> 履歴</span>'+
@@ -667,6 +752,34 @@
     } else { h+='<div class="cd-empty">入庫カードの履歴はまだありません（整備ソフトに正式履歴があります）</div>'; }
     h+='</div>';
 
+    /* 🔴 v1.52.0（ゆうた指定）**来店履歴の下に「アーカイブ車両」欄**。
+       ⚠ 来店履歴と同じテイストの小さい行（BOX）で、グレーアウトして並べる。
+       ⚠ 1台も無い時は**欄ごと出さない**（ふだんは目に入らないように）。 */
+    if(archived.length){
+      h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=box data-ics=16></i> アーカイブ車両 <span class="cd-cnt">'+archived.length+'台</span></div></div>';
+      h+='<div class="cd-hist cd-archlist">';
+      archived.forEach(function(v){
+        const t=teamInfo(v||{});
+        const canR = !(window.PitArchive) || PitArchive.canRestore();
+        const nm=((v.maker?v.maker+' ':'')+(v.car||'')).trim();
+        h+='<div class="cd-arow">'+
+           '<div class="cd-aplate">'+(isPerVisit(v)?'都度変動':esc(v.plate||'—'))+'</div>'+
+           '<div class="cd-amid"><b>'+esc(nm||'—')+'</b>'+
+             ((v.karteNo||'').trim()?' ・ カルテ '+esc(v.karteNo.trim()):'')+
+             (t.label?' ・ '+esc(t.label):'')+(t.course?' ・ '+esc(t.course):'')+
+             (frontName(v)?' ・ 担当 '+esc(frontName(v)):'')+
+             '<div class="cd-asub"><i data-ic=box data-ics=14></i> '+esc(window.PitArchive?PitArchive.noteOf(v):'アーカイブ済み')+'</div>'+
+           '</div>'+
+           '<div class="cd-aacts">'+
+             '<button class="cd-ab" onclick="custHistory(\''+cust.id+'\',\''+(v.id||'')+'\')" title="この車の来店履歴を見る"><i data-ic=clock data-ics=15></i> 履歴</button>'+
+             (canR ? '<button class="cd-ab cd-ab-restore" onclick="custVehRestore(\''+cust.id+'\',\''+(v.id||'')+'\')" title="アーカイブから戻す"><i data-ic=undo data-ics=15></i> 戻す</button>'
+                   : '<span class="cd-ab cd-ab-lock" title="戻せるのは管理者だけです"><i data-ic=lock data-ics=15></i></span>')+
+           '</div>'+
+           '</div>';
+      });
+      h+='</div></div>';
+    }
+
     openModal(h, 'cd-box');
   };
   /* この車で新規予約＝新規予約カードを作ってこの顧客＋車両で埋める */
@@ -674,7 +787,27 @@
     window._pitReturnToSearch=false;           // 新規予約へ進む＝検索には戻らない
     _detailFromSearch=false;
     custCloseModal();
-    if(window.openNewReserve){ openNewReserve(); if(window.custPick) custPick(custId, vehId); }
+    if(!window.openNewReserve) return;
+    const prevId = window.pitOpenCardId ? pitOpenCardId() : null;   /* 開く前に見ていたカード */
+    openNewReserve();
+    /* 🔴 v1.52.0 直した不具合（ゆうた報告ではなく作業中に見つけたもの）
+       ⚠ **書きかけの予約が残っていると**「続きから開きますか？」の確認が先に出るので、
+          新規予約カードは**その返事のあとに**作られる。前はその返事を待たずにお客様を入れていたため、
+          確認が出た時だけ **お客様・車が空のカード**が開いていた（顧客一覧・顧客詳細の「新規予約」）。
+       ⚠ カードが開くのを待ってから入れる。**「続きから開く」を選んだ時は入れない**
+          （別のお客様の書きかけに、いま選んだ人を上書きしてしまうため）。 */
+    let tries=0;
+    (function waitCard(){
+      const id = window.pitOpenCardId ? pitOpenCardId() : null;
+      const c = (id && id!==prevId) ? (state.cards||[]).find(x=>x&&x.id===id) : null;
+      if(c){
+        const fresh = !(c.customer||'').trim() && !(c.plate||'').trim() && !(c.car||'').trim();
+        if(fresh && window.custPick) custPick(custId, vehId);
+        return;
+      }
+      if(++tries>100) return;                  // 10秒待って開かなければあきらめる（画面は止めない）
+      setTimeout(waitCard, 100);
+    })();
   };
 
   /* ===== カード→顧客の橋渡し（検索結果の「顧客情報」「新規予約」用） ===== */

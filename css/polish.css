@@ -1782,3 +1782,17 @@ th.cfs-lg-d{ z-index:3; }
 .cal-chip.closed{ background:rgba(239,68,68,.14); color:#ef4444; }
 .rml-hol.cal-soft,.lo-closed-tag.cal-soft{ color:var(--text3) !important; font-weight:600; }
 .drc-h.closed{ color:#ef4444; font-weight:600; }
+
+/* 🔴 v1.52.0 顧客一覧の操作欄：新規予約 → その右に Lステップ（ゆうた指定）。
+   ⚠ Lステップが無い人にも**同じ幅の空きマス**を置く＝有無で新規予約の位置がガタつかない。 */
+.ct-actrow{ display:inline-flex; align-items:center; justify-content:flex-end; gap:6px; }
+.ct-licon-none{ display:inline-block; width:22px; height:22px; flex:0 0 auto; }
+/* 都度車両変動＝ナンバーを持たない車の印（一覧のナンバー欄） */
+.ct-pv{ display:inline-block; font-size:10.5px; font-weight:800; color:#a5b4fc;
+  background:rgba(124,140,248,.14); border:1px solid rgba(124,140,248,.45); border-radius:999px; padding:1px 8px; }
+/* 顧客編集モーダル：片付けた車・都度変動の車の印 */
+.ce-vtags{ display:flex; gap:6px; flex-wrap:wrap; width:100%; margin-bottom:6px; }
+.ce-vtag{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; border-radius:999px; padding:1px 8px; }
+.ce-vtag.arch{ color:#e0b978; background:rgba(192,138,62,.14); border:1px solid rgba(192,138,62,.45); }
+.ce-vtag.pv{ color:#a5b4fc; background:rgba(124,140,248,.14); border:1px solid rgba(124,140,248,.45); }
+.ce-veh.ce-veh-arch{ opacity:.7; }

@@ -49,6 +49,10 @@ function openCard(cardId, mode){
   }
 }
 
+/* 🔴 v1.52.0 いま開いている入庫カードのID（customers.js が「新規予約が開いたか」を見るのに使う）。
+   ⚠ 中身は返すだけ。ここから書き換えないこと。 */
+window.pitOpenCardId = function(){ return _editingCardId; };
+
 // 各ビューのカードをクリック＝ポップアップで開く
 function openDetail(cardId){ openCard(cardId, 'modal'); }
 
@@ -1623,15 +1627,42 @@ window.cfAddVehicle = function(kind){
         if (window.pitToast) pitToast('ナンバーが入っていないので、前の車はアーカイブできません（増車として登録します）');
       } else {
         const done = window.PitArchive ? PitArchive.archiveVehByPlate(c.customerId, oldPlate, '乗換') : false;
-        if (window.pitToast) pitToast(done ? (oldName + ' をアーカイブしました。新しい車を入力してください')
-                                           : '前の車はまだ顧客の控えに無いので、そのまま新しい車を入力してください');
+        if (window.pitToast) pitToast(done ? (oldName + ' をアーカイブしました。新しい車を登録してください')
+                                           : '前の車はまだ顧客の控えに無いので、そのまま新しい車を登録してください');
       }
-    } else {
-      if (window.pitToast) pitToast('増車として、新しい車を入力してください（' + oldName + ' はそのまま残ります）');
     }
-    /* 車両ごとの欄をぜんぶ空に */
+    /* 🔴 v1.52.0（ゆうた指定）ここから先は **新設した「顧客・車両の登録」画面に統合**した。
+       ⚠ 前は「カードの車の欄を空にして手で打ち直す」だけで、車の控えは保存時に自動で作られていた。
+          そのため **都度車両変動のような車ごとの設定を入れる場所が無かった**。
+       ⚠ 登録画面で保存された車を、そのままこのカードに入れて続きを書ける。
+       ⚠ 登録画面が無い場合（読み込み失敗）は、今までどおり欄を空にするだけで動く。 */
+    if (window.PitCustReg && c.customerId){
+      PitCustReg.open({
+        mode:'vehicle', custId:c.customerId,
+        base:{ boardId:c.boardId||'', division:c.division||'', frontStaff:c.frontStaff||'' },
+        onSaved:function(cust, veh){
+          if (window.custCloseModal) custCloseModal();
+          c.plate=''; c.maker=''; c.car=''; c.karteNo=''; c.drive=[];
+          c.perVisit=false; c.vehId='';
+          if (veh){
+            c.vehId = veh.id || '';
+            if (veh.perVisit){ c.perVisit=true; }
+            else { c.plate=veh.plate||''; c.maker=veh.maker||''; c.car=veh.car||''; }
+            if (veh.karteNo) c.karteNo=veh.karteNo;
+            if (veh.boardId) c.boardId=veh.boardId;
+            if (veh.division) c.division=veh.division;
+            if (veh.frontStaff) c.frontStaff=veh.frontStaff;
+          }
+          if (window.PitDB) PitDB.save();
+          renderCardForm(c);
+          if (window.pitToast) pitToast(veh && veh.perVisit ? '都度車両変動で登録しました。今回の車種名を入力してください' : '新しい車を登録しました');
+        }
+      });
+      return;
+    }
+    /* 車両ごとの欄をぜんぶ空に（登録画面が使えない時の逃げ道） */
     c.plate=''; c.maker=''; c.car=''; c.karteNo='';
-    c.drive=[];
+    c.drive=[]; c.perVisit=false; c.vehId='';
     if(window.PitDB) PitDB.save();
     renderCardForm(c);
   });
@@ -1699,6 +1730,18 @@ function _platePartsOf(c){
   return { region: toks[0] || '', cls: toks[1] || '', kana: toks[2] || '', num: toks[3] || '' };
 }
 function plateInput(c){
+  /* 🔴 v1.52.0 都度車両変動のお客様＝**ナンバーは持たない**（ゆうた指定）。
+     ナンバー欄の代わりに印を出して、「車種名を入れてください」とだけ伝える。
+     ⚠ 打った車種名（c.car）は、予約カード・表紙印刷・実績ボード・履歴に**そのまま**出る。
+     ⚠ 車の登録側は書き換えないので、次の予約でまた別の車種名を同じカルテNo.で入れられる。 */
+  if (c && c.perVisit){
+    return '<div class="cf-plate cf-plate-pv">'
+         + '<div class="cf-pv-badge" title="この車両は「都度車両変動」で登録されています">'
+         + '<i data-ic=swap data-ics=15></i> 都度車両変動（ナンバーなし）</div>'
+         + '<div class="cf-pv-hint">今回入る車の<b>車種名</b>を下の「車種（グレード）」に入れてください。'
+         + 'カルテNo.・担当・課はこのお客様で共通です。</div>'
+         + '</div>';
+  }
   // v0.83.0「新規車両」スイッチON＝ナンバー未定の新しい車（c.plate に文言「新規車両」を入れる）
   const isNew = (String(c.plate || '').trim() === '新規車両');
   const p = isNew ? { region:'', cls:'', kana:'', num:'' } : _platePartsOf(c);
