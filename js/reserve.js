@@ -503,7 +503,9 @@ function cardHtml(c, opts){
     h += '<div class="pcm-r"><span class="pcm-car">' + (c.car || '') + '</span>' + _washB + (_stf ? '<span class="pcm-front">' + _stf + '</span>' : '') + '</div>';
     // 外注フェーズ＝外注先名(＋メモ)＋そのフェーズに入ってからの日数ラベル
     if (c.status === 'outsource'){
-      var _odN = c.phaseAt ? (Math.floor((Date.now() - c.phaseAt) / 86400000) + 1) : null;
+      /* 🔴 v1.58.0 起点は**フローの記録**（pitPhaseStartMs）。写しを直接見ない。 */
+      var _odMs = window.pitPhaseStartMs ? pitPhaseStartMs(c) : (c.phaseAt || null);
+      var _odN = (_odMs != null) ? (Math.floor((Date.now() - _odMs) / 86400000) + 1) : null;
       var _odTxt = (_odN != null) ? (_odN + '日目') : '';
       var _oName = (c.outsourceTo || '外注先未定') + (c.outsourceNote ? ' ' + c.outsourceNote : '');
       h += '<div class="pcm-out"><i data-ic=external data-ics=16></i> <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';

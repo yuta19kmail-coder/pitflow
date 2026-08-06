@@ -128,12 +128,65 @@
   /* 手で足した記録か＝消せる・言葉も直せる */
   function isManual(e){ return !!(e && e.manual); }
 
+  /* ===================================================================
+     📅 v1.58.0（ゆうた指定）**フローの記録を「本当に動いた実データ」として扱う。**
+     -------------------------------------------------------------------
+     ◎ゆうたの言葉
+       「**各フローの編集は実際のデータとして扱ってほしい。
+         例えば見積もり中に入れた日を変えたら、見積もりフェーズのカウント日数自体を改めてほしい**」
+     ◎これまで
+       「いまの工程に入った時刻」は **`card.phaseAt`** に持っていた。
+       これは**工程を動かした瞬間に書いた写し**で、**フローの日時を直しても変わらない**。
+       ＝フローを直しても「◯日目」が動かなかった。**写しを作ると片方だけ直って食い違う**、いつもの罠。
+     ◎これから
+       🔴 **フローの記録（`type:'phase'` で `to` がいまの工程のもの）を先に見る。**
+          直せばそのまま日数に効く。
+       ⚠ `phaseAt` は**記録を持たない古いカードのための予備**に降格（消しはしない）。
+       ⚠ フローを直した時は `phaseAt` も**書き直して揃える**（下の `syncPhaseAt`）＝
+          まだ写しを直接見ている所が残っていても食い違わない。
+     ⚠ 日数の数え方（何日目とするか）は**画面ごとの決めごと**なので、ここでは
+        **「入った時刻(ms)」だけ**を返す。各画面は今までどおりの数え方を続ける。
+     =================================================================== */
+  function phaseStartMs(c){
+    if (!c) return null;
+    var log = Array.isArray(c.log) ? c.log : [];
+    var st  = String(c.status || '');
+    for (var i = log.length - 1; i >= 0; i--){
+      var e = log[i];
+      if (e && e.type === 'phase' && e.to === st){
+        var ms = atMs(e);
+        if (ms != null) return ms;
+      }
+    }
+    if (c.phaseAt) return +c.phaseAt;                       /* 記録が無い古いカード */
+    if (c.reserveDate){
+      var d = new Date(String(c.reserveDate) + 'T00:00:00');
+      if (!isNaN(d.getTime())) return d.getTime();          /* それも無ければ入庫日 */
+    }
+    return null;
+  }
+  w.pitPhaseStartMs = phaseStartMs;
+
+  /* フローを直したあと、写し（phaseAt）を記録に合わせて書き直す。
+     🔴 **記録が正・写しが従。** 逆にしないこと。 */
+  function syncPhaseAt(c){
+    if (!c) return;
+    var ms = phaseStartMs(c);
+    if (ms != null) c.phaseAt = ms;
+  }
+  w.pitSyncPhaseAt = syncPhaseAt;
+
   /* ---------- 保存して描き直す ---------- */
   function save(){ try { if (w.PitDB) PitDB.save(); } catch(err){} }
   /* いま開いている画面のフローの面だけ描き直す（タブや位置を保ったまま）。 */
   function repaint(){
     try { if (w.cvFlowRepaint) cvFlowRepaint(); } catch(err){}
     try { if (w.cfFlowRepaint) cfFlowRepaint(); } catch(err){}
+  }
+  /* 🔴 v1.58.0 「◯日目」は**背後の一覧（タスクボード・予約ビュー・外注）にも出ている**。
+     フローを直したらそちらも描き直さないと、**同じカードで数字が2つ**になる。 */
+  function refreshViews(){
+    try { if (w.showView && w.state && state.currentView) showView(state.currentView); } catch(err){}
   }
 
   /* ---------- 足す ----------
@@ -180,7 +233,10 @@
     e.at = t;
     /* 🔴 atTxt を持っている記録は、そちらも合わせて書き換える（画面が食い違うため） */
     if ('atTxt' in e) e.atTxt = atText({ at: t });
-    save(); repaint();
+    /* 🔴 v1.58.0 工程の記録を直したら、**「◯日目」の起点も改める**（ゆうた指定）。
+       写し（phaseAt）を記録に合わせて書き直す。 */
+    syncPhaseAt(c);
+    save(); repaint(); refreshViews();
     return true;
   }
   function setBy(cardId, i, v){
@@ -214,7 +270,9 @@
     /* 手で足した記録は今までどおり誰でも消せる。自動の記録は設定権限のある人だけ。 */
     if (!isManual(e) && !canEdit()) return false;
     c.log.splice(i, 1);
-    save(); repaint();
+    /* 🔴 v1.58.0 工程の記録を消した時も起点を改める（1つ前の記録が起点になる） */
+    syncPhaseAt(c);
+    save(); repaint(); refreshViews();
     return true;
   }
 

@@ -10,7 +10,12 @@
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
   function mdShort(iso){ if(!iso) return ''; var p=String(iso).split('-'); return (p.length>=3)?((+p[1])+'/'+(+p[2])):iso; }
-  function dayNo(c){ return c.phaseAt ? (Math.floor((Date.now()-c.phaseAt)/86400000)+1) : null; }
+  /* 🔴 v1.58.0 「外注に出してから◯日目」の起点は**フローの記録**（pitPhaseStartMs）。
+     写し（phaseAt）を直接見ると、フローの日時を直しても日数が変わらない。 */
+  function dayNo(c){
+    var ms = window.pitPhaseStartMs ? pitPhaseStartMs(c) : (c.phaseAt || null);
+    return (ms != null) ? (Math.floor((Date.now()-ms)/86400000)+1) : null;
+  }
 
   // タスクボードと同じコンパクトカード＋右側に「完了予定・何日目」
   function osItem(c){

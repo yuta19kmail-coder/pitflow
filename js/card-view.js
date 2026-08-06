@@ -319,7 +319,9 @@
       const partners = (state.settings && state.settings.outsourcePartners) || [];
       const needNote = (c.outsourceTo === '各ディーラー' || c.outsourceTo === 'その他');
       const opts = partners.map(function(p){ return '<option value="'+esc(p)+'"'+(p===c.outsourceTo?' selected':'')+'>'+esc(p)+'</option>'; }).join('');
-      const inN = c.phaseAt ? (Math.floor((Date.now()-c.phaseAt)/86400000)+1) : null;
+      /* 🔴 v1.58.0 起点は**フローの記録**（pitPhaseStartMs）。写し（phaseAt）を直接見ない。 */
+      const _inMs = window.pitPhaseStartMs ? pitPhaseStartMs(c) : (c.phaseAt || null);
+      const inN = (_inMs != null) ? (Math.floor((Date.now()-_inMs)/86400000)+1) : null;
       let dueInfo = '—';
       if (c.outsourceDue){
         const n = window.daysFromToday ? daysFromToday(c.outsourceDue) : null;

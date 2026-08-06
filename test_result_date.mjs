@@ -278,7 +278,12 @@ console.log('\n── ソースの見張り ──');
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
               (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
-  ok('版は v1.57.0', vs[0] === '1.57.0', vs);
+  /* 🔴 版は上がる一方なので、決め打ちで書かない（毎回テストが古くなるため）。
+     **この節を書いた時の版（1.57.0）より下がっていないこと**だけを見る。 */
+  const _num = v => String(v||'').split('.').map(Number);
+  const _ge = (a, b) => { const x=_num(a), y=_num(b);
+    for (let i=0;i<3;i++){ if ((x[i]||0) !== (y[i]||0)) return (x[i]||0) > (y[i]||0); } return true; };
+  ok('版が v1.57.0 より下がっていない', _ge(vs[0], '1.57.0'), vs);
   ok('直した3本にキャッシュ番号が付いている',
      /card-view\.js\?v=\d+/.test(ix) && /return-popup\.js\?v=\d+/.test(ix) && /card-view\.css\?v=\d+/.test(ix));
 }

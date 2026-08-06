@@ -3,7 +3,7 @@
    タスクボードのコンパクトカード（.pit-card.pcm）をホバーすると、
    カードの右側に「情報カード」を固定表示する（バッジ位置に関係なく常に同じ場所）。
    ・基本：予約番号／客名様／カナ／メーカー車種／ナンバー／国産輸入／課／担当（省略なし）
-   ・経過日数3つ：①預かり何日目 ②このフェーズ何日目（c.phaseAt 起点）③代車リミット（既存）
+   ・経過日数3つ：①預かり何日目 ②このフェーズ何日目（🔴 v1.58.0 起点はフローの記録＝pitPhaseStartMs）③代車リミット（既存）
    既存ヘルパー流用：statusLabel / fmtMD / daysFromToday / loanerRem / loanerLevel。
    ======================================== */
 (function(){
@@ -16,13 +16,13 @@
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
-  /* 今のフェーズに入った時刻(ms)。phaseAt 優先→ログの最後のフェーズ移動→入庫日 の順でフォールバック */
+  /* 今のフェーズに入った時刻(ms)。
+     🔴 v1.58.0 **順番を入れ替えた**＝フローの記録が先、写し（phaseAt）は予備（ゆうた指定）。
+        前は `phaseAt` を先に見ていたので、**フローの日時を直しても「◯日目」が変わらなかった**。
+     🔴 中身は flow-pit.js の `pitPhaseStartMs` に一本化。**ここで書き写さないこと。** */
   function phaseStartMs(c){
+    if (window.pitPhaseStartMs) return pitPhaseStartMs(c);
     if (c.phaseAt) return c.phaseAt;
-    var log = c.log || [];
-    for (var i=log.length-1; i>=0; i--){
-      if (log[i] && log[i].type==='phase' && log[i].to===c.status && log[i].at) return log[i].at;
-    }
     if (c.reserveDate){ var d=new Date(c.reserveDate+'T00:00:00'); if(!isNaN(d)) return d.getTime(); }
     return null;
   }
