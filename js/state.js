@@ -408,7 +408,14 @@ window.pitStaffPrintName = pitStaffPrintName;
    ⚠ 保存の形は今までどおり **文字列ひとつ**（c.reserveTime にラベルがそのまま入る）。
       だから表紙印刷やカードの表示は、何もしなくても「朝一」「決まり次第」と**文字がそのまま出る**。
    ⚠ 時刻を直接打つ（9:00 / 900 / 9時半）のも今までどおり。ここは“よく使うもの”の近道。 */
-var PIT_TIME_QUICK = [
+/* 🔴 v1.60.0 **時間の言葉の表は、この1本（PIT_TIME_ALL）だけ。**
+     入庫（予約）用と返車用で「画面に出すボタンの並び」は違うが、
+     **中身（何時ぶんか・時刻不明か・並び順）は同じ表を見る**。表を2つ作ると必ずズレる。
+     ・intakeOnly … 入庫のときだけ出す（鍵ポスト）
+     ・returnOnly … 返車のときだけ出す（勝手に取る）
+     ・tbd        … 「未定」だけ。**返車では、これが入っているうちは「返車時間未定」に残る**。
+       （決まり次第・レッカー・勝手に取る は、時刻不明のまま**返車カレンダーの「時刻未定」に置く**＝ゆうた指定） */
+var PIT_TIME_ALL = [
   { label: 'AM',         from: '09:00', to: '12:00' },
   { label: 'PM',         from: '13:00', to: '19:00' },
   { label: '朝一',       from: '09:00', to: '09:30' },
@@ -416,13 +423,24 @@ var PIT_TIME_QUICK = [
   { label: '夕方',       from: '16:30', to: '19:00' },
   { label: '決まり次第', unknown: true },
   { label: 'レッカー',   unknown: true },
-  { label: '鍵ポスト',   unknown: true },
-  { label: '未定',       unknown: true }
+  { label: '鍵ポスト',   unknown: true, intakeOnly: true },
+  { label: '勝手に取る', unknown: true, returnOnly: true },
+  { label: '未定',       unknown: true, tbd: true }
 ];
-window.PIT_TIME_QUICK = PIT_TIME_QUICK;
+window.PIT_TIME_ALL = PIT_TIME_ALL;
 
 var _pitTimeByLabel = {};
-PIT_TIME_QUICK.forEach(function (t, i) { t.ord = i; _pitTimeByLabel[t.label] = t; });
+PIT_TIME_ALL.forEach(function (t, i) { t.ord = i; _pitTimeByLabel[t.label] = t; });
+
+/* 入庫（予約）のボタンの並び＝今までどおり。返車だけの言葉は出さない。 */
+var PIT_TIME_QUICK = PIT_TIME_ALL.filter(function (t){ return !t.returnOnly; });
+window.PIT_TIME_QUICK = PIT_TIME_QUICK;
+
+/* 🕐 v1.60.0（ゆうた指定）返車時間のショートカットの並び。
+   AM／PM／朝一／お昼／夕方／決まり次第／レッカー／勝手に取る／未定。
+   時間の割りふりは予約とまったく同じ（夕方＝16:30〜19:00 がいちばん後ろの時間帯）。 */
+var PIT_RETURN_TIME_QUICK = PIT_TIME_ALL.filter(function (t){ return !t.intakeOnly; });
+window.PIT_RETURN_TIME_QUICK = PIT_RETURN_TIME_QUICK;
 
 /* ラベル（朝一 など）ならその定義を返す。時刻や空なら null。 */
 function pitTimeQuick(v){
@@ -430,12 +448,22 @@ function pitTimeQuick(v){
 }
 window.pitTimeQuick = pitTimeQuick;
 
-/* 時刻が本当に分からないもの（決まり次第・レッカー・鍵ポスト・未定）か */
+/* 時刻が本当に分からないもの（決まり次第・レッカー・鍵ポスト・勝手に取る・未定）か */
 function pitTimeUnknown(v){
   var q = pitTimeQuick(v);
   return !!(q && q.unknown);
 }
 window.pitTimeUnknown = pitTimeUnknown;
+
+/* 🔴 v1.60.0 「まだ**時間そのものを決めていない**」＝空 か 「未定」だけ。
+   決まり次第・レッカー・勝手に取る は“決めた上での時刻不明”なので**ここには入らない**。 */
+function pitTimeTbd(v){
+  var s = String(v == null ? '' : v).trim();
+  if (!s) return true;
+  var q = pitTimeQuick(s);
+  return !!(q && q.tbd);
+}
+window.pitTimeTbd = pitTimeTbd;
 
 /* 🔴 **並び順の物差し**。時間順に並べる所は必ずこれを通すこと。
      ・「09:30」「09:00-10:00」 → 570 / 540（先頭の時刻）

@@ -148,3 +148,36 @@
 .pp-date{ width:auto; align-self:flex-start; font-size:15px; padding:7px 9px; border:1px solid var(--border2); border-radius:8px; background:var(--bg3); color:var(--text); }
 .pp-note{ font-size:11.5px; color:var(--text3); line-height:1.55; background:var(--bg3); border-radius:8px; padding:9px 11px; }
 .pp-actions{ display:flex; justify-content:flex-end; gap:8px; margin-top:2px; }
+
+/* ===== v1.60.0 返車の日時入力（ホバー情報カード内 / 返車ポップアップ） =====
+   🔴 見た目は新規予約の入庫時間の欄（.cf-time …）をそのまま借りている。
+      借り物なので、色や角丸を作り直さない。ここは「置き場所の違い」だけ足す。 */
+
+/* 返車予定日の横の「未定」チェック */
+.ph-rt-tbdlb{ display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text2); white-space:nowrap; cursor:pointer; }
+.ph-rt-tbdlb input{ margin:0; cursor:pointer; }
+.ph-rt-date.is-off, .pp-date.is-off{ opacity:.45; }
+
+/* 返車時間＝入力ガイド。ホバー情報カードは中身をスクロールさせる箱なので、
+   ガイドを「浮かせる」と切れて見えない。ここだけ**下に押し広げる**形にする。 */
+.ph-rt-timerow{ align-items:flex-start; }
+.ph-rt-timerow .ph-rt-k{ margin-top:6px; }
+.ph-rt .cf-time{ flex:1; min-width:0; }
+.ph-rt .cf-time-main{ width:100%; box-sizing:border-box; font-size:12.5px; color:var(--text);
+  background:var(--bg3); border:1px solid var(--border2); border-radius:7px; padding:5px 8px; }
+.ph-rt .cf-time-guide{ position:static; margin-top:6px; box-shadow:none; padding:7px 8px; }
+.ph-rt .cf-time-quick{ max-width:100%; }
+.ph-rt .cf-time-pick{ font-size:12px; padding:4px 7px; background:var(--bg3); border:1px solid var(--border2); border-radius:7px; color:var(--text); }
+.ph-rt .cf-chip{ font-size:11px; padding:3px 8px; border-radius:7px; border:1px solid var(--border2); background:var(--bg3); color:var(--text); cursor:pointer; }
+
+/* 返車ポップアップ：日付＋「返車日未定」を1行に */
+.rp-dwrap{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.rp-tbdlb{ display:flex; align-items:center; gap:5px; font-size:12.5px; color:var(--text2); cursor:pointer; }
+.rp-tbdlb input{ margin:0; cursor:pointer; }
+.rp-timeguide .cf-time-main{ width:100%; box-sizing:border-box; font-size:15px; padding:7px 9px;
+  border:1px solid var(--border2); border-radius:8px; background:var(--bg3); color:var(--text); }
+/* ポップアップの箱は overflow:auto なので、ガイドを浮かせると下が切れる。ここも下に押し広げる。 */
+.rp-timeguide .cf-time-guide{ position:static; margin-top:7px; box-shadow:none; }
+.rp-timeguide .cf-time-quick{ max-width:100%; }
+.rp-timeguide .cf-time-pick{ font-size:14px; padding:5px 8px; background:var(--bg3); border:1px solid var(--border2); border-radius:8px; color:var(--text); }
+.rp-timeguide .cf-chip{ font-size:12px; padding:4px 10px; border-radius:8px; border:1px solid var(--border2); background:var(--bg3); color:var(--text); cursor:pointer; }

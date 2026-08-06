@@ -84,16 +84,22 @@
         c.washNote = t.value; saveDebounced();
       }
     });
+    /* 🔴 v1.60.0（ゆうた報告「完TEL待ちのエリアで日時を入れたのに返車カレンダーに移動しない」）
+       日付・返車日未定・時間の**書き込み口と後始末を1本に**（commitMove）。
+       前は時間だけ saveNow() で終わり＝画面を描き直していなかったので、移動していないように見えていた。 */
     el.addEventListener('change', function(e){
       var t = e.target; if (!t || !t.classList) return;
       var c = curCard(); if (!c) return;
       if (t.classList.contains('ph-rt-date')){
-        c.returnDate = t.value || '';
-        if (c.returnDate){ c.returnStage = 'returnWait'; c.returnDateFinal = c.returnDate; }
-        saveNow(); rerenderReturn();
-      } else if (t.classList.contains('ph-rt-time')){
-        c.returnTime = (window._normTime ? _normTime(t.value) : t.value) || '';
-        t.value = c.returnTime; saveNow();
+        var cb1 = el.querySelector('.ph-rt-datetbd');
+        if (cb1) cb1.checked = !t.value;
+        syncDateTbd();
+        commitMove(c, t.value || '', undefined);
+      } else if (t.classList.contains('ph-rt-datetbd')){
+        var dEl = el.querySelector('.ph-rt-date');
+        if (t.checked && dEl) dEl.value = '';
+        syncDateTbd();
+        if (t.checked) commitMove(c, '', undefined);
       }
     });
     el.addEventListener('click', function(e){
@@ -115,6 +121,39 @@
   function saveDebounced(){ clearTimeout(saveTimer); saveTimer = setTimeout(function(){ if (window.PitDB && PitDB.save) PitDB.save(); }, 600); }
   function saveNow(){ clearTimeout(saveTimer); if (window.PitDB && PitDB.save) PitDB.save(true); }
   function rerenderReturn(){ if (window.state && state.currentView === 'return' && window.renderReturn) renderReturn(); }
+
+  /* 「返車日未定」のチェックと日付欄をそろえる（チェックON＝日付は空・欄は使えない） */
+  function syncDateTbd(){
+    if (!el) return;
+    var d = el.querySelector('.ph-rt-date'), cb = el.querySelector('.ph-rt-datetbd');
+    if (!d || !cb) return;
+    if (cb.checked) d.value = '';
+    else if (d.value) cb.checked = false;
+    d.disabled = cb.checked;
+    d.classList.toggle('is-off', cb.checked);
+  }
+
+  /* 返車の日付・時間を書き込んで、保存・画面の描き直し・お知らせまで面倒を見る。
+     🔴 行き先の判断（完TEL待ち／返車日未定／返車時間未定／カレンダー）は return-slot.js に一本化。
+        ここで if を並べない。 */
+  function commitMove(c, date, time){
+    var res = window.pitReturnSetDateTime ? pitReturnSetDateTime(c, date, time) : null;
+    if (!res){                                        // 部品が無い時の保険
+      if (date !== undefined){ c.returnDate = date || ''; if (c.returnDate){ c.returnStage='returnWait'; c.returnDateFinal=c.returnDate; } }
+      if (time !== undefined) c.returnTime = (window._normTime ? _normTime(time||'') : (time||''));
+      saveNow(); rerenderReturn(); return;
+    }
+    if (window.logFlow && res.moved && res.after){
+      logFlow(c, '返車の予定を更新 → ' + pitReturnPlaceLabel(res.after)
+              + (c.returnDate ? '（' + c.returnDate + (c.returnTime ? ' ' + c.returnTime : '') + '）' : ''));
+    }
+    saveNow();
+    rerenderReturn();
+    if (window.state && state.currentView && state.currentView !== 'return' && window.showView) showView(state.currentView);
+    if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
+    /* 🔴 移動したら必ず口に出す。黙って消えるのがいちばん困る（探しに行けない）。 */
+    if (res.moved && res.after && window.pitToast) pitToast(pitReturnPlaceLabel(res.after) + 'へ移しました');
+  }
   function cancelHide(){ clearTimeout(hideTimer); }
   function scheduleHide(){
     clearTimeout(hideTimer);
@@ -327,8 +366,19 @@
       h += '<div class="ph-sec ph-rt">';
       h += '<div class="ph-sec-lb"><i data-ic=phone data-ics=16></i> 完TEL / 返車 <small>（ここで入力できます）</small></div>';
       h += '<div class="ph-rt-row"><span class="ph-rt-k">確定金額</span><span class="ph-rt-in"><span class="ph-rt-yen">¥</span><input class="ph-rt-amt" inputmode="numeric" value="'+esc(_amtStr)+'"></span></div>';
-      h += '<div class="ph-rt-row"><span class="ph-rt-k">返車予定日</span><span class="ph-rt-in"><input class="ph-rt-date" type="date" value="'+esc(c.returnDate||'')+'"></span></div>';
-      h += '<div class="ph-rt-row"><span class="ph-rt-k">返車時間</span><span class="ph-rt-in"><input class="ph-rt-time" type="text" placeholder="900 / 9時半" value="'+esc(c.returnTime||'')+'"></span></div>';
+      /* 🔴 v1.60.0 返車予定日の横に「返車日未定」。チェック＝日付が空、それだけ（新しい項目は作らない）。 */
+      var _dTbd = !c.returnDate;
+      h += '<div class="ph-rt-row"><span class="ph-rt-k">返車予定日</span><span class="ph-rt-in">'
+         + '<input class="ph-rt-date" type="date" value="'+esc(c.returnDate||'')+'"'+(_dTbd?' disabled':'')+'>'
+         + '<label class="ph-rt-tbdlb"><input type="checkbox" class="ph-rt-datetbd"'+(_dTbd?' checked':'')+'> 未定</label>'
+         + '</span></div>';
+      /* 返車時間＝新規予約とまったく同じ入力ガイド（打ち込み／ピッカー／ショートカット）。
+         🔴 中身は return-slot.js の共通部品。ここでHTMLを書き写さない。 */
+      h += '<div class="ph-rt-row ph-rt-timerow"><span class="ph-rt-k">返車時間</span><span class="ph-rt-in">'
+         + (window.pitTimeGuideHtml
+            ? pitTimeGuideHtml(c.returnTime || '', { list: window.PIT_RETURN_TIME_QUICK, cls: 'ph-rt-guide', placeholder: '900 / 9時半' })
+            : '<input class="ph-rt-time" type="text" value="'+esc(c.returnTime||'')+'">')
+         + '</span></div>';
       h += '<div class="ph-rt-row"><span class="ph-rt-k">洗車</span><span class="ph-rt-chips"><button type="button" class="ph-rt-wash'+(_washOn?' on':'')+'" data-w="1">要</button><button type="button" class="ph-rt-wash'+(!_washOn?' on':'')+'" data-w="0">不要</button></span></div>';
       h += '<input class="ph-rt-washnote" type="text" placeholder="洗車の備考（1行）" value="'+esc(c.washNote||'')+'">';
       h += '<div class="ph-rt-row"><span class="ph-rt-k">お礼LINE</span><span class="ph-rt-chips"><button type="button" class="ph-rt-line'+(_lineOn?' on':'')+'" data-l="1">要</button><button type="button" class="ph-rt-line'+(!_lineOn?' on':'')+'" data-l="0">不要</button></span></div>';
@@ -341,6 +391,16 @@
     }
 
     ensureEl().innerHTML = h;
+
+    /* 返車時間の入力ガイドを配線（描き直すたびに中身は作り直されるので毎回つなぐ）。
+       確定したらその場で書き込み・保存・画面の描き直しまで（commitMove）。 */
+    var _tw = el.querySelector('.ph-rt .cf-time');
+    if (_tw && window.pitTimeGuideBind){
+      pitTimeGuideBind(_tw, {
+        onCommit: function(v){ var cc = curCard(); if (cc) commitMove(cc, undefined, v); }
+      });
+    }
+    syncDateTbd();
   }
 
   function position(cardEl){

@@ -75,10 +75,13 @@ function renderReserveTbd(){
 }
 window.renderReserveTbd = renderReserveTbd;
 
-/* 返車ビュー内「未定」タブ：2カラム（完TEL待ち／返車未定）。標準カード表示。
-   ・完TEL待ち＝完TEL依頼した（金額入力済・未架電）＝returnStage:'callWait'
-   ・返車未定 ＝完TEL済だが返車日が未定＝returnStage:'returnWait' かつ returnDate無し
-   どちらもカードクリックで完TELポップアップ（返車日時を入れて返車カレンダーへ）。 */
+/* 返車ビュー内「未定」タブ：4カラム（完TEL待ち／返車日未定／返車時間未定／入金待ち）。標準カード表示。
+   🔴 v1.60.0（ゆうた指定）「返車未定」を **返車日未定** と **返車時間未定** の2つに割った。
+   ・完TEL待ち　　＝完TEL依頼した（金額入力済・まだ電話していない）
+   ・返車日未定　　＝完TEL済だが返車日がまだ
+   ・返車時間未定　＝日にちは決まったが時間がまだ（空 か「未定」）
+   ・入金待ち　　　＝返車済みで売掛（入金日待ち）
+   振り分けの判断は **return-slot.js の pitReturnPlace 1本**。ここに条件を書き写さない。 */
 function renderReturnTbd(){
   ['return-day-list','return-week','return-month','return-2month'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -87,9 +90,14 @@ function renderReturnTbd(){
   if (!wrap) return;
   wrap.style.display = '';
 
-  const active = c => c.status !== 'returned' && c.status !== 'scrap';
-  const callWait = state.cards.filter(c => c.returnStage === 'callWait' && active(c));
-  const noDate   = state.cards.filter(c => c.returnStage === 'returnWait' && !c.returnDate && active(c));
+  /* 🔴 v1.60.0 **どの車がどこに出るかは return-slot.js の pitReturnPlace ひとつで決める。**
+     ここに「returnStage が…かつ returnDate が…」と条件を書き写さないこと。
+     書き写した瞬間、ホバー入力・返車ポップアップ・この一覧の3か所が食い違い、
+     「入れたのに移動しない」（今回のバグ）が必ず戻ってくる。 */
+  const at = p => state.cards.filter(c => (window.pitReturnPlace ? pitReturnPlace(c) : null) === p);
+  const callWait = at('callWait');
+  const dateTbd  = at('dateTbd');
+  const timeTbd  = at('timeTbd');
 
   // クリックは予約詳細（openDetail）。完TEL/返車の入力はマウスオーバー情報カード(card-hover.js)で行う。
   const card = c => (typeof cardHtml === 'function') ? cardHtml(c, { compact: true }) : '';
@@ -97,11 +105,17 @@ function renderReturnTbd(){
   let h = '<div class="ret-tbd-cols">';
   h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=phone data-ics=16></i> 完TEL待ち <small>（完TEL依頼ぶん）</small><span class="und-cnt">' + callWait.length + '</span></div>';
   h += '<div class="ret-tbd-body">' + (callWait.length ? callWait.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
-  h += '<div class="und-note">完TELしたら、カードを押して確定金額・返車日時を入れてください。</div></div>';
+  h += '<div class="und-note">完TELしたら、カードにマウスを乗せて確定金額・返車日時を入れてください。</div></div>';
 
-  h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=car data-ics=16></i> 返車未定 <small>（完TEL済・日付待ち）</small><span class="und-cnt">' + noDate.length + '</span></div>';
-  h += '<div class="ret-tbd-body">' + (noDate.length ? noDate.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
-  h += '<div class="und-note">カードを押して返車日を入れると、当日／週／月へ移ります。</div></div>';
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=calendar data-ics=16></i> 返車日未定 <small>（完TEL済・日にち待ち）</small><span class="und-cnt">' + dateTbd.length + '</span></div>';
+  h += '<div class="ret-tbd-body">' + (dateTbd.length ? dateTbd.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
+  h += '<div class="und-note">返車日が入るとここから外れます（時間もそろえば返車カレンダーへ）。</div></div>';
+
+  /* ⚠ ここの車は**返車カレンダーの「時刻未定」にも同時に出る**（ゆうた確認済み）。
+     日にちは決まっているので、その日の予定として見えていないと困るため。 */
+  h += '<div class="ret-tbd-col"><div class="ret-tbd-h"><i data-ic=clock data-ics=16></i> 返車時間未定 <small>（日にち決定・時間待ち）</small><span class="und-cnt">' + timeTbd.length + '</span></div>';
+  h += '<div class="ret-tbd-body">' + (timeTbd.length ? timeTbd.map(card).join('') : '<div class="today-empty">なし</div>') + '</div>';
+  h += '<div class="und-note">返車カレンダーの「時刻未定」にも出ています。時間が入るとここから外れます。</div></div>';
 
   // 💰 入金待ち（売掛）＝返車済みで「入金日を分ける」ON・入金日まだ の車。日付を入れると消えて実績に入金日が埋まる v0.121.0
   const payWait = state.cards.filter(c => c.status === 'returned' && c.paymentSeparate && !c.paymentDate);

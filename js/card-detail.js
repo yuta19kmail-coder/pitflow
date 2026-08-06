@@ -724,25 +724,13 @@ function driveChips(c){
   h += '</div>';
   return h;
 }
-/* 入庫時刻＝メインBOXに直接入力（全角→半角）。フォーカスで下にショートカット（AM/PM/決まり次第/未定） */
+/* 入庫時刻＝メインBOXに直接入力（全角→半角）。フォーカスで下にショートカット（AM/PM/決まり次第/未定）
+   🔴 v1.60.0 **画面の作りは return-slot.js の pitTimeGuideHtml ひとつ**（返車時間の欄と同じ部品を借りる）。
+      ここでHTMLを書き写さないこと。書き写すと、片方だけ直して見た目や動きがズレる。
+      ボタンに出す一覧だけ「入庫用（TIME_QUICK）」を渡す。 */
 function timeField(c){
-  let h = '<div class="cf-time">';
-  h += '<input type="text" class="cf-input cf-time-main" value="' + _pe(c.reserveTime || '') + '" placeholder="900 / 9時半 / 9:00-10:00 など" autocomplete="off">';
-  h += '<div class="cf-time-guide">';
-  h += '<div class="cf-time-l">時間で選ぶ</div><input type="time" class="cf-input cf-time-pick" value="' + _pe(_timePickVal(c.reserveTime)) + '">';
-  h += '<div class="cf-time-l">ショートカット</div><div class="cf-time-quick">';
-  /* ⚠ ボタンに出すのは**ラベルだけ**。（）内の時間は出さない（マウスを乗せた時の説明にだけ入れる）。
-     ⚠ 時刻不明のもの（決まり次第・レッカー・鍵ポスト・未定）は薄い見た目にして、時間もの と見分けやすく。 */
-  TIME_QUICK.forEach(t => {
-    const q = (window.pitTimeQuick ? pitTimeQuick(t) : null) || {};
-    const tip = q.unknown ? '時間が決まっていない扱い（その日のいちばん後ろに並びます）'
-              : (q.from ? ('目安 ' + q.from + '〜' + (q.to || '') + '（この時間で並びます）') : '');
-    h += '<button type="button" class="cf-chip cf-chip-tm' + (q.unknown ? ' cf-chip-tbd' : '')
-       + (c.reserveTime === t ? ' active' : '') + '" data-val="' + _pe(t) + '"'
-       + (tip ? ' title="' + _pe(tip) + '"' : '') + '>' + _pe(t) + '</button>';
-  });
-  h += '</div></div></div>';
-  return h;
+  if (window.pitTimeGuideHtml) return pitTimeGuideHtml(c.reserveTime || '', { list: TIME_QUICK });
+  return '<div class="cf-time"><input type="text" class="cf-input cf-time-main" value="' + _pe(c.reserveTime || '') + '" autocomplete="off"></div>';
 }
 /* 全角→半角（数字・コロン・ハイフン）。９：００→9:00 */
 function _timeHalf(s){
@@ -757,6 +745,7 @@ function _timeHalf(s){
   }
   return t;
 }
+window._timeHalf = _timeHalf;   /* v1.60.0 返車時間の欄（return-slot.js）からも使う＝物差しは1本 */
 /* v0.95.0 入庫時刻の賢い自動補正。全角/半角不問で「9」「900」「0900」「9時」「9時半」「九時半」「0915」「0900-1000」等を HH:MM（範囲は HH:MM-HH:MM）に。
    AM/PM/決まり次第/未定 などの語はそのまま残す。 */
 function _timeHHMM(h, m){ if (isNaN(h)) return ''; h = Math.max(0, Math.min(23, h)); m = isNaN(m) ? 0 : Math.max(0, Math.min(59, m)); return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0'); }
@@ -798,8 +787,10 @@ function _normTime(raw){
    これでどこから入れても同じ整形（900→09:00／ショートカットの言葉はそのまま）になる。 */
 window._normTime = _normTime;
 
-/* 時間ピッカー(input type=time)用の値。単一のHH:MMの時だけ返す（範囲や語は空＝ピッカーは空表示） */
+/* 時間ピッカー(input type=time)用の値。単一のHH:MMの時だけ返す（範囲や語は空＝ピッカーは空表示）
+   🔴 v1.60.0 中身は return-slot.js の pitTimePickVal ひとつ（返車時間の欄と共通）。 */
 function _timePickVal(v){
+  if (window.pitTimePickVal) return pitTimePickVal(v);
   const n = _normTime(v || '');
   const m = (n.split('-')[0] || '').match(/^\d{2}:\d{2}$/);
   return m ? m[0] : '';
@@ -2072,26 +2063,17 @@ function bindCardFormEvents(root){
   })();
 
   // 入庫時刻：メインBOX直接入力（全角→半角）＋フォーカスで下にショートカット（AM/PM/決まり次第/未定）
+  // 🔴 v1.60.0 配線も return-slot.js の pitTimeGuideBind ひとつ（返車時間の欄と共通）。ここに書き写さない。
   (function(){
     const timeWrap = root.querySelector('.cf-time');
     if (!timeWrap) return;
-    const mainEl = timeWrap.querySelector('.cf-time-main');
-    const pickEl = timeWrap.querySelector('.cf-time-pick');
-    const syncChips = function(v){ timeWrap.querySelectorAll('.cf-time-quick .cf-chip').forEach(function(b){ b.classList.toggle('active', b.dataset.val === v); }); };
-    if (mainEl){
-      mainEl.addEventListener('focus', function(){ timeWrap.classList.add('open'); });
-      mainEl.addEventListener('input', function(){ const v = _timeHalf(mainEl.value); if (mainEl.value !== v) mainEl.value = v; c.reserveTime = v; syncChips(v); });
-      // v0.95.0 確定(blur)で賢く補正：900/9時/9時半/九時半/0915/0900-1000 → HH:MM
-      mainEl.addEventListener('change', function(){ const v = _normTime(mainEl.value); mainEl.value = v; c.reserveTime = v; syncChips(v); if (pickEl) pickEl.value = _timePickVal(v); if (window.PitDB) PitDB.save(); });
+    if (window.pitTimeGuideBind){
+      pitTimeGuideBind(timeWrap, {
+        onInput:  function(v){ c.reserveTime = v; },                              // 打っている最中（保存しない）
+        onCommit: function(v){ c.reserveTime = v; if (window.PitDB) PitDB.save(); } // 確定（900→09:00 に整形済み）
+      });
+      return;
     }
-    if (pickEl){
-      pickEl.addEventListener('change', function(){ if (!pickEl.value) return; c.reserveTime = pickEl.value; if (mainEl) mainEl.value = pickEl.value; syncChips(pickEl.value); if (window.PitDB) PitDB.save(); });
-    }
-    timeWrap.querySelectorAll('.cf-time-quick .cf-chip').forEach(function(btn){
-      btn.addEventListener('mousedown', function(e){ e.preventDefault(); });
-      btn.addEventListener('click', function(){ c.reserveTime = btn.dataset.val; if (mainEl) mainEl.value = c.reserveTime; syncChips(c.reserveTime); if (window.PitDB) PitDB.save(); if (mainEl) mainEl.focus(); });
-    });
-    timeWrap.addEventListener('focusout', function(e){ if (!timeWrap.contains(e.relatedTarget)) timeWrap.classList.remove('open'); });
   })();
 
   // TEL：見た目1BOX。クリックで3枠ガイドを開く。半角数字のみ→ c.tel に "市外-市内-番号" でハイフン自動挿入。枠が埋まると次へ

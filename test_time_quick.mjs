@@ -19,7 +19,7 @@ const cdSrc = read('card-detail.js');
 
 /* ---- state.js から時間まわりだけ切り出す ---- */
 {
-  const a = stateSrc.indexOf('var PIT_TIME_QUICK = [');
+  const a = stateSrc.indexOf('var PIT_TIME_ALL = [');   /* v1.60.0 表の名前が PIT_TIME_ALL（1本の表）に変わった */
   const b = stateSrc.indexOf('/* v0.85.0 受付タイプの表示ラベル');
   if (a < 0 || b < 0 || b < a) throw new Error('state.js から時間の定義を切り出せません（構成が変わった？）');
   var TIME_CODE = stateSrc.slice(a, b);

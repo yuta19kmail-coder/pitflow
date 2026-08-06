@@ -38,14 +38,19 @@
       + '    <div class="pp-moneywrap"><span class="pp-yen">¥</span>'
       + '      <input class="pp-money" id="rp-amt" type="text" inputmode="numeric" placeholder="0" oninput="PitReturnPopup.onAmt(this)"></div>'
       + '  </div>'
+      /* 🔴 v1.60.0（ゆうた指定）返車予定日の横に「返車日未定」のチェック。
+         ⚠ 新しい項目は増やさない。**チェックが入っている＝日付が空**、それだけ。
+            別に持つと、片方だけ直って必ず食い違う。 */
       + '  <div class="pp-field" id="rp-date-field">'
       + '    <label class="pp-lb">返車予定日</label>'
-      + '    <input class="pp-date" id="rp-date" type="date">'
-      + '    <div class="pp-ref">空のままにすると「返車未定」に入ります（あとで日付を入れられます）。</div>'
+      + '    <div class="rp-dwrap">'
+      + '      <input class="pp-date" id="rp-date" type="date" onchange="PitReturnPopup.onDate()">'
+      + '      <label class="rp-tbdlb"><input type="checkbox" id="rp-datetbd" onchange="PitReturnPopup.onDateTbd(this)"> 返車日未定</label>'
+      + '    </div>'
       + '  </div>'
       + '  <div class="pp-field" id="rp-time-field">'
       + '    <label class="pp-lb">返車時間</label>'
-      + '    <input class="rp-time" id="rp-time" type="text" autocomplete="off" placeholder="900 / 9時半 / 9:00-10:00 など" onblur="PitReturnPopup.onTime(this)">'
+      + '    <div id="rp-time-slot"></div>'
       + '  </div>'
       + '  <div class="pp-field">'
       + '    <label class="pp-lb">洗車</label>'
@@ -78,6 +83,26 @@
     if (b) b.classList.toggle('on', !on);
   }
 
+  /* 🔴 v1.60.0 「返車日未定」チェックと日付欄は**同じ一つのこと**の裏表。
+     チェックON＝日付は空・欄は使えない。日付が入っていればチェックは自動でOFF。
+     どちらを触ってもここを通して合わせる（＝表示のズレを作らない）。 */
+  function syncDateTbd(){
+    var d = el('rp-date'), cb = el('rp-datetbd');
+    if (!d || !cb) return;
+    if (cb.checked) d.value = '';
+    else if (d.value) cb.checked = false;
+    d.disabled = cb.checked;
+    d.classList.toggle('is-off', cb.checked);
+  }
+
+  /* いま返車時間の欄に入っている文字（整形済み） */
+  function timeVal(){
+    var w = el('rp-time-slot') && el('rp-time-slot').querySelector('.cf-time');
+    if (w && window.pitTimeGuideValue) return pitTimeGuideValue(w);
+    var i = w && w.querySelector('.cf-time-main');
+    return i ? (window._normTime ? _normTime(i.value) : i.value) : '';
+  }
+
   function openModal(card, mode){
     build();
     var isDone = (mode === 'callDone');
@@ -95,7 +120,14 @@
     el('rp-time-field').style.display = isDone ? '' : 'none';
     if (isDone){
       el('rp-date').value = '';   // 返車予定日はデフォルト空（その場で決めて入れる）
-      el('rp-time').value = card.returnTime || '';
+      el('rp-datetbd').checked = false;
+      syncDateTbd();
+      /* 返車時間＝新規予約とまったく同じ入力ガイド（打ち込み／ピッカー／ショートカット）。
+         🔴 中身は return-slot.js の共通部品。ここでHTMLを書き写さない。 */
+      el('rp-time-slot').innerHTML = window.pitTimeGuideHtml
+        ? pitTimeGuideHtml(card.returnTime || '', { list: window.PIT_RETURN_TIME_QUICK, cls: 'rp-timeguide' })
+        : '<input class="cf-input cf-time-main" type="text" value="'+esc(card.returnTime||'')+'">';
+      if (window.pitTimeGuideBind) pitTimeGuideBind(el('rp-time-slot').querySelector('.cf-time'), {});
     }
 
     // 洗車＝デフォ要／お礼LINE＝デフォ要（初回＝盤面からのドラッグ時は必ず要。再編集時は保存値を尊重）
@@ -117,7 +149,8 @@
       openModal(card, pending.mode);
     },
     onAmt: function(input){ input.value = comma(input.value); },
-    onTime: function(input){ if (window._normTime) input.value = _normTime(input.value); },
+    onDate: function(){ var cb = el('rp-datetbd'); if (cb && el('rp-date').value) cb.checked = false; syncDateTbd(); },
+    onDateTbd: function(){ syncDateTbd(); },
     onWash: function(v){ setWash(v === '1'); },
     onLine: function(v){ setLine(v === '1'); },
     close: function(ok){
@@ -185,12 +218,14 @@
       c.returnTbd = false;   // 旧フラグは使わない（returnStage に一本化）
 
       if (isDone){
-        var d = el('rp-date') ? el('rp-date').value : '';
-        var t = window._normTime ? _normTime(el('rp-time') ? el('rp-time').value : '') : (el('rp-time') ? el('rp-time').value : '');
-        c.returnDate = d || '';
-        c.returnDateFinal = d || c.returnDateFinal || null;
-        c.returnTime = t || '';
+        var d = (el('rp-datetbd') && el('rp-datetbd').checked) ? '' : (el('rp-date') ? el('rp-date').value : '');
+        var t = timeVal();
+        /* 🔴 v1.60.0 日付・時間の書き込みは return-slot.js の pitReturnSetDateTime 1本を通す。
+           行き先（完TEL待ち／返車日未定／返車時間未定／カレンダー）の決め方をここに書き写さない。 */
         c.returnStage = 'returnWait';
+        if (window.pitReturnSetDateTime) pitReturnSetDateTime(c, d, t);
+        else { c.returnDate = d || ''; c.returnTime = t || ''; }
+        c.returnDateFinal = d || c.returnDateFinal || null;
         c.completeCallAt = c.completeCallAt || todayISO();
         if (c.coverCall && typeof c.coverCall === 'object'){ c.coverCall.done = true; if(!c.coverCall.at){ var dd=new Date(); c.coverCall.at=(dd.getMonth()+1)+'/'+dd.getDate(); } }
 
@@ -209,7 +244,8 @@
             label: ((window.pitCustName?pitCustName(c):c.customer) || '') + ' 様' + (c.car ? ' / ' + c.car : '')
                  + ' / 実績日 ' + d + (c.amountFinal ? ' / ¥' + Number(c.amountFinal).toLocaleString() : '') });
         } else {
-          if (window.logFlow) logFlow(c, d ? ('完TEL済 → 返車予定 '+d) : '完TEL済 → 返車未定');
+          if (window.logFlow) logFlow(c, '完TEL済 → ' + ((window.pitReturnPlaceLabel ? pitReturnPlaceLabel(pitReturnPlace(c)) : '') || '返車未定')
+                                        + (d ? '（' + d + (t ? ' ' + t : '') + '）' : ''));
         }
       } else {
         c.returnStage = 'callWait';
@@ -219,10 +255,11 @@
       if (window.PitDB) PitDB.save();
       if (state.currentView) showView(state.currentView);
       if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
+      /* 🔴 v1.60.0 「どこへ入ったか」の言い方も物差し1本（pitReturnPlaceLabel）から取る。
+         画面のブロック名とお知らせの文言が食い違うと、探しに行っても見つからない。 */
       if (window.pitToast){
-        pitToast(!isDone ? '完TEL待ちに入れました'
-               : (c.status === 'returned' ? ('実績に登録しました（' + c.completedAt + '）')
-               : (c.returnDate ? '返車予定に入れました' : '返車未定に入れました')));
+        pitToast(c.status === 'returned' ? ('実績に登録しました（' + c.completedAt + '）')
+               : ((window.pitReturnPlaceLabel ? pitReturnPlaceLabel(pitReturnPlace(c)) : '返車未定') + 'へ入れました'));
       }
   }
 })();
