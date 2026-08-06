@@ -472,6 +472,78 @@ console.log('\n── 🔴 v1.56.1 「反応しないから連打」を受け止
   await p.evaluate(() => { if (window.pitDropDraft) pitDropDraft(null, true); });
 }
 
+console.log('\n── 🎨 v1.56.2 どのテーマでも文字が読める（ライトで --text1 が白いまま残っていた件） ──');
+{
+  const THEMES = ['dark', 'light', 'dark-liquid', 'light-liquid'];
+  const res = await p.evaluate((themes) => {
+    /* 相対輝度とコントラスト比（WCAG の式）＝背景と文字がどれだけ離れているかを数字で見る */
+    const lum = (rgb) => {
+      const c = rgb.map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const parse = (s) => {
+      s = String(s || '').trim();
+      let m = s.match(/^#([0-9a-fA-F]{6})$/);
+      if (m) return [parseInt(m[1].slice(0,2),16), parseInt(m[1].slice(2,4),16), parseInt(m[1].slice(4,6),16)];
+      m = s.match(/rgba?\(([^)]+)\)/);
+      if (m) return m[1].split(',').slice(0,3).map(x => parseInt(x, 10));
+      return null;
+    };
+    const ratio = (a, b) => { const l1 = lum(a), l2 = lum(b), hi = Math.max(l1,l2), lo = Math.min(l1,l2); return (hi + 0.05) / (lo + 0.05); };
+    const keep = document.documentElement.getAttribute('data-theme');
+    const out = {};
+    themes.forEach(t => {
+      document.documentElement.setAttribute('data-theme', t);
+      const cs = getComputedStyle(document.documentElement);
+      const bg = parse(cs.getPropertyValue('--bg'));
+      out[t] = {};
+      ['--text', '--text1', '--text2', '--text3'].forEach(v => {
+        const raw = cs.getPropertyValue(v).trim();
+        const col = parse(raw);
+        out[t][v] = { set: !!raw, raw: raw, ratio: (bg && col) ? +ratio(bg, col).toFixed(2) : 0 };
+      });
+    });
+    if (keep) document.documentElement.setAttribute('data-theme', keep); else document.documentElement.removeAttribute('data-theme');
+    return out;
+  }, THEMES);
+
+  THEMES.forEach(t => {
+    ok('『' + t + '』の --text1 が決まっている', res[t]['--text1'].set === true, res[t]['--text1']);
+    ok('🔴『' + t + '』の --text1 が背景から十分離れている（4.5:1以上）', res[t]['--text1'].ratio >= 4.5, res[t]['--text1']);
+    ok('『' + t + '』の --text も読める', res[t]['--text'].ratio >= 4.5, res[t]['--text']);
+    ok('『' + t + '』の --text2 も読める（3:1以上）', res[t]['--text2'].ratio >= 3, res[t]['--text2']);
+  });
+
+  /* 実際の予約詳細カードで、ゆうたが見えないと言った3か所を測る */
+  await p.evaluate(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    const c = state.cards.find(x => x.id === 'TR1'); if (c) c.menu = '車検一式\nエンジンオイル交換';
+  });
+  await open('TR1');
+  const real = await p.evaluate(() => {
+    const lum = (rgb) => { const c = rgb.map(v => { v /= 255; return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); }); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; };
+    const parse = (s) => { const m = String(s).match(/rgba?\(([^)]+)\)/); return m ? m[1].split(',').slice(0,3).map(x => parseInt(x,10)) : null; };
+    const ratio = (a,b) => { const l1=lum(a), l2=lum(b), hi=Math.max(l1,l2), lo=Math.min(l1,l2); return +((hi+0.05)/(lo+0.05)).toFixed(2); };
+    const cs = getComputedStyle(document.documentElement);
+    const bgRaw = cs.getPropertyValue('--bg2').trim() || cs.getPropertyValue('--bg').trim();
+    const bg = (function(s){ const m = s.match(/^#([0-9a-fA-F]{6})$/); return m ? [parseInt(m[1].slice(0,2),16),parseInt(m[1].slice(2,4),16),parseInt(m[1].slice(4,6),16)] : parse(s); })(bgRaw);
+    const pick = (sel) => { const e = document.querySelector(sel); return e ? ratio(bg, parse(getComputedStyle(e).color)) : null; };
+    return { tel: pick('#md-body-modal .cv-tel'),
+             memo: pick('#md-body-modal .cv-wl:not(.cv-muted)'),
+             muted: pick('#md-body-modal .cv-wl.cv-muted'),   /* 「（なし）」は薄くてよい欄 */
+             tab: pick('#md-body-modal .cv-tab.on') };
+  });
+  ok('🔴 ライトで「電話」が読める', real.tel !== null && real.tel >= 4.5, real);
+  ok('🔴 ライトで「予約時内容の本文」が読める', real.memo !== null && real.memo >= 4.5, real);
+  ok('「（なし）」の薄い字も、薄すぎはしない（3:1以上）', real.muted === null || real.muted >= 3, real);
+  ok('🔴 ライトで「予約詳細」のタブ名が読める', real.tab !== null && real.tab >= 4.5, real);
+  await p.evaluate(() => { document.documentElement.setAttribute('data-theme', 'dark'); });
+
+  const css = fs.readFileSync('css/base.css', 'utf8');
+  const at = css.indexOf(':root[data-theme="light"]{');
+  ok('ライトテーマの箱に --text1 が書いてある', at > 0 && /--text1\s*:/.test(css.slice(at, at + 1200)));
+}
+
 console.log('\n── 版とキャッシュ番号 ──');
 {
   const ix = fs.readFileSync('index.html', 'utf8');
@@ -479,7 +551,7 @@ console.log('\n── 版とキャッシュ番号 ──');
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
               (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
-  ok('版は v1.56.1', vs[0] === '1.56.1', vs);
+  ok('版は v1.56.2', vs[0] === '1.56.2', vs);
   ok('直したファイルにキャッシュ番号が付いている',
      /card-view\.js\?v=\d+/.test(ix) && /card-detail\.js\?v=\d+/.test(ix) && /db-pit\.js\?v=\d+/.test(ix)
      && /loaner\.js\?v=\d+/.test(ix) && /card-view\.css\?v=\d+/.test(ix));
