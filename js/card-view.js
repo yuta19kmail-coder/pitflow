@@ -363,13 +363,22 @@
       // 実績移行後の返車日も確定情報としてロック（表示のみ）。✏️編集でその場で直せる v0.117.0/0.118.0
       const shownRet = c.returnDateFinal || c.returnDate || '';
       const retStr = (shownRet?fmtMD(shownRet):'—')+(c.returnTime?('　'+esc(c.returnTime)):'');
-      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockReturn()"><i data-ic=pencil data-ics=16></i> 編集</button></div><div class="cv-frb">'
+      /* 🔴 v1.57.0 実績になったカードの**返車日を直すと、実績カウント日も一緒に動く**（元からの作り）。
+         つまりここを誰でも触れると「実績日は管理だけ」の鍵が意味を失う。**同じ鍵をかける。**
+         ⚠ 実績になる前（返車待ちなど）の返車日は、今までどおり誰でも直せる（下の else の側）。 */
+      h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定 返車日 <span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span> '
+        + (canEditResultDate()
+            ? '<button type="button" class="cv-unlockbtn" onclick="cvUnlockReturn()"><i data-ic=pencil data-ics=16></i> 編集</button>'
+            : '<span class="cv-adminonly"><i data-ic=lock data-ics=14></i> 管理のみ</span>')
+        + '</div><div class="cv-frb">'
         + '<span class="cv-fixval" id="cv-retlock">'+retStr+'</span>'
         + '<span class="cv-unlockwrap" id="cv-retedit" style="display:none">'
           + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
           + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)">'
           + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="時間 未定" onchange="cvReturnTime(this)" style="width:150px;margin-left:8px">'
-        + '</span></div></div></div>';
+        + '</span></div></div>';
+      h += resultDateRow(c);
+      h += '</div>';
     } else {
       h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
         + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
@@ -445,6 +454,69 @@
     return h;
   }
   /* 実績（返車済み）カード用：完TEL・支払い・洗車・お礼LINE・車販依頼などを読み取り専用でまとめて表示 v0.120.0 */
+  /* ===================================================================
+     📆 v1.57.0（ゆうた指定）**実績カウント日**＝売上をどの日に数えるか（`completedAt`）。
+     -------------------------------------------------------------------
+     ・実績（返車済み）になったカードだけに出る。
+     ・🔴 **直せるのは設定権限（管理）を持っている人だけ。** ほかの人には**日付が見えるだけ**。
+     ・🔴 ゆうた指定＝**実績日を変えたら、返車日も一緒に動かす**（returnDate / returnDateFinal も揃える）。
+       ⚠ 逆（確定返車日を直す）も元から実績日を動かす作りなので、**どちらから触っても2つはズレない**。
+     ⚠ 売上の数字が動く操作なので、**フローと操作ログに必ず「どこから どこへ」を残す**。
+     ⚠ 物差しは `pitIsAdmin()`。サンプルモードでは今までどおり全部さわれる。
+     =================================================================== */
+  function canEditResultDate(){
+    if (!window.PIT_CLOUD) return true;                 /* 練習用サイトは全部さわれる */
+    return !!(window.pitIsAdmin && pitIsAdmin());
+  }
+  function resultDateRow(c){
+    const cur = c.completedAt || '';
+    const shown = cur ? fmtMD(cur) : '—';
+    let h = '<div class="cv-fixrow cv-fixlocked cv-resdate"><div class="cv-frt">実績カウント日 <small>（売上をこの日に数えます）</small>'
+          + ' <span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span>';
+    if (canEditResultDate()){
+      h += ' <button type="button" class="cv-unlockbtn" onclick="cvUnlockResult()"><i data-ic=pencil data-ics=16></i> 編集</button>';
+    } else {
+      h += ' <span class="cv-adminonly"><i data-ic=lock data-ics=14></i> 管理のみ</span>';
+    }
+    h += '</div><div class="cv-frb">'
+       + '<span class="cv-fixval" id="cv-reslock">' + shown + '</span>';
+    if (canEditResultDate()){
+      h += '<span class="cv-unlockwrap" id="cv-resedit" style="display:none">'
+         + '<input class="cv-fixinput" type="date" id="cv-resinput" value="' + esc(cur) + '" onchange="cvSetResultDate(this.value)">'
+         + '<span class="cv-resnote">返車日も同じ日に揃います</span>'
+         + '</span>';
+    }
+    return h + '</div></div>';
+  }
+  window.cvUnlockResult = function(){
+    var v = document.getElementById('cv-reslock'), e = document.getElementById('cv-resedit');
+    if (v) v.style.display = 'none';
+    if (e) e.style.display = '';
+  };
+  window.cvSetResultDate = function(v){
+    if (!_c) return;
+    if (!canEditResultDate()){
+      if (window.UI && UI.alert) UI.alert('実績カウント日を直せるのは、設定権限（管理）のある人だけです。', { title: '変更できません' });
+      return;
+    }
+    v = String(v || '').trim();
+    if (!v) return;                                  /* 空にはしない＝実績から消えてしまう */
+    const before = _c.completedAt || '（なし）';
+    if (v === _c.completedAt) return;
+    _c.completedAt = v;
+    /* 🔴 ゆうた指定：返車日も一緒に動かす */
+    _c.returnDate = v;
+    _c.returnDateFinal = v;
+    try { if (window.logFlow) logFlow(_c, '実績カウント日を ' + before + ' → ' + v + ' に変更（返車日も同じ日に）'); } catch(e){}
+    try {
+      if (window.pitLog) pitLog('実績カウント日を変更', { cardId: _c.id, kind: 'result',
+        label: ((window.pitCustName?pitCustName(_c):_c.customer) || '') + ' 様' + (_c.car ? ' / ' + _c.car : '') + '　' + before + ' → ' + v });
+    } catch(e){}
+    save(); cvRefreshBg();
+    if (window.pitToast) pitToast('実績カウント日を ' + v + ' にしました（返車日も揃えました）');
+    if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+  };
+
   function archiveHtml(c, csShaken, csCoat){
     function row(label, valueHtml){ return '<div class="cv-arow"><span class="cv-ak">'+esc(label)+'</span><span class="cv-av">'+valueHtml+'</span></div>'; }
     function done(on){ return on ? '<span class="cv-adone">済</span>' : ''; }
@@ -842,10 +914,23 @@
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
   };
   window.cvSetReturn = function(v){
+    /* 🔴 v1.57.0 実績になったカードの返車日は**実績カウント日も動かす**ので、管理だけ。 */
+    if (_c && _c.status === 'returned' && !canEditResultDate()){
+      if (window.UI && UI.alert) UI.alert('実績になったカードの返車日を直せるのは、設定権限（管理）のある人だけです。', { title: '変更できません' });
+      return;
+    }
+    const _before = _c ? (_c.completedAt || '（なし）') : '';
     _c.returnDateFinal = v || null;
     if(v && !_c.returnDate) _c.returnDate = v;
     // 実績（返車完了）カードで返車日を直したら、確定返車日＝実績カレンダーの表示日(completedAt)も合わせて動かす v0.118.1
-    if(v && _c.status === 'returned'){ _c.returnDate = v; _c.completedAt = v; }
+    if(v && _c.status === 'returned'){
+      _c.returnDate = v; _c.completedAt = v;
+      if (_before !== v){
+        try { if (window.logFlow) logFlow(_c, '確定返車日を ' + v + ' に変更（実績カウント日も ' + _before + ' → ' + v + '）'); } catch(e){}
+        try { if (window.pitLog) pitLog('実績カウント日を変更（返車日から）', { cardId: _c.id, kind: 'result',
+          label: ((window.pitCustName?pitCustName(_c):_c.customer) || '') + ' 様' + (_c.car ? ' / ' + _c.car : '') + '　' + _before + ' → ' + v }); } catch(e){}
+      }
+    }
     save(); cvRefreshBg();
   };
   // 実績移行後のロック表示を、✏️編集で入力欄に切り替える（DOM切替のみ・保存は各入力のonchange/OKで）v0.118.0

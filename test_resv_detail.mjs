@@ -597,7 +597,7 @@ console.log('\n── 版とキャッシュ番号 ──');
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
               (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
-  ok('版は v1.56.3', vs[0] === '1.56.3', vs);
+  ok('版は v1.57.0', vs[0] === '1.57.0', vs);
   ok('直したファイルにキャッシュ番号が付いている',
      /card-view\.js\?v=\d+/.test(ix) && /card-detail\.js\?v=\d+/.test(ix) && /db-pit\.js\?v=\d+/.test(ix)
      && /loaner\.js\?v=\d+/.test(ix) && /card-view\.css\?v=\d+/.test(ix));

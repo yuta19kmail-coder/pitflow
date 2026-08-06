@@ -121,10 +121,51 @@
     onWash: function(v){ setWash(v === '1'); },
     onLine: function(v){ setLine(v === '1'); },
     close: function(ok){
-      var bd = el('rp-backdrop'); if (bd) bd.classList.remove('show');
-      var p = pending; pending = null;
-      if (!p) return;
-      if (!ok){ if (window.pitToast) pitToast('やめました'); return; }
+      var p = pending;
+      if (!ok){
+        hide(); pending = null;
+        if (p && window.pitToast) pitToast('やめました');
+        return;
+      }
+      if (!p){ hide(); return; }
+
+      /* ===================================================================
+         🔴 v1.57.0（ゆうた指定）**完TEL済で、返車予定日が過去だったら1回聞く。**
+         -------------------------------------------------------------------
+         ◎なぜ
+           もう渡し終わった車を、あとから記録することがある。そのまま入れると
+           **過ぎた日の返車カレンダーに置かれて、誰も見に行かない**。
+         ◎聞いた結果
+           ・「実績に登録する」… **返車カレンダーを通さず、その日付でそのまま実績へ**（返車済み扱い）
+           ・「日付を直す」　… ポップアップは閉じずに、日付欄へ戻す
+         ⚠ **今日は過去ではない。今日より前**だけが対象。
+         ⚠ 「完TEL依頼」には日付の欄が無いので、こちらは今までどおり（ゆうた確認済み）。
+         =================================================================== */
+      if (p.mode === 'callDone'){
+        var dChk = el('rp-date') ? el('rp-date').value : '';
+        if (dChk && dChk < todayISO()){
+          var msg = '過去の日付です。このまま実績に登録しますか？';
+          var det = '返車予定日が ' + dChk + '（今日より前）になっています。'
+                  + '「実績に登録する」を選ぶと、返車カレンダーには置かず、その日付でそのまま実績（売上）に入れます。';
+          var ask = (window.UI && UI.confirm)
+            ? UI.confirm(msg, { title: '過去の日付です', detail: det, ok: '実績に登録する', cancel: '日付を直す' })
+            : Promise.resolve(window.confirm(msg + '\n\n' + det));
+          ask.then(function (yes){
+            if (!yes){ try { el('rp-date').focus(); } catch (e) {} return; }   /* 開けたまま直してもらう */
+            hide(); pending = null; apply(p, true);
+          });
+          return;
+        }
+      }
+      hide(); pending = null; apply(p, false);
+    }
+  };
+
+  function hide(){ var bd = el('rp-backdrop'); if (bd) bd.classList.remove('show'); }
+
+  /* 入力された内容をカードに書き込む。
+     toResult=true ＝ 返車カレンダーを通さず、その日付でそのまま実績に入れる（v1.57.0） */
+  function apply(p, toResult){
       var c = p.card;
       var isDone = (p.mode === 'callDone');
 
@@ -152,7 +193,24 @@
         c.returnStage = 'returnWait';
         c.completeCallAt = c.completeCallAt || todayISO();
         if (c.coverCall && typeof c.coverCall === 'object'){ c.coverCall.done = true; if(!c.coverCall.at){ var dd=new Date(); c.coverCall.at=(dd.getMonth()+1)+'/'+dd.getDate(); } }
-        if (window.logFlow) logFlow(c, d ? ('完TEL済 → 返車予定 '+d) : '完TEL済 → 返車未定');
+
+        if (toResult && d){
+          /* 🔴 v1.57.0 過去の日付＋ゆうたOK＝**返車カレンダーを通さず、その日で実績に入れる**。
+             ⚠ 当日ビューの「返車済みにする」（today.js の pitTodayReturn）と**同じ形に揃える**こと。
+                揃っていないと、実績ビュー・売上・来店履歴のどれかで見え方が食い違う。
+                　status='returned' ／ completedAt＝実績に乗る日 ／ amountFinal＝売上を固める */
+          c.status = 'returned';
+          c.completedAt = d;
+          if (c.amountFinal == null || c.amountFinal === ''){
+            c.amountFinal = (window.pitEstAmount ? (c.estAmount || pitEstAmount(c.workType)) : (c.estAmount || 0));
+          }
+          if (window.logFlow) logFlow(c, '完TEL済 → 過去の日付なので、そのまま実績へ（' + d + '）');
+          if (window.pitLog) pitLog('過去の日付で実績に登録', { cardId: c.id, kind: 'out',
+            label: ((window.pitCustName?pitCustName(c):c.customer) || '') + ' 様' + (c.car ? ' / ' + c.car : '')
+                 + ' / 実績日 ' + d + (c.amountFinal ? ' / ¥' + Number(c.amountFinal).toLocaleString() : '') });
+        } else {
+          if (window.logFlow) logFlow(c, d ? ('完TEL済 → 返車予定 '+d) : '完TEL済 → 返車未定');
+        }
       } else {
         c.returnStage = 'callWait';
         if (window.logFlow) logFlow(c, '完TEL依頼（金額入力・完TEL待ちへ）');
@@ -161,7 +219,10 @@
       if (window.PitDB) PitDB.save();
       if (state.currentView) showView(state.currentView);
       if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
-      if (window.pitToast) pitToast(isDone ? (c.returnDate ? '返車予定に入れました': '返車未定に入れました') : '完TEL待ちに入れました');
-    }
-  };
+      if (window.pitToast){
+        pitToast(!isDone ? '完TEL待ちに入れました'
+               : (c.status === 'returned' ? ('実績に登録しました（' + c.completedAt + '）')
+               : (c.returnDate ? '返車予定に入れました' : '返車未定に入れました')));
+      }
+  }
 })();
