@@ -2260,10 +2260,20 @@ function bindCardFormEvents(root){
         c.loanerTo = drag.b;
         // 代車の範囲ドラッグに連動（v0.101.3）：貸出開始日を入庫日に再入力＋最終貸出日までを預かり日数に＋内容メモへ返車日を自動記入
         c.reserveDate = drag.a;   // 予約日が入っていても代車開始日で入庫日を再入力
-        (function(){   // 預かり日数＝貸出開始〜最終日（両端含む）。例：車検デフォ5→2週間貸出なら14
-          var pa = drag.a.split('-'), pb = drag.b.split('-');
-          var da = new Date(+pa[0], +pa[1]-1, +pa[2]), db = new Date(+pb[0], +pb[1]-1, +pb[2]);
-          c.estHoldDays = Math.round((db - da) / 86400000) + 1;
+        (function(){
+          /* 🔴 v1.59.0（ゆうたの決めごと）**預かり日数は「日をまたいだ数」＝泊数。当日返しは 0。**
+             ⚠ ここは**両端を数えていた**ので、8/1〜8/5 の貸出で 5（本当は4泊）が入っていた＝1日多い。
+                入力欄の案内（「当日仕上げは0」）とも、ダッシュボードの占有計算（入庫日＋預かり日数）とも
+                食い違っていたので、**決めごとに合わせて直した。**
+             ⚠ 数え方は views.js の `pitHoldDays` に一本化。**ここで組み立てない。** */
+          if (window.pitHoldDays){
+            var n = pitHoldDays(drag.a, drag.b);
+            if (n != null) c.estHoldDays = n;
+          } else {
+            var pa = drag.a.split('-'), pb = drag.b.split('-');
+            var da = new Date(+pa[0], +pa[1]-1, +pa[2]), db = new Date(+pb[0], +pb[1]-1, +pb[2]);
+            c.estHoldDays = Math.round((db - da) / 86400000);
+          }
         })();
         (function(){   // 作業内容メモに「代車による返車日M/Dまで」を自動記入（再ドラッグ時は既存の同種行を更新）
           var pb = drag.b.split('-');

@@ -220,6 +220,60 @@ function daysFromToday(s){                            // s - 今日（整数日�
   const t = new Date(); t.setHours(0,0,0,0);
   return Math.round((d - t) / 86400000);
 }
+/* ===================================================================
+   📏 v1.59.0（ゆうた指定）**日数の数え方をここ1か所に決める。**
+   -------------------------------------------------------------------
+   ◎ゆうたの言葉
+     「**基本的には入れた日を1日目と定めていい。ただし当日返車だと預かり日数としては0日と
+       カウントしたい（朝預かって夕方返せば、実質 日をまたいで使わないというカウントになるため）**」
+   ◎正体＝**ズレではなく、別々の2つの数字を同じ「日数」と呼んでいた。**
+     ホテルの「3泊4日」と同じ。**日目 ＝ 泊数 ＋ 1**。式が1本あればどちらも嘘をつかない。
+
+     | 呼び名 | 意味 | 入庫日に返したら |
+     |---|---|---|
+     | **◯日目**（`pitDayNo`） | 序数。**入れた日が1日目** | **1日目** |
+     | **預かり日数**（`pitHoldDays`） | 泊数。**日をまたいだ数**＝返車日 − 入庫日 | **0日** |
+
+   ⚠ すでに社内の定義は「0」側で揃っていた
+      （概算 預かり日数の入力欄＝「当日仕上げは0」／ダッシュボードの占有＝入庫日＋預かり日数）。
+      食い違っていたのは**実績カードの「預かり期間」表示だけ**（両端を数えていた）。
+   🔴 **数え方はカレンダーの日付で。**（時刻は見ない＝夕方入庫でも翌日は2日目）
+      ⚠ v1.58.0 まで外注・予約ビュー・カード詳細は「経過24時間」で数えていて、
+        ホバー詳細だけカレンダーだった。**ここで揃えた。**
+   🔴 **代車は別物**＝「使った日数」なので今までどおり両端を含める（ゆうた確認済み）。
+   =================================================================== */
+/* 「◯日目」＝入れた日を1日目。ISO日付（YYYY-MM-DD）から。 */
+function pitDayNo(fromISO){
+  const n = daysFromToday(fromISO);
+  return (n == null) ? null : (1 - n);
+}
+/* 「◯日目」＝ミリ秒から（フローの記録・phaseAt 用）。時刻は切り捨ててカレンダーで数える。 */
+function pitDayNoMs(ms){
+  if (ms == null) return null;
+  const d = new Date(+ms); if (isNaN(d.getTime())) return null;
+  d.setHours(0,0,0,0);
+  const t = new Date(); t.setHours(0,0,0,0);
+  return Math.round((t - d) / 86400000) + 1;
+}
+/* 「預かり日数」＝泊数（日をまたいだ数）。当日返車は 0。分からなければ null。 */
+function pitHoldDays(inISO, outISO){
+  if (!inISO || !outISO) return null;
+  const a = new Date(String(inISO) + 'T00:00:00'), b = new Date(String(outISO) + 'T00:00:00');
+  if (isNaN(a.getTime()) || isNaN(b.getTime())) return null;
+  return Math.round((b - a) / 86400000);
+}
+/* 画面に出す「預かり日数」の言葉。⚠ 0 は「0日」ではなく **「当日返し」**（ゆうた選択）。 */
+function pitHoldDaysText(inISO, outISO){
+  const n = pitHoldDays(inISO, outISO);
+  if (n == null) return null;
+  if (n === 0) return '当日返し';
+  return (n < 0) ? '—' : (n + '日');
+}
+window.pitDayNo = pitDayNo;
+window.pitDayNoMs = pitDayNoMs;
+window.pitHoldDays = pitHoldDays;
+window.pitHoldDaysText = pitHoldDaysText;
+
 function loanerDueLabel(c){                           // 代車期限：〜7/4（あと3日）
   if (!c.needLoaner) return '';
   if (!c.returnDate) return '代車（返車日 未定）';
@@ -231,8 +285,7 @@ function loanerDueLabel(c){                           // 代車期限：〜7/4�
 function holdDaysLabel(c, workLabel){                 // 預かり：6/10〜（5日目）
   const head = workLabel ? (workLabel + '　') : '';
   if (!c.reserveDate) return head + '預かり日 未定';
-  const n = daysFromToday(c.reserveDate);             // 入庫日（過去=マイナス）
-  const dayNo = (n == null) ? null : (1 - n);         // 入庫日当日＝1日目
+  const dayNo = pitDayNo(c.reserveDate);              // 🔴 v1.59.0 数え方は pitDayNo に一本化（入庫日＝1日目）
   return head + '預かり ' + fmtMD(c.reserveDate) + '〜' + (dayNo ? '（' + dayNo + '日目）' : '');
 }
 function escAttr(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }

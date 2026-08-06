@@ -505,7 +505,8 @@ function cardHtml(c, opts){
     if (c.status === 'outsource'){
       /* 🔴 v1.58.0 起点は**フローの記録**（pitPhaseStartMs）。写しを直接見ない。 */
       var _odMs = window.pitPhaseStartMs ? pitPhaseStartMs(c) : (c.phaseAt || null);
-      var _odN = (_odMs != null) ? (Math.floor((Date.now() - _odMs) / 86400000) + 1) : null;
+      /* 🔴 v1.59.0 数え方は pitDayNoMs に一本化（カレンダー基準） */
+      var _odN = window.pitDayNoMs ? pitDayNoMs(_odMs) : ((_odMs != null) ? (Math.floor((Date.now() - _odMs) / 86400000) + 1) : null);
       var _odTxt = (_odN != null) ? (_odN + '日目') : '';
       var _oName = (c.outsourceTo || '外注先未定') + (c.outsourceNote ? ' ' + c.outsourceNote : '');
       h += '<div class="pcm-out"><i data-ic=external data-ics=16></i> <span class="pcm-outn">' + at(_oName) + '</span>' + (_odTxt ? '<span class="pcm-outd">' + _odTxt + '</span>' : '') + '</div>';

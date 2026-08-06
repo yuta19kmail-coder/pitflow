@@ -12,8 +12,11 @@
   function mdShort(iso){ if(!iso) return ''; var p=String(iso).split('-'); return (p.length>=3)?((+p[1])+'/'+(+p[2])):iso; }
   /* 🔴 v1.58.0 「外注に出してから◯日目」の起点は**フローの記録**（pitPhaseStartMs）。
      写し（phaseAt）を直接見ると、フローの日時を直しても日数が変わらない。 */
+  /* 🔴 v1.59.0 数え方は views.js の pitDayNoMs に一本化（**カレンダー基準・出した日が1日目**）。
+     ⚠ v1.58.0 まではここだけ「経過24時間」だったので、夕方出すと翌日もまだ1日目だった。 */
   function dayNo(c){
     var ms = window.pitPhaseStartMs ? pitPhaseStartMs(c) : (c.phaseAt || null);
+    if (window.pitDayNoMs) return pitDayNoMs(ms);
     return (ms != null) ? (Math.floor((Date.now()-ms)/86400000)+1) : null;
   }
 

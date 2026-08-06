@@ -214,10 +214,17 @@
       var retF = c.returnDateFinal || c.returnDate || '';
       // ① 預かり期間（入庫日〜最終返車日）
       var hStart = c.reserveDate || '';
-      var hd = _periodDays(hStart, retF);
+      /* 🔴 v1.59.0（ゆうた指定）**預かり日数は「日をまたいだ数」＝泊数**。
+         朝預かって夕方返せば駐車場は日をまたがないので **0＝「当日返し」**。
+         ⚠ ここは両端を数えていた（`_periodDays`）ので当日返車が「1日間」になっていた。**そこだけの食い違い。**
+         ⚠ 数え方は views.js の `pitHoldDays` / `pitHoldDaysText` に一本化。**ここで組み立てない。** */
+      var hdTxt = window.pitHoldDaysText ? pitHoldDaysText(hStart, retF) : null;
+      var hdNum = window.pitHoldDays ? pitHoldDays(hStart, retF) : null;
       var hsub = (hStart && retF && window.fmtMD) ? (fmtMD(hStart)+'〜'+fmtMD(retF)) : (hStart && window.fmtMD ? fmtMD(hStart)+'〜' : '—');
       h += '<div class="ph-stat s-hold"><div class="ph-stat-lb">預かり期間</div>'
-         + '<div class="ph-stat-num">'+(hd!=null?hd:'—')+'<span class="u">日間</span></div>'
+         + '<div class="ph-stat-num'+(hdNum===0?' ph-sameday':'')+'">'
+         + (hdTxt == null ? '—' : (hdNum === 0 ? '当日返し' : (hdNum + '<span class="u">日</span>')))
+         + '</div>'
          + '<div class="ph-stat-sub">'+esc(hsub)+'</div></div>';
       // ② 代車（代車スケジュールから 期間）
       if (!c.needLoaner){
@@ -228,6 +235,8 @@
         var _loNm = _lo2 ? (_lo2.model || _lo2.name || '') : (c.loanerId || '');
         var lStart = c.loanerFrom || '';
         var lEnd = c.loanerTo || retF || '';
+        /* ⚠ 代車は**今までどおり「使った日数」（両端含む）**。当日貸出・当日返却でも1日埋まるため。
+           預かり日数（泊数）とは**わざと数え方が違う**（2026-08-06 ゆうた確認済み）。 */
         var ld = _periodDays(lStart, lEnd);
         var lsub = (lStart && lEnd && window.fmtMD) ? (fmtMD(lStart)+'〜'+fmtMD(lEnd)) : '期間未定';
         h += '<div class="ph-stat s-ldone"><div class="ph-stat-lb">代車</div>'
@@ -242,14 +251,16 @@
     } else {
 
     // ① 預かり
-    var holdN = (function(){ var n = window.daysFromToday ? daysFromToday(c.reserveDate) : null; return (n==null)?null:(1-n); })();
+    /* 🔴 v1.59.0 数え方は views.js の pitDayNo に一本化（入庫日＝1日目・カレンダー基準） */
+    var holdN = window.pitDayNo ? pitDayNo(c.reserveDate) : null;
     h += '<div class="ph-stat s-hold"><div class="ph-stat-lb">預かり</div>'
        + '<div class="ph-stat-num">'+(holdN!=null?holdN:'—')+'<span class="u">日目</span></div>'
        + '<div class="ph-stat-sub">'+(c.reserveDate&&window.fmtMD?(fmtMD(c.reserveDate)+'〜'):'未定')+'</div></div>';
 
     // ② このフェーズ（外注の時は「完了予定 〇/〇 ・ 〇日目」）
     var pms = phaseStartMs(c);
-    var phaseN = (function(){ var n=daysSinceMs(pms); return (n==null)?null:(n+1); })();
+    /* 🔴 v1.59.0 フェーズの「◯日目」も pitDayNoMs に一本化（カレンダー基準） */
+    var phaseN = window.pitDayNoMs ? pitDayNoMs(pms) : (function(){ var n=daysSinceMs(pms); return (n==null)?null:(n+1); })();
     if (c.status === 'outsource'){
       var dueTxt = c.outsourceDue ? (function(){ var p=String(c.outsourceDue).split('-'); return (+p[1])+'/'+(+p[2]); })() : '未定';
       h += '<div class="ph-stat s-phase"><div class="ph-stat-lb">外注作業</div>'

@@ -321,7 +321,9 @@
       const opts = partners.map(function(p){ return '<option value="'+esc(p)+'"'+(p===c.outsourceTo?' selected':'')+'>'+esc(p)+'</option>'; }).join('');
       /* 🔴 v1.58.0 起点は**フローの記録**（pitPhaseStartMs）。写し（phaseAt）を直接見ない。 */
       const _inMs = window.pitPhaseStartMs ? pitPhaseStartMs(c) : (c.phaseAt || null);
-      const inN = (_inMs != null) ? (Math.floor((Date.now()-_inMs)/86400000)+1) : null;
+      /* 🔴 v1.59.0 数え方は views.js の pitDayNoMs に一本化（**カレンダー基準・入った日が1日目**）。
+         ⚠ v1.58.0 まではここだけ「経過24時間」で数えていたので、夕方入庫だと翌日もまだ1日目だった。 */
+      const inN = window.pitDayNoMs ? pitDayNoMs(_inMs) : ((_inMs != null) ? (Math.floor((Date.now()-_inMs)/86400000)+1) : null);
       let dueInfo = '—';
       if (c.outsourceDue){
         const n = window.daysFromToday ? daysFromToday(c.outsourceDue) : null;

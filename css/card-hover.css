@@ -104,6 +104,8 @@
 .ph-stat-lb{ font-size:10px; font-weight:700; color:var(--text2); line-height:1.2; min-height:24px; display:flex; align-items:center; justify-content:center; }
 .ph-stat-num{ font-size:20px; font-weight:800; line-height:1.05; margin-top:3px; color:var(--text); }
 .ph-stat-num .u{ font-size:11px; font-weight:700; color:var(--text2); margin-left:1px; }
+/* 🔴 v1.59.0 預かり0日＝「当日返し」。数字ではなく言葉なので、少し小さくして収める */
+.ph-stat-num.ph-sameday{ font-size:15px; letter-spacing:-.3px; }
 .ph-stat-sub{ font-size:10px; color:var(--text3); margin-top:2px; }
 .ph-meter{ height:5px; border-radius:3px; background:var(--bg); overflow:hidden; margin-top:5px; }
 .ph-meter i{ display:block; height:100%; background:var(--green); }
