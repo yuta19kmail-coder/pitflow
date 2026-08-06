@@ -33,6 +33,8 @@
   function norm(s){ return String(s||'').replace(/\s+/g,'').replace(/[ァ-ヶ]/g,function(ch){return String.fromCharCode(ch.charCodeAt(0)-0x60);}).toLowerCase(); }
   function custs(){ if(!Array.isArray(w.state&&state.customers)) state.customers=[]; return state.customers; }
   function findCust(id){ return custs().find(function(x){ return x && x.id===id; })||null; }
+  /* 🔴 v1.53.0 漢字が無いお客様はカナを名前として出す（customers.js と同じ決まり） */
+  function dispName(c){ return (w.pitCustDispName ? pitCustDispName(c) : (String((c&&c.name)||'').trim() || String((c&&c.kana)||'').trim())); }
   function toast(m){ if(w.pitToast) pitToast(m); }
   function newId(p){ return p+Date.now()+Math.floor(Math.random()*1000); }
   function frontStaffList(){ return ((w.state&&state.staff)||[]).filter(function(s){return s.front;}).map(function(s){return s.name;}); }
@@ -73,7 +75,7 @@
     var h = '';
 
     h += '<div class="cm-head"><i data-ic=plus data-ics=16></i> '+(isNew?'新規顧客登録':'車両を追加')+
-         (cust?' <span class="cm-sub">'+esc(cust.name||'(無名)')+' 様</span>':'')+
+         (cust?' <span class="cm-sub">'+esc(dispName(cust)||'(無名)')+' 様</span>':'')+
          '<button class="cm-x" onclick="crCancel()" title="閉じる"><i data-ic=close data-ics=16></i></button></div>';
     h += '<div class="cm-body cr-body">';
 
@@ -81,9 +83,11 @@
     if (isNew){
       h += '<div class="cr-sec"><i data-ic=user data-ics=15></i> お客様</div>';
       h += '<div class="cr-row2">'+
-             '<div class="cr-f"><label>お客様名 <b class="cr-req">必須</b></label><input id="cr-name" class="cr-in" placeholder="小林 太郎" autocomplete="off"></div>'+
+             '<div class="cr-f"><label>お客様名（漢字）</label><input id="cr-name" class="cr-in" placeholder="小林 太郎" autocomplete="off"></div>'+
              '<div class="cr-f"><label>カナ</label><input id="cr-kana" class="cr-in" placeholder="コバヤシ タロウ" autocomplete="off"></div>'+
            '</div>';
+      /* 🔴 v1.53.0 漢字が分からない新規のお客様は**カナだけでOK**（予約カードと同じ運用） */
+      h += '<div class="cr-hint" style="margin:-4px 0 10px">漢字が分からないときは<b>カナだけ</b>でも登録できます（どちらか入っていればOK）。</div>';
       h += '<div class="cr-sub">連絡先</div><div id="cr-contacts">'+contactRow(null,true)+'</div>';
       h += '<button type="button" class="cr-add" onclick="crAddContact()">＋ 連絡先を足す</button>';
       /* LINE（Lステップ）＝人につく情報。ここで最初から登録できる（ゆうた指定） */
@@ -95,7 +99,7 @@
              '<a id="cr-lstep-link" class="ct-bline" target="_blank" rel="noopener" style="display:none"><i data-ic=link data-ics=15></i> Lステップ</a>'+
            '</div>';
     } else {
-      h += '<div class="cr-who"><i data-ic=user data-ics=15></i> '+esc(cust?(cust.name||'(無名)'):'')+' 様に車を足します'+
+      h += '<div class="cr-who"><i data-ic=user data-ics=15></i> '+esc(cust?(dispName(cust)||'(無名)'):'')+' 様に車を足します'+
            '<span class="cr-whosub">お客様の名前・連絡先・LINE はそのままです</span></div>';
     }
 
@@ -188,7 +192,10 @@
     return out;
   }
   /* 同じナンバーが他所に登録されていないか（PitFlow はナンバーで車を見分けるので重複は禁止） */
+  /* 🔴 v1.53.0 「0」「なし」「未定」などは車を見分ける鍵にしない（customers.js と同じ物差しを借りる） */
+  function realPlate(pl){ return w.pitIsRealPlate ? pitIsRealPlate(pl) : !!String(pl||'').trim(); }
   function plateOwner(plate, skipCustId){
+    if(!realPlate(plate)) return null;
     var pl=norm(plate); if(!pl) return null;
     var hit=null;
     custs().forEach(function(c){
@@ -209,12 +216,13 @@
     var karteNo=g('cr-karte'), boardId=g('cr-board'), division=g('cr-div'), frontStaff=g('cr-front');
     var hasVeh = !!(pv || plate || maker || car || karteNo);
 
-    if(isNew && !g('cr-name')){ toast('お客様名を入れてください'); var n=d.getElementById('cr-name'); if(n) n.focus(); return; }
+    /* 🔴 v1.53.0 漢字かカナのどちらかが入っていればOK（カナだけ運用を受ける） */
+    if(isNew && !g('cr-name') && !g('cr-kana')){ toast('お客様名（漢字）かカナのどちらかを入れてください'); var n=d.getElementById('cr-name'); if(n) n.focus(); return; }
     if(pv && !karteNo){ toast('都度車両変動は、共通で使うカルテNo.が要ります'); var k=d.getElementById('cr-karte'); if(k) k.focus(); return; }
     if(!isNew && !hasVeh){ toast('車の内容を入れてください'); return; }
     if(plate){
       var owner=plateOwner(plate);
-      if(owner && (isNew || owner.id!==_reg.custId)){ toast('そのナンバーは「'+(owner.name||'(無名)')+'」様で登録済みです'); return; }
+      if(owner && (isNew || owner.id!==_reg.custId)){ toast('そのナンバーは「'+(dispName(owner)||'(無名)')+'」様で登録済みです'); return; }
       if(owner && !isNew && owner.id===_reg.custId){ toast('そのナンバーはこのお客様にもう登録されています'); return; }
     }
 
@@ -240,7 +248,7 @@
       cust.updatedAt=Date.now();
     }
     if(w.PitDB) PitDB.save();
-    if(w.pitOpLog) try{ pitOpLog(isNew?'顧客を登録':'車両を追加', (cust.name||'')+(veh?(' / '+(pv?'都度車両変動':(veh.plate||veh.car||''))):'')); }catch(e){}
+    if(w.pitOpLog) try{ pitOpLog(isNew?'顧客を登録':'車両を追加', (dispName(cust)||'')+(veh?(' / '+(pv?'都度車両変動':(veh.plate||veh.car||''))):'')); }catch(e){}
     toast(isNew?'登録しました':'車両を追加しました');
 
     var after=_reg.onSaved, back=_reg.back, cid=cust.id;

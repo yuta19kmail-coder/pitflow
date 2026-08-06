@@ -60,28 +60,107 @@
   function isPerVisit(v){ return !!(v && v.perVisit); }
   window.pitIsPerVisitVeh = isPerVisit;
 
-  /* ===== 入庫カードから upsert（人を特定→車両を upsert） ===== */
+  /* 🔴 v1.53.0 ①（ゆうた確認）**カナだけで受けたお客様も顧客として登録する**
+     ⚠ 「漢字が分からない新規のお客様はカナだけでOK」（v1.25.0）で受けた予約が、
+        **1枚残らず顧客控えに残っていなかった**（2026-08-06 本番調査で14枚／カナだけの予約は100%取りこぼし）。
+        原因＝控えを作る側が**漢字の欄しか見ていなかった**。画面はカナを名前として出しているのに、である。
+     ⚠ 表示の決まりは予約カード（`pitCustName`）と同じ＝**漢字が無ければカナを名前として出す。**
+        ここ以外で `cust.name` を直に出さないこと。 */
+  function custDispName(cust){
+    const n = String((cust&&cust.name)||'').trim();
+    if(n) return n;
+    return String((cust&&cust.kana)||'').trim();
+  }
+  window.pitCustDispName = custDispName;
+
+  /* 🔴 v1.53.0 ②④（ゆうた確認）**ナンバーとして意味をなさない値は「車の見分け」に使わない**
+     ⚠ 本番には整備ソフト取込の受け皿として **ナンバーが「0」の車が82台**（「1」が2台）あった。
+        このまま照合に使うと、「0」と打った予約がその82台のうちの誰かに吸い込まれ、
+        **名前もTELも上書きされる**（＝別のお客様の乗っ取り）。
+     ⚠ 「新規車両」スイッチが入れる文言も同じ穴。使うほど前の人を乗っ取る（本番の実害は0件のうちに塞ぐ）。
+     ⚠ **データは消さない**＝照合に使わないだけ。ただし**控えに新しく保存する時は空にする**（これ以上増やさない）。 */
+  /* ⚠ norm() はカタカナをひらがなに直すので、この一覧も同じ物差しに通してから比べる
+        （「ナンバーなし」をそのまま比べても一生一致しない） */
+  const PLATE_NG = ['なし','無し','未定','不明','無','新規車両','ナンバーなし','ナンバー無し','番号なし','未登録','仮ナンバー','-','ー','―','−','--','ーー','・','／','/'].map(norm);
+  function isRealPlate(plate){
+    const s = String(plate==null?'':plate).trim();
+    if(!s) return false;
+    const k = norm(s);
+    if(!k) return false;
+    if(/^[0-9]{1,2}$/.test(k)) return false;          /* 「0」「1」「00」… 数字だけ1〜2文字は番号ではない */
+    if(PLATE_NG.indexOf(k)>=0) return false;
+    if(k.length<3) return false;                       /* 3文字未満は番号として成り立たない */
+    return true;
+  }
+  window.pitIsRealPlate = isRealPlate;
+
+  /* ===== 入庫カードから upsert（人を特定→車両を upsert） =====
+     🔴 v1.53.0 ③（ゆうた確認）**どうやってその人だと決めたか**を一緒に返す。
+        ナンバーで当てた時だけ「名前が違うなら上書きしない」という守りを入れるため。 */
   function _findPerson(c, vehicle){
     const arr=list();
-    if(c.customerId){ const p=arr.find(x=>x.id===c.customerId); if(p) return p; }
-    if(vehicle.plate){ const p=arr.find(x=>Array.isArray(x.vehicles)&&x.vehicles.some(v=>norm(v.plate)===norm(vehicle.plate))); if(p) return p; }
-    const nm=norm(c.customer), pt=norm((c.contacts&&c.contacts.find(x=>x.primary)||{}).tel||c.tel);
-    if(nm){ const p=arr.find(x=>norm(x.name)===nm && (pt ? norm(primaryTel(x))===pt : true)); if(p) return p; }
+    if(c.customerId){ const p=arr.find(x=>x.id===c.customerId); if(p) return {p:p, why:'id'}; }
+    if(isRealPlate(vehicle.plate)){
+      const p=arr.find(x=>Array.isArray(x.vehicles)&&x.vehicles.some(v=>isRealPlate(v.plate)&&norm(v.plate)===norm(vehicle.plate)));
+      if(p) return {p:p, why:'plate'};
+    }
+    const nm=norm(c.customer), kn=norm(c.kana);
+    const pt=norm((c.contacts&&c.contacts.find(x=>x.primary)||{}).tel||c.tel);
+    /* 名前（漢字）で引く。TELがあればTELも一致すること。
+       🔴 TELが空のときは名前だけで決めない＝**カナも一致していること**を条件に足す（同姓同名の別人対策）。
+          ⚠ どちらかにカナが無い時は今までどおり名前だけで一致とみなす（昔の控えを切らないため）。 */
+    if(nm){
+      const p=arr.find(function(x){
+        if(norm(x.name)!==nm) return false;
+        if(pt) return norm(primaryTel(x))===pt;
+        const xk=norm(x.kana);
+        if(kn && xk) return kn===xk;
+        return true;
+      });
+      if(p) return {p:p, why:'name'};
+    }
+    /* 🔴 v1.53.0 ① カナだけで受けたお客様＝カナ＋TELで引く（TELが無ければカナだけ） */
+    if(!nm && kn){
+      const p=arr.find(function(x){
+        if(norm(x.kana)!==kn) return false;
+        if(pt) return norm(primaryTel(x))===pt;
+        return !String(x.name||'').trim();     /* 漢字を持っている人には、カナだけの予約をくっつけない */
+      });
+      if(p) return {p:p, why:'kana'};
+    }
     return null;
   }
   function upsertCustomerFromCard(c){
     if(!c) return;
     const name=(c.customer||'').trim();
+    const kana=(c.kana||'').trim();
     const _fm0 = window.pitStaffByName ? window.pitStaffByName(c.frontStaff) : null;   /* v1.5.0：担当をメンバーに結びつける */
-    const vehicle={ plate:(c.plate||'').trim(), maker:(c.maker||'').trim(), car:(c.car||'').trim(), boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(), frontStaffId:(_fm0?_fm0.id:''), karteNo:(c.karteNo||'').trim() };
-    if(!name && !vehicle.plate) return;
+    const rawPlate=(c.plate||'').trim();
+    const vehicle={ plate:(isRealPlate(rawPlate)?rawPlate:''), maker:(c.maker||'').trim(), car:(c.car||'').trim(), boardId:c.boardId||'', division:c.division||'', frontStaff:(c.frontStaff||'').trim(), frontStaffId:(_fm0?_fm0.id:''), karteNo:(c.karteNo||'').trim() };
+    /* 🔴 v1.53.0 ① 漢字が無くても **カナがあれば作る**（ここが14枚の取りこぼしの正体） */
+    if(!name && !kana && !vehicle.plate) return;
     const contacts = Array.isArray(c.contacts)
       ? c.contacts.filter(x=>(x.tel||'').trim()||(x.label||'').trim()).map(x=>({tel:(x.tel||'').trim(),label:(x.label||'').trim(),primary:!!x.primary}))
       : ((c.tel||'').trim() ? [{tel:(c.tel||'').trim(),label:'個人携帯',primary:true}] : []);
     if(contacts.length && !contacts.some(x=>x.primary)) contacts[0].primary=true;
-    let p=_findPerson(c, vehicle);
-    if(!p){ p={ id:'cu'+Date.now()+Math.floor(Math.random()*1000), name, kana:(c.kana||'').trim(), contacts, vehicles:[], updatedAt:Date.now() }; list().push(p); }
-    else { p.name=name||p.name; p.kana=(c.kana||'').trim()||p.kana; if(contacts.length) p.contacts=contacts; }
+    const hit=_findPerson(c, {plate:vehicle.plate});
+    let p = hit ? hit.p : null;
+    /* 🔴 v1.53.0 ③（ゆうた確認）**ナンバーで当てたのに名前が明らかに違う＝別人**。
+       ⚠ 前はここで問答無用に名前・カナ・連絡先を上書きしていたので、
+          ナンバーの打ち間違い／前オーナーの車で **既存のお客様が別人に化けていた**。
+       ⚠ 勝手に新しい人も作らない（同じ方の二重登録が増えるため）。**知らせて何もしない**のが安全側。
+          正しく結び付けたい時は、カードの「顧客呼び出し」で選んでもらう。 */
+    if(p && hit.why==='plate'){
+      const mine = norm(name) || norm(kana);
+      const theirs = norm(p.name) || norm(p.kana);
+      if(mine && theirs && mine!==theirs){
+        if(window.pitToast) pitToast('このナンバーは「'+(custDispName(p)||'(無名)')+'」様で登録済みです。顧客控えは変更していません');
+        if(window.pitOpLog) try{ pitOpLog('顧客控えの更新を見送り', 'ナンバー '+rawPlate+' は別のお客様（'+(custDispName(p)||'(無名)')+'）で登録済み'); }catch(e){}
+        return;
+      }
+    }
+    if(!p){ p={ id:'cu'+Date.now()+Math.floor(Math.random()*1000), name, kana, contacts, vehicles:[], updatedAt:Date.now() }; list().push(p); }
+    else { p.name=name||p.name; p.kana=kana||p.kana; if(contacts.length) p.contacts=contacts; }
     // v0.93.0 LINEは人単位で保持（カードに値があれば更新・無ければ既存維持）
     if(c.lineStatus) p.lineStatus=c.lineStatus;
     if((c.lstepId||'').trim()) p.lstepId=(c.lstepId||'').trim();
@@ -105,15 +184,32 @@
         return;
       }
     }
-    let v = vehicle.plate ? p.vehicles.find(x=>norm(x.plate)===norm(vehicle.plate)) : null;
+    /* 🔴 v1.53.0 ② 車の突き合わせも「意味のあるナンバー」だけ。
+       ⚠ `vehicle.plate` はこの時点で既に選り分け済み（意味をなさない値は空にしてある）。
+          ＝「0」の車どうしが1台にまとまったり、上書きし合ったりしない。 */
+    let v = vehicle.plate ? p.vehicles.find(x=>isRealPlate(x.plate)&&norm(x.plate)===norm(vehicle.plate)) : null;
+    /* 🔴 v1.53.0 ナンバーがまだ無い車（カナだけの新規のお客様・ナンバー未定の新車）を、
+       **保存のたびに増やさない**ための引き当て。⚠ 前は「ナンバーが空なら必ず新しい車」だったので、
+       同じ予約を開いて閉じるたびに同じ車が1台ずつ増えていた。
+       順番＝①カードが覚えている車 ②カルテNo. ③メーカー＋車種。 */
+    if(!v && !vehicle.plate){
+      if(c.vehId) v = p.vehicles.find(x=>x && x.id===c.vehId) || null;
+      if(!v && vehicle.karteNo) v = p.vehicles.find(x=>x && !x.perVisit && !isRealPlate(x.plate) && norm(x.karteNo)===norm(vehicle.karteNo)) || null;
+      if(!v && (vehicle.maker||vehicle.car)){
+        const key=norm(vehicle.maker+vehicle.car);
+        v = p.vehicles.find(x=>x && !x.perVisit && !isRealPlate(x.plate) && norm(String(x.maker||'')+String(x.car||''))===key) || null;
+      }
+    }
     if(v){ v.plate=vehicle.plate||v.plate; v.maker=vehicle.maker||v.maker; v.car=vehicle.car||v.car; if(vehicle.boardId)v.boardId=vehicle.boardId; if(vehicle.division)v.division=vehicle.division; if(vehicle.frontStaff){v.frontStaff=vehicle.frontStaff; v.frontStaffId=vehicle.frontStaffId||'';} if(vehicle.karteNo)v.karteNo=vehicle.karteNo; v.updatedAt=Date.now(); }
     else if(vehicle.plate||vehicle.maker||vehicle.car){
       const base=p.vehicles[p.vehicles.length-1]||{};   // 新車両：未指定の担当/課/区分は既存からデフォ継承
-      p.vehicles.push({ id:'v'+Date.now()+Math.floor(Math.random()*1000), plate:vehicle.plate, maker:vehicle.maker, car:vehicle.car,
-        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', frontStaffId:vehicle.frontStaffId||base.frontStaffId||'', karteNo:vehicle.karteNo||'', updatedAt:Date.now() });
+      v={ id:'v'+Date.now()+Math.floor(Math.random()*1000), plate:vehicle.plate, maker:vehicle.maker, car:vehicle.car,
+        boardId:vehicle.boardId||base.boardId||'', division:vehicle.division||base.division||'', frontStaff:vehicle.frontStaff||base.frontStaff||'', frontStaffId:vehicle.frontStaffId||base.frontStaffId||'', karteNo:vehicle.karteNo||'', updatedAt:Date.now() };
+      p.vehicles.push(v);
     }
     p.updatedAt=Date.now();
     c.customerId=p.id;
+    if(v && v.id) c.vehId=v.id;   /* 🔴 v1.53.0 どの車の予約かをカードに覚えさせる（次の保存で増やさない） */
     if(window.PitDB) PitDB.save();
   }
   window.upsertCustomerFromCard=upsertCustomerFromCard;
@@ -157,14 +253,14 @@
       const tag=t.label?(' <i style="color:'+t.color+'">●</i>'+esc(t.label)):'';
       const vtxt=e.v?(esc(vehLabel(e.v))+(e.v.plate?' / '+esc(e.v.plate):'')):'（車両なし）';
       return '<button type="button" class="cf-recall-item" onclick="custPick(\''+e.cust.id+'\',\''+(e.v?e.v.id:'')+'\')">'+
-        '<b>'+esc(e.cust.name||'(無名)')+'</b> <span>'+vtxt+tag+'</span></button>';
+        '<b>'+esc(custDispName(e.cust)||'(無名)')+'</b> <span>'+vtxt+tag+'</span></button>';
     }).join('');
     box.style.display='block';
   };
   window.custPick=function(custId,vehId){
     const cust=list().find(x=>x.id===custId); if(!cust) return;
     const c=state.cards.find(x=>x.id===_editingCardId); if(!c) return;
-    c.customer=cust.name||c.customer; c.kana=cust.kana||c.kana; c.customerId=cust.id;
+    c.customer=cust.name||c.customer; c.kana=cust.kana||c.kana; c.customerId=cust.id;   /* 🔴 漢字が無い人は customer が空のまま＝カードもカナで出る（v1.53.0） */
     c.repeat='repeater';   // 呼び出した＝必ずリピーター（初回/リピーターを自動でリピーターに）
     // v0.93.0 LINE（人単位）を引き継ぐ
     if(cust.lineStatus!=null) c.lineStatus=cust.lineStatus;
@@ -290,7 +386,7 @@
         const t=teamInfo(v||{});
         const pillC=(s,col)=>s?'<span class="ct-pill" style="background:'+col+'22;color:'+col+';border-color:'+col+'66">'+esc(s)+'</span>':'—';
         h+='<tr class="'+(last?'ct-rb':'ct-norb')+(first?'':' ct-cont')+' ct-clickrow" onclick="custOpen(\''+cust.id+'\')" title="顧客詳細を開く">'+
-           '<td class="ct-name">'+(first?esc(cust.name||'(無名)'):'')+'</td>'+
+           '<td class="ct-name">'+(first?esc(custDispName(cust)||'(無名)'):'')+'</td>'+
            '<td class="ct-mut">'+(first?esc(cust.kana||'—'):'')+'</td>'+
            '<td>'+(v?esc(v.maker||'—'):'—')+'</td>'+
            '<td class="ct-mut">'+(v?esc(v.karteNo||'—'):'—')+'</td>'+
@@ -337,7 +433,7 @@
   }
   window.custArchive=function(id){
     const c=list().find(r=>r.id===id); if(!c) return;
-    _ask('「'+(c.name||'(無名)')+'」様をアーカイブしますか？',
+    _ask('「'+(custDispName(c)||'(無名)')+'」様をアーカイブしますか？',
          '・検索や顧客呼び出しに出なくなります（この方の車も全部）\n・データは消えません。履歴も金額もそのまま残ります\n・戻せるのは管理者だけです',
          'アーカイブする', true).then(function(okd){
       if(!okd) return;
@@ -350,7 +446,7 @@
   window.custRestore=function(id){
     if(window.PitArchive && !PitArchive.canRestore()){ _deny(); return; }
     const c=list().find(r=>r.id===id); if(!c) return;
-    _ask('「'+(c.name||'(無名)')+'」様を元に戻しますか？',
+    _ask('「'+(custDispName(c)||'(無名)')+'」様を元に戻しますか？',
          '・検索や顧客呼び出しにまた出るようになります\n・1台ずつアーカイブした車は、アーカイブのままです',
          '元に戻す').then(function(okd){
       if(!okd) return;
@@ -412,7 +508,7 @@
   function _divSel(v){ return '<select class="ce-div"><option value="">—</option>'+(state.divisions||[]).map(d=>'<option value="'+d.id+'"'+(v===d.id?' selected':'')+'>'+esc(d.label)+'</option>').join('')+'</select>'; }
   function _frontSel(v){ return '<select class="ce-front"><option value="">—</option>'+frontStaffList().map(n=>'<option value="'+esc(n)+'"'+(v===n?' selected':'')+'>'+esc(n)+'</option>').join('')+'</select>'; }
   function _renderEdit(cust){
-    let h='<div class="cm-head"><i data-ic=pencil data-ics=16></i> 顧客を編集 <span class="cm-sub">'+esc(cust.name||'')+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
+    let h='<div class="cm-head"><i data-ic=pencil data-ics=16></i> 顧客を編集 <span class="cm-sub">'+esc(custDispName(cust)||'')+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
     h+='<div class="cm-2"><div class="cm-f"><label>お客様名</label><input id="ce-name" value="'+esc(cust.name||'')+'"></div>'+
        '<div class="cm-f"><label>カナ</label><input id="ce-kana" value="'+esc(cust.kana||'')+'"></div></div>';
     // 連絡先
@@ -518,9 +614,10 @@
     const v=(cust.vehicles||[]).find(x=>x.id===vehId);
     const plate=v?(v.plate||''):'';
     const arr=Array.isArray(state.cards)?state.cards:[];
-    const cards=(plate?arr.filter(c=>norm(c.plate)===norm(plate)):[]).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
+    /* 🔴 v1.53.0 「0」などのナンバーで引くと、他のお客様のカードまで履歴に混ざるので使わない */
+    const cards=(isRealPlate(plate)?arr.filter(c=>isRealPlate(c.plate)&&norm(c.plate)===norm(plate)):[]).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
     const vlabel=v?(vehLabel(v)+(plate?' / '+plate:'')):'（車両不明）';
-    let h='<div class="cm-head"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cm-sub">'+esc(cust.name||'(無名)')+' ・ '+esc(vlabel)+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
+    let h='<div class="cm-head"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cm-sub">'+esc(custDispName(cust)||'(無名)')+' ・ '+esc(vlabel)+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
     if(!cards.length){
       h+='<div class="cust-empty">この車の入庫カードはまだありません。<br>（整備ソフトに正式履歴があります）</div>';
     } else {
@@ -552,9 +649,10 @@
     return col?col.name:(c.status||'');
   }
   function _custCards(cust){
-    const plates=(cust.vehicles||[]).map(v=>norm(v.plate)).filter(Boolean);
+    /* 🔴 v1.53.0 意味をなさないナンバー（「0」など）は突き合わせに使わない */
+    const plates=(cust.vehicles||[]).filter(v=>isRealPlate(v.plate)).map(v=>norm(v.plate));
     return (Array.isArray(state.cards)?state.cards:[]).filter(function(c){
-      return (c.customerId&&c.customerId===cust.id) || (c.plate&&plates.indexOf(norm(c.plate))>=0);
+      return (c.customerId&&c.customerId===cust.id) || (isRealPlate(c.plate)&&plates.indexOf(norm(c.plate))>=0);
     }).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
   }
   /* v0.93.0 LINE状態→表示HTML（NG=地味ピル／登録済+番号=Lステップボタン）。未案内は出さない。 */
@@ -662,7 +760,7 @@
          '<span class="cd-archsub">検索・顧客呼び出しには出ません。履歴と金額はそのまま残っています。</span></div>';
     }
     h+='<div class="cd-hero"><div class="cd-hmain">'+
-       '<div class="cd-hname">'+esc(cust.name||'(無名)')+' <small>様</small></div>'+
+       '<div class="cd-hname">'+esc(custDispName(cust)||'(無名)')+' <small>様</small></div>'+
        (cust.kana?'<div class="cd-hkana">'+esc(cust.kana)+'</div>':'')+
        '<div class="cd-hpills"><span class="cd-pill mut">最終入庫 '+fmtDate(last)+'</span></div>'+
        '</div><div class="cd-stats"><div class="cd-statrow">'+
@@ -815,8 +913,11 @@
   window.custFindForCard=function(c){
     if(!c) return null;
     if(c.customerId){ const byId=list().find(x=>x.id===c.customerId); if(byId) return byId; }
-    const p=norm(c.plate);
-    if(p){ const byP=list().find(x=>(x.vehicles||[]).some(v=>norm(v.plate)===p)); if(byP) return byP; }
+    if(isRealPlate(c.plate)){
+      const p=norm(c.plate);
+      const byP=list().find(x=>(x.vehicles||[]).some(v=>isRealPlate(v.plate)&&norm(v.plate)===p));
+      if(byP) return byP;
+    }
     return null;
   };
   // 顧客情報を開く＝そのカードのお客様の詳細（控えが無ければカードから作ってから開く）
@@ -836,7 +937,7 @@
     let cust=custFindForCard(c);
     if(!cust && window.upsertCustomerFromCard){ upsertCustomerFromCard(c); cust=custFindForCard(c); }
     if(!cust){ if(window.openNewReserve) openNewReserve(); return; }
-    const v=(cust.vehicles||[]).find(x=>norm(x.plate)===norm(c.plate))||(cust.vehicles||[])[0];
+    const v=(isRealPlate(c.plate)?(cust.vehicles||[]).find(x=>isRealPlate(x.plate)&&norm(x.plate)===norm(c.plate)):null)||liveVehs(cust)[0]||(cust.vehicles||[])[0];
     custNewReserveFor(cust.id, v?v.id:'');
   };
 })();

@@ -26,6 +26,10 @@
   function cards()  { return (w.state && state.cards) || []; }
   function custs()  { return (w.state && state.customers) || []; }
   function norm(s)  { return String(s == null ? '' : s).replace(/\s+/g, '').replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(ch){ return String.fromCharCode(ch.charCodeAt(0) - 0xFEE0); }).toLowerCase(); }
+  /* 🔴 v1.53.0 「0」「なし」「未定」「新規車両」などは**車を見分ける鍵にしない**（customers.js の物差しを借りる）。
+     ⚠ これを見ないと、ナンバーが「0」の車を1台アーカイブしただけで、
+        同じ「0」を持つ他のお客様のカードまで検索から消える。 */
+  function realPlate(p){ return w.pitIsRealPlate ? pitIsRealPlate(p) : !!String(p == null ? '' : p).trim(); }
 
   /* ---------- 権限 ----------
      ⚠ サンプルモード（クラウド未接続）では今までどおり全部さわれる。 */
@@ -56,9 +60,9 @@
       var byId = list.find(function(x){ return x && x.id === card.customerId; });
       if (byId) return byId;
     }
-    var pl = norm(card.plate);
-    if (pl){
-      var byPlate = list.find(function(x){ return (x.vehicles || []).some(function(v){ return norm(v.plate) === pl; }); });
+    if (realPlate(card.plate)){
+      var pl = norm(card.plate);
+      var byPlate = list.find(function(x){ return (x.vehicles || []).some(function(v){ return realPlate(v.plate) && norm(v.plate) === pl; }); });
       if (byPlate) return byPlate;
     }
     var nm = norm(card.customer);
@@ -68,9 +72,9 @@
   /* カードの車両を引く（ナンバーで突き合わせ） */
   function vehOf(cust, card){
     if (!cust || !card) return null;
+    if (!realPlate(card.plate)) return null;
     var pl = norm(card.plate);
-    if (!pl) return null;
-    return (cust.vehicles || []).find(function(v){ return norm(v.plate) === pl; }) || null;
+    return (cust.vehicles || []).find(function(v){ return realPlate(v.plate) && norm(v.plate) === pl; }) || null;
   }
 
   /* 🔴 このカードを検索などに出してよいか。
@@ -135,8 +139,9 @@
   /* ナンバーで車を片付ける（新規予約の「乗換」から呼ぶ）。理由＝乗換 */
   function archiveVehByPlate(custId, plate, reason){
     var c = findCust(custId); if (!c) return false;
-    var pl = norm(plate); if (!pl) return false;
-    var v = (c.vehicles || []).find(function(x){ return norm(x.plate) === pl; });
+    if (!realPlate(plate)) return false;
+    var pl = norm(plate);
+    var v = (c.vehicles || []).find(function(x){ return realPlate(x.plate) && norm(x.plate) === pl; });
     if (!v) return false;
     return archiveVeh(custId, v.id, reason || '乗換');
   }

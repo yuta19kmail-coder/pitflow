@@ -350,9 +350,14 @@ console.log('\n── ソースの見張り ──');
   ok('一覧・詳細は archive-pit.js の判定を通している', /PitArchive\.vehSelfArchived/.test(cs));
   ok('カードの「＋この顧客で新規車両」が登録画面に統合されている', /PitCustReg\.open\(/.test(cd));
   ok('登録画面は PitDB.save を通す', /PitDB\.save\(\)/.test(cr));
-  ok('版が3か所そろっている', (ix.match(/1\.52\.0/g) || []).length >= 3, (ix.match(/1\.52\.0/g) || []).length);
+  /* ⚠ 版の数字はテストに書かない（デザインや別件で上がるたびに落ちるため）。
+        「ログイン画面・トップバー・app-version の3つがそろっているか」だけ見る（2026-08-05 の決めごと）。 */
+  const vs = [ (ix.match(/app-version" content="([\d.]+)"/) || [])[1],
+               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
+               (ix.match(/class="ver">v([\d.]+)</) || [])[1] ];
+  ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
   ok('cust-reg.js が読み込まれている', /js\/cust-reg\.js\?v=/.test(ix));
-  ok('customers.js のキャッシュ番号が上がっている', /js\/customers\.js\?v=39/.test(ix));
+  ok('customers.js にキャッシュ番号が付いている', /js\/customers\.js\?v=\d+/.test(ix));
 }
 
 ok('JSエラーが出ていない', errs.length === 0, errs.slice(0, 3));
