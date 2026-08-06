@@ -107,6 +107,39 @@ function closeDetail(){
      ・**保存する／仮予約で登録**（空のとき）… **1回だけ聞く**。既定は「入力に戻る」。
    ⚠ 物差しは blank-cards.js の `pitIsBlankCard` ひとつ。**ここで別に作らないこと。**
    =================================================================== */
+/* ===================================================================
+   🔴 v1.56.1  「反応しないから連打した」の受け止め（ゆうた証言・2026-08-06）
+   -------------------------------------------------------------------
+   ◎ゆうたの証言
+     「**複数台で一気に予約を入れ直していて、保存して印刷をクリックしても
+       反応しない時があった。それで6回くらい押したと思う**」
+   ◎なぜ反応が無いように見えるか
+     ・「印刷して保存」は **表紙の組み立て→印刷ダイアログ→画面を閉じて一覧を描き直す**
+       までを一息にやる。**6,600件を読み込んだ本番では、この描き直しに時間がかかる。**
+     ・その間ブラウザは固まって見えるので、**押せていないと思ってもう一度押す**。
+   ◎受け止め方（3つ）
+     ① **押した瞬間に手応えを返す**（トースト）＝「効いていない」と思わせない。
+     ② 🔴 **二度押しを飲み込む**＝1.2秒は次の保存を受け付けない。
+     ③ 🔴 **保存の直後（0.7秒以内）の「＋ 新規予約」も飲み込む**。
+        ⚠ 「＋ 新規予約」は**上のバーにずっと出ている**ので、保存で画面が戻った直後の
+           2度目のクリックが**そのまま新しい予約を開いてしまう**。
+           これが「空の予約が7〜8秒おきに次々できる」の正体だった。
+   ⚠ 飲み込んだ時は**必ず知らせる**。黙って無視すると、今度は本当に壊れたと思われる。
+   =================================================================== */
+var _pitLastSaveAt = 0;
+/* 保存系のボタン：前の1回からまだ間もなければ false を返す（＝二度押し） */
+function _pitSaveOnce(){
+  var now = Date.now();
+  if (now - _pitLastSaveAt < 1200){
+    if (window.pitToast) pitToast('いま保存しています。少しお待ちください');
+    return false;
+  }
+  _pitLastSaveAt = now;
+  return true;
+}
+/* 「＋ 新規予約」が、保存の直後の流れ弾で押されていないか（views.js の openNewReserve が見る） */
+window.pitJustSaved = function(){ return (Date.now() - _pitLastSaveAt) < 700; };
+
 function _pitCardIsBlankNow(){
   const c = state.cards.find(x => x.id === _editingCardId);
   return !!(c && window.pitIsBlankCard && pitIsBlankCard(c));
@@ -128,6 +161,7 @@ function _pitAskBlankSave(title){
    仮予約は予約カレンダー/代車カレンダーには「仮」付きで載り、予約ビューの未定タブ「仮予約」カラムに集まる。
    本予約への確定は予約詳細画面の⋮メニューで行う（v0.100.0）。 */
 function pitSaveTentative(){
+  if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
   /* 🔴 v1.56.1 中身が空なら1回聞く（下の _pitAskBlankSave の注記を参照） */
   if (_pitCardIsBlankNow()){ _pitAskBlankSave('仮予約で登録').then(function(ok){ if (ok) _pitSaveTentativeGo(); }); return; }
   _pitSaveTentativeGo();
@@ -156,6 +190,7 @@ window.pitSaveTentative = pitSaveTentative;
    ⚠ 既にあるカードを開いて編集している時は下書きではないので、今までどおりの動き。
    =================================================================== */
 function pitSaveCard(){
+  if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
   /* 🔴 v1.56.1 中身が空なら1回聞く */
   if (_pitCardIsBlankNow()){ _pitAskBlankSave('保存する').then(function(ok){ if (ok) _pitSaveCardGo(); }); return; }
   _pitSaveCardGo();
@@ -197,8 +232,11 @@ window.pitCancelCard = pitCancelCard;
    印刷は cover-print.js の pitPrintCover(cardId) を使う（別iframeで印刷ダイアログを出すので画面遷移とは独立）。
    pitPrintCover は cardId を直接受け取るため、先に呼んでおけば closeDetail() が _editingCardId を消しても影響なし。 */
 function pitSaveAndPrint(){
+  if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
   const c = state.cards.find(x => x.id === _editingCardId);
   const id = c ? c.id : _editingCardId;
+  /* 🔴 v1.56.1 押した瞬間に手応えを返す＝本番は描き直しに時間がかかり「効いていない」と見える */
+  if (window.pitToast) pitToast('表紙を印刷しています…');
   /* 🔴 v1.56.1 **中身が空なら、表紙だけ刷って予約は作らない。**
      2026-08-06 の本番で、この道から空の予約が6枚できた（フローが「予約作成→表紙を印刷して保存」だけ）。
      ⚠ 空の表紙を刷りたい、という使い方はそのまま通す＝余計な確認は出さない。
@@ -278,6 +316,7 @@ window.pitPrintCoverOnly = pitPrintCoverOnly;
    ◎実入庫日（actualInAt）にも同じ日付を入れる＝「いつ入ったか」が残る。
    ⚠ 国産／輸入が未選択だと、どちらのタスクボードに置くか決まらないので先に選んでもらう。 */
 function pitSaveInWork(alsoPrint){
+  if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
   pitSaveMenuClose();
   const c = state.cards.find(x => x.id === _editingCardId);
   if (!c) return;

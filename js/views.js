@@ -238,6 +238,17 @@ function holdDaysLabel(c, workLabel){                 // 預かり：6/10〜（5
 function escAttr(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 
 function openNewReserve(){
+  /* 🔴 v1.56.1（2026-08-06 の事故）**保存した直後（0.7秒以内）の「＋ 新規予約」は受け流す。**
+     「＋ 新規予約」は上のバーにずっと出ているので、保存で画面が戻った**直後の2度目のクリック**が
+     そのまま新しい予約を開いてしまう。ゆうたが「反応しないから6回押した」と言っていた日に、
+     **空の予約が7〜8秒おきに6枚できた**のはこれ（押す → 保存されて戻る → 空の新規が開く →
+     また押す → その空が保存される…の繰り返し）。
+     ⚠ 黙って無視しない＝**必ず知らせる**（本当に壊れたと思われないため）。
+     ⚠ 見張るのは「保存の直後」だけ。ふだんの「＋ 新規予約」は今までどおり効く。 */
+  if (window.pitJustSaved && pitJustSaved()){
+    if (window.pitToast) pitToast('保存しました。新しく予約を作るときは、もう一度押してください');
+    return;
+  }
   if (window.pitLog) pitLog('新規予約を開いた', { kind:'new' });
   const id = 'c' + Date.now();
   const card = {

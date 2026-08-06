@@ -370,6 +370,7 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
       bookedAt: '2026-08-06', reserveDate: '2026-08-06', reserveStaff: 'コバモ',
       log: [{ label: '予約作成', at: Date.now() }] };
     state.cards.push(c);
+    window._pitLastSaveAt = 0;          /* 二度押しの見張りを解除してから試す */
     let printed = 0; const keep = window.pitPrintCover;
     window.pitPrintCover = function(){ printed++; };
     openCard('cP1', 'modal');           /* _editingCardId をこのカードに向ける */
@@ -386,6 +387,7 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
   const pr2 = await p.evaluate(() => {
     const c = state.cards.find(x => x.id === 'cP1');
     c.customer = '山田 太郎';
+    window._pitLastSaveAt = 0;
     let printed = 0; const keep = window.pitPrintCover;
     window.pitPrintCover = function(){ printed++; };
     openCard('cP1', 'modal');
@@ -402,6 +404,7 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
     state.cards = state.cards.filter(x => x.id !== 'cS1');
     state.cards.push({ id: 'cS1', resNo: 'S-TEST', status: 'reserved', _draft: true,
       bookedAt: '2026-08-06', reserveDate: '2026-08-06', reserveStaff: 'コバモ', log: [{ label: '予約作成', at: Date.now() }] });
+    window._pitLastSaveAt = 0;
     let asked = 0; const keep = UI.confirm;
     UI.confirm = function(){ asked++; return Promise.resolve(false); };   /* 「入力に戻る」を選ぶ */
     openCard('cS1', 'modal');
@@ -417,6 +420,56 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
   const src = fs.readFileSync('js/blank-cards.js', 'utf8');
   ok('🔴 空カード判定が「手で足した記録／工程」だけを見ている',
      /e\.manual === true \|\| e\.type === 'phase'/.test(src) && !/c\.log\.length > 1/.test(src));
+}
+
+console.log('\n── 🔴 v1.56.1 「反応しないから連打」を受け止める（ゆうた証言） ──');
+{
+  /* ① 二度押しは飲み込む */
+  const dbl = await p.evaluate(() => {
+    state.cards = state.cards.filter(x => x.id !== 'cD1');
+    state.cards.push({ id: 'cD1', resNo: 'D-TEST', status: 'reserved', _draft: true, customer: '連打 太郎',
+      bookedAt: '2026-08-06', reserveDate: '2026-08-06', log: [{ label: '予約作成', at: Date.now() }] });
+    window._pitLastSaveAt = 0;          /* 二度押しの見張りを解除してから試す */
+    let printed = 0; const keepP = window.pitPrintCover, keepT = window.pitToast;
+    const toasts = [];
+    window.pitPrintCover = function(){ printed++; };
+    window.pitToast = function(m){ toasts.push(m); };
+    openCard('cD1', 'modal');
+    pitSaveAndPrint();      /* 1回目 */
+    pitSaveAndPrint();      /* 2回目＝すぐ押した＝飲み込まれる */
+    pitSaveAndPrint();      /* 3回目 */
+    window.pitPrintCover = keepP; window.pitToast = keepT;
+    const d = state.cards.find(x => x.id === 'cD1');
+    return { printed: printed, toasts: toasts, logs: (d.log || []).map(e => e.label) };
+  });
+  ok('🔴 3回押しても保存・印刷は1回だけ', dbl.printed === 1, dbl);
+  ok('🔴 記録も1件しか増えない', dbl.logs.filter(x => x === '表紙を印刷して保存').length === 1, dbl.logs);
+  ok('押した瞬間に手応えを返す', dbl.toasts.some(m => /印刷しています/.test(m)), dbl.toasts);
+  ok('🔴 飲み込んだ時は黙らず知らせる', dbl.toasts.some(m => /お待ちください/.test(m)), dbl.toasts);
+
+  /* ② 保存の直後の「＋ 新規予約」は受け流す＝空の予約が次々できない
+     ⚠ 数えるのは「下書きが1枚できたか」。openNewReserve は前の下書きを外すので総数では見ない。 */
+  const nr = await p.evaluate(() => {
+    try { localStorage.removeItem('pitflow_draft_card'); } catch(e){}
+    if (window.pitDropDraft) pitDropDraft(null, true);
+    window._pitLastSaveAt = Date.now();       /* いま保存した直後、という状況を作る */
+    const toasts = []; const keepT = window.pitToast;
+    window.pitToast = function(m){ toasts.push(m); };
+    openNewReserve();                          /* 保存の直後＝流れ弾 */
+    window.pitToast = keepT;
+    return { drafts: state.cards.filter(c => c._draft).length, justSaved: pitJustSaved(), toasts: toasts };
+  });
+  ok('🔴 保存の直後の「＋ 新規予約」では予約が作られない', nr.drafts === 0, nr);
+  ok('🔴 そのことを知らせる', nr.toasts.some(m => /もう一度押して/.test(m)), nr.toasts);
+
+  /* ③ 少し待てば、今までどおり新規予約は開く */
+  await p.waitForTimeout(900);
+  const nr2 = await p.evaluate(() => {
+    openNewReserve();
+    return { drafts: state.cards.filter(c => c._draft).length, justSaved: pitJustSaved() };
+  });
+  ok('少し待てば今までどおり新規予約は開く', nr2.drafts === 1 && nr2.justSaved === false, nr2);
+  await p.evaluate(() => { if (window.pitDropDraft) pitDropDraft(null, true); });
 }
 
 console.log('\n── 版とキャッシュ番号 ──');

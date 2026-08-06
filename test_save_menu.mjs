@@ -17,9 +17,10 @@ import path from 'path';
   const dir = process.cwd();
   const src = fs.readFileSync(path.join(dir,'js','card-detail.js'),'utf8');
   /* 🔴 v1.56.1 「中身が空なら予約を作らない」の見張り（_pitCardIsBlankNow / _pitAskBlankSave）が
-     保存関数の**手前**に増えたので、切り出しの開始をそこまで戻す。
+     保存関数の**手前**に増えたので、切り出しの開始をそこまで戻す
+     （二度押しの見張り `_pitLastSaveAt` / `_pitSaveOnce` もその手前にある）。
      ⚠ 手前で切ると保存関数の中から呼べず、丸ごと落ちる。 */
-  const from = src.indexOf('function _pitCardIsBlankNow()');
+  const from = src.indexOf('var _pitLastSaveAt = 0;');
   const to   = src.indexOf('function renderCardForm(c)');
   if (from < 0 || to < 0) throw new Error('card-detail.js の保存まわりが見つかりません（関数名が変わった？）');
   fs.writeFileSync(path.join(dir,'_save-part.js'), src.slice(from,to));
@@ -52,6 +53,7 @@ window.pitClearDraftKeep=function(){ window.__draftCleared++; };
 window.UI={ alert:function(t,o){ window.__alert={t:t,o:o}; return Promise.resolve(true); } };
 window.__reset=function(card){
   state.cards=[Object.assign({id:'c1'},card)]; _editingCardId='c1';
+  window._pitLastSaveAt=0;   /* 🔴 v1.56.1 二度押しの見張りを毎回まっさらに（続けて試すので） */
   window.__closed=0; window.__printed=[]; window.__toasts=[]; window.__logs=[]; window.__flow=[]; window.__draftCleared=0; window.__alert=null;
 };
 window.__card=function(){ return state.cards[0]; };
