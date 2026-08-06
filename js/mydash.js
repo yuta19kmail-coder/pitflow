@@ -31,6 +31,9 @@
     var wt = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes[0] : c.workType;
     return window.pitEstAmount ? (pitEstAmount(wt, teamOf(c)) || 0) : 0;
   }
+  /* 🔴 v1.61.0 「売上をどの日に数えるか」は物差し1本（js/sales-count.js）から取る。**写しを作らない**
+        実績＝実績カウント日（completedAt）／まだ返していない車＝返車予定日 */
+  function mdCountDate(c) { return window.pitSalesCountDate ? pitSalesCountDate(c) : String((c && (c.completedAt || c.returnDateFinal || c.returnDate)) || ''); }
   function yen(n) { return '¥' + (Math.round(+n || 0)).toLocaleString('ja-JP'); }
   function man(n) { n = Math.round(+n || 0); if (Math.abs(n) >= 10000) return (Math.round(n / 1000) / 10) + '万'; return n.toLocaleString('ja-JP'); }
   function manUnit(n) { return Math.abs(Math.round(+n || 0)) >= 10000 ? '万' : '円'; }
@@ -428,7 +431,7 @@
     sales: {
       title: '売上サマリー', icon: '💴', jump: 'sales', sizes: ['s', 'm', 'l', 'xl'],
       body: function (sz) {
-        var act = C.cards.filter(function (c) { if (c.status !== 'returned') return false; var rd = c.returnDateFinal || c.returnDate || ''; return rd >= C.moS && rd <= C.moE; });
+        var act = C.cards.filter(function (c) { if (c.status !== 'returned') return false; var rd = mdCountDate(c); return rd >= C.moS && rd <= C.moE; });
         var sum = act.reduce(function (a, c) { return a + amt(c); }, 0);
         var tg = (state.settings && state.settings.target) || { monthMin: 15000000 };
         var pct = tg.monthMin ? Math.round(sum / tg.monthMin * 100) : 0;
@@ -520,7 +523,7 @@
       title: '売上', icon: '💴', person: true, sizes: ['s', 'm', 'l'],
       body: function (sz, item) {
         var ns = targetNames(item);
-        var list = C.cards.filter(function (c) { if (c.status !== 'returned') return false; var rd = c.returnDateFinal || c.returnDate || ''; return rd >= C.moS && rd <= C.moE && inTarget(taskStaff(c), ns); });
+        var list = C.cards.filter(function (c) { if (c.status !== 'returned') return false; var rd = mdCountDate(c); return rd >= C.moS && rd <= C.moE && inTarget(taskStaff(c), ns); });
         var sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
         if (sz === 's') return kpi(man(sum), manUnit(sum), '当月 ' + list.length + '台', 'g');
         var head = '<div class="md-inline">' + kpi(man(sum), manUnit(sum), '当月実績', 'g') + kpi(list.length, '台', '担当台数', 'b') + '</div>';

@@ -14,10 +14,10 @@
 
   var TIERS = [
     { id:'actual',    label:'実績', color:'#1db97a', note:'返車済み（確定売上）' },
-    { id:'confirmed', label:'確定', color:'#2563eb', note:'パーツ待ち以降・受注済（実績前・返車まだ含む）' },
-    { id:'planned',   label:'予定', color:'#38bdf8', note:'連絡中・見積提示済（受注できれば）' },
-    { id:'prospect',  label:'見込', color:'#f59e0b', note:'入庫済・受注前（概算）' },
-    { id:'forecast',  label:'予測', color:'#9ca3af', note:'未入庫予約・月内に実績化できる（概算）' }
+    { id:'confirmed', label:'確定', color:'#2563eb', note:'パーツ待ち以降・受注済（返車予定日がこの月）' },
+    { id:'planned',   label:'予定', color:'#38bdf8', note:'連絡中・見積提示済（返車予定日がこの月）' },
+    { id:'prospect',  label:'見込', color:'#f59e0b', note:'入庫済・受注前（返車予定日がこの月・概算）' },
+    { id:'forecast',  label:'予測', color:'#9ca3af', note:'未入庫予約・返車予定がこの月（概算）' }
   ];
   var TIER_BY = {}; TIERS.forEach(function(t){ TIER_BY[t.id] = t; });
 
@@ -26,30 +26,25 @@
   function man(n){ var m = n/10000; return (Math.abs(m)>=100 ? Math.round(m) : Math.round(m*10)/10).toLocaleString() + '万'; }
   function pd(s){ var p=String(s||'').split('-'); return new Date(+p[0],(+p[1])-1,+p[2]); }
   function ymdL(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
-  function addStr(s, n){ var d=pd(s); d.setDate(d.getDate()+n); return ymdL(d); }
   function course(c){ if (c.division==='div1'||c.division==='div2') return c.division; return c.boardId==='import'?'div2':'div1'; }
   function estA(c){ return num(c.estAmount) || (window.pitEstAmount?num(pitEstAmount(c.workType, window.pitTeamKey?pitTeamKey(c):'default')):0); }
-  function holdOf(c){ if (c.estHoldDays!=null && c.estHoldDays!=='') return num(c.estHoldDays); return window.pitEstHold?num(pitEstHold(c.workType,c.dropType)):5; }
+
+  /* 🔴 v1.61.0（ゆうた指定）「売上をどの月に数えるか」は js/sales-count.js の物差し1本に集約した。
+        ここは**その日が、いま見ている期間に入っているか**を聞くだけ。**写しを作らないこと。**
+        ・実績＝実績カウント日（completedAt）
+        ・確定／予定／見込＝**返車予定日**。翌月以降ならその月へずらす。未定・予定日超過は当月に寄せる
+        ・予測＝返車予定日。無ければ 入庫予定日＋概算 預かり日数 */
+  function countDate(c){ return window.pitSalesCountDate ? pitSalesCountDate(c) : String(c.completedAt || c.returnDateFinal || c.returnDate || ''); }
+  function inRange(c, fromStr, toStr, todayStr){
+    if (window.pitSalesInRange) return pitSalesInRange(c, fromStr, toStr, todayStr);
+    var d = countDate(c); return !!d && d>=fromStr && d<=toStr;
+  }
 
   // カードがどの確度区分に入るか（当月[moS,moE]・本日todayStr基準）。該当なしは null
-  //  実績＝返車日がその月／予測＝その月に実績化する予約（当月・未来のみ）／確定・予定・見込＝進行中の車＝当月だけに計上（過去・未来の月には出さない）
   function tierOf(c, moS, moE, todayStr){
-    if (!c || c.status==='scrap') return null;
-    var st = c.status;
-    if (st==='returned'){ var d=c.returnDateFinal||c.returnDate||''; return (d>=moS && d<=moE) ? 'actual' : null; }
-    var isCurrent = (todayStr>=moS && todayStr<=moE);
-    var isFuture  = (moS > todayStr);
-    if (st==='reserved'){
-      if (!(isCurrent || isFuture)) return null;   // 過去月には予測を出さない
-      var rd=c.reserveDate||''; if(!rd || rd>moE) return null;
-      var doneBy=addStr(rd, Math.max(0, holdOf(c)));
-      return (doneBy>=moS && doneBy<=moE) ? 'forecast' : null;   // その月に実績化できる予約だけ
-    }
-    if (!isCurrent) return null;   // 進行中（確定/予定/見込）は当月のみ
-    if (c.returnStage || ['parts','work','workDone','outsource'].indexOf(st)>=0) return 'confirmed';
-    if (st==='contact') return 'planned';
-    if (st==='check' || st==='estim') return 'prospect';
-    return null;
+    var tier = window.pitSalesTier ? pitSalesTier(c) : null;
+    if (!tier) return null;
+    return inRange(c, moS, moE, todayStr) ? tier : null;
   }
   function amtOf(c, tier){
     if (tier==='actual')    return num(c.amountFinal)||num(c.amountOrder)||estA(c);
@@ -75,7 +70,7 @@
       tiers[tier].sum += amt; tiers[tier].count++;
       var cs = course(c); byCourse[cs][tier].sum += amt; byCourse[cs][tier].count++;
       if (tier==='actual'){
-        var d = c.returnDateFinal||c.returnDate||''; var dd = pd(d).getDate();
+        var d = countDate(c); var dd = pd(d).getDate();
         if (dd>=1 && dd<=lastDay) dayActual[dd] += amt;
       }
       if (tier==='actual' || tier==='confirmed' || tier==='planned'){
@@ -183,7 +178,7 @@
     h += '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=chart data-ics=16></i> 日次の進捗（返車＝実績の累計）</span><span class="sv-legend">'
        + '<i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-proj"></i>着地予測 <i class="sv-lg sv-lg-min"></i>最低ペース <i class="sv-lg sv-lg-max"></i>最高ペース</span></div>';
     h += dailyChartSvg(data.cum, data.lastDay, todayIdx, tg.min, tg.max, landing);
-    h += '<div class="sv-note">実績は<b>返車済みになった日</b>で計上（返車が翌月なら翌月扱い）。点線＝残りを今のパイプラインで積んだ着地予測。</div></div>';
+    h += '<div class="sv-note">実績は<b>実績カウント日</b>で計上。まだ返していない車は<b>返車予定日の月</b>に積む（予定が翌月ならこの月には出ない）。返車予定日が未定・予定日を過ぎた車は当月に寄せる。点線＝残りを今のパイプラインで積んだ着地予測。</div></div>';
 
     // 確度別サマリー（6区分）
     h += '<div class="sv-tiers">';
@@ -209,7 +204,7 @@
     // フロント別
     h += frontTable(data.fronts);
 
-    h += '<div class="sv-foot">金額の取り方：実績＝確定額(amountFinal)／確定＝受注額／予定＝見積額／見込・予測＝概算（作業タイプ別平均）。数字はすべて円。</div>';
+    h += '<div class="sv-foot">金額の取り方：実績＝確定額(amountFinal)／確定＝受注額／予定＝見積額／見込・予測＝概算（作業タイプ別平均）。数字はすべて円。<br>どの月に数えるか：実績＝実績カウント日／それ以外＝<b>返車予定日</b>（未定と予定日超過は当月）。</div>';
     wrap.innerHTML = h;
   }
 
@@ -237,7 +232,7 @@
     var monA = []; var monP = []; for (var i=0;i<12;i++){ monA[i]=0; monP[i]=0; }
     (state.cards||[]).forEach(function(c){
       if (c.status!=='returned') return;
-      var d = c.returnDateFinal||c.returnDate||''; if (!d) return;
+      var d = countDate(c); if (!d) return;
       var dd = pd(d); var amt = num(c.amountFinal)||num(c.amountOrder)||estA(c);
       var cm=dd.getMonth(), cy=dd.getFullYear();
       var fy=(cm===11)?cy+1:cy, slot=(cm===11)?0:cm+1;   // 12月は翌年11月締めの年度・スロット0
@@ -318,22 +313,21 @@
   // ================= クォーター：当月（月4分割＋6区分・翌Qリミット） =================
   function qWindow(y,m,qi){ var last=new Date(y,m+1,0).getDate(); var rr=[[1,7],[8,15],[16,23],[24,last]][qi]; return { s:ymdL(new Date(y,m,rr[0])), e:ymdL(new Date(y,m,rr[1])), f:rr[0], t:rr[1] }; }
   function nextQEnd(y,m,qi){ if(qi<3) return qWindow(y,m,qi+1).e; var nm=new Date(y,m+1,1); return qWindow(nm.getFullYear(),nm.getMonth(),0).e; }
+  /* 🔴 v1.61.0 区分と「数える日」は物差し（sales-count.js）から。ここはクォーターの窓に当てはめるだけ。
+        実績＝現Qの中だけ。まだ返していない車＝**返車予定日が翌Q末までに入っているもの**（元からの「翌Qリミット」を踏襲）。 */
   function qTierOf(c,qS,qE,nqE,todayStr){
-    if(!c||c.status==='scrap')return null; var st=c.status;
-    if(st==='returned'){ var d=c.returnDateFinal||c.returnDate||''; return (d>=qS&&d<=qE)?'actual':null; }
+    var tier = window.pitSalesTier ? pitSalesTier(c) : null;
+    if(!tier) return null;
+    if(tier==='actual'){ var d=countDate(c); return (d>=qS&&d<=qE)?'actual':null; }
     if(qE<todayStr) return null;                 // 過去Qは実績のみ
-    if(st==='reserved'){ var rd=c.reserveDate||''; if(!rd) return null; var doneBy=addStr(rd,Math.max(0,holdOf(c))); return (doneBy>=qS && doneBy<=nqE)?'forecast':null; }  // 翌Qまで
-    if(c.returnStage||['parts','work','workDone','outsource'].indexOf(st)>=0) return 'confirmed';
-    if(st==='contact') return 'planned';
-    if(st==='check'||st==='estim') return 'prospect';
-    return null;
+    return inRange(c, qS, nqE, todayStr) ? tier : null;   // 翌Q末までを上限に、返車予定日で振り分ける
   }
   function renderQuarterMonth(wrap){
     var ym=window._svYM, y=ym.y, m=ym.m;
     var moS=ymdL(new Date(y,m,1)), moE=ymdL(new Date(y,m+1,0)); var tg=target();
     var last=new Date(y,m+1,0).getDate(); var qs=[{f:1,t:7},{f:8,t:15},{f:16,t:23},{f:24,t:last}];
     var qAct=[0,0,0,0], qCnt=[0,0,0,0], qMin=[0,0,0,0], qMax=[0,0,0,0];
-    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=c.returnDateFinal||c.returnDate||''; if(d<moS||d>moE)return; var qi=qOfDay(pd(d).getDate()); qAct[qi]+=actAmt(c); qCnt[qi]++; });
+    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=countDate(c); if(d<moS||d>moE)return; var qi=qOfDay(pd(d).getDate()); qAct[qi]+=actAmt(c); qCnt[qi]++; });
     var al=qAlloc(y,m+1); for(var i=0;i<4;i++){ qMin[i]=al?al.q[i].min:Math.round(tg.min/4); qMax[i]=al?al.q[i].max:Math.round(tg.max/4); }
     var today=new Date(); var isThis=(today.getFullYear()===y&&today.getMonth()===m);
     var todayQ=isThis?qOfDay(today.getDate()):(ymdL(today)>moE?3:0);
@@ -355,7 +349,7 @@
     TIERS.forEach(function(tt){ h+=tierCard(tt.id,tt.label,tt.color,man(qt[tt.id].sum),qt[tt.id].count+'台',tt.note); });
     h+='</div>';
     // 4Qカード＋累計
-    h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=calendar data-ics=16></i> クォーター実績（月4分割・営業日配分）</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-min"></i>目標累計(最低)</span></div>'+quarterChartSvg(qAct,qMin,todayQ)+'<div class="sv-note">クォーター＝1〜7 / 8〜15 / 16〜23 / 24〜末。実績は返車日で計上。上の6区分は現Qの着地見込み（確定/予定/見込/予測は翌Qまでを上限に計上）。</div></div>';
+    h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=calendar data-ics=16></i> クォーター実績（月4分割・営業日配分）</span><span class="sv-legend"><i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-min"></i>目標累計(最低)</span></div>'+quarterChartSvg(qAct,qMin,todayQ)+'<div class="sv-note">クォーター＝1〜7 / 8〜15 / 16〜23 / 24〜末。実績は実績カウント日で計上。上の6区分は現Qの着地見込み（確定/予定/見込/予測は返車予定日で振り分け・翌Q末までが上限）。</div></div>';
     h+='<div class="sv-qcards">';
     for(i=0;i<4;i++){ var p=pct(qAct[i],qMin[i]); var pc=p>=100?'ok':(p>=85?'near':'warn');
       h+='<div class="sv-qcard'+(i===todayQ?' now':'')+'"><div class="sv-qcard-h">Q'+(i+1)+' <span>'+qs[i].f+'〜'+qs[i].t+'日</span>'+(i===todayQ?'<em>進行中</em>':'')+'</div><div class="sv-qcard-num" style="color:#1db97a">'+man(qAct[i])+'</div><div class="sv-qbar"><i class="sv-'+pc+'" style="width:'+Math.min(100,p)+'%"></i></div><div class="sv-qcard-sub">目標 '+man(qMin[i])+'〜'+man(qMax[i])+' ／ <b class="sv-'+pc+'">'+p+'%</b> ／ '+qCnt[i]+'台</div></div>';
@@ -382,7 +376,7 @@
     var grid=[]; for(var i=0;i<12;i++){ grid[i]=[{act:0,min:0},{act:0,min:0},{act:0,min:0},{act:0,min:0}]; }
     function slotToYM(slot){ var cm=(slot===0)?11:slot-1, cy=(slot===0)?Y-1:Y; return {y:cy,m:cm}; }
     for(i=0;i<12;i++){ var ymo=slotToYM(i); var al=qAlloc(ymo.y,ymo.m+1); for(var q=0;q<4;q++){ grid[i][q].min=al?al.q[q].min:Math.round(tg.min/4); } }
-    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=c.returnDateFinal||c.returnDate||''; if(!d)return; var dd=pd(d),cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; if(fy!==Y)return; var slot=(cm===11)?0:cm+1; grid[slot][qOfDay(dd.getDate())].act+=actAmt(c); });
+    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=countDate(c); if(!d)return; var dd=pd(d),cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; if(fy!==Y)return; var slot=(cm===11)?0:cm+1; grid[slot][qOfDay(dd.getDate())].act+=actAmt(c); });
     var h=header('year',{y:Y});
     h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=fire data-ics=16></i> クォーター達成率ヒートマップ（年度・月×Q）</span><span class="sv-legend">達成率 低 <i class="sv-hm-lg"></i> 高</span></div>';
     h+='<table class="sv-hm"><thead><tr><th></th><th>Q1<br><i>1-7</i></th><th>Q2<br><i>8-15</i></th><th>Q3<br><i>16-23</i></th><th>Q4<br><i>24-末</i></th><th>月計</th></tr></thead><tbody>';
@@ -400,7 +394,7 @@
     function add(o,amt){ o.sum+=amt; o.cnt++; if(amt>o.hi)o.hi=amt; if(o.lo===0||amt<o.lo)o.lo=amt; }
     var g={}; WGROUPS.forEach(function(w){ g[w.id]={div1:cell(),div2:cell()}; });
     var sub={};
-    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=c.returnDateFinal||c.returnDate||''; if(d<fromStr||d>toStr)return; var amt=actAmt(c); var grp=workGroupOf(c), cs=course(c); add(g[grp][cs],amt);
+    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=countDate(c); if(d<fromStr||d>toStr)return; var amt=actAmt(c); var grp=workGroupOf(c), cs=course(c); add(g[grp][cs],amt);
       if(grp==='general'){ var sl=workSubLabel(c); if(!sub[sl])sub[sl]={div1:cell(),div2:cell()}; add(sub[sl][cs],amt); } });
     return {g:g,sub:sub};
   }
@@ -444,7 +438,7 @@
   function renderWorkYear(wrap){
     var Y=window._svYear, SLOT=[12,1,2,3,4,5,6,7,8,9,10,11];
     var mon=[]; for(var i=0;i<12;i++){ mon[i]={shaken:0,'12pt':0,general:0}; }
-    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=c.returnDateFinal||c.returnDate||''; if(!d)return; var dd=pd(d),cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; if(fy!==Y)return; var slot=(cm===11)?0:cm+1; mon[slot][workGroupOf(c)]+=actAmt(c); });
+    (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d=countDate(c); if(!d)return; var dd=pd(d),cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; if(fy!==Y)return; var slot=(cm===11)?0:cm+1; mon[slot][workGroupOf(c)]+=actAmt(c); });
     var h=header('year',{y:Y});
     h+='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=wrench data-ics=16></i> 作業グループ 月別推移（年度）</span><span class="sv-legend">'+WGROUPS.map(function(x){return '<i class="sv-lg" style="border-top-color:'+x.color+'"></i>'+x.label;}).join(' ')+'</span></div>'+workYearChart(mon,SLOT)+'</div>';
     var tot={shaken:0,'12pt':0,general:0}; mon.forEach(function(mm){ tot.shaken+=mm.shaken;tot['12pt']+=mm['12pt'];tot.general+=mm.general; });
@@ -471,7 +465,7 @@
     var F={};
     function ens(n){ if(!F[n]) F[n]={cnt:0,sum:0,hi:0,hold:0,holdN:0,holdMax:0,odDays:0,odN:0,dow:[0,0,0,0,0,0,0],grp:{shaken:0,'12pt':0,general:0},grpN:{shaken:0,'12pt':0,general:0}}; return F[n]; }
     (state.cards||[]).forEach(function(c){ var fn=c.frontStaff||c.staff||'（未割当）';
-      if(c.status==='returned'){ var d=c.returnDateFinal||c.returnDate||''; if(d>=fromStr&&d<=toStr){ var f=ens(fn); var amt=actAmt(c); f.cnt++; f.sum+=amt; if(amt>f.hi)f.hi=amt; var g=workGroupOf(c); f.grp[g]+=amt; f.grpN[g]++; if(c.reserveDate){ var hd=Math.round((pd(d)-pd(c.reserveDate))/86400000); if(hd>=0){ f.hold+=hd; f.holdN++; if(hd>f.holdMax)f.holdMax=hd; } } } }
+      if(c.status==='returned'){ var d=countDate(c); if(d>=fromStr&&d<=toStr){ var f=ens(fn); var amt=actAmt(c); f.cnt++; f.sum+=amt; if(amt>f.hi)f.hi=amt; var g=workGroupOf(c); f.grp[g]+=amt; f.grpN[g]++; if(c.reserveDate){ var hd=Math.round((pd(d)-pd(c.reserveDate))/86400000); if(hd>=0){ f.hold+=hd; f.holdN++; if(hd>f.holdMax)f.holdMax=hd; } } } }
       var om=orderDateMs(c); if(om){ var od=new Date(om); var ods=ymdL(od); if(ods>=fromStr&&ods<=toStr){ var f2=ens(fn); if(c.reserveDate){ var odd=Math.round((od-pd(c.reserveDate))/86400000); if(odd>=0){ f2.odDays+=odd; f2.odN++; } } f2.dow[od.getDay()]++; } }
     });
     return F;
@@ -566,7 +560,7 @@
     }
     if(tab==='sales' && yr){
       var Y=window._svYear; var monA=[],monP=[]; for(var i=0;i<12;i++){monA[i]=0;monP[i]=0;}
-      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var dd=pd(c.returnDateFinal||c.returnDate||''); if(isNaN(dd.getTime()))return; var cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; var slot=(cm===11)?0:cm+1; var amt=actAmt(c); if(fy===Y)monA[slot]+=amt; else if(fy===Y-1)monP[slot]+=amt; });
+      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var dd=pd(countDate(c)); if(isNaN(dd.getTime()))return; var cm=dd.getMonth(),cy=dd.getFullYear(); var fy=(cm===11)?cy+1:cy; var slot=(cm===11)?0:cm+1; var amt=actAmt(c); if(fy===Y)monA[slot]+=amt; else if(fy===Y-1)monP[slot]+=amt; });
       var yTot=monA.reduce(function(a,b){return a+b;},0), pTot=monP.reduce(function(a,b){return a+b;},0), hasP=pTot>0;
       var head=['月','実績','目標','達成率']; if(hasP){head.push('前年度');head.push('昨対');}
       var rows=[]; for(i=0;i<12;i++){ var r=[SLOT[i]+'月',man(monA[i]),man(tg.min),pct(monA[i],tg.min)+'%']; if(hasP){r.push(man(monP[i]));r.push((monA[i]-monP[i]>=0?'+':'')+man(monA[i]-monP[i]));} rows.push(r); }
@@ -578,7 +572,7 @@
     if(tab==='quarter' && !yr){
       var ym2=window._svYM,y2=ym2.y,m2=ym2.m; var moS=ymdL(new Date(y2,m2,1)),moE=ymdL(new Date(y2,m2+1,0));
       var al=qAlloc(y2,m2+1); var qAct=[0,0,0,0],qCnt=[0,0,0,0],qMin=[0,0,0,0],qMax=[0,0,0,0];
-      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var dd=c.returnDateFinal||c.returnDate||''; if(dd<moS||dd>moE)return; var qi=qOfDay(pd(dd).getDate()); qAct[qi]+=actAmt(c); qCnt[qi]++; });
+      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var dd=countDate(c); if(dd<moS||dd>moE)return; var qi=qOfDay(pd(dd).getDate()); qAct[qi]+=actAmt(c); qCnt[qi]++; });
       for(var i5=0;i5<4;i5++){ qMin[i5]=al?al.q[i5].min:Math.round(tg.min/4); qMax[i5]=al?al.q[i5].max:Math.round(tg.max/4); }
       var today=new Date(); var isThis=(today.getFullYear()===y2&&today.getMonth()===m2); var tq=isThis?qOfDay(today.getDate()):(ymdL(today)>moE?3:0);
       var qw=qWindow(y2,m2,tq), nqE=nextQEnd(y2,m2,tq); var _td=new Date();_td.setHours(0,0,0,0);var todayStr=ymdL(_td);
@@ -594,7 +588,7 @@
       var Y3=window._svYear; var grid=[];for(var i6=0;i6<12;i6++){grid[i6]=[{a:0,mn:0},{a:0,mn:0},{a:0,mn:0},{a:0,mn:0}];}
       var s2ym=function(sl){var cm=(sl===0)?11:sl-1,cy=(sl===0)?Y3-1:Y3;return{y:cy,m:cm};};
       for(i6=0;i6<12;i6++){var ymo=s2ym(i6);var al3=qAlloc(ymo.y,ymo.m+1);for(var q3=0;q3<4;q3++)grid[i6][q3].mn=al3?al3.q[q3].min:Math.round(tg.min/4);}
-      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d3=c.returnDateFinal||c.returnDate||'';if(!d3)return;var dd=pd(d3),cm=dd.getMonth(),cy=dd.getFullYear();var fy=(cm===11)?cy+1:cy;if(fy!==Y3)return;var slot=(cm===11)?0:cm+1;grid[slot][qOfDay(dd.getDate())].a+=actAmt(c); });
+      (state.cards||[]).forEach(function(c){ if(c.status!=='returned')return; var d3=countDate(c);if(!d3)return;var dd=pd(d3),cm=dd.getMonth(),cy=dd.getFullYear();var fy=(cm===11)?cy+1:cy;if(fy!==Y3)return;var slot=(cm===11)?0:cm+1;grid[slot][qOfDay(dd.getDate())].a+=actAmt(c); });
       var rows3=[]; for(i6=0;i6<12;i6++){ var row=[SLOT[i6]+'月']; var ma=0,mm3=0; for(q3=0;q3<4;q3++){var cell=grid[i6][q3];ma+=cell.a;mm3+=cell.mn;row.push(cell.a>0?pct(cell.a,cell.mn)+'%':'—');} row.push(ma>0?pct(ma,mm3)+'%':'—'); rows3.push(row); }
       return { title:'クォーター（年度・達成率）', period:(Y3-1)+'/12〜'+Y3+'/11', kpis:[], sections:[{type:'table',title:'月×Q 達成率（実績÷目標最低）',head:['月','Q1','Q2','Q3','Q4','月計'],rows:rows3,align:['l','r','r','r','r','r']}]};
     }
@@ -607,7 +601,7 @@
     }
     if(tab==='work' && yr){
       var Y5=window._svYear; var mon=[];for(var i7=0;i7<12;i7++)mon[i7]={shaken:0,'12pt':0,general:0};
-      (state.cards||[]).forEach(function(c){if(c.status!=='returned')return;var d5=c.returnDateFinal||c.returnDate||'';if(!d5)return;var dd=pd(d5),cm=dd.getMonth(),cy=dd.getFullYear();var fy=(cm===11)?cy+1:cy;if(fy!==Y5)return;var slot=(cm===11)?0:cm+1;mon[slot][workGroupOf(c)]+=actAmt(c);});
+      (state.cards||[]).forEach(function(c){if(c.status!=='returned')return;var d5=countDate(c);if(!d5)return;var dd=pd(d5),cm=dd.getMonth(),cy=dd.getFullYear();var fy=(cm===11)?cy+1:cy;if(fy!==Y5)return;var slot=(cm===11)?0:cm+1;mon[slot][workGroupOf(c)]+=actAmt(c);});
       var rows5=[];for(i7=0;i7<12;i7++){var mm5=mon[i7];rows5.push([SLOT[i7]+'月',man(mm5.shaken),man(mm5['12pt']),man(mm5.general),man(mm5.shaken+mm5['12pt']+mm5.general)]);}
       return { title:'作業内容（年度）', period:(Y5-1)+'/12〜'+Y5+'/11', kpis:[], sections:[{type:'table',title:'月別グループ',head:['月','車検','12点','一般','計'],rows:rows5,align:['l','r','r','r','r']}]};
     }

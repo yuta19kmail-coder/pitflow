@@ -116,7 +116,8 @@
   window.pitMechAllocText = pitMechAllocText;
 
   /* ===================== 作業サマリー ビュー ===================== */
-  function returnDateOf(c){ return c.returnDateFinal || c.returnDate || ''; }
+  /* 🔴 v1.61.0 実績を数える日は物差し1本（js/sales-count.js）から。写しを作らない */
+  function returnDateOf(c){ return window.pitSalesCountDate ? pitSalesCountDate(c) : (c.completedAt || c.returnDateFinal || c.returnDate || ''); }
 
   function collect(moS, moE){
     var people = {};          // name -> {inspAmt,workAmt,inspVeh,workVeh}

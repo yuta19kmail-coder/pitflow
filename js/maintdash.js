@@ -31,7 +31,8 @@ function _mdCalc(divId, cards, moS, moE, wkS, wkE){
     if (_mdCourse(c) !== divId) return;
     const amt = _mdAmount(c);
     if (_mdDone(c)){
-      const dt = c.returnDate || c.reserveDate || '';
+      /* 🔴 v1.61.0 数える日は物差し1本（js/sales-count.js）から。返車済み＝実績カウント日／作業完了＝返車予定日 */
+      const dt = (window.pitSalesCountDate ? pitSalesCountDate(c) : '') || c.returnDate || c.reserveDate || '';
       if (dt >= moS && dt <= moE){ mC++; mA += amt; }
       if (dt >= wkS && dt <= wkE){ wC++; wA += amt; }
     } else if (c.status !== 'scrap'){
