@@ -168,7 +168,11 @@
 
 /* メモ */
 .cv-work{ margin-top:12px; background:var(--bg1); border:1px solid var(--border); border-radius:10px; padding:11px 14px; }
-.cv-wtop{ display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+/* 🔴 v1.56.3 担当が2つ（フロント担当／予約担当）並ぶようになったので、
+   両端に飛ばさず左から順に並べる（片方しか居ない時もそのまま左に付く）。 */
+.cv-wtop{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+/* 名前ピルの前に付く小さな見出し（例「フロント」）＝何の担当か裸の名前と見分けるため */
+.cv-pill.cv-staff > i{ font-style:normal; font-size:10px; font-weight:800; color:var(--text3); margin-right:5px; letter-spacing:.3px; }
 .cv-wtt{ font-size:12px; font-weight:800; color:var(--text2); }
 .cv-wsec{ padding:7px 0; } .cv-wsec + .cv-wsec{ border-top:1px dashed var(--border); }
 .cv-gt{ font-size:10.5px; font-weight:800; color:var(--text3); margin-bottom:5px; letter-spacing:.3px; } .cv-gt small{ font-weight:700; color:var(--text3); opacity:.8; }

@@ -105,7 +105,10 @@
       ? '<span class="cv-pill cv-yunyu">輸入車</span>' : '<span class="cv-pill cv-kokusan">国産車</span>';
     const divPill = (c.division==='div2')
       ? '<span class="cv-pill cv-div2">2課</span>' : '<span class="cv-pill cv-div1">1課</span>';
-    const staffPill = (c.frontStaff||c.staff) ? '<span class="cv-pill cv-staff">'+esc(c.frontStaff||c.staff)+'</span>' : '';
+    /* 🔴 v1.56.3（ゆうた報告）ここは**フロント担当**。名前だけ裸で置いていたので、
+       下のメモ欄の「予約担当」と見分けが付かなかった。**何の担当か分かる形にする。** */
+    const staffPill = (c.frontStaff||c.staff)
+      ? '<span class="cv-pill cv-staff" title="フロント担当"><i>フロント</i>'+esc(c.frontStaff||c.staff)+'</span>' : '';
     h += '<div class="cv-id3">'+teamPill+divPill+staffPill+telHtml(c)+lineHtml(c)+'</div>';
 
     // 車検枠（作業内容コンテナ）
@@ -223,9 +226,22 @@
     return String(text||'').split('\n').map(function(l){return l.trim();}).filter(Boolean)
       .map(function(l){return '<div class="cv-wl">'+esc(l)+'</div>';}).join('') || '<div class="cv-wl cv-muted">（なし）</div>';
   }
+  /* 🔴 v1.56.3（ゆうた報告）**「予約担当」と書いてあるのに、フロント担当の名前が出ていた。**
+     予約詳細カードは `c.reserveStaff`（予約を受けた人）を**一度も使っていなかった**。
+     ⚠ カードは2人を別々に持っている＝**フロント担当（`frontStaff`）／予約担当（`reserveStaff`）**。
+        予約編集の画面にも2つ別々の欄がある。**見出しと中身を必ず一致させること。**
+     ⚠ 昔のカードは `c.staff` しか持っていないことがあるので、そこだけ拾う。 */
+  function staffPillHtml(label, name){
+    if (!name) return '';
+    return '<span class="cv-wtt">' + esc(label)
+         + ' <span class="cv-pill cv-staff">' + esc(name) + '</span></span>';
+  }
   function memoHtml(c){
-    const staff = c.frontStaff || c.staff || '—';
-    let h = '<div class="cv-work"><div class="cv-wtop"><span class="cv-wtt">予約担当 <span class="cv-pill cv-staff">'+esc(staff)+'</span></span></div>';
+    const front = c.frontStaff || c.staff || '';
+    const resv  = c.reserveStaff || '';
+    let top = staffPillHtml('フロント担当', front) + staffPillHtml('予約担当', resv);
+    if (!top) top = '<span class="cv-wtt">担当 <span class="cv-pill cv-staff">—</span></span>';
+    let h = '<div class="cv-work"><div class="cv-wtop">' + top + '</div>';
     h += '<div class="cv-wsec"><div class="cv-gt">予約時内容</div>'+memoLines(c.menu||c.memo)+'</div>';
     // 引継ぎメモはこの画面から直接入力＝自動保存（予約時内容は新規予約で入れるので編集ボタンのまま）
     h += '<div class="cv-wsec"><div class="cv-gt">引継ぎ・伝達 <small>（入庫後・ここに直接入力できます）</small></div>'

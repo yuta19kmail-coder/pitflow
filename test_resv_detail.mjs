@@ -39,7 +39,7 @@ await p.evaluate(() => {
   window.pitCurrentStaffName = function(){ return 'サンプル 花子'; };
   const base = {
     tel: '090-1111-2222', car: 'アクア', plate: '横浜 300 あ 12-34', karteNo: '1234',
-    boardId: 'default', division: 'div1', workType: 'shaken', frontStaff: '',
+    boardId: 'default', division: 'div1', workType: 'shaken', frontStaff: 'フロント 一郎', reserveStaff: '予約 二郎',
     reserveDate: '2026-08-20', estHoldDays: 3, estAmount: 88000,
     needLoaner: true, loanerId: 'L01', loanerTo: '2026-08-25', log: [], maint: {}, office: {}
   };
@@ -472,6 +472,52 @@ console.log('\n── 🔴 v1.56.1 「反応しないから連打」を受け止
   await p.evaluate(() => { if (window.pitDropDraft) pitDropDraft(null, true); });
 }
 
+console.log('\n── 👤 v1.56.3 フロント担当と予約担当を取り違えない（ゆうた報告） ──');
+{
+  await open('TR1');
+  const r = await p.evaluate(() => {
+    const tops = Array.prototype.map.call(document.querySelectorAll('#md-body-modal .cv-wtop .cv-wtt'), e => ({
+      label: e.childNodes[0].textContent.trim(),
+      name: (e.querySelector('.cv-pill') || {}).textContent
+    }));
+    const pill = document.querySelector('#md-body-modal .cv-id3 .cv-pill.cv-staff');
+    return { tops: tops, id3: pill ? { text: pill.textContent, title: pill.getAttribute('title') } : null };
+  });
+  ok('担当が2つ並ぶ', r.tops.length === 2, r.tops);
+  ok('🔴 フロント担当にはフロント担当の名前が出る',
+     r.tops[0] && r.tops[0].label === 'フロント担当' && r.tops[0].name === 'フロント 一郎', r.tops);
+  ok('🔴 予約担当には予約担当の名前が出る（前はフロント担当が出ていた）',
+     r.tops[1] && r.tops[1].label === '予約担当' && r.tops[1].name === '予約 二郎', r.tops);
+  ok('上の行の名前ピルは「フロント」と分かる', r.id3 && /フロント/.test(r.id3.text) && r.id3.title === 'フロント担当', r.id3);
+  ok('上の行に出るのはフロント担当の名前', r.id3 && /フロント 一郎/.test(r.id3.text), r.id3);
+
+  /* 片方しか居ない時／どちらも居ない時 */
+  const one = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'TR1');
+    const keepF = c.frontStaff, keepR = c.reserveStaff;
+    c.frontStaff = ''; renderCardView(c, 'md-body-modal');
+    const a = Array.prototype.map.call(document.querySelectorAll('#md-body-modal .cv-wtop .cv-wtt'), e => e.childNodes[0].textContent.trim());
+    c.reserveStaff = ''; renderCardView(c, 'md-body-modal');
+    const b = Array.prototype.map.call(document.querySelectorAll('#md-body-modal .cv-wtop .cv-wtt'), e => e.textContent.trim());
+    c.frontStaff = keepF; c.reserveStaff = keepR; renderCardView(c, 'md-body-modal');
+    return { one: a, none: b };
+  });
+  ok('片方だけの時は、その1つだけ出る', one.one.length === 1 && one.one[0] === '予約担当', one);
+  ok('どちらも居ない時も欄が壊れない', one.none.length === 1 && /担当/.test(one.none[0]), one);
+
+  /* 昔のカード（c.staff しか持っていない）も拾う */
+  const old = await p.evaluate(() => {
+    state.cards = state.cards.filter(x => x.id !== 'TOLD');
+    state.cards.push({ id: 'TOLD', resNo: 'R-OLD', status: 'reserved', customer: '昔 太郎', staff: '昔の 担当', log: [] });
+    openCard('TOLD', 'modal');
+    return Array.prototype.map.call(document.querySelectorAll('#md-body-modal .cv-wtop .cv-wtt'), e => e.textContent.trim());
+  });
+  ok('昔のカードの担当も拾う（空にしない）', old.length === 1 && /フロント担当/.test(old[0]) && /昔の 担当/.test(old[0]), old);
+
+  const src = fs.readFileSync('js/card-view.js', 'utf8');
+  ok('🔴 予約担当が reserveStaff を見ている', /c\.reserveStaff/.test(src));
+}
+
 console.log('\n── 🎨 v1.56.2 どのテーマでも文字が読める（ライトで --text1 が白いまま残っていた件） ──');
 {
   const THEMES = ['dark', 'light', 'dark-liquid', 'light-liquid'];
@@ -551,7 +597,7 @@ console.log('\n── 版とキャッシュ番号 ──');
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
               (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
-  ok('版は v1.56.2', vs[0] === '1.56.2', vs);
+  ok('版は v1.56.3', vs[0] === '1.56.3', vs);
   ok('直したファイルにキャッシュ番号が付いている',
      /card-view\.js\?v=\d+/.test(ix) && /card-detail\.js\?v=\d+/.test(ix) && /db-pit\.js\?v=\d+/.test(ix)
      && /loaner\.js\?v=\d+/.test(ix) && /card-view\.css\?v=\d+/.test(ix));
