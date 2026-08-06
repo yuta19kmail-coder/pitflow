@@ -193,9 +193,9 @@ console.log('\n── 登録画面（新規顧客）もカナだけでOK ──'
   await p.waitForTimeout(400);
   await p.evaluate(() => crSave());
   await p.waitForTimeout(250);
-  ok('🔴 漢字もカナも空なら登録しない', await p.evaluate(() => !!document.getElementById('cr-name')));
-  await p.fill('#cr-kana', 'キシダ');
-  await p.fill('#cr-contacts .cr-ctel', '090-9150-6224');
+  ok('🔴 漢字もカナも空なら登録しない', await p.evaluate(() => !!document.getElementById('cr-sei')));
+  await p.fill('#cr-seikana', 'キシダ');
+  await p.fill('#cr-contacts .cr-t1', '090'); await p.fill('#cr-contacts .cr-t2', '9150'); await p.fill('#cr-contacts .cr-t3', '6224');
   await p.evaluate(() => crSave());
   await p.waitForTimeout(500);
   const r = await p.evaluate(() => state.customers.map(c => ({ name: c.name, kana: c.kana })));

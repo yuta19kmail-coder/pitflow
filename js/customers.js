@@ -614,12 +614,17 @@
     const v=(cust.vehicles||[]).find(x=>x.id===vehId);
     const plate=v?(v.plate||''):'';
     const arr=Array.isArray(state.cards)?state.cards:[];
-    /* 🔴 v1.53.0 「0」などのナンバーで引くと、他のお客様のカードまで履歴に混ざるので使わない */
-    const cards=(isRealPlate(plate)?arr.filter(c=>isRealPlate(c.plate)&&norm(c.plate)===norm(plate)):[]).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
+    /* 🔴 v1.53.0 「0」などのナンバーで引くと、他のお客様のカードまで履歴に混ざるので使わない
+       🔴 v1.54.0 出すのは**実績になったものだけ**（顧客詳細の来店履歴と同じ決まり） */
+    const _all=(isRealPlate(plate)?arr.filter(c=>isRealPlate(c.plate)&&norm(c.plate)===norm(plate)):[]);
+    const cards=_all.filter(_cardDone).slice().sort((a,b)=>(_doneDate(b)||'').localeCompare(_doneDate(a)||''));
+    const _open=_all.length-cards.length;
     const vlabel=v?(vehLabel(v)+(plate?' / '+plate:'')):'（車両不明）';
     let h='<div class="cm-head"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cm-sub">'+esc(custDispName(cust)||'(無名)')+' ・ '+esc(vlabel)+'</span><button class="cm-x" onclick="custCloseModal()"><i data-ic=close data-ics=16></i></button></div><div class="cm-body">';
     if(!cards.length){
-      h+='<div class="cust-empty">この車の入庫カードはまだありません。<br>（整備ソフトに正式履歴があります）</div>';
+      h+='<div class="cust-empty">この車の来店履歴はまだありません。<br>返車まで終わって実績になった入庫だけが、ここに並びます。'
+        +(_open?'<br><b>（いま予約・作業中のものが '+_open+' 件あります）</b>':'')
+        +'<br>（整備ソフトに正式履歴があります）</div>';
     } else {
       h+='<div class="cm-hist">';
       cards.forEach(c=>{
@@ -627,7 +632,7 @@
         const wl=wt?wt.label:(c.workType||'—');
         const st=(typeof statusLabel==='function')?statusLabel(c.status):(c.status||'');
         const amt=(c.estAmount!=null&&c.estAmount!=='')?('¥'+Number(c.estAmount).toLocaleString()):'—';
-        const dt=cardDate(c)||'日付未定';
+        const dt=_doneDate(c)||'日付未定';
         let loa='';
         if(c.needLoaner){ const l=(state.loaners||[]).find(x=>x.id===c.loanerId); loa='<i data-ic=van data-ics=16></i>代車'+(l?('（'+l.name+'）'):''); }
         h+='<div class="cm-hrow"><div class="cm-hdt">'+esc(dt)+'</div>'+
@@ -648,13 +653,30 @@
     const col=b&&(b.cols||[]).find(x=>x.id===c.status);
     return col?col.name:(c.status||'');
   }
-  function _custCards(cust){
+  /* 🔴 v1.54.0（ゆうた指定）**来店履歴に載せるのは「実績になったもの」だけ。**
+     ⚠ 前は予約を入れた段階で履歴に出ていた。
+        ゆうた＝「**あくまでタスクフローを通過して返車まで完了して、実績ボードに乗ったタイミングで記載**。
+                金額もそこで本当に確定だし」。
+     ⚠ 判定＝**返車済み（status='returned'）で、実績の日付（completedAt）が入っている**もの。
+        これは実績ビューが見ているのと同じ印で、当日ビューの「返車済みにする」で入り、
+        **同時に売上（amountFinal）も確定値で固められる**。
+     ⚠ 作業完了（workDone）はまだ返車前なので**入れない**。 */
+  function _cardDone(c){ return !!(c && c.status==='returned' && String(c.completedAt||'').trim()); }
+  window.pitCardIsDone = _cardDone;
+  /* その人のカード全部（予約中も含む）。件数の案内に使う */
+  function _custCardsAll(cust){
     /* 🔴 v1.53.0 意味をなさないナンバー（「0」など）は突き合わせに使わない */
     const plates=(cust.vehicles||[]).filter(v=>isRealPlate(v.plate)).map(v=>norm(v.plate));
     return (Array.isArray(state.cards)?state.cards:[]).filter(function(c){
       return (c.customerId&&c.customerId===cust.id) || (isRealPlate(c.plate)&&plates.indexOf(norm(c.plate))>=0);
-    }).slice().sort((a,b)=>(cardDate(b)||'').localeCompare(cardDate(a)||''));
+    });
   }
+  /* 来店履歴に出すもの＝実績になったものだけ。並びは実績の日付の新しい順 */
+  function _custCards(cust){
+    return _custCardsAll(cust).filter(_cardDone).slice()
+      .sort((a,b)=>(_doneDate(b)||'').localeCompare(_doneDate(a)||''));
+  }
+  function _doneDate(c){ return c.completedAt || c.returnDate || c.reserveDate || ''; }
   /* v0.93.0 LINE状態→表示HTML（NG=地味ピル／登録済+番号=Lステップボタン）。未案内は出さない。 */
   function _lineHtml(o){
     var st=(o&&o.lineStatus)||'';
@@ -734,8 +756,10 @@
        アーカイブした車は下の「アーカイブ車両」欄にまとめる（ゆうた指定）。 */
     const vehicles=liveVehs(cust);
     const archived=archVehs(cust);
-    const cards=_custCards(cust);
+    const cards=_custCards(cust);                       /* 実績になったものだけ（v1.54.0） */
+    const openCards=_custCardsAll(cust).filter(c=>!_cardDone(c));   /* いま予約・作業中のもの */
     const visits=cards.length;
+    /* 🔴 v1.54.0 金額は**確定額（返車時に固めたもの）**を使う。まだ無ければ概算で埋める */
     const total=cards.reduce(function(s,c){ const a=(c.amountFinal!=null&&c.amountFinal!=='')?Number(c.amountFinal):(Number(c.estAmount)||0); return s+(isFinite(a)?a:0); },0);
     let last=cust.updatedAt||0; vehicles.forEach(function(v){ if((v.updatedAt||0)>last) last=v.updatedAt||0; });
     const yen=function(n){ return '¥'+Number(n||0).toLocaleString('ja-JP'); };
@@ -824,7 +848,10 @@
     } else { h+='<div class="cd-empty">車両は未登録です</div>'; }
     h+='</div>';
     // 来店履歴
-    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cd-cnt">'+(visits?('直近'+Math.min(visits,12)+'件'):'なし')+'</span></div></div>';
+    /* 🔴 v1.54.0 来店履歴＝実績になったものだけ。予約・作業中のものは件数だけ添える（ゆうた指定） */
+    h+='<div class="cd-sec"><div class="cd-sech"><div class="cd-sect"><i data-ic=clock data-ics=16></i> 来店履歴 <span class="cd-cnt">'+
+       (visits?('直近'+Math.min(visits,12)+'件'):'なし')+
+       (openCards.length?('　／　予約・作業中 '+openCards.length+'件'):'')+'</span></div></div>';
     if(visits){
       h+='<div class="cd-hist">';
       cards.slice(0,12).forEach(function(c){
@@ -840,14 +867,19 @@
                     :isRet?("event.stopPropagation();pitGotoResultMonth('"+esc(c.returnDate||c.reserveDate||'')+"')"):'';
         const stBadge='<span class="cd-hst'+((isResv||isRet)?' clickable':'')+'"'+(stClick?(' onclick="'+stClick+'" title="'+(isResv?'予約カレンダーへ':'実績カレンダーへ')+'"'):'')+'>'+esc(_statusLbl(c))+(isResv?' <i data-ic=calendar data-ics=16></i>':isRet?' <i data-ic=chart data-ics=16></i>':'')+'</span>';
         h+='<div class="cd-hrow clickable" onclick="pitOpenCardDetail(\''+esc(c.id)+'\')" title="クリックで予約詳細">'+
-           '<div class="cd-hdt">'+esc(cardDate(c)||'日付未定')+'</div>'+
+           '<div class="cd-hdt">'+esc(_doneDate(c)||'日付未定')+'</div>'+
            '<div class="cd-hwt" style="background:'+wc+'">'+esc(wl)+'</div>'+
            '<div class="cd-hmid"><b>'+esc(c.car||'')+'</b>'+(c.plate?' ・ '+esc(c.plate):'')+(c.frontStaff?' ・ 担当 '+esc(c.frontStaff):'')+loa+(menuTxt?'<div class="cd-hsub">'+menuTxt+'</div>':'')+'</div>'+
            stBadge+
            '<div class="cd-hamt">'+amtStr+'</div></div>';
       });
       h+='</div>';
-    } else { h+='<div class="cd-empty">入庫カードの履歴はまだありません（整備ソフトに正式履歴があります）</div>'; }
+    } else {
+      h+='<div class="cd-empty">来店履歴はまだありません。<br>'
+        +'<b>返車まで終わって実績になった入庫だけが、ここに並びます</b>（金額もそこで確定します）。'
+        +(openCards.length?('<br>いま <b>'+openCards.length+'件</b> の予約・作業中があります。返車まで終わるとここに載ります。'):'')
+        +'<br>（整備ソフトに正式履歴があります）</div>';
+    }
     h+='</div>';
 
     /* 🔴 v1.52.0（ゆうた指定）**来店履歴の下に「アーカイブ車両」欄**。

@@ -37,6 +37,18 @@ const okDialog = async () => {
   await p.waitForTimeout(350);
 };
 
+/* 🔴 v1.54.0 登録画面のナンバーは、新規予約画面と同じ「1BOXを押して4枠」方式。
+   ⚠ 素の入力欄は無い。押してガイドを開いてから入れる。 */
+const crPlate = async (pg, region, cls, kana, num) => {
+  await pg.click('#cust-modal .cf-plate [data-plate-main]');
+  await pg.waitForTimeout(200);
+  await pg.fill('#cust-modal .cf-plate-region', region);
+  await pg.fill('#cust-modal .cf-plate-cls', cls);
+  await pg.fill('#cust-modal .cf-plate-kana', kana);
+  await pg.fill('#cust-modal .cf-plate-num', num);
+  await pg.waitForTimeout(200);
+};
+
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
 await p.goto('http://127.0.0.1:8962/index.html?demo=1');
 await p.waitForFunction('window.state && window.PitArchive && window.renderCustomers', null, { timeout: 20000 });
@@ -222,12 +234,14 @@ console.log('\n── ⑨ 🔴 新規予約：乗り換え／増車 の2択 →�
   ok('🔴 v1.52.0 登録画面が開く', await p.evaluate(() => !!document.getElementById('cr-karte')));
   ok('🔴 増車では前の車をアーカイブしない',
      (await p.evaluate(() => PitArchive.vehSelfArchived(state.customers.find(x=>x.id==='cuA').vehicles.find(v=>v.id==='a1')))) === false);
-  await p.fill('#cr-plate', '野田300さ9999'); await p.fill('#cr-maker', 'スバル');
+  /* 🔴 v1.54.0 ナンバーは新規予約画面と同じ入力補助になった（1BOXを押して4枠に入れる） */
+  await crPlate(p, '野田', '300', 'さ', '9999');
+  await p.fill('#cr-maker', 'スバル');
   await p.fill('#cr-car', 'レガシィ');        await p.fill('#cr-karte', 'K999');
   await p.evaluate(() => crSave());
   await p.waitForTimeout(700);
   const afterAdd = await p.evaluate(id => { const c = state.cards.find(x => x.id === id); return { plate:c.plate, maker:c.maker, car:c.car, karte:c.karteNo, drive:(c.drive||[]).length, cust:c.customer, tel:c.tel }; }, CID);
-  ok('🔴 登録した車がカードに入る', afterAdd.plate === '野田300さ9999' && afterAdd.maker === 'スバル' && afterAdd.car === 'レガシィ', afterAdd);
+  ok('🔴 登録した車がカードに入る', afterAdd.plate === '野田 300 さ 9999' && afterAdd.maker === 'スバル' && afterAdd.car === 'レガシィ', afterAdd);
   ok('🔴 カルテNo.も新しい車のものになる（v1.48.1 までのバグ）', afterAdd.karte === 'K999', afterAdd);
   ok('車両注意は空になる（車ごとの情報）', afterAdd.drive === 0, afterAdd);
   ok('🔴 人の情報（名前・TEL）は消えない', afterAdd.cust === 'アーカイブ 太郎' && afterAdd.tel === '090-1111-1111', afterAdd);
@@ -245,11 +259,11 @@ console.log('\n── ⑨ 🔴 新規予約：乗り換え／増車 の2択 →�
   ok('理由が「乗換」で残る',
      (await p.evaluate(() => state.customers.find(x=>x.id==='cuA').vehicles.find(v=>v.id==='a2').archiveReason)) === '乗換');
   ok('🔴 こちらも登録画面が開く', await p.evaluate(() => !!document.getElementById('cr-karte')));
-  await p.fill('#cr-plate', '野田300た8888'); await p.fill('#cr-karte', 'K888');
+  await crPlate(p, '野田', '300', 'た', '8888'); await p.fill('#cr-karte', 'K888');
   await p.evaluate(() => crSave());
   await p.waitForTimeout(700);
   const afterTrade = await p.evaluate(id => { const c = state.cards.find(x => x.id === id); return { plate:c.plate, karte:c.karteNo }; }, CID);
-  ok('こちらも登録した車がカードに入る', afterTrade.plate === '野田300た8888' && afterTrade.karte === 'K888', afterTrade);
+  ok('こちらも登録した車がカードに入る', afterTrade.plate === '野田 300 た 8888' && afterTrade.karte === 'K888', afterTrade);
   ok('🔴 車のデータは消えていない（アーカイブしただけ）',
      (await p.evaluate(() => state.customers.find(x=>x.id==='cuA').vehicles.filter(v=>v.id==='a1'||v.id==='a2').length)) === 2);
   await p.evaluate(() => {

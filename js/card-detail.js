@@ -1742,9 +1742,16 @@ function plateInput(c){
          + 'カルテNo.・担当・課はこのお客様で共通です。</div>'
          + '</div>';
   }
-  // v0.83.0「新規車両」スイッチON＝ナンバー未定の新しい車（c.plate に文言「新規車両」を入れる）
-  const isNew = (String(c.plate || '').trim() === '新規車両');
-  const p = isNew ? { region:'', cls:'', kana:'', num:'' } : _platePartsOf(c);
+  return _plateGuideHtml(c.plate);
+}
+/* 🔴 v1.54.0 ナンバー入力補助の中身を、**入庫カード以外からも使える形**に切り出した。
+   ⚠ 顧客・車両の登録画面（cust-reg.js）が同じものを使う＝**写しを作らない**。
+      写しにすると、片方だけ直して食い違う（CarFlow のホバーで実際にやってしまっている）。 */
+function _plateGuideHtml(plateStr){
+  // v0.83.0「新規車両」スイッチON＝ナンバー未定の新しい車（plate に文言「新規車両」を入れる）
+  const isNew = (String(plateStr || '').trim() === '新規車両');
+  const p = isNew ? { region:'', cls:'', kana:'', num:'' } : _platePartsOf({ plate: plateStr });
+  const c = { plate: plateStr };
   let h = '<div class="cf-plate">';
   h += '<input type="text" class="cf-input cf-plate-main" data-plate-main readonly value="' + _pe(c.plate || '') + '" placeholder="クリックして入力" autocomplete="off">';
   h += '<div class="cf-plate-guide">';
@@ -1767,6 +1774,58 @@ function plateInput(c){
   h += '</div></div>';
   return h;
 }
+
+/* 🔴 v1.54.0 ナンバー入力補助の配線。入庫カードと登録画面で**同じものを使う**。
+   onChange には合成したナンバー文字列（例「野田 300 ひ 5555」）が渡る。 */
+function _bindPlateGuide(plateWrap, onChange){
+  if (!plateWrap) return;
+  const mainEl = plateWrap.querySelector('[data-plate-main]');
+  const newVehBtn = plateWrap.querySelector('[data-plate-newveh]');   // v0.83.0「新規車両」スイッチ
+  const recompose = () => {
+    const g = sel => { const x = plateWrap.querySelector(sel); return x ? x.value.trim() : ''; };
+    const v = [g('.cf-plate-region'), g('.cf-plate-cls'), g('.cf-plate-kana'), g('.cf-plate-num')].filter(Boolean).join(' ');
+    if (mainEl) mainEl.value = v;
+    if (onChange) onChange(v);
+  };
+  plateWrap.querySelectorAll('[data-plate]').forEach(el => el.addEventListener('input', () => {
+    const part = el.dataset.plate;
+    if (part === 'cls') el.value = _plateDigits(el.value, 3);        // 分類＝半角数字3桁
+    else if (part === 'num') el.value = _plateDigits(el.value, 4);   // ナンバー＝半角数字4桁・ハイフン/文字禁止・全角→半角
+    else if (part === 'kana') el.value = el.value.slice(0, 1);       // かな＝1文字
+    recompose();
+    if (newVehBtn) newVehBtn.classList.remove('on');                 // v0.83.0 ナンバーを打ったら「新規車両」は自動で解除
+  }));
+  // v0.83.0「新規車両」スイッチ：押すと plate='新規車両'。もう一度押すと解除。
+  if (newVehBtn){
+    newVehBtn.addEventListener('click', () => {
+      const willOn = !newVehBtn.classList.contains('on');
+      newVehBtn.classList.toggle('on', willOn);
+      if (willOn){
+        plateWrap.querySelectorAll('[data-plate]').forEach(el => { el.value = ''; });   // 4枠はクリア
+        if (mainEl) mainEl.value = '新規車両';
+        if (onChange) onChange('新規車両');
+        plateWrap.classList.remove('open');                          // 押したら閉じる
+      } else {
+        recompose();                                                 // 空の4枠から合成
+      }
+    });
+  }
+  const openGuide = () => plateWrap.classList.add('open');
+  if (mainEl){
+    mainEl.addEventListener('focus', openGuide);
+    mainEl.addEventListener('click', () => { openGuide(); const r = plateWrap.querySelector('.cf-plate-region'); if (r) setTimeout(() => r.focus(), 0); });
+  }
+  // フォーカスがガイドの外へ出たら閉じる（クリック外し・Tab抜け両対応）
+  plateWrap.addEventListener('focusout', (e) => { if (!plateWrap.contains(e.relatedTarget)) plateWrap.classList.remove('open'); });
+}
+
+/* 🔴 v1.54.0 登録画面（cust-reg.js）にも同じ入力補助を貸す入口。
+   ⚠ 中身を写さないこと。ここを直せば両方が直る。 */
+window.pitPlateGuideHtml = _plateGuideHtml;
+window.pitBindPlateGuide = _bindPlateGuide;
+window.pitBindAutoKanaSeg = _bindAutoKanaSeg;
+window.pitPlateDigits = _plateDigits;
+window.pitToKatakana = _toKatakana;
 
 function loanerSelect(c, key){
   let h = '<select class="cf-input" data-key="' + key + '">';
@@ -1923,48 +1982,10 @@ function bindCardFormEvents(root){
   }
 
   // ナンバー：見た目は1BOX。クリック/フォーカスでガイドを開き、4項目を入力→c.plate に合成（半角スペース1つ＝揺れ防止）
-  const plateWrap = root.querySelector('.cf-plate');
-  if (plateWrap){
-    const mainEl = plateWrap.querySelector('[data-plate-main]');
-    const newVehBtn = plateWrap.querySelector('[data-plate-newveh]');   // v0.83.0「新規車両」スイッチ
-    const recompose = () => {
-      const g = sel => { const x = plateWrap.querySelector(sel); return x ? x.value.trim() : ''; };
-      c.plate = [g('.cf-plate-region'), g('.cf-plate-cls'), g('.cf-plate-kana'), g('.cf-plate-num')].filter(Boolean).join(' ');
-      if (mainEl) mainEl.value = c.plate;
-      if (window.PitDB) PitDB.save();
-    };
-    plateWrap.querySelectorAll('[data-plate]').forEach(el => el.addEventListener('input', () => {
-      const part = el.dataset.plate;
-      if (part === 'cls') el.value = _plateDigits(el.value, 3);        // 分類＝半角数字3桁
-      else if (part === 'num') el.value = _plateDigits(el.value, 4);   // ナンバー＝半角数字4桁・ハイフン/文字禁止・全角→半角
-      else if (part === 'kana') el.value = el.value.slice(0, 1);       // かな＝1文字
-      recompose();
-      if (newVehBtn) newVehBtn.classList.remove('on');                 // v0.83.0 ナンバーを打ったら「新規車両」は自動で解除
-    }));
-    // v0.83.0「新規車両」スイッチ：押すと c.plate='新規車両'（ナンバー欄に文言が入る）。もう一度押すと解除。
-    if (newVehBtn){
-      newVehBtn.addEventListener('click', () => {
-        const willOn = !newVehBtn.classList.contains('on');
-        newVehBtn.classList.toggle('on', willOn);
-        if (willOn){
-          plateWrap.querySelectorAll('[data-plate]').forEach(el => { el.value = ''; });   // 4枠はクリア
-          c.plate = '新規車両';
-          if (mainEl) mainEl.value = c.plate;
-          if (window.PitDB) PitDB.save();
-          plateWrap.classList.remove('open');                          // 押したら閉じる
-        } else {
-          recompose();                                                 // 空の4枠から合成＝c.plate='' ＋保存
-        }
-      });
-    }
-    const openGuide = () => plateWrap.classList.add('open');
-    if (mainEl){
-      mainEl.addEventListener('focus', openGuide);
-      mainEl.addEventListener('click', () => { openGuide(); const r = plateWrap.querySelector('.cf-plate-region'); if (r) setTimeout(() => r.focus(), 0); });
-    }
-    // フォーカスがガイドの外へ出たら閉じる（クリック外し・Tab抜け両対応）
-    plateWrap.addEventListener('focusout', (e) => { if (!plateWrap.contains(e.relatedTarget)) plateWrap.classList.remove('open'); });
-  }
+  _bindPlateGuide(root.querySelector('.cf-plate'), function(v){
+    c.plate = v;
+    if (window.PitDB) PitDB.save();
+  });
 
   // v0.85.0 受付タイプ＝最大2つ選択（待/当/預）。主=dropType・副=dropType2。表示は「待or預」。
   root.querySelectorAll('.cf-chips.cf-dual').forEach(group => {

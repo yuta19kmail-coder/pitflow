@@ -223,3 +223,15 @@
 .cr-pvnote{ font-size:11.5px; line-height:1.75; color:#a5b4fc; background:rgba(124,140,248,.10);
   border:1px solid rgba(124,140,248,.38); border-radius:10px; padding:10px 13px; margin:-2px 0 12px; }
 .cr-pvnote b{ color:#c7d2fe; }
+
+/* 🔴 v1.54.0 登録画面の入力欄を「新規予約画面と同じ」にした（ゆうた指定）
+   ⚠ 姓／名の2枠・カナ2枠・ナンバー入力補助・メーカー／車種の候補は、
+      card-detail.js / carname-pit.js の**本物を借りている**（写しを作らない）。
+      ここは、その部品がこのモーダルの中でも収まるようにするだけ。 */
+.cr-box .cf-namebox{ width:100%; }
+.cr-box .cf-plate{ width:100%; }
+.cr-box .cf-plate-guide{ z-index:60; }
+/* 電話3枠（新規予約画面の .cf-ct-1/2/3 と同じ考え方） */
+.cr-tel3{ display:flex; align-items:center; gap:5px; flex:0 0 auto; }
+.cr-tel3 .cr-in{ width:4.6em; text-align:center; padding:8px 6px; }
+.cr-telsep{ color:var(--text3); font-size:12px; }

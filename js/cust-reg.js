@@ -58,14 +58,32 @@
       frontStaffList().map(function(n){ return '<option value="'+esc(n)+'"'+(v===n?' selected':'')+'>'+esc(n)+'</option>'; }).join('')+
       '</select>';
   }
+  /* 🔴 v1.54.0 電話は**新規予約画面と同じ3枠**（ゆうた指定）。打つと 090-1234-5678 に合成する。 */
+  function telParts(tel){
+    var t = String(tel||'').split('-');
+    return { a:(t[0]||''), b:(t[1]||''), c:(t[2]||'') };
+  }
   function contactRow(ct, first){
     ct = ct || {};
+    var t = telParts(ct.tel);
     return '<div class="cr-ct">'+
       '<label class="cr-ctpri"><input type="radio" name="cr-pri" class="ui-cb"'+((ct.primary||first)?' checked':'')+'> 優先</label>'+
-      '<input class="cr-ctel cr-in" value="'+esc(ct.tel||'')+'" placeholder="090-1234-5678">'+
+      '<div class="cr-tel3">'+
+        '<input class="cr-in cr-t1" inputmode="numeric" maxlength="5" value="'+esc(t.a)+'" placeholder="090">'+
+        '<span class="cr-telsep">-</span>'+
+        '<input class="cr-in cr-t2" inputmode="numeric" maxlength="4" value="'+esc(t.b)+'" placeholder="1234">'+
+        '<span class="cr-telsep">-</span>'+
+        '<input class="cr-in cr-t3" inputmode="numeric" maxlength="4" value="'+esc(t.c)+'" placeholder="5678">'+
+      '</div>'+
       '<input class="cr-clabel cr-in" value="'+esc(ct.label||'')+'" placeholder="ラベル（個人携帯 など）">'+
       '<button type="button" class="cr-ctdel" onclick="crDelContact(this)" title="この連絡先を消す"><i data-ic=trash data-ics=15></i></button>'+
       '</div>';
+  }
+  /* 3枠 → 「090-1234-5678」。数字だけに直してから繋ぐ（新規予約画面と同じ決まり） */
+  function telOf(row){
+    var dg = function(el, max){ if(!el) return ''; el.value = (w.pitPlateDigits ? pitPlateDigits(el.value, max) : String(el.value||'').replace(/[^0-9]/g,'').slice(0,max)); return el.value.trim(); };
+    var a = dg(row.querySelector('.cr-t1'), 5), b = dg(row.querySelector('.cr-t2'), 4), c = dg(row.querySelector('.cr-t3'), 4);
+    return [a,b,c].filter(Boolean).join('-');
   }
 
   function render(){
@@ -82,9 +100,20 @@
     /* ── お客様（新規のときだけ入力／車両追加のときは相手を出すだけ） ── */
     if (isNew){
       h += '<div class="cr-sec"><i data-ic=user data-ics=15></i> お客様</div>';
+      /* 🔴 v1.54.0 名前は**新規予約画面と同じ「姓／名の2枠」**。打つと**カナが自動で入る**（IMEの読みを拾う・手で直せる）。 */
       h += '<div class="cr-row2">'+
-             '<div class="cr-f"><label>お客様名（漢字）</label><input id="cr-name" class="cr-in" placeholder="小林 太郎" autocomplete="off"></div>'+
-             '<div class="cr-f"><label>カナ</label><input id="cr-kana" class="cr-in" placeholder="コバヤシ タロウ" autocomplete="off"></div>'+
+             '<div class="cr-f"><label>お客様名（姓／名）</label>'+
+               '<div class="cf-namebox" id="cr-namebox">'+
+                 '<input type="text" class="cf-nb-seg" id="cr-sei" placeholder="姓" autocomplete="off">'+
+                 '<span class="cf-nb-sep"></span>'+
+                 '<input type="text" class="cf-nb-seg" id="cr-mei" placeholder="名" autocomplete="off">'+
+               '</div></div>'+
+             '<div class="cr-f"><label>カナ（セイ／メイ）</label>'+
+               '<div class="cf-namebox">'+
+                 '<input type="text" class="cf-nb-seg" id="cr-seikana" placeholder="セイ" autocomplete="off">'+
+                 '<span class="cf-nb-sep"></span>'+
+                 '<input type="text" class="cf-nb-seg" id="cr-meikana" placeholder="メイ" autocomplete="off">'+
+               '</div></div>'+
            '</div>';
       /* 🔴 v1.53.0 漢字が分からない新規のお客様は**カナだけでOK**（予約カードと同じ運用） */
       h += '<div class="cr-hint" style="margin:-4px 0 10px">漢字が分からないときは<b>カナだけ</b>でも登録できます（どちらか入っていればOK）。</div>';
@@ -114,13 +143,17 @@
          '<br>・<b>ナンバーは持ちません</b>'+
          '<br>・<b>車種名は予約のたびに入力</b>します。打った名前が予約カード・表紙・実績ボード・履歴にそのまま出ます'+
          '</div>';
+    /* 🔴 v1.54.0 ナンバーは**新規予約画面と同じ入力補助**（地名・分類・かな・番号の4枠＋「新規車両」スイッチ）。
+       メーカー・車種は**打つと候補が入力欄の上に出る**（carname-pit.js＝予約画面と同じ部品）。 */
     h += '<div id="cr-plainveh">'+
            '<div class="cr-row2">'+
-             '<div class="cr-f"><label>ナンバー</label><input id="cr-plate" class="cr-in" placeholder="野田 300 ひ 5555" autocomplete="off"></div>'+
-             '<div class="cr-f"><label>メーカー</label><input id="cr-maker" class="cr-in" value="'+esc(base.maker||'')+'" placeholder="トヨタ" autocomplete="off"></div>'+
+             '<div class="cr-f"><label>ナンバー</label>'+
+               (w.pitPlateGuideHtml ? pitPlateGuideHtml('') : '<input id="cr-plate" class="cr-in" placeholder="野田 300 ひ 5555" autocomplete="off">')+
+             '</div>'+
+             '<div class="cr-f"><label>メーカー</label><input id="cr-maker" class="cr-in" data-cn="maker" value="'+esc(base.maker||'')+'" placeholder="トヨタ" autocomplete="off"></div>'+
            '</div>'+
            '<div class="cr-row2">'+
-             '<div class="cr-f"><label>車種（グレード）</label><input id="cr-car" class="cr-in" value="'+esc(base.car||'')+'" placeholder="アクア Gz" autocomplete="off"></div>'+
+             '<div class="cr-f"><label>車種（グレード）</label><input id="cr-car" class="cr-in" data-cn="car" value="'+esc(base.car||'')+'" placeholder="アクア Gz" autocomplete="off"></div>'+
              '<div class="cr-f"></div>'+
            '</div>'+
          '</div>';
@@ -139,7 +172,45 @@
     if (w.custShowModal) custShowModal(h, 'cr-box');
     if (w.icHydrate) try{ icHydrate(); }catch(e){}
     if (w.pitIconsHydrate) try{ pitIconsHydrate(); }catch(e){}
-    setTimeout(function(){ var f=d.getElementById(isNew?'cr-name':'cr-plate'); if(f) f.focus(); }, 30);
+    wire(isNew);
+    setTimeout(function(){ var f=d.getElementById(isNew?'cr-sei':'cr-maker'); if(f) f.focus(); }, 30);
+  }
+
+  /* 🔴 v1.54.0 新規予約画面と同じ入力補助を取り付ける。
+     ⚠ どれも card-detail.js / carname-pit.js の**本物を借りている**（写しを作らない）。 */
+  var _plate = '';                    /* ナンバー入力補助が組み立てた文字列をここに持つ */
+  function wire(isNew){
+    _plate = '';
+    /* 名前→カナの自動フリガナ（姓→セイ／名→メイ） */
+    if (isNew && w.pitBindAutoKanaSeg){
+      pitBindAutoKanaSeg(d.getElementById('cr-sei'),  d.getElementById('cr-seikana'), null);
+      pitBindAutoKanaSeg(d.getElementById('cr-mei'),  d.getElementById('cr-meikana'), null);
+    }
+    /* ナンバーの4枠 */
+    var box = d.getElementById('cust-modal');
+    if (box && w.pitBindPlateGuide) pitBindPlateGuide(box.querySelector('.cf-plate'), function(v){ _plate = v; });
+    /* メーカー・車種の候補（入力欄の上に出る） */
+    if (box && w.PitCarName && PitCarName.mount){
+      var pseudo = { boardId: (d.getElementById('cr-board')||{}).value || '', maker: (d.getElementById('cr-maker')||{}).value || '' };
+      var bd = d.getElementById('cr-board');
+      if (bd) bd.addEventListener('change', function(){ pseudo.boardId = bd.value; });
+      PitCarName.mount(box, pseudo, {
+        onMaker: function(v){
+          pseudo.maker = v;
+          /* 予約画面と同じ＝メーカーから国産／輸入が決まるなら入れておく */
+          if (bd && !bd.value && PitCarName.boardOf){ var b = PitCarName.boardOf(v); if (b) { bd.value = b; pseudo.boardId = b; } }
+        }
+      });
+    }
+    /* 電話3枠：打った瞬間に数字だけへ直す */
+    if (box) box.querySelectorAll('.cr-ct').forEach(function(row){
+      row.querySelectorAll('.cr-t1,.cr-t2,.cr-t3').forEach(function(el){
+        el.addEventListener('input', function(){
+          var max = el.classList.contains('cr-t1') ? 5 : 4;
+          if (w.pitPlateDigits) el.value = pitPlateDigits(el.value, max);
+        });
+      });
+    });
   }
 
   /* ---------- 画面の操作 ---------- */
@@ -153,14 +224,24 @@
   w.crAddContact = function(){
     var box=d.getElementById('cr-contacts'); if(!box) return;
     var wrap=d.createElement('div'); wrap.innerHTML=contactRow(null,false);
-    if(wrap.firstElementChild) box.appendChild(wrap.firstElementChild);
+    var row = wrap.firstElementChild;
+    if(row){
+      box.appendChild(row);
+      row.querySelectorAll('.cr-t1,.cr-t2,.cr-t3').forEach(function(el){
+        el.addEventListener('input', function(){
+          var max = el.classList.contains('cr-t1') ? 5 : 4;
+          if (w.pitPlateDigits) el.value = pitPlateDigits(el.value, max);
+        });
+      });
+    }
     if(w.icHydrate) try{ icHydrate(); }catch(e){}
   };
   w.crDelContact = function(btn){
     var row=btn.closest('.cr-ct'); if(!row) return;
     var box=d.getElementById('cr-contacts');
     if(box && box.querySelectorAll('.cr-ct').length<=1){ /* 最後の1行は空にするだけ */
-      row.querySelector('.cr-ctel').value=''; row.querySelector('.cr-clabel').value=''; return;
+      row.querySelectorAll('.cr-t1,.cr-t2,.cr-t3').forEach(function(el){ el.value=''; });
+      row.querySelector('.cr-clabel').value=''; return;
     }
     row.remove();
   };
@@ -183,7 +264,7 @@
   function readContacts(){
     var out=[];
     d.querySelectorAll('#cr-contacts .cr-ct').forEach(function(row){
-      var tel=(row.querySelector('.cr-ctel').value||'').trim();
+      var tel=telOf(row);
       var label=(row.querySelector('.cr-clabel').value||'').trim();
       var primary=!!row.querySelector('input[name="cr-pri"]').checked;
       if(tel||label) out.push({tel:tel,label:label,primary:primary});
@@ -212,12 +293,17 @@
     var isNew=(_reg.mode==='new');
     var pv = !!(d.getElementById('cr-pv')||{}).checked;
 
-    var plate = pv?'':g('cr-plate'), maker = pv?'':g('cr-maker'), car = pv?'':g('cr-car');
+    /* 🔴 v1.54.0 名前とカナは姓／名の2枠。半角空白で合成する（新規予約画面と同じ決まり） */
+    var name = [g('cr-sei'), g('cr-mei')].filter(Boolean).join(' ');
+    var kana = [g('cr-seikana'), g('cr-meikana')].filter(Boolean).join(' ');
+    /* ナンバーは入力補助が組み立てた文字列を使う（4枠が無い環境では素の欄から） */
+    var plate = pv ? '' : (_plate || g('cr-plate'));
+    var maker = pv?'':g('cr-maker'), car = pv?'':g('cr-car');
     var karteNo=g('cr-karte'), boardId=g('cr-board'), division=g('cr-div'), frontStaff=g('cr-front');
     var hasVeh = !!(pv || plate || maker || car || karteNo);
 
     /* 🔴 v1.53.0 漢字かカナのどちらかが入っていればOK（カナだけ運用を受ける） */
-    if(isNew && !g('cr-name') && !g('cr-kana')){ toast('お客様名（漢字）かカナのどちらかを入れてください'); var n=d.getElementById('cr-name'); if(n) n.focus(); return; }
+    if(isNew && !name && !kana){ toast('お客様名（姓／名）かカナのどちらかを入れてください'); var n=d.getElementById('cr-sei'); if(n) n.focus(); return; }
     if(pv && !karteNo){ toast('都度車両変動は、共通で使うカルテNo.が要ります'); var k=d.getElementById('cr-karte'); if(k) k.focus(); return; }
     if(!isNew && !hasVeh){ toast('車の内容を入れてください'); return; }
     if(plate){
@@ -234,7 +320,7 @@
 
     var cust;
     if(isNew){
-      cust = { id:newId('cu'), name:g('cr-name'), kana:g('cr-kana'), contacts:readContacts(),
+      cust = { id:newId('cu'), name:name, kana:kana, contacts:readContacts(),
                vehicles: veh?[veh]:[], updatedAt:Date.now() };
       var ls=d.getElementById('cr-line-status');
       if(ls && ls.value) cust.lineStatus=ls.value;
@@ -271,5 +357,5 @@
   /* 顧客詳細の「車両を追加」 */
   w.custAddVehicleFor = function(custId, base){ open({ mode:'vehicle', custId:custId, base:base||{}, back:'detail' }); };
 
-  console.log('[cust-reg] ready（顧客・車両の登録画面 v1.52.0）');
+  console.log('[cust-reg] ready（顧客・車両の登録画面 v1.54.0）');
 })(window, document);

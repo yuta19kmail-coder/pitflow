@@ -28,6 +28,16 @@ p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
 p.on('dialog', d => d.accept());
 const okDialog = async () => { await p.waitForSelector('#uid-ok', { timeout: 4000 }); await p.click('#uid-ok'); await p.waitForTimeout(320); };
+/* 🔴 v1.54.0 登録画面のナンバーは新規予約画面と同じ「1BOXを押して4枠」方式（素の入力欄は無い） */
+const crPlate = async (pg, region, cls, kana, num) => {
+  await pg.click('#cust-modal .cf-plate [data-plate-main]');
+  await pg.waitForTimeout(200);
+  await pg.fill('#cust-modal .cf-plate-region', region);
+  await pg.fill('#cust-modal .cf-plate-cls', cls);
+  await pg.fill('#cust-modal .cf-plate-kana', kana);
+  await pg.fill('#cust-modal .cf-plate-num', num);
+  await pg.waitForTimeout(200);
+};
 /* 「書きかけの予約があります」の確認が挟まらないよう、控えを消してから新規予約を開く */
 const newReserve = async (custId, vehId) => {
   await p.evaluate(() => { try { localStorage.removeItem('pitflow_draft_card'); } catch (e) {} });
@@ -147,21 +157,21 @@ console.log('\n── ④ 新規顧客登録：顧客＋車両＋Lステップ�
 {
   await p.evaluate(() => { custCloseModal(); custNewCustomer(); });
   await p.waitForTimeout(320);
-  ok('登録画面が開く', await p.evaluate(() => !!document.getElementById('cr-name')));
+  ok('登録画面が開く', await p.evaluate(() => !!document.getElementById('cr-sei')));   /* v1.54.0：名前は姓／名の2枠に */
   ok('Lステップの欄がある（顧客に紐づく部分も登録できる）', await p.evaluate(() => !!document.getElementById('cr-line-status') && !!document.getElementById('cr-lstep')));
   ok('都度車両変動のスイッチがある', await p.evaluate(() => !!document.getElementById('cr-pv')));
   /* 名前なしでは登録できない */
   await p.evaluate(() => crSave());
   await p.waitForTimeout(200);
-  ok('🔴 お客様名が空なら登録しない', await p.evaluate(() => !!document.getElementById('cr-name')));
-  await p.fill('#cr-name', 'シンキ 次郎');
-  await p.fill('#cr-kana', 'シンキ ジロウ');
-  await p.fill('#cr-contacts .cr-ctel', '090-9999-9999');
+  ok('🔴 お客様名が空なら登録しない', await p.evaluate(() => !!document.getElementById('cr-sei')));
+  await p.fill('#cr-sei', 'シンキ'); await p.fill('#cr-mei', '次郎');
+  await p.fill('#cr-seikana', 'シンキ'); await p.fill('#cr-meikana', 'ジロウ');
+  await p.fill('#cr-contacts .cr-t1', '090'); await p.fill('#cr-contacts .cr-t2', '9999'); await p.fill('#cr-contacts .cr-t3', '9999');
   await p.fill('#cr-contacts .cr-clabel', '個人携帯');
   await p.selectOption('#cr-line-status', 'ok');
   await p.waitForTimeout(120);
   await p.fill('#cr-lstep', '77777');
-  await p.fill('#cr-plate', '野田500さ7777');
+  await crPlate(p, '野田', '500', 'さ', '7777');
   await p.fill('#cr-maker', 'スバル');
   await p.fill('#cr-car', 'レヴォーグ');
   await p.fill('#cr-karte', 'K777');
@@ -176,7 +186,7 @@ console.log('\n── ④ 新規顧客登録：顧客＋車両＋Lステップ�
   ok('顧客が登録された', !!r && r.name === 'シンキ 次郎', r);
   ok('カナ・連絡先も入る', !!r && r.kana === 'シンキ ジロウ' && r.tel === '090-9999-9999', r);
   ok('🔴 Lステップ（顧客に紐づく部分）も登録できる', !!r && r.line === 'ok' && r.lstep === '77777', r);
-  ok('1台目の車も一緒に登録される', !!r && r.veh.length === 1 && r.veh[0].plate === '野田500さ7777' && r.veh[0].karte === 'K777', r && r.veh);
+  ok('1台目の車も一緒に登録される', !!r && r.veh.length === 1 && r.veh[0].plate === '野田 500 さ 7777' && r.veh[0].karte === 'K777', r && r.veh);
   ok('登録後はその顧客の詳細が開く', await p.evaluate(() => !!document.querySelector('#cust-modal .cd-hname')));
 }
 
@@ -184,11 +194,11 @@ console.log('\n── ④ 同じナンバーは登録させない（車を見分
 {
   await p.evaluate(() => { custCloseModal(); custAddVehicleFor('cuA'); });
   await p.waitForTimeout(300);
-  ok('車両追加モードで開く（人の欄は出ない）', await p.evaluate(() => !!document.querySelector('#cust-modal .cr-who') && !document.getElementById('cr-name')));
-  await p.fill('#cr-plate', '野田500か3333');   /* B さんの車と同じ */
+  ok('車両追加モードで開く（人の欄は出ない）', await p.evaluate(() => !!document.querySelector('#cust-modal .cr-who') && !document.getElementById('cr-sei')));
+  await crPlate(p, '野田', '500', 'か', '3333');   /* B さんの車と同じ */
   await p.evaluate(() => crSave());
   await p.waitForTimeout(250);
-  ok('🔴 他の人と同じナンバーは弾く', await p.evaluate(() => !!document.getElementById('cr-plate')));
+  ok('🔴 他の人と同じナンバーは弾く', await p.evaluate(() => !!document.querySelector('#cust-modal .cf-plate')));
   ok('車は増えていない', (await p.evaluate(() => state.customers.find(x => x.id === 'cuA').vehicles.length)) === 2);
 }
 
@@ -298,7 +308,11 @@ console.log('\n── ⑤ 🔴 新規予約：車種名を手入力→カード�
   ok('🔴 過去の予約は当時の車種名のまま', hist.one === 'ハイエース' && hist.two === 'キャラバン', hist);
 
   /* 履歴（顧客詳細）にその名前が出る */
-  await p.evaluate(() => { state.cards.forEach(k => { if (k.customerId === 'cuA') k.status = 'returned'; }); custOpen('cuA'); });
+  /* 🔴 v1.54.0 来店履歴に載るのは「返車済み＋実績の日付が入ったもの」だけになった */
+  await p.evaluate(() => {
+    state.cards.forEach(k => { if (k.customerId === 'cuA'){ k.status = 'returned'; k.completedAt = '2026-08-06'; k.returnDate = '2026-08-06'; } });
+    custOpen('cuA');
+  });
   await p.waitForTimeout(350);
   const ht = await p.evaluate(() => document.querySelector('#cust-modal .cd-hist').textContent);
   ok('🔴 来店履歴に両方の車種名が出る', ht.indexOf('ハイエース') >= 0 && ht.indexOf('キャラバン') >= 0, ht.slice(0, 200));
