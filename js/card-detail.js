@@ -608,6 +608,10 @@ function renderCardForm(c){
     }
   });
 
+  /* 🔴 v1.59.1 描き直したら見出しも合わせる（顧客呼び出し・車種の候補選択など、
+     入力欄を通らずに中身が変わる道もここを通るため） */
+  pitCardTitleRefresh();
+
   // v0.83.1 フォーム再描画のたびに自動保存（チップ＝作業/受付タイプ・相談・Ⓕ・車種固定などの選択を取りこぼさない）。
   //   ※デバウンス保存なので、カレンダー送り等の連続再描画でも localStorage 書き込みは1回にまとまる。
   if (window.PitDB) PitDB.save();
@@ -818,6 +822,33 @@ window.pitCardRepaint = function(){
   const c = state.cards.find(x => x.id === _editingCardId);
   if (c && typeof renderCardForm === 'function') renderCardForm(c);
 };
+
+/* ===================================================================
+   🔤 v1.59.1（ゆうた報告）**画面いちばん上の見出しを、打つたびに書き直す。**
+   -------------------------------------------------------------------
+   ◎ゆうたの言葉
+     「**新規予約で顧客を入力しているのに、一番上のタイトル的な顧客名と車種が未入力のまま。
+       保存をするとちゃんと入る**」
+   ◎正体
+     見出し（`#card-title` / `#card-title-modal`）は **`openCard()` で1回書いて終わり**だった。
+     打った内容はカードには入っているのに、**見出しだけ書き直していなかった**。
+     保存して開き直すと `openCard()` を通るので入る＝「保存すると入る」という見え方になっていた。
+   ◎これから
+     入力のたびにここを呼んで書き直す。
+     ⚠ **中身が変わっていない時は何もしない**（打つたびに DOM を触らない）。
+     ⚠ 書き方は `_cardTitleHtml()` ひとつ。**ここで組み立てないこと。**
+     ⚠ 行き先は開き方で変わる＝全画面なら `card-title`、ポップアップなら `card-title-modal`。
+   =================================================================== */
+function pitCardTitleRefresh(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (!c) return;
+  const id = ((_cardBodyId || 'md-body') === 'md-body-modal') ? 'card-title-modal' : 'card-title';
+  const el = document.getElementById(id);
+  if (!el) return;
+  const h = _cardTitleHtml(c);
+  if (el.innerHTML !== h) el.innerHTML = h;
+}
+window.pitCardTitleRefresh = pitCardTitleRefresh;
 
 function cfSideHtml(c){
   const today = new Date(); today.setHours(0,0,0,0);
@@ -1969,6 +2000,14 @@ function conditionChips(c){
 function bindCardFormEvents(root){
   const c = state.cards.find(x => x.id === _editingCardId);
   if (!c) return;
+
+  /* 🔴 v1.59.1（ゆうた報告）**打つたびに、画面いちばん上の見出しも書き直す。**
+     ⚠ 見張りは**この1本だけ**。個々の入力欄に足して回らない（足し忘れが必ず出るため）。
+        入力欄それぞれのハンドラが先に走ってカードへ値を入れ、そのあと泡が上がってここに来る。
+     ⚠ 中身が変わっていない時は `pitCardTitleRefresh()` が何もしないので、置きっぱなしで軽い。 */
+  ['input', 'change', 'click'].forEach(function(ev){
+    root.addEventListener(ev, function(){ pitCardTitleRefresh(); });
+  });
 
   // テキスト・select
   root.querySelectorAll('input.cf-input, textarea.cf-input, select.cf-input').forEach(el => {
