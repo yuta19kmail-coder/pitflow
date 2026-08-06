@@ -176,11 +176,13 @@ function cfOfficeToggle(i){
   renderCardForm(c);
 }
 
-/* ===== 工程ログ記録（task.js / dnd.js / views.js から呼ぶ） ===== */
+/* ===== 工程ログ記録（task.js / dnd.js / views.js から呼ぶ） =====
+   🔴 v1.55.0（ゆうた指定）**自動で入る記録にも、操作した人の名前を入れる。**
+      ⚠ 名前の作り方は flow-pit.js の `pitFlowMe()` に一本化（呼び名を使う）。ここで組み立てない。 */
 window.logFlow = function(card, label){
   if (!card) return;
   if (!Array.isArray(card.log)) card.log = [];
-  card.log.push({ label: label, at: Date.now() });
+  card.log.push({ label: label, at: Date.now(), staff: (window.pitFlowMe ? pitFlowMe() : '') });
 };
 
 /* ===== フェーズ移動ログ（誰が・いつ・どこから→どこへ）＋ phaseAt 更新 =====
@@ -203,7 +205,9 @@ window.logPhaseMove = function(card, fromStatus, toStatus){
     type: 'phase',
     from: fromStatus || '',
     to:   toStatus || '',
-    by:   (window.bnMe || ''),
+    /* 🔴 v1.55.0 ここは長いあいだ **window.bnMe（どこにも入れていない変数）** を見ていたので、
+       工程移動の記録の担当が**ずっと空**だった。`pitFlowMe()`（呼び名）に直した。 */
+    by:   (window.pitFlowMe ? pitFlowMe() : ''),
     at:   d.getTime(),
     atTxt:(d.getMonth() + 1) + '/' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes())
   };

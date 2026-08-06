@@ -741,7 +741,7 @@
   // ===== 表紙チェック =====
   window.cvPick = function(group, val, el){
     el.parentNode.querySelectorAll('.cv-chip').forEach(function(s){s.classList.remove('on');}); el.classList.add('on');
-    if(group==='call'){ _c.coverCall.done = (val==='done'); if(_c.coverCall.done && !_c.coverCall.at){ const d=new Date(); _c.coverCall.at = (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); _c.coverCall.staff = (window.bnMe||''); } }
+    if(group==='call'){ _c.coverCall.done = (val==='done'); if(_c.coverCall.done && !_c.coverCall.at){ const d=new Date(); _c.coverCall.at = (d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); _c.coverCall.staff = (window.pitFlowMe?pitFlowMe():''); } }   /* 🔴 v1.55.0 ここも同じ死んだ変数を見ていて、ずっと空だった */
     else if(group==='pay'){ _c.payment = val; }
     else if(group==='wash'){ _c.needWash = (val==='1'); }
     else if(group==='handover'){ _c.handover = val; }
@@ -800,7 +800,8 @@
     _c.tentative = !_c.tentative;
     if(!Array.isArray(_c.log)) _c.log=[];
     const d=new Date();
-    _c.log.push({ text:(_c.tentative?'仮予約にした':'本予約に確定した'), at:(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()), by:(window.bnMe||'') });
+    /* 🔴 v1.55.0 自動で入る記録にも操作した人の名前を（名前の作り方は flow-pit.js の pitFlowMe に一本化） */
+    _c.log.push({ text:(_c.tentative?'仮予約にした':'本予約に確定した'), at:(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()), by:(window.pitFlowMe?pitFlowMe():'') });
     save(); closeAllPop();
     if(window.pitToast) pitToast(_c.tentative?'仮予約にしました':'✓ 本予約に確定しました');
     renderCardView(_c, 'md-body-modal');
@@ -809,7 +810,7 @@
   window.cvMovePhase = function(status){
     if(!_c) return; _c.status = status;
     if(!Array.isArray(_c.log)) _c.log=[];
-    const d=new Date(); _c.log.push({ text:(window.statusLabel?statusLabel(status):status)+' に移動', at:(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()), by:(window.bnMe||'') });
+    const d=new Date(); _c.log.push({ text:(window.statusLabel?statusLabel(status):status)+' に移動', at:(d.getMonth()+1)+'/'+d.getDate()+' '+pad(d.getHours())+':'+pad(d.getMinutes()), by:(window.pitFlowMe?pitFlowMe():'') });
     save(); closeAllPop();
     renderCardView(_c, 'md-body-modal');
   };
@@ -930,7 +931,7 @@
     if(!_c) return; const s=_c.inspSchedule||{};
     window._cvShSlot = (s.decidedSlot==='pm')?'pm':'am';
     const defDate = s.decided || _isoToday();
-    const cur = (s.resultStaff||window.bnMe||'');
+    const cur = (s.resultStaff||(window.pitFlowMe?pitFlowMe():'')||'');   /* 🔴 v1.55.0 既定＝自分（同じ死んだ変数を見ていた） */
     const staffOpts = (state.staff||[]).map(function(m){ return '<option value="'+esc(m.name)+'"'+(cur===m.name?' selected':'')+'>'+esc(m.name)+'</option>'; }).join('');
     const isDone = (kind==='done');
     const title = isDone ? '<i data-ic=check data-ics=16></i> 車検済を記録' : '↺ 再検を記録';

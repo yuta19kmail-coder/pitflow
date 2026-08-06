@@ -213,7 +213,7 @@
     if(s.result==='done'){
       body+='<div class="shk-pnote">完了：'+(s.resultDate?fmtMD(s.resultDate):'')+' '+slName+(s.resultStaff?'・担当 '+esc(s.resultStaff):'')+'</div><button class="shk-pbtn" onclick="shkAct(\''+id+'\',\'reopen\')">予定に戻す</button>';
     } else if(s.decided){
-      var _cur=(s.resultStaff||window.bnMe||'');
+      var _cur=(s.resultStaff||(window.pitFlowMe?pitFlowMe():'')||'');   /* 🔴 v1.55.0 既定＝自分（bnMe はどこにも入れていない死んだ変数だった） */
       var _opts=(window.state&&Array.isArray(state.staff)?state.staff:[]).map(function(m){ return '<option value="'+esc(m.name)+'"'+(_cur===m.name?' selected':'')+'>'+esc(m.name)+'</option>'; }).join('');
       body+='<div class="shk-pnote">予定決定：'+fmtMD(s.decided)+' '+slName+'</div>'
         + '<label class="shk-plabel">担当（車検に行った人）</label><select id="shk-staff" class="shk-psel">'+_opts+'</select>'

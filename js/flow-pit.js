@@ -93,6 +93,20 @@
 
   /* ---------- 担当を読む ---------- */
   function byOf(e){ return String((e && (e.staff || e.by)) || ''); }
+
+  /* 🔴 v1.55.0（ゆうた指定）**いま操作している人の名前**。
+     ・アクション記録の担当は、開いた時点で**この名前が選ばれた状態**にする。
+     ・連絡中→パーツ待ち のような**自動で入る記録にも、この名前を自動で入れる**。
+     ⚠ 使うのは**呼び名（CoreMembers の表示名）**＝画面の担当セレクトや表紙印刷と同じ名前。
+        本名を入れると「候補に無い名前」になって、担当が空欄に見えてしまう。
+     ⚠ 名簿に居ないアカウントの時は、ログイン名をそのまま使う（空にしない）。
+     🔴 **ここ以外で「操作した人」を組み立てないこと。** 物差しは1つ。 */
+  function meName(){
+    try { if (w.pitCurrentStaffName){ var n = pitCurrentStaffName(); if (n) return String(n); } } catch(err){}
+    try { var m = w.fb && w.fb.currentMember; if (m && m.name) return String(m.name); } catch(err){}
+    return '';
+  }
+  w.pitFlowMe = meName;
   /* ---------- 見出しの言葉を読む ----------
      ⚠ **素の文字**を返す（HTMLではない）。描く側で icoText()／esc() を通すこと。 */
   function textOf(e){ return String((e && (e.label || e.text)) || ''); }
@@ -124,7 +138,9 @@
 
   /* ---------- 足す ----------
      ns ＝ 入力欄の id の前置き。詳細（'cv'）と編集（'cf'）で id がぶつからないように分ける。 */
+  /* 前に選んだ担当を覚えておく。⚠ まだ何も選んでいない時は**自分**を既定にする（v1.55.0） */
   var _lastStaff = '';
+  function defaultStaff(){ return _lastStaff || meName(); }
   function metaOf(ns){
     var sEl = d.getElementById(ns + '-flow-staff');
     var wEl = d.getElementById(ns + '-flow-when');
@@ -209,9 +225,14 @@
     var h = '<div class="pf-flowadd" data-ns="' + esc(ns) + '">';
     h += '<div class="pf-flowlabel">アクションを記録（チップをタップ／自由入力で追加）</div>';
     h += '<div class="pf-flowmeta">';
+    /* 🔴 v1.55.0 開いた時点で**自分が選ばれた状態**にする（ゆうた指定）。
+       ⚠ 名簿に自分が居ない時のために、居なければ選択肢の先頭に足してから選ぶ＝**空欄にしない**。 */
+    var _cur = defaultStaff();
+    var _names = ((w.state && state.staff) || []).map(function(s){ return s.name; }).filter(Boolean);
+    if (_cur && _names.indexOf(_cur) < 0) _names.unshift(_cur);
     h += '<select id="' + ns + '-flow-staff" class="pf-fin" title="担当者"><option value="">担当 ―</option>';
-    ((w.state && state.staff) || []).forEach(function(s){
-      h += '<option value="' + esc(s.name) + '"' + (s.name === _lastStaff ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+    _names.forEach(function(nm){
+      h += '<option value="' + esc(nm) + '"' + (nm === _cur ? ' selected' : '') + '>' + esc(nm) + '</option>';
     });
     h += '</select>';
     h += '<input id="' + ns + '-flow-when" class="pf-fin pf-flowwhen" type="datetime-local" value="' + nowInput() + '" title="記録時刻（既定は今・昨日の留守などはここを変更）">';
