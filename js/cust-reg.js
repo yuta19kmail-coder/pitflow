@@ -116,7 +116,8 @@
                '</div></div>'+
            '</div>';
       /* 🔴 v1.53.0 漢字が分からない新規のお客様は**カナだけでOK**（予約カードと同じ運用） */
-      h += '<div class="cr-hint" style="margin:-4px 0 10px">漢字が分からないときは<b>カナだけ</b>でも登録できます（どちらか入っていればOK）。</div>';
+      /* ⚠ ここで margin を負にしないこと（上のお客様名／カナの枠に食い込む・v1.54.1 で直した） */
+      h += '<div class="cr-hint cr-hint-tight">漢字が分からないときは<b>カナだけ</b>でも登録できます（どちらか入っていればOK）。</div>';
       h += '<div class="cr-sub">連絡先</div><div id="cr-contacts">'+contactRow(null,true)+'</div>';
       h += '<button type="button" class="cr-add" onclick="crAddContact()">＋ 連絡先を足す</button>';
       /* LINE（Lステップ）＝人につく情報。ここで最初から登録できる（ゆうた指定） */
@@ -357,5 +358,5 @@
   /* 顧客詳細の「車両を追加」 */
   w.custAddVehicleFor = function(custId, base){ open({ mode:'vehicle', custId:custId, base:base||{}, back:'detail' }); };
 
-  console.log('[cust-reg] ready（顧客・車両の登録画面 v1.54.0）');
+  console.log('[cust-reg] ready（顧客・車両の登録画面 v1.54.1）');
 })(window, document);
