@@ -57,6 +57,10 @@ window.pitOpenCardId = function(){ return _editingCardId; };
 function openDetail(cardId){ openCard(cardId, 'modal'); }
 
 function closeDetail(){
+  /* 🔴 v1.56.0 予約の編集中に、別の道（付箋の直リンク・削除など）からここへ来た時の逃げ道。
+     見張り（保存を止める hold）だけ外す＝**外し忘れると全部の保存が止まる**。
+     ⚠ 中身は触らない＝打ったものは残す。編集の出口は今までどおり「保存する／キャンセル」だけ。 */
+  if (window.pitCardEditRelease) pitCardEditRelease();
   const modal = document.getElementById('modal-detail');
   const modalOpen = modal && modal.classList.contains('show');
   if (!modalOpen && state.currentView !== 'card') return;   // 何も開いていなければ無視（ESC誤爆防止）

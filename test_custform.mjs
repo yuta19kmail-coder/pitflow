@@ -303,7 +303,11 @@ console.log('\n── ② 実績の判定は実績ボードと同じ印を見て
 
 console.log('\n── ③ ナンバー空欄化スクリプトの中身（読むだけの見張り） ──');
 {
-  const fx = fs.readFileSync('../out6/顧客控え_ナンバー0を空にする.js', 'utf8');
+  /* 🔴 v1.56.0 置き場所は PitFlow フォルダ（本体の外・1つ上）。
+     ⚠ 前は作業中の仮フォルダ（../out6/）を見ていたので、この節がまるごと落ちていた。 */
+  const _fxp = ['../顧客控え_ナンバー0を空にする.js', '../out6/顧客控え_ナンバー0を空にする.js'].find(x => fs.existsSync(x));
+  const fx = _fxp ? fs.readFileSync(_fxp, 'utf8') : '';
+  ok('ナンバー空欄化スクリプトが見つかる', !!_fxp, _fxp || '（PitFlow フォルダに無い）');
   ok('本体の物差し（pitIsRealPlate）を借りている', /pitIsRealPlate/.test(fx));
   ok('🔴 先に控えをダウンロードしてから書き換える', fx.indexOf('download(backup') < fx.indexOf('x.veh.plate = \'\''), '');
   ok('🔴 控えを保存できなければ中止する', /控えを保存できなかったので中止/.test(fx));

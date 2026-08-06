@@ -113,6 +113,12 @@
     /* 保存（既定はデバウンス。immediate=true で即時）。戻り値＝成功(true)/失敗(false)。 */
     save: function (immediate) {
       const self = this;
+      /* 🔴 v1.56.0（ゆうた指定）**予約を編集している間は保存しない。**
+         「保存する」を押すまで自動保存を効かせない＝「キャンセル」で開いた時点に戻せるようにするため。
+         ⚠ 見張りを立てるのは card-view.js の editBegin、外すのは editRelease。
+            **ここ以外で hold を触らないこと**（外し忘れると全部の保存が止まる）。
+         ⚠ 待っている書き込みが後から飛ばないよう、タイマーも止めておく。 */
+      if (this.hold){ clearTimeout(this._t); return true; }
       /* クラウドモード：localStorage には書かず、変わった所だけ Firestore に送る */
       if (this.mode === 'cloud' || this.mode === 'cloud-pending') {
         if (this._applying) return true;      // クラウドから受け取った内容を反映中は書き返さない

@@ -91,9 +91,11 @@
     const dt = dropType(c);
     let h = '';
 
-    // 1行目：名前＋予約を編集
+    // 1行目：名前＋新規/リピーター＋予約を編集／2行目にフリガナ（v1.56.0）
     h += '<div class="cv-id1"><span class="cv-nm">'+esc((window.pitCustName?pitCustName(c):c.customer)||'（未入力）')+' <small>様</small></span>'
+       + repeatBadge(c)
        + '<span class="cv-editmini cv-idedit" onclick="openCardEditForm(\''+c.id+'\')"><i data-ic=pencil data-ics=16></i> 予約を編集</span></div>';
+    h += kanaHtml(c);
     // 2行目：車種＋ナンバー＋カルテNo
     h += '<div class="cv-id2"><span class="cv-car">'+esc(c.car||'（車種未入力）')+'</span>'
        + (c.plate?'<span class="cv-plate">'+esc(c.plate)+'</span>':'')
@@ -128,6 +130,35 @@
     // 車両注意（特殊運転）＝該当がある時だけメモの下に表示
     h += driveNoteHtml(c);
     return h;
+  }
+
+  /* 🔤 v1.56.0（ゆうた指定）お客様名の下に**フリガナを小さく**出す。
+     ⚠ 漢字が空のお客様は、名前の欄そのものがカナ（pitCustName の決まり・v1.25.0）。
+        そのまま出すと**同じ文字が2行並ぶ**ので、その時は出さない。
+     ⚠ カナは `kana`（合成）が正。まだ持っていない古いカードのために セイ／メイ からも組める。 */
+  function kanaOf(c){
+    var k = String((c && c.kana) || '').trim();
+    if (!k) k = [String((c && c.seiKana) || '').trim(), String((c && c.meiKana) || '').trim()].filter(Boolean).join(' ');
+    return k;
+  }
+  function kanaHtml(c){
+    var k = kanaOf(c);
+    if (!k) return '';
+    var nm = String((window.pitCustName ? pitCustName(c) : (c.customer || '')) || '').trim();
+    if (nm === k) return '';                       /* 名前の欄がカナそのもの＝2度出さない */
+    return '<div class="cv-kana">'+esc(k)+'</div>';
+  }
+
+  /* 🏷 v1.56.0（ゆうた指定）**新規／リピーター**の印。
+     🔴 中身は**予約編集で選んだ値そのまま**（`c.repeat` ／ 物差しは `state.repeatTypes`）。
+        ここで来店履歴から推測しない＝画面に出す情報と、保存している情報を食い違わせないため
+        （v1.53.0 の教訓）。**選んでいなければ何も出さない。** */
+  function repeatBadge(c){
+    var id = String((c && c.repeat) || '');
+    if (!id) return '';
+    var it = ((window.state && state.repeatTypes) || []).find(function(r){ return r.id === id; });
+    if (!it) return '';
+    return '<span class="cv-rep cv-rep-'+esc(id)+'">'+esc(it.label)+'</span>';
   }
 
   // 車両注意：左ハンドル/M/T/車高低い（card.drive 配列）。1つも無ければ枠ごと非表示
@@ -166,7 +197,11 @@
 
   function loanerHtml(c){
     const loaner = (state.loaners||[]).find(l=>l.id===c.loanerId);
-    const which = loaner ? (loaner.name||'代車') : (c.loanerId||'代車');
+    /* 🚗 v1.56.0（ゆうた指定）ここは**車種名で出す**（「代車5」ではなく「タント」）。
+       🔴 呼び名の作り方は loaner.js の `pitLoanerModel()` に一本化＝**ここで組み立てない**。
+          （代車カレンダーの「タント（5）」も同じファイルの `_loName` が持っている） */
+    const which = (window.pitLoanerModel ? pitLoanerModel(c.loanerId) : '')
+               || (loaner ? (loaner.name||'代車') : (c.loanerId||'代車'));
     const dueISO = c.loanerTo || c.returnDateFinal || c.returnDate || '';
     const rem = dueISO ? daysBetween(isoToday(), dueISO) : null;
     const remTxt = (rem==null) ? '—' : (rem<0 ? '超過'+(-rem)+'日' : 'あと'+rem+'日');
@@ -198,9 +233,45 @@
     return h + '</div>';
   }
 
+  /* 🔴 v1.56.0（ゆうた指定）**まだ入庫していない＝予約の段階**か。
+     この間は 表紙／フロー／整備／バックオフィス を出さず、「予約詳細」1枚だけにする。
+     ⚠ 物差しは工程（status）ひとつ＝**仮予約も、入庫日が未定のものも「予約」に含む**。
+        点検待ち（check）に入った瞬間から、今までどおりの4タブに戻る。
+     ⚠ 昔のカードは status を持っていないことがあるので、その時も「予約」とみなす。 */
+  function isReserveStage(c){ return String((c && c.status) || 'reserved') === 'reserved'; }
+  window.pitIsReserveStage = isReserveStage;
+
+  /* 📋 予約詳細＝上に「概算 預かり日数／概算 金額」を大きく、その下にフロー。
+     🔴 フローは **flowTab() をそのまま引っ張ってくる**＝写しを作らない。
+        （タイムライン・アクション記録の入口・消すボタンまで、フロータブと中身は同じ）
+        ⚠ 写しにすると片方だけ直して食い違う（v1.54.0 の教訓）。 */
+  function reserveTab(c){
+    const d = c.estHoldDays, a = c.estAmount;
+    const dTxt = (d == null || d === '') ? '—'
+               : (Number(d) === 0 ? '当日仕上げ' : esc(String(d)) + '<small>日</small>');
+    const aTxt = (a == null || a === '') ? '—' : '¥' + Number(a).toLocaleString();
+    let h = '<div class="cv-sec cv-rsv">';
+    h += '<div class="cv-rsvhead"><i data-ic=clipboard data-ics=16></i> 予約の概算</div>';
+    h += '<div class="cv-rsvbig">'
+       + '<div class="cv-rsvb"><div class="cv-rsvbl">概算 預かり日数</div><div class="cv-rsvbv">' + dTxt + '</div></div>'
+       + '<div class="cv-rsvb"><div class="cv-rsvbl">概算 金額</div><div class="cv-rsvbv">' + aTxt + '</div></div>'
+       + '</div>';
+    h += '<div class="cv-rsvnote">診断・見積もりで変わります。直すのは「予約を編集」から。</div>';
+    h += '</div>';
+    h += flowTab(c);   /* 🔴 フローは共通のものを引っ張る（ここに書き写さない） */
+    return h;
+  }
+
   // ===== 右カラム＝タブ本体 =====
   function rightHtml(c){
     let h = pbarHtml(c);
+    /* 🔴 v1.56.0 予約の段階は「予約詳細」だけ。表紙・整備・バックオフィスはまだ出す意味がない。 */
+    if (isReserveStage(c)){
+      h += '<div class="cv-tabs cv-tabs-one">'
+        + '<button class="cv-tab on" data-p="resv" onclick="cvTab(this)"><i data-ic=clipboard data-ics=16></i> 予約詳細</button></div>';
+      h += '<div class="cv-body"><div class="cv-panel on" id="cv-p-resv">'+reserveTab(c)+'</div></div>';
+      return h;
+    }
     h += '<div class="cv-tabs">'
       + '<button class="cv-tab on" data-p="cover" onclick="cvTab(this)"><i data-ic=pencil data-ics=16></i> 表紙</button>'
       + '<button class="cv-tab" data-p="flow" onclick="cvTab(this)"><i data-ic=clock data-ics=16></i> フロー</button>'
@@ -453,10 +524,15 @@
     h += '<div class="cv-fhint">記録した日時や担当を直すのは「予約を編集」→フロー（設定権限のある人だけ）。</div>';
     return h + '</div>';
   }
-  /* フローの面だけ描き直す＝タブも巻物の位置もそのまま（整備タブの _mechRerender と同じ考え方） */
+  /* フローの面だけ描き直す＝タブも巻物の位置もそのまま（整備タブの _mechRerender と同じ考え方）
+     🔴 v1.56.0 予約の段階はフローが「予約詳細」の中に居る。**両方を見る**こと
+        （片方しか見ないと、アクションを記録しても画面が変わらない）。 */
   window.cvFlowRepaint = function(){
+    if (!_c) return;
     const el = document.getElementById('cv-p-flow');
-    if (el && _c) el.innerHTML = flowTab(_c);
+    if (el) el.innerHTML = flowTab(_c);
+    const rv = document.getElementById('cv-p-resv');
+    if (rv) rv.innerHTML = reserveTab(_c);
   };
 
   function maintTab(c){
@@ -626,9 +702,84 @@
     cvBuildCal();
   };
 
+  /* ===================================================================
+     ✏ 予約を編集（v1.56.0・ゆうた指定）
+     -------------------------------------------------------------------
+     🔴 これまで：編集に入ると**打った瞬間に保存**され、**エリア外クリックや ✕ で閉じられた**。
+        ＝「やっぱりやめる」が存在せず、閉じた時点でもう直っていた。
+     🔴 これから：
+        ・**エリア外クリックでは閉じない**（✕ も出さない）。
+        ・右上の **「保存する」／「キャンセル」** でしか出られない。
+        ・**どちらを押しても予約詳細に戻る**（ポップアップは閉じない）。
+        ・押すまで **保存は一切走らない**（PitDB.hold）。
+     ⚠ 入力は打った瞬間 state のカードに入る作り（フォーム全体がそう出来ている）。
+        なので「キャンセル」は**開いた時点の中身を控えておいて丸ごと戻す**。
+     ⚠ 控えは JSON の deep copy＝関数・DOM は持たない前提（カードは素のデータのみ）。
+     =================================================================== */
+  let _editId = null, _editSnap = null;
+  function _editActs(){ return document.getElementById('cv-edit-acts'); }
+  function _editCloseBtn(){ return document.getElementById('card-modal-close'); }
+  /* いま編集中か（index.html の背景クリックが見る） */
+  window.pitCardEditing = function(){ return !!_editId; };
+
+  function editBegin(card){
+    _editId = card.id;
+    try { _editSnap = JSON.parse(JSON.stringify(card)); } catch(e){ _editSnap = null; }
+    try { if (window.PitDB) PitDB.hold = true; } catch(e){}   /* ⛔ ボタンを押すまで保存しない */
+    const a = _editActs(); if (a) a.hidden = false;
+    const b = _editCloseBtn(); if (b) b.hidden = true;        /* ✕ は出さない＝出口はボタンだけ */
+  }
+  /* 見張りを外すだけ（中身は触らない）。⚠ 何があってもここを通れば保存が復活する。 */
+  function editRelease(){
+    _editId = null; _editSnap = null;
+    try { if (window.PitDB) PitDB.hold = false; } catch(e){}
+    const a = _editActs(); if (a) a.hidden = true;
+    const b = _editCloseBtn(); if (b) b.hidden = false;
+  }
+  window.pitCardEditRelease = editRelease;
+
+  /* 予約詳細に戻る（ポップアップは開けたまま） */
+  function backToView(card){
+    if (!card){ if (window.closeDetail) closeDetail(); return; }
+    _c = ensure(card);
+    const box = document.querySelector('#modal-detail .modal-box');
+    const title = document.getElementById('card-title-modal');
+    if (title && window._cardTitleHtml) title.innerHTML = _cardTitleHtml(card);
+    if (window.renderCardView) renderCardView(card, 'md-body-modal');
+    else if (box) box.classList.add('cardview');
+    try { if (window.showView && window.state && state.currentView) showView(state.currentView); } catch(e){}   /* 背後の一覧も揃える */
+  }
+
+  window.pitCardEditSave = function(){
+    const card = (_editId ? (state.cards||[]).find(function(x){ return x.id === _editId; }) : null) || _c;
+    editRelease();
+    if (card){
+      /* 顧客控え・代車カレンダーへの反映は「閉じる時」と同じ手順を踏む（v1.53.0 の決まり） */
+      try { if (!card._sample && window.upsertCustomerFromCard) upsertCustomerFromCard(card); } catch(e){}
+      try { if (window.pitSyncLoanerAssigns) pitSyncLoanerAssigns(); } catch(e){}
+      try { if (window.PitDB) PitDB.save(true); } catch(e){}
+      if (window.pitToast) pitToast('保存しました');
+    }
+    backToView(card);
+  };
+
+  window.pitCardEditCancel = function(){
+    const card = (_editId ? (state.cards||[]).find(function(x){ return x.id === _editId; }) : null) || _c;
+    const snap = _editSnap;
+    if (card && snap){
+      /* 🔴 開いた時点の姿に丸ごと戻す＝**編集中に増えたキーも消す**（消し忘れると設定が残る） */
+      Object.keys(card).forEach(function(k){ if (!(k in snap)) delete card[k]; });
+      Object.keys(snap).forEach(function(k){ card[k] = snap[k]; });
+    }
+    editRelease();
+    if (window.pitToast) pitToast('編集をキャンセルしました');
+    backToView(card);
+  };
+
   // 編集（既存フォームへ）
   window.openCardEditForm = function(cardId){
     const card = state.cards.find(c=>c.id===cardId) || _c; if(!card) return;
+    editBegin(card);
     const box = document.querySelector('#modal-detail .modal-box'); if(box){ box.classList.remove('cardview'); box.style.boxShadow=''; box.style.borderColor=''; }
     const title = document.getElementById('card-title-modal'); if(title && window._cardTitleHtml) title.innerHTML = _cardTitleHtml(card);
     window._cardMode = 'modal';
