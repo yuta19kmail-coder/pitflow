@@ -16,7 +16,10 @@ import path from 'path';
 (function build(){
   const dir = process.cwd();
   const src = fs.readFileSync(path.join(dir,'js','card-detail.js'),'utf8');
-  const from = src.indexOf('function pitSaveTentative()');
+  /* 🔴 v1.56.1 「中身が空なら予約を作らない」の見張り（_pitCardIsBlankNow / _pitAskBlankSave）が
+     保存関数の**手前**に増えたので、切り出しの開始をそこまで戻す。
+     ⚠ 手前で切ると保存関数の中から呼べず、丸ごと落ちる。 */
+  const from = src.indexOf('function _pitCardIsBlankNow()');
   const to   = src.indexOf('function renderCardForm(c)');
   if (from < 0 || to < 0) throw new Error('card-detail.js の保存まわりが見つかりません（関数名が変わった？）');
   fs.writeFileSync(path.join(dir,'_save-part.js'), src.slice(from,to));

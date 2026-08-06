@@ -117,8 +117,17 @@
          「保存する」を押すまで自動保存を効かせない＝「キャンセル」で開いた時点に戻せるようにするため。
          ⚠ 見張りを立てるのは card-view.js の editBegin、外すのは editRelease。
             **ここ以外で hold を触らないこと**（外し忘れると全部の保存が止まる）。
-         ⚠ 待っている書き込みが後から飛ばないよう、タイマーも止めておく。 */
-      if (this.hold){ clearTimeout(this._t); return true; }
+         ⚠ 待っている書き込みが後から飛ばないよう、タイマーも止めておく。
+         🔴 v1.56.1 **見張りが置き去りになると、アプリ全体の保存が黙って止まる**（＝打ったものが全部消える）。
+            そこで **3分たったら見張りを無視して保存を再開する**。
+            ⚠ 「キャンセルで戻せること」より **「データを失わないこと」を優先する**。
+               3分も開けっぱなしの編集は、もう編集していない。 */
+      if (this.hold){
+        if (!this._holdAt) this._holdAt = Date.now();
+        if (Date.now() - this._holdAt < 180000){ clearTimeout(this._t); return true; }
+        console.warn('[PitDB] 予約編集の見張りが長く残っていたので、保存を再開しました（置き去り防止）');
+        this.hold = false; this._holdAt = 0;
+      }
       /* クラウドモード：localStorage には書かず、変わった所だけ Firestore に送る */
       if (this.mode === 'cloud' || this.mode === 'cloud-pending') {
         if (this._applying) return true;      // クラウドから受け取った内容を反映中は書き返さない
@@ -347,6 +356,14 @@
               return;
             }
             if (self._pending[key]) return;                        // 自分がいま書いた分＝見送る
+            /* 🔴 v1.56.1 **いま「予約を編集」で開いている入庫カードは差し替えない。**
+               下の `arr[idx] = o` は state.cards の中身を**別の物に入れ替える**。
+               画面（フォーム）が握っているのは入れ替わる前の物なので、差し替えられると
+               **打ち込んだ内容が行き場を失って、保存を押しても消えてしまう。**
+               ⚠ v1.55.0 までは打つたびに保存していたので窓が一瞬しかなく表に出なかったが、
+                  v1.56.0 で「押すまで保存しない」にした結果、**編集中ずっとこの窓が開く**ようになった。
+               ⚠ 見送った分は、編集を終えて保存した時に自分の内容で上書きされる。 */
+            if (col === 'pitCards' && window.pitCardEditingId && window.pitCardEditingId() === id) return;
             const o = ch.doc.data() || {}; o.id = id;
             const js = self._js(o);
             if (self._shadow.docs[key] === js) return;             // 自分が書いた分＝何もしない

@@ -24,6 +24,10 @@ function _cardTitleHtml(card){
 function openCard(cardId, mode){
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
+  /* 🔴 v1.56.1 別のカードを開く＝前の「予約を編集」はもう終わっている。
+     見張り（保存を止める hold）をここでも外す＝置き去りにしない。
+     ⚠ 中身は触らない。外す時に1回保存されるので、打ったものは残る。 */
+  if (window.pitCardEditRelease) pitCardEditRelease();
   _editingCardId = cardId;
   _cardTab = 'basic';
   _cardCheckOn = false;   // 開いた直後は赤枠なし
@@ -85,10 +89,50 @@ function closeDetail(){
   }
 }
 
+/* ===================================================================
+   🔴 v1.56.1  中身が空のまま「保存」してしまう穴（2026-08-06 本番で6枚）
+   -------------------------------------------------------------------
+   ◎起きたこと
+     予約番号 J22207 / H50708 / Y53818 / E61962 / P14095 / R20119 の6枚が、
+     お客様も車も何も入っていないのに予約として保存されていた。
+     6枚ともフローの記録は **「予約作成」→「表紙を印刷して保存」の2つだけ**。
+     ＝**何も打たないまま「印刷して保存」を押した**ぶん。7〜8秒おきに6回続いていた。
+   ◎これまでの作り
+     「保存」系のボタンは**中身を一切見ずに**下書きを外していた＝空でも予約になった。
+     しかも「表紙を印刷して保存」の記録が付くと、blank-cards.js の空カード判定が
+     **中身あり**と誤解して、設定の「空の予約カード」にも出てこなかった（そちらも直した）。
+   ◎これから
+     ・**印刷して保存**（空のとき）… **表紙だけ刷って、予約は作らない**。
+       ⚠ 空の表紙を刷りたいだけ、という使い方をそのまま活かす（余計な確認も出さない）。
+     ・**保存する／仮予約で登録**（空のとき）… **1回だけ聞く**。既定は「入力に戻る」。
+   ⚠ 物差しは blank-cards.js の `pitIsBlankCard` ひとつ。**ここで別に作らないこと。**
+   =================================================================== */
+function _pitCardIsBlankNow(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  return !!(c && window.pitIsBlankCard && pitIsBlankCard(c));
+}
+/* 空だったら「作りますか？」と1回だけ聞く。作ってよければ then(true)。 */
+function _pitAskBlankSave(title){
+  if (!_pitCardIsBlankNow()) return Promise.resolve(true);
+  const msg = 'まだ何も入力されていません。このまま空の予約を作りますか？';
+  const detail = 'お客様・車・作業内容のどれも入っていません。'
+               + '空のまま作ると、予約ビューや「今日の入庫」に中身の無いカードとして数えられます。'
+               + '表紙を刷りたいだけなら「その他保存 → 表紙印刷のみ」をお使いください。';
+  if (window.UI && UI.confirm){
+    return UI.confirm(msg, { title: title || '中身が空です', detail: detail, ok: '空のまま作る', cancel: '入力に戻る', danger: true });
+  }
+  return Promise.resolve(window.confirm(msg + '\n\n' + detail));
+}
+
 /* 📝 仮予約で登録（新規予約画面の右上ボタン）＝今のカードを仮予約フラグONで保存して戻る。
    仮予約は予約カレンダー/代車カレンダーには「仮」付きで載り、予約ビューの未定タブ「仮予約」カラムに集まる。
    本予約への確定は予約詳細画面の⋮メニューで行う（v0.100.0）。 */
 function pitSaveTentative(){
+  /* 🔴 v1.56.1 中身が空なら1回聞く（下の _pitAskBlankSave の注記を参照） */
+  if (_pitCardIsBlankNow()){ _pitAskBlankSave('仮予約で登録').then(function(ok){ if (ok) _pitSaveTentativeGo(); }); return; }
+  _pitSaveTentativeGo();
+}
+function _pitSaveTentativeGo(){
   const c = state.cards.find(x => x.id === _editingCardId);
   if (c){
     if (c._draft) delete c._draft;   /* v1.17.0：ここで初めて確定＝保存される */
@@ -112,6 +156,11 @@ window.pitSaveTentative = pitSaveTentative;
    ⚠ 既にあるカードを開いて編集している時は下書きではないので、今までどおりの動き。
    =================================================================== */
 function pitSaveCard(){
+  /* 🔴 v1.56.1 中身が空なら1回聞く */
+  if (_pitCardIsBlankNow()){ _pitAskBlankSave('保存する').then(function(ok){ if (ok) _pitSaveCardGo(); }); return; }
+  _pitSaveCardGo();
+}
+function _pitSaveCardGo(){
   const c = state.cards.find(x => x.id === _editingCardId);
   if (c && c._draft){
     delete c._draft;                                   /* ここで初めて「本物の予約」になる */
@@ -150,6 +199,15 @@ window.pitCancelCard = pitCancelCard;
 function pitSaveAndPrint(){
   const c = state.cards.find(x => x.id === _editingCardId);
   const id = c ? c.id : _editingCardId;
+  /* 🔴 v1.56.1 **中身が空なら、表紙だけ刷って予約は作らない。**
+     2026-08-06 の本番で、この道から空の予約が6枚できた（フローが「予約作成→表紙を印刷して保存」だけ）。
+     ⚠ 空の表紙を刷りたい、という使い方はそのまま通す＝余計な確認は出さない。
+     ⚠ 下書きは下書きのまま残す（「表紙印刷のみ」と同じ扱い）＝続きから入力できる。 */
+  if (_pitCardIsBlankNow()){
+    if (id && window.pitPrintCover) pitPrintCover(id);
+    if (window.pitToast) pitToast('まだ何も入っていないので、表紙だけ刷りました（予約は作っていません）');
+    return;
+  }
   if (c && c._draft) delete c._draft;   /* v1.17.0：ここで初めて確定＝保存される */
   if (window.pitClearDraftKeep) pitClearDraftKeep();
   if (c && window.logFlow) logFlow(c, '表紙を印刷して保存');

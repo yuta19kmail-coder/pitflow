@@ -285,6 +285,140 @@ console.log('\n── ✏ 予約編集：出口は「保存する」「キャン
   ok('直した金額が予約詳細に出ている', /99,000/.test(after.shown || ''), after);
 }
 
+console.log('\n── 🛟 v1.56.1 見張り（hold）が置き去りにならない ──');
+{
+  /* ① 3分たったら見張りを無視して保存を再開する */
+  await open('TR1');
+  await p.evaluate(() => openCardEditForm('TR1'));
+  await p.waitForTimeout(250);
+  const r = await p.evaluate(() => {
+    const before = { hold: !!PitDB.hold };
+    PitDB._holdAt = Date.now() - 4 * 60 * 1000;      /* 4分前から握りっぱなし ということにする */
+    const c = state.cards.find(x => x.id === 'TR1');
+    c.estAmount = 55555;
+    PitDB.save(true);
+    return { before: before, after: { hold: !!PitDB.hold }, ls: /55555/.test(localStorage.getItem('pitflow_data_v12') || '') };
+  });
+  ok('🔴 3分を超えたら見張りを自分で外す', r.before.hold === true && r.after.hold === false, r);
+  ok('🔴 そのとき打ったものはちゃんと保存される（黙って消えない）', r.ls === true, r);
+  await p.evaluate(() => { if (window.pitCardEditRelease) pitCardEditRelease(); });
+
+  /* ② 別のカードを開いたら見張りは外れる（置き去りにしない） */
+  await open('TR1');
+  await p.evaluate(() => openCardEditForm('TR1'));
+  await p.waitForTimeout(200);
+  const mid = await p.evaluate(() => ({ hold: !!PitDB.hold, editing: pitCardEditing() }));
+  await open('TW1');
+  const aft = await p.evaluate(() => ({ hold: !!PitDB.hold, editing: pitCardEditing() }));
+  ok('編集中は見張りが立っている', mid.hold === true && mid.editing === true, mid);
+  ok('🔴 別のカードを開くと見張りが外れる', aft.hold === false && aft.editing === false, aft);
+
+  /* ③ 編集を抜けたら必ず1回保存する */
+  const flushed = await p.evaluate(() => {
+    let n = 0; const orig = PitDB.save;
+    PitDB.save = function(){ n++; return orig.apply(this, arguments); };
+    openCardEditForm('TR1');
+    const c = state.cards.find(x => x.id === 'TR1'); c.karteNo = '9999';
+    pitCardEditRelease();
+    PitDB.save = orig;
+    return { n: n, ls: /9999/.test(localStorage.getItem('pitflow_data_v12') || '') };
+  });
+  await p.waitForTimeout(200);
+  ok('🔴 編集を抜けたら保存が走る', flushed.n >= 1, flushed);
+  ok('🔴 抜け方が何であれ、打ったものは残る', flushed.ls === true, flushed);
+
+  /* ④ 編集中のカードは、他の端末の更新で差し替えない（差し替えると打った内容が行き場を失う） */
+  const src = fs.readFileSync('js/db-pit.js', 'utf8');
+  ok('🔴 db-pit.js が「編集中のカードは差し替えない」を持っている',
+     /pitCardEditingId\(\)\s*===\s*id\)\s*return;/.test(src));
+  ok('🔴 見張りには時間の上限がある（置き去り防止）', /_holdAt/.test(src) && /180000/.test(src));
+  const cv = fs.readFileSync('js/card-view.js', 'utf8');
+  ok('編集中のカード番号を外に出している（pitCardEditingId）', /window\.pitCardEditingId\s*=/.test(cv));
+  const cd = fs.readFileSync('js/card-detail.js', 'utf8');
+  ok('openCard でも見張りを外している', /function openCard[\s\S]{0,420}pitCardEditRelease\(\)/.test(cd));
+}
+
+console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（2026-08-06 本番で6枚できた件） ──');
+{
+  /* 実際に起きた6枚と同じ形＝「予約作成」→「表紙を印刷して保存」の2件だけ */
+  const real = await p.evaluate(() => {
+    const c = { id: 'cBLANK1', resNo: 'J22207', status: 'reserved',
+      bookedAt: '2026-08-06', reserveDate: '2026-08-06', reserveStaff: 'コバモ',
+      inspSchedule: { mode: 'manual', slots: {}, cutBefore: '' }, coverCall: { done: false, at: '', staff: '' }, handover: 'store',
+      log: [{ at: 1785986444356, label: '予約作成' }, { label: '表紙を印刷して保存', staff: 'コバモ', at: 1785986451562 }] };
+    return { blank: pitIsBlankCard(c) };
+  });
+  ok('🔴 本番で生まれた6枚と同じ形が「空」と見抜ける', real.blank === true, real);
+
+  const rules = await p.evaluate(() => ({
+    made:   pitIsBlankCard({ id: 'b0', status: 'reserved', log: [{ label: '予約作成', at: 1 }] }),
+    manual: pitIsBlankCard({ id: 'b1', status: 'reserved', log: [{ label: '予約作成', at: 1 }, { label: '電話した', at: 2, manual: true }] }),
+    phase:  pitIsBlankCard({ id: 'b2', status: 'reserved', log: [{ label: '予約作成', at: 1 }, { type: 'phase', from: 'reserved', to: 'check', at: 2 }] }),
+    typed:  pitIsBlankCard({ id: 'b3', status: 'reserved', customer: '山田', log: [{ label: '予約作成', at: 1 }] }),
+    auto2:  pitIsBlankCard({ id: 'b4', status: 'reserved', log: [{ label: '予約作成', at: 1 }, { label: '仮予約で登録', at: 2 }] })
+  }));
+  ok('開いただけのカードは空', rules.made === true, rules);
+  ok('🔴 自動で付く記録が増えても「空」のまま（ここが漏れていた）', rules.auto2 === true, rules);
+  ok('手で足した記録があれば空ではない', rules.manual === false, rules);
+  ok('工程が動いていれば空ではない', rules.phase === false, rules);
+  ok('何か打ってあれば空ではない', rules.typed === false, rules);
+
+  /* 「印刷して保存」＝空なら表紙だけ刷って、予約は作らない */
+  const pr = await p.evaluate(() => {
+    state.cards = state.cards.filter(x => x.id !== 'cP1');
+    const c = { id: 'cP1', resNo: 'P-TEST', status: 'reserved', _draft: true,
+      bookedAt: '2026-08-06', reserveDate: '2026-08-06', reserveStaff: 'コバモ',
+      log: [{ label: '予約作成', at: Date.now() }] };
+    state.cards.push(c);
+    let printed = 0; const keep = window.pitPrintCover;
+    window.pitPrintCover = function(){ printed++; };
+    openCard('cP1', 'modal');           /* _editingCardId をこのカードに向ける */
+    pitSaveAndPrint();
+    window.pitPrintCover = keep;
+    const d = state.cards.find(x => x.id === 'cP1');
+    return { printed: printed, stillDraft: !!(d && d._draft), logs: (d.log || []).map(e => e.label) };
+  });
+  ok('🔴 空のときは表紙だけ刷る', pr.printed === 1, pr);
+  ok('🔴 予約は作らない（下書きのまま）', pr.stillDraft === true, pr);
+  ok('🔴 「表紙を印刷して保存」の記録も付けない', pr.logs.indexOf('表紙を印刷して保存') < 0, pr);
+
+  /* 中身が入っていれば今までどおり保存される */
+  const pr2 = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'cP1');
+    c.customer = '山田 太郎';
+    let printed = 0; const keep = window.pitPrintCover;
+    window.pitPrintCover = function(){ printed++; };
+    openCard('cP1', 'modal');
+    pitSaveAndPrint();
+    window.pitPrintCover = keep;
+    const d = state.cards.find(x => x.id === 'cP1');
+    return { printed: printed, draft: !!(d && d._draft), logs: (d.log || []).map(e => e.label) };
+  });
+  ok('中身があれば今までどおり刷って保存する', pr2.printed === 1 && pr2.draft === false, pr2);
+  ok('その時は記録も付く', pr2.logs.indexOf('表紙を印刷して保存') >= 0, pr2);
+
+  /* 「保存する」＝空なら1回聞く（既定は入力に戻る） */
+  const sv = await p.evaluate(() => {
+    state.cards = state.cards.filter(x => x.id !== 'cS1');
+    state.cards.push({ id: 'cS1', resNo: 'S-TEST', status: 'reserved', _draft: true,
+      bookedAt: '2026-08-06', reserveDate: '2026-08-06', reserveStaff: 'コバモ', log: [{ label: '予約作成', at: Date.now() }] });
+    let asked = 0; const keep = UI.confirm;
+    UI.confirm = function(){ asked++; return Promise.resolve(false); };   /* 「入力に戻る」を選ぶ */
+    openCard('cS1', 'modal');
+    pitSaveCard();
+    UI.confirm = keep;
+    return { asked: asked };
+  });
+  await p.waitForTimeout(200);
+  const svAfter = await p.evaluate(() => { const d = state.cards.find(x => x.id === 'cS1'); return { draft: !!(d && d._draft) }; });
+  ok('🔴 空で「保存する」を押すと1回聞く', sv.asked === 1, sv);
+  ok('🔴 「入力に戻る」なら予約にならない', svAfter.draft === true, svAfter);
+
+  const src = fs.readFileSync('js/blank-cards.js', 'utf8');
+  ok('🔴 空カード判定が「手で足した記録／工程」だけを見ている',
+     /e\.manual === true \|\| e\.type === 'phase'/.test(src) && !/c\.log\.length > 1/.test(src));
+}
+
 console.log('\n── 版とキャッシュ番号 ──');
 {
   const ix = fs.readFileSync('index.html', 'utf8');
@@ -292,7 +426,7 @@ console.log('\n── 版とキャッシュ番号 ──');
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
               (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
-  ok('版は v1.56.0', vs[0] === '1.56.0', vs);
+  ok('版は v1.56.1', vs[0] === '1.56.1', vs);
   ok('直したファイルにキャッシュ番号が付いている',
      /card-view\.js\?v=\d+/.test(ix) && /card-detail\.js\?v=\d+/.test(ix) && /db-pit\.js\?v=\d+/.test(ix)
      && /loaner\.js\?v=\d+/.test(ix) && /card-view\.css\?v=\d+/.test(ix));

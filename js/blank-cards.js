@@ -75,7 +75,15 @@
     for (i = 0; i < FLAGS.length; i++) if (_has(c[FLAGS[i]])) return false;
     for (i = 0; i < NUMS.length;  i++) if (_has(c[NUMS[i]]))  return false;
     for (i = 0; i < LISTS.length; i++) if (_has(c[LISTS[i]])) return false;
-    if (Array.isArray(c.log) && c.log.length > 1) return false;   /* ログが増えている＝何か操作した */
+    /* 🔴 v1.56.1 「ログが1件を超えたら触った」は**緩すぎた**。
+       「予約作成」「表紙を印刷して保存」のような**自動で付く記録**まで数えていたので、
+       中身が空のまま印刷して保存したカードが**空カード検出から丸ごと漏れていた**
+       （2026-08-06 の本番で6枚。どれも log は 予約作成 → 表紙を印刷して保存 の2つだけ）。
+       ⚠ 「人が触った」とみなすのは
+          **手で足した記録（manual）** と **工程が動いた記録（type:'phase'）** だけ。 */
+    if (Array.isArray(c.log) && c.log.some(function (e) {
+      return e && (e.manual === true || e.type === 'phase');
+    })) return false;
     return true;
   }
   w.pitIsBlankCard = isBlank;

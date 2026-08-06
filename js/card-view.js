@@ -721,20 +721,28 @@
   function _editCloseBtn(){ return document.getElementById('card-modal-close'); }
   /* いま編集中か（index.html の背景クリックが見る） */
   window.pitCardEditing = function(){ return !!_editId; };
+  /* 🔴 v1.56.1 いま編集している入庫カードの番号（db-pit.js が「差し替えてはいけない相手」を知るのに使う） */
+  window.pitCardEditingId = function(){ return _editId; };
 
   function editBegin(card){
     _editId = card.id;
     try { _editSnap = JSON.parse(JSON.stringify(card)); } catch(e){ _editSnap = null; }
-    try { if (window.PitDB) PitDB.hold = true; } catch(e){}   /* ⛔ ボタンを押すまで保存しない */
+    /* ⛔ ボタンを押すまで保存しない。⚠ 置き去り防止のため、立てた時刻も渡しておく（db-pit.js が3分で解除する） */
+    try { if (window.PitDB){ PitDB.hold = true; PitDB._holdAt = Date.now(); } } catch(e){}
     const a = _editActs(); if (a) a.hidden = false;
     const b = _editCloseBtn(); if (b) b.hidden = true;        /* ✕ は出さない＝出口はボタンだけ */
   }
-  /* 見張りを外すだけ（中身は触らない）。⚠ 何があってもここを通れば保存が復活する。 */
+  /* 見張りを外す。⚠ 何があってもここを通れば保存が復活する。
+     🔴 v1.56.1 外したあと **必ず1回保存する**。
+        どの道から編集を抜けても、打ったものが黙って消えないようにするため
+        （キャンセルの時は先に元へ戻してから来るので、戻した姿が保存される＝正しい）。 */
   function editRelease(){
+    const had = !!_editId;
     _editId = null; _editSnap = null;
-    try { if (window.PitDB) PitDB.hold = false; } catch(e){}
+    try { if (window.PitDB){ PitDB.hold = false; PitDB._holdAt = 0; } } catch(e){}
     const a = _editActs(); if (a) a.hidden = true;
     const b = _editCloseBtn(); if (b) b.hidden = false;
+    if (had){ try { if (window.PitDB) PitDB.save(true); } catch(e){} }
   }
   window.pitCardEditRelease = editRelease;
 
