@@ -340,6 +340,40 @@ console.log('\n── 既存の作りを壊していないか ──');
   ok('「新規車両」スイッチも残っている', nv === true);
 }
 
+console.log('\n── ④ 🔴 車検の諸費用は上下の矢印を出さない（手で打つ欄） ──');
+{
+  await p.evaluate(() => {
+    state.cards = []; try { localStorage.removeItem('pitflow_draft_card'); } catch (e) {}
+    if (window.custCloseModal) custCloseModal();
+    openNewReserve();
+  });
+  await p.waitForTimeout(800);
+  await p.evaluate(() => {
+    const id = pitOpenCardId(); const c = state.cards.find(x => x.id === id);
+    const wt = (state.workTypes || []).find(w => /車検/.test(w.label)) || (state.workTypes || [])[0];
+    if (wt) c.workType = wt.id;
+    renderCardForm(c);
+  });
+  await p.waitForTimeout(600);
+  const r = await p.evaluate(() => {
+    const host = document.getElementById('md-body');
+    const fee = host.querySelector('[data-key="feeAmount"]');
+    const est = host.querySelector('[data-key="estAmount"]');
+    return {
+      fee: !!fee, nospin: fee ? fee.hasAttribute('data-nospin') : null,
+      feeAp: fee ? getComputedStyle(fee).appearance : null,
+      feeType: fee ? fee.type : null,
+      estNospin: est ? est.hasAttribute('data-nospin') : null,
+      estAp: est ? getComputedStyle(est).appearance : null
+    };
+  });
+  ok('諸費用の欄が出る（車検のとき）', r.fee === true, r);
+  ok('🔴 上下の矢印を出さない印が付いている', r.nospin === true, r);
+  ok('🔴 実際につまみが消えている（appearance:textfield）', r.feeAp === 'textfield', r.feeAp);
+  ok('数字の欄であることは変えていない', r.feeType === 'number', r.feeType);
+  ok('🔴 ほかの金額欄（概算）は今までどおり', r.estNospin === false && r.estAp !== 'textfield', r);
+}
+
 console.log('\n── ソースの見張り ──');
 {
   const cd = fs.readFileSync('js/card-detail.js', 'utf8');

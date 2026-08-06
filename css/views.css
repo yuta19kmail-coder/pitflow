@@ -879,6 +879,11 @@
   font-family:inherit;
   width:100%;
 }
+/* 🔴 v1.54.2 上下の矢印（数字を増減させるつまみ）を出さない印（ゆうた指定）。
+   手で打つ金額欄に付ける。⚠ 付けた欄だけに効く＝ほかの数字欄は今までどおり。 */
+.cf-input[data-nospin]::-webkit-outer-spin-button,
+.cf-input[data-nospin]::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; }
+.cf-input[data-nospin][type=number]{ -moz-appearance:textfield; appearance:textfield; }
 .cf-input:focus{
   outline:none;
   border-color:var(--brand);

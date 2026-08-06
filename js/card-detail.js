@@ -408,7 +408,9 @@ function renderCardForm(c){
     h += '<div class="cf-mochi"><div class="cf-mochi-lead"><i data-ic=megaphone data-ics=16></i> お客様にご案内ください（当日ご持参いただくもの）</div>'
        + '<div class="cf-mochi-items"><span class="cf-mochi-i"><i data-ic=car data-ics=16></i> 車検証</span><span class="cf-mochi-i"><i data-ic=receipt data-ics=16></i> 納税証明書</span><span class="cf-mochi-i"><i data-ic=file data-ics=16></i> 自賠責</span></div></div>';
     h += '<div class="cf-row" style="flex-wrap:wrap">';
-    h += '<div class="cf-field cf-field-narrow"><div class="cf-label">諸費用 ¥</div>' + numIn(c, 'feeAmount', 'style="width:120px"') + '</div>';
+    /* 🔴 v1.54.2（ゆうた指定）諸費用は**手で打つ欄**なので、上下の矢印（数字を増減させるつまみ）は出さない。
+       ⚠ 印は `data-nospin`。中身・計算・保存は今までどおり。 */
+    h += '<div class="cf-field cf-field-narrow"><div class="cf-label">諸費用 ¥</div>' + numIn(c, 'feeAmount', 'data-nospin style="width:120px"') + '</div>';
     h += '<div class="cf-field cf-field-narrow"><div class="cf-label">早期割</div>' + toggle(c, 'earlyDiscount', '適用', 'なし') + '</div>';
     h += '</div>';
   }
