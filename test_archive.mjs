@@ -50,7 +50,7 @@ const crPlate = async (pg, region, cls, kana, num) => {
 };
 
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
-await p.goto('http://127.0.0.1:8962/index.html?demo=1');
+await p.goto('http://127.0.0.1:8962/index.html?demo=1&nonews=1');
 await p.waitForFunction('window.state && window.PitArchive && window.renderCustomers', null, { timeout: 20000 });
 await p.waitForTimeout(800);
 

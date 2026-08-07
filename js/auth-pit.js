@@ -26,6 +26,14 @@
     var lg = el('pit-login');
     if (lg) lg.style.display = 'none';
     document.body.classList.add('pit-authed');
+    /* 🔴 v1.68.0 お知らせ＝ログインしたら未読を出す（CarFlow と同じ考え方）。
+       ここは**本番もサンプルも必ず通るログインの出口**なので、呼ぶのはここ1か所だけ。
+       ⚠ 各画面や main.js に書き写さないこと。二重にポップアップが出る。
+       少し待つのは、サイドバーと名簿の読み込みが済んでから丸を付けたいため。 */
+    setTimeout(function () {
+      if (window.pitNewsRefreshBadge) try { pitNewsRefreshBadge(); } catch (e) {}
+      if (window.pitNewsMaybePopup)   try { pitNewsMaybePopup(); } catch (e) {}
+    }, 900);
   }
   function showLogin() {
     var lg = el('pit-login');

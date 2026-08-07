@@ -29,7 +29,7 @@ const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
 
-await p.goto('http://127.0.0.1:8963/index.html?demo=1');
+await p.goto('http://127.0.0.1:8963/index.html?demo=1&nonews=1');
 await p.waitForTimeout(1400);
 
 console.log('\n── ① タブのタイトル ──');
@@ -94,7 +94,7 @@ console.log('\n── ④ 読み込みの途中でも出ない（今回の不具
      ⚠ 前の作りだと、この状態で注意書きが**出てしまっていた**。 */
   const p2 = await b.newPage({ viewport: { width: 1100, height: 820 } });
   await p2.route('**/js/auth-pit.js*', r => r.abort());
-  await p2.goto('http://127.0.0.1:8963/index.html?demo=1');
+  await p2.goto('http://127.0.0.1:8963/index.html?demo=1&nonews=1');
   await p2.waitForTimeout(900);
   const d = await p2.evaluate(() => {
     const n = document.querySelector('#pit-login .pl-note');

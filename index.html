@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.67.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.68.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="css/help.css?v=1">
 <link rel="stylesheet" href="css/mech-summary.css?v=2">
 <link rel="stylesheet" href="css/members.css?v=7">
-<link rel="stylesheet" href="css/news-oplog.css?v=1">
+<link rel="stylesheet" href="css/news-oplog.css?v=2">
 <style id="pit-dev-style">
   /* 「開発中サンプル」バッジ（タイトル横） */
   .pit-dev-badge{
@@ -120,7 +120,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.67.1</div>
+    <div class="login-ver">v1.68.0</div>
   </div>
 </div>
 
@@ -134,7 +134,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.67.1</span>
+    <span class="ver">v1.68.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -868,10 +868,10 @@
 <script src="js/outsource.js?v=5"></script>
 <script src="js/loaner.js?v=62"></script>
 <script src="js/fleet.js?v=26"></script>
-<script src="js/auth-pit.js?v=14"></script>
+<script src="js/auth-pit.js?v=15"></script>
 <script src="js/members-pit.js?v=14"></script>
 <script src="js/oplog-pit.js?v=1"></script>
-<script src="js/news-pit.js?v=1"></script>
+<script src="js/news-pit.js?v=2"></script>
 <script src="js/launcher.js?v=e62024b3"></script>
 <script src="js/holidays.js?v=1"></script>
 <script>window.PIT_CAL_MIRROR = 1;   /* 🔴 PitFlow だけ：MHSの値を state.settings の予備値に写す（cal-pit.js より前） */</script>
@@ -890,21 +890,6 @@
 <script src="js/auto-update.js?v=1"></script>
 
 
-<!-- お知らせを書く（news-pit.js） -->
-<div class="nw-modal" id="nw-modal" style="display:none" onclick="if(event.target===this)pitNewsClose()">
-  <div class="nw-box">
-    <div class="nw-box-h"><span id="nw-modal-t">お知らせを書く</span>
-      <button class="nw-x" onclick="pitNewsClose()" title="閉じる"><i data-ic=close data-ics=16></i></button></div>
-    <label class="nw-lb">見出し</label>
-    <input id="nw-title" class="nw-input" type="text" maxlength="80" placeholder="例：8/12〜8/16 はお盆休みです">
-    <label class="nw-lb">本文</label>
-    <textarea id="nw-text" class="nw-text" rows="8" placeholder="伝えたいことを書いてください（改行そのまま出ます）"></textarea>
-    <div class="nw-box-f">
-      <button class="nw-cancel" onclick="pitNewsClose()">やめる</button>
-      <button class="nw-ok" onclick="pitNewsSave()">出す</button>
-    </div>
-  </div>
-</div>
 <script src="js/ui-dialog.js?v=c2eb0791"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
 <script src="js/blank-cards.js?v=5"></script><!-- 空の予約カードを残さない（settings.js / views.js / card-detail.js より後ろ） -->
 <script src="js/reset-pit.js?v=1"></script><!-- 本番データの初期化（管理のみ・settings.js より後ろ） -->

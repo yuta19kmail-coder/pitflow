@@ -26,7 +26,7 @@ p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net
 
 /* サンプルモードで入る（本番の鍵は要らない） */
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
-await p.goto('http://127.0.0.1:8950/index.html?demo=1');
+await p.goto('http://127.0.0.1:8950/index.html?demo=1&nonews=1');
 await p.waitForFunction('window.state && Array.isArray(window.state.cards) && typeof window.showView === "function"', null, { timeout: 20000 });
 await p.waitForTimeout(600);
 

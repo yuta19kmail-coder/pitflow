@@ -30,7 +30,7 @@ p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net
 p.on('dialog', d => d.accept());
 
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
-await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1`);
+await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1&nonews=1`);
 await p.waitForFunction('window.state && window.pitHoldDays && window.pitDayNo && window.pitDayNoMs', null, { timeout: 25000 });
 await p.waitForTimeout(800);
 

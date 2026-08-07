@@ -48,7 +48,7 @@ const newReserve = async (custId, vehId) => {
 const openCardOf = () => p.evaluate(() => { const id = pitOpenCardId(); return (state.cards || []).find(c => c.id === id) || {}; });
 
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
-await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1`);
+await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1&nonews=1`);
 await p.waitForFunction('window.state && window.PitArchive && window.renderCustomers && window.PitCustReg', null, { timeout: 25000 });
 await p.waitForTimeout(800);
 

@@ -25,7 +25,7 @@ p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
 
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
-await p.goto('http://127.0.0.1:8955/index.html?demo=1');
+await p.goto('http://127.0.0.1:8955/index.html?demo=1&nonews=1');
 await p.waitForFunction('window.state && window.PitFlowLog && typeof window.openCard === "function"', null, { timeout: 20000 });
 await p.waitForTimeout(600);
 
