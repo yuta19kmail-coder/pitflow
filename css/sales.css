@@ -195,7 +195,12 @@
 .sv-toolbtn{ border:1px solid var(--border); background:var(--bg3); color:var(--text2); font-size:12px; font-weight:700; padding:6px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; }
 .sv-toolbtn:hover{ border-color:var(--brand,#1f7a4d); color:var(--text); }
 
-/* ===== v1.62.0 フロント「受注の質」＝会社平均との差／見積との差 ===== */
+/* ===== v1.62.0〜v1.63.0 フロント「受注の質」＝基準値との差／見積との差
+       v1.63.0：別ビューをやめ、インフォグラフィックの1人ぶんのブロックの中に入れた。
+       縦に伸びるぶん、カードの最小幅を広げる（.sv-fcards-wide）。 ===== */
+.sv-fcards-wide{ grid-template-columns:repeat(auto-fill,minmax(400px,1fr)); }
+.sv-qsep{ margin:14px 0 2px; padding-top:10px; border-top:1px dashed var(--border); font-size:10.5px; font-weight:800; color:var(--text3); letter-spacing:.06em; }
+
 .sv-qn{ font-style:normal; font-size:10px; color:var(--text3); margin-left:4px; }
 .sv-dup{ color:#1db97a; }                 /* ＋＝平均より上・見積より積めた */
 .sv-ddn{ color:#ef4444; }                 /* −＝平均より下・見積から落ちた */
@@ -205,7 +210,7 @@
 .sv-qcards2{ display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:14px; margin-bottom:12px; }
 .sv-qcard2{ background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:14px 16px; }
 
-.sv-q2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 6px; }
+.sv-q2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 6px; }
 .sv-qax{ background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
 .sv-qax-lb{ font-size:10.5px; font-weight:700; color:var(--text3); letter-spacing:.02em; }
 .sv-qax-num{ font-size:24px; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:2px; }
@@ -219,5 +224,6 @@
 
 @media (max-width:900px){
   .sv-qcards2{ grid-template-columns:1fr; }
+  .sv-fcards-wide{ grid-template-columns:1fr; }
   .sv-q2{ grid-template-columns:1fr; }
 }

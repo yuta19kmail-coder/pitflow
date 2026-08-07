@@ -1,4 +1,4 @@
-/* PitFlow v1.62.0 ── 受注の質（会社平均との差／見積との差）＋ クイック受注
+/* PitFlow v1.63.0 ── 受注の質（基準値との差／見積との差）＋ クイック受注
    -------------------------------------------------------------------
    ◎ゆうた指定
      ①「会社平均（国産・輸入・車検12点などの振り分け後の単価）と自身の獲得受注との差分金額と％」
@@ -6,7 +6,7 @@
      ③「点検待ち・見積もり中から作業待ち・作業完了まで一気に飛ぶ場合は受注金額だけを入れられるようにして、
         内部的には見積もり金額と＝という扱い。返車予定日は当日をデフォルトで入力済みに」
    ◎ゆうた確認済み（2026-08-06）
-     測る対象＝返車まで終わった車の確定額／会社平均＝見ている期間と同じ／最終金額＝確定額／
+     測る対象＝返車まで終わった車の確定額／**基準値＝設定の概算金額の表**（カードごとの概算は見ない）／最終金額＝確定額／
      クイック受注＝受注の関門（パーツ待ち）を飛び越えた時ぜんぶ
    ◎使い方（PitFlow のフォルダで）
      python3 -m http.server 8988      ← 別ウィンドウ
@@ -39,69 +39,91 @@ const W = await p.evaluate(() => {
 });
 
 /* ───────────────────────────────────────────────
-   仕込み：1課(国産)×車検 の会社平均が 10万 になるように4台置く。
-   斎藤 … 12万 / 12万（平均より＋2万ずつ＝＋4万）
-   田中 … 8万 / 8万 （平均より−2万ずつ＝−4万）
-   さらに 2課(輸入)×一般 を 斎藤に1台（平均＝自分だけ＝差0）＝バケツ分けが効いていることの確認
+   仕込み：基準値（設定の概算金額）を国産×車検＝10万 に固定してから、
+   斎藤 … 12万 / 12万（基準より＋2万ずつ＝＋4万）
+   田中 … 8万 / 8万 （基準より−2万ずつ＝−4万）
+   さらに 輸入×一般（基準30万）を斎藤に1台＝30万ぴったり（＝±0）
+   🔴 月平均ではなく基準値と比べるので、**1台しかいないバケツでも差がちゃんと出る**のが要点。
    ─────────────────────────────────────────────── */
 const seed = () => p.evaluate(([W]) => {
+  /* 基準値そのものを固定する（設定の概算金額の表） */
+  state.settings = state.settings || {};
+  state.settings.estAmount = {
+    default: { shaken: 100000, '12pt': 30000, general: 50000, oil: 5000, _default: 100000 },
+    import:  { shaken: 200000, '12pt': 60000, general: 300000, oil: 9000, _default: 200000 }
+  };
   const mk = (id, front, board, wt, final, quote) => ({
     id, resNo: 'R-' + id, customer: id, car: 'x', boardId: board, division: board === 'import' ? 'div2' : 'div1',
     workType: wt, workTypes: [wt], status: 'returned', completedAt: W.mid, returnDate: W.mid,
-    amountFinal: final, amountQuote: quote, frontStaff: front
+    amountFinal: final, amountQuote: quote, frontStaff: front,
+    estAmount: 999999999   /* ⚠ カードごとの概算は物差しに使わない（これが混ざったら数字が壊れる） */
   });
   window._keepCards = state.cards;
   state.cards = [
-    mk('Q1', '斎藤', 'default', 'shaken', 120000, 100000),   // 見積10万→確定12万（＋2万）
+    mk('Q1', '斎藤', 'default', 'shaken', 120000, 100000),   // 基準10万 → ＋2万 ／ 見積10万→確定12万
     mk('Q2', '斎藤', 'default', 'shaken', 120000, null),     // 見積なし＝見積差の分母から外れる
-    mk('Q3', '田中', 'default', 'shaken', 80000, 100000),    // 見積10万→確定8万（−2万）
+    mk('Q3', '田中', 'default', 'shaken', 80000, 100000),    // 基準10万 → −2万
     mk('Q4', '田中', 'default', 'shaken', 80000, 100000),
-    mk('Q5', '斎藤', 'import', 'general', 300000, 300000)    // 輸入×一般＝自分1台だけ＝平均差0
+    mk('Q5', '斎藤', 'import', 'general', 300000, 300000)    // 基準30万ぴったり＝±0
   ];
-  window._svTab = 'front'; window._svMode = 'month'; window._svFrontView = 'quality';
+  window._svTab = 'front'; window._svMode = 'month'; window._svFrontView = 'info';
   const now = new Date(); window._svYM = { y: now.getFullYear(), m: now.getMonth() };
   renderSales();
   return document.getElementById('view-sales-body').innerText.replace(/\n+/g, ' | ');
 }, [W]);
 
-console.log('\n── 📐 会社平均単価の表（比べるものさし） ──');
+console.log('\n── 📐 基準値の表（比べるものさし＝設定の概算金額） ──');
 const txt = await seed();
 {
-  ok('「受注の質」の入口ボタンが出ている', /受注の質/.test(txt), txt.slice(0, 200));
-  ok('会社平均単価の表が出ている', /会社平均単価/.test(txt), txt.slice(0, 300));
-  ok('1課×車検の会社平均が 10万（4台）', /10万/.test(txt) && /4台/.test(txt), txt.slice(0, 600));
+  ok('🔴 「受注の質」の別ボタンは無くなっている（1枚に統合）', !/受注の質<\/button>/.test(await p.evaluate(() => document.getElementById('view-sales-body').innerHTML)), txt.slice(0, 200));
+  ok('入口はインフォグラフィックと表の2つだけ', (await p.evaluate(() => [...document.querySelectorAll('.sv-vbtn')].map(b => b.textContent).join(','))) === 'インフォグラフィック,表');
+  ok('基準値の表が出ている', /基準値（設定の概算金額・比べるものさし）/.test(txt), txt.slice(0, 400));
+  ok('設定へ誘導する言葉が入っている', /設定 → 概算金額/.test(txt), txt.slice(0, 400));
+  ok('国産×車検＝10万 が出ている', /国産（1課）[\s\S]{0,40}10万/.test(txt), txt.slice(0, 600));
+  ok('輸入×一般＝30万 が出ている', /輸入（2課）[\s\S]{0,60}30万/.test(txt), txt.slice(0, 700));
 }
 
-console.log('\n── 📊 軸1：会社平均との差 ──');
+console.log('\n── 🧩 1枚に統合されているか ──');
 {
-  const r = await p.evaluate(() => {
-    const cards = [...document.querySelectorAll('.sv-qcard2')].map(el => ({
-      name: el.querySelector('.sv-fcard-name').textContent,
-      txt: el.innerText.replace(/\n+/g, ' | ')
-    }));
-    return cards;
-  });
+  const blocks = await p.evaluate(() => [...document.querySelectorAll('.sv-fcard')].map(el => ({
+    name: (el.querySelector('.sv-fcard-name') || {}).textContent,
+    hasSales: !!el.querySelector('.sv-fcard-sales'),
+    hasDow: !!el.querySelector('.sv-dowbars'),
+    hasQuality: !!el.querySelector('.sv-q2'),
+    hasQtbl: !!el.querySelector('.sv-qtbl'),
+    txt: el.innerText.replace(/\n+/g, ' | ')
+  })));
+  ok('フロントごとのブロックが2枚', blocks.length === 2, blocks.map(b => b.name));
+  ok('🔴 同じブロックの中に 売上・曜日・受注の質 が全部入っている',
+     blocks.every(b => b.hasSales && b.hasDow && b.hasQuality && b.hasQtbl), blocks.map(b => ({ n: b.name, s: b.hasSales, d: b.hasDow, q: b.hasQuality })));
+  ok('受注の質の区切り見出しが入っている', /受注の質/.test(blocks[0].txt), blocks[0].txt);
+}
+
+console.log('\n── 📊 軸1：基準値との差 ──');
+{
+  const r = await p.evaluate(() => [...document.querySelectorAll('.sv-fcard')].map(el => ({
+    name: el.querySelector('.sv-fcard-name').textContent, txt: el.innerText.replace(/\n+/g, ' | ')
+  })));
   const sai = r.find(x => x.name === '斎藤'), tan = r.find(x => x.name === '田中');
-  ok('フロントごとのカードが2枚出る', r.length === 2, r.map(x => x.name));
-  ok('🔴 斎藤＝会社平均より ＋4万（12万×2台 − 平均10万×2台）', /＋4万/.test(sai.txt), sai.txt);
-  ok('🔴 田中＝会社平均より −4万（8万×2台 − 平均10万×2台）', /−4万/.test(tan.txt), tan.txt);
-  ok('％も出る（斎藤＝＋20.0%／車検ぶん）', /＋20\.0%/.test(sai.txt), sai.txt);
-  ok('％も出る（田中＝−20.0%）', /−20\.0%/.test(tan.txt), tan.txt);
-  ok('平均より上は緑・下は赤の印が付く', /sv-dup/.test(await p.evaluate(() => document.getElementById('view-sales-body').innerHTML)) && /sv-ddn/.test(await p.evaluate(() => document.getElementById('view-sales-body').innerHTML)));
+  ok('見出しが「基準値との差」になっている', /基準値との差/.test(sai.txt), sai.txt);
+  ok('🔴 斎藤＝基準より ＋4万（12万×2台 − 基準10万×2台。輸入の1台は±0）', /＋4万/.test(sai.txt), sai.txt);
+  ok('🔴 田中＝基準より −4万（8万×2台 − 基準10万×2台）', /−4万/.test(tan.txt), tan.txt);
+  ok('田中の％は −20.0%', /−20\.0%/.test(tan.txt), tan.txt);
+  const html = await p.evaluate(() => document.getElementById('view-sales-body').innerHTML);
+  ok('基準より上は緑・下は赤の印が付く', /sv-dup/.test(html) && /sv-ddn/.test(html));
   ok('内容ごとの行（車検）が出る', /車検/.test(sai.txt), sai.txt);
-  ok('🔴 バケツ分けが効く＝輸入×一般は自分1台なので差ゼロ扱い（一般の行が ±0）', /一般/.test(sai.txt) && /±0/.test(sai.txt), sai.txt);
+  ok('🔴 1台しかいない輸入×一般でも、基準値と比べて ±0 と出る（月平均だと必ず±0で意味がなかった所）', /一般/.test(sai.txt) && /±0/.test(sai.txt), sai.txt);
+  ok('🔴 カードごとの概算（99,999万）は物差しに使っていない', !/9999/.test(sai.txt), sai.txt);
 }
 
 console.log('\n── 🧾 軸2：見積との差（取りこぼし） ──');
 {
-  const r = await p.evaluate(() => [...document.querySelectorAll('.sv-qcard2')].map(el => ({
+  const r = await p.evaluate(() => [...document.querySelectorAll('.sv-fcard')].map(el => ({
     name: el.querySelector('.sv-fcard-name').textContent, txt: el.innerText.replace(/\n+/g, ' | ')
   })));
   const sai = r.find(x => x.name === '斎藤'), tan = r.find(x => x.name === '田中');
   ok('見積との差の見出しが出る', /見積との差/.test(sai.txt), sai.txt);
-  /* 斎藤＝見積(10万+30万)→確定(12万+30万)＝＋2万・2台（Q2は見積なしで除外） */
   ok('🔴 斎藤＝見積40万→確定42万で ＋2万（見積なしのQ2は数えない）', /見積 40万 → 確定 42万（2台）/.test(sai.txt), sai.txt);
-  /* 田中＝見積20万→確定16万＝−4万・2台 */
   ok('🔴 田中＝見積20万→確定16万で −4万', /見積 20万 → 確定 16万（2台）/.test(tan.txt), tan.txt);
   const noQuote = await p.evaluate(([W]) => {
     state.cards = [{ id: 'QZ', resNo: 'R-QZ', customer: 'z', car: 'x', boardId: 'default', division: 'div1',
@@ -111,6 +133,25 @@ console.log('\n── 🧾 軸2：見積との差（取りこぼし） ──');
     return document.getElementById('view-sales-body').innerText.replace(/\n+/g, ' | ');
   }, [W]);
   ok('見積が1台も無いフロントは「—」と出る（0扱いにしない）', /見積額が入っている車がありません/.test(noQuote), noQuote.slice(0, 400));
+}
+
+console.log('\n── 📅 物差しが月ごとに動かない ──');
+{
+  const r = await p.evaluate(([W]) => {
+    const pad = n => (n < 10 ? '0' : '') + n;
+    const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const t = new Date();
+    const prev = ymd(new Date(t.getFullYear(), t.getMonth() - 1, 15));
+    /* 先月に1台だけ、同じ条件（国産×車検 12万）の車を置く */
+    state.cards = [{ id: 'PM', resNo: 'R-PM', customer: 'p', car: 'x', boardId: 'default', division: 'div1',
+      workType: 'shaken', workTypes: ['shaken'], status: 'returned', completedAt: prev, returnDate: prev,
+      amountFinal: 120000, amountQuote: 120000, frontStaff: '斎藤' }];
+    window._svYM = { y: t.getFullYear(), m: t.getMonth() - 1 };
+    renderSales();
+    return document.getElementById('view-sales-body').innerText.replace(/\n+/g, ' | ');
+  }, [W]);
+  ok('🔴 先月に1台だけでも、基準10万と比べて ＋2万 と出る（月平均なら±0になってしまう所）', /＋2万/.test(r), r.slice(0, 600));
+  ok('％も出る（＋20.0%）', /＋20\.0%/.test(r), r.slice(0, 600));
 }
 
 console.log('\n── ⚡ クイック受注：どこで出るか（物差し1本） ──');
@@ -224,12 +265,13 @@ console.log('\n── 🔗 クイック受注の車が、そのまま集計に�
     state.cards = [{ id: 'QF', resNo: 'R-QF', customer: 'クイック', car: 'x', boardId: 'default', division: 'div1',
       workType: 'oil', workTypes: ['oil'], status: 'returned', frontStaff: '斎藤',
       amountQuote: 8800, amountOrder: 8800, amountFinal: 8800, completedAt: W.mid, returnDate: W.mid }];
-    window._svTab = 'front'; window._svFrontView = 'quality';
+    window._svTab = 'front'; window._svFrontView = 'info';
+    const now = new Date(); window._svYM = { y: now.getFullYear(), m: now.getMonth() };
     renderSales();
     return document.getElementById('view-sales-body').innerText.replace(/\n+/g, ' | ');
   }, [W]);
-  ok('🔴 見積＝受注なので「見積との差」は ±0（取りこぼし扱いにならない）', /±0/.test(r), r.slice(0, 500));
-  ok('会社平均との差も ±0（自分1台＝自分が平均）', (r.match(/±0/g) || []).length >= 2, r.slice(0, 500));
+  ok('🔴 見積＝受注なので「見積との差」は ±0（取りこぼし扱いにならない）', /±0/.test(r), r.slice(0, 800));
+  ok('🔴 基準値（オイル 5,000円）と比べて ＋3,800円ぶんの差が出る', /＋0\.4万|＋3,800|＋0\.4/.test(r), r.slice(0, 800));
 }
 
 console.log('\n── 🧭 まわりが壊れていないか ──');
@@ -237,7 +279,7 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
   const back = await p.evaluate(() => {
     state.cards = window._keepCards || [];
     const out = {};
-    ['info', 'table', 'quality'].forEach(v => {
+    ['info', 'table'].forEach(v => {
       window._svTab = 'front'; window._svFrontView = v;
       renderSales();
       out[v] = document.getElementById('view-sales-body').innerText.length;
@@ -246,10 +288,12 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
     window._svMode = 'year'; renderSales(); window._svMode = 'month';
     return out;
   });
-  ok('インフォグラフィック・表・受注の質 の3つとも描ける', back.info > 50 && back.table > 50 && back.quality > 50, back);
+  ok('インフォグラフィックと表の2つとも描ける', back.info > 50 && back.table > 50, back);
   ok('売上・クォーター・作業内容・フロント・年度 を回してもエラーなし', errs.length === 0, errs.slice(0, 5));
   const ver = await p.evaluate(() => document.querySelector('meta[name=app-version]').content);
-  ok('版が v1.62.0 になっている', ver === '1.62.0', ver);
+  /* ⚠ 版は上がっていくので数字を打ち込まない（v1.62.0 以降かだけ見る） */
+  const vn = String(ver || '').split('.').map(Number);
+  ok('版が v1.62.0 以降になっている', vn[0] > 1 || (vn[0] === 1 && vn[1] >= 62), ver);
 }
 
 console.log('\n' + (fail === 0 ? '🎉 ' : '⚠ ') + pass + ' OK / ' + fail + ' NG');
