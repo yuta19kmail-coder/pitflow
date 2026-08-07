@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="1.71.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="1.72.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="css/launcher.css?v=c679db13">
 <link rel="stylesheet" href="css/card-view.css?v=29">
 <link rel="stylesheet" href="css/card-hover.css?v=21">
-<link rel="stylesheet" href="css/sales.css?v=7">
+<link rel="stylesheet" href="css/sales.css?v=8">
 <link rel="stylesheet" href="css/shaken.css?v=14">
 <link rel="stylesheet" href="css/shaken-log.css?v=3">
 <link rel="stylesheet" href="css/mydash.css?v=4">
@@ -120,7 +120,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v1.71.0</div>
+    <div class="login-ver">v1.72.0</div>
   </div>
 </div>
 
@@ -134,7 +134,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v1.71.0</span>
+    <span class="ver">v1.72.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -831,7 +831,7 @@
 <script src="js/views.js?v=47"></script>
 <script src="js/work-content.js?v=12"></script>
 <script src="js/card-detail.js?v=125"></script>
-<script src="js/flow-pit.js?v=3"></script><!-- フロー（進捗ログ）の「足す／直す」。card-view.js（詳細）と card-tabs.js（編集）の両方から呼ぶので先に読む -->
+<script src="js/flow-pit.js?v=4"></script><!-- フロー（進捗ログ）の「足す／直す」。card-view.js（詳細）と card-tabs.js（編集）の両方から呼ぶので先に読む -->
 <script src="js/card-view.js?v=53"></script>
 <script src="js/cover-print.js?v=13"></script>
 <script src="js/avail.js?v=7"></script>
@@ -847,7 +847,7 @@
 <script src="js/search.js?v=12"></script>
 <script src="js/sales-count.js?v=2"></script><!-- 🔴 v1.61.0 「売上をどの月に数えるか」の物差し1本（実績＝実績カウント日／まだ返していない車＝返車予定日）。使う側（maintdash / sales / mech-summary / mydash）より前に読む -->
 <script src="js/maintdash.js?v=4"></script>
-<script src="js/sales.js?v=13"></script>
+<script src="js/sales.js?v=14"></script>
 <script src="js/sales-print.js?v=3"></script>
 <script src="js/mech-summary.js?v=4"></script>
 <script src="js/pit-floor.js?v=33"></script>
@@ -871,7 +871,7 @@
 <script src="js/auth-pit.js?v=16"></script>
 <script src="js/members-pit.js?v=14"></script>
 <script src="js/oplog-pit.js?v=1"></script>
-<script src="js/news-pit.js?v=5"></script>
+<script src="js/news-pit.js?v=6"></script>
 <script src="js/launcher.js?v=e62024b3"></script>
 <script src="js/holidays.js?v=1"></script>
 <script>window.PIT_CAL_MIRROR = 1;   /* 🔴 PitFlow だけ：MHSの値を state.settings の予備値に写す（cal-pit.js より前） */</script>
@@ -883,7 +883,7 @@
 <script src="js/card-hover.js?v=34"></script>
 <script src="js/phase-popup.js?v=14"></script>
 <script src="js/return-popup.js?v=7"></script>
-<script src="js/help-content.js?v=16"></script>
+<script src="js/help-content.js?v=17"></script>
 <script src="js/help.js?v=2"></script>
 <script src="js/mydash.js?v=11"></script>
 <script src="js/main.js?v=12"></script>

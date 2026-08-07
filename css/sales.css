@@ -227,3 +227,58 @@
   .sv-fcards-wide{ grid-template-columns:1fr; }
   .sv-q2{ grid-template-columns:1fr; }
 }
+
+/* ============================================================
+   🔴 v1.72.0（ゆうた指定）
+   ① フロントの「読みのズレ／預かりの中身」
+   ② グラフの拡大表示
+   ============================================================ */
+
+/* ① 日数のブロック（フロントカードの中） */
+.sv-fdays{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.sv-dm{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  background:var(--bg3); border:1px solid var(--line); border-radius:8px; padding:6px 9px; }
+.sv-dm > span{ font-size:11px; color:var(--text2); line-height:1.35; }
+.sv-dm > span > i{ display:block; font-style:normal; font-size:10px; color:var(--text3); }
+.sv-dm > b{ font-size:15px; font-weight:800; white-space:nowrap; }
+/* 遅れ＝赤／早い＝緑。⚠ 早い方が良いとは限らないので、緑は「読みより早かった」の印にすぎない */
+.sv-dm.sv-dm-late > b{ color:#ef4444; }
+.sv-dm.sv-dm-early > b{ color:#1db97a; }
+td.sv-num.sv-dm-late{ color:#ef4444; }
+td.sv-num.sv-dm-early{ color:#1db97a; }
+/* 列が増えたので、表は横に流せるようにする（数字が潰れない） */
+.sv-table-wide{ overflow-x:auto; }
+.sv-table-wide .sv-table{ min-width:960px; }
+
+/* ② 拡大ボタン */
+.sv-zoombtn{ margin-left:auto; display:inline-flex; align-items:center; gap:4px;
+  font-size:11px; font-weight:700; color:var(--text2); cursor:pointer;
+  background:var(--bg3); border:1px solid var(--line); border-radius:999px; padding:3px 10px; }
+.sv-zoombtn:hover{ color:var(--text); border-color:var(--brand); }
+
+/* ② 拡大の窓 */
+.sv-zoom{ position:fixed; inset:0; z-index:9500; display:none;
+  background:rgba(0,0,0,.72); backdrop-filter:blur(2px); padding:24px; }
+.sv-zoom.open{ display:flex; align-items:center; justify-content:center; }
+.sv-zoom-box{ width:min(1500px,96vw); max-height:92vh; display:flex; flex-direction:column;
+  background:var(--bg2); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+  box-shadow:0 24px 70px rgba(0,0,0,.55); }
+.sv-zoom-h{ display:flex; align-items:center; gap:10px; padding:12px 16px;
+  border-bottom:1px solid var(--line); font-size:15px; font-weight:800; }
+.sv-zoom-h > span{ flex:1 1 auto; }
+.sv-zoom-x{ flex:0 0 auto; border:0; background:transparent; color:var(--text3); cursor:pointer; padding:2px; }
+.sv-zoom-x:hover{ color:#ef4444; }
+.sv-zoom-body{ padding:18px 20px 22px; overflow:auto; }
+/* 中のカードは枠を持たない（外の窓が枠なので二重に見えないように） */
+.sv-zoom-body .sv-card{ background:transparent; border:0; padding:0; margin:0; }
+.sv-zoom-body .sv-card-h{ font-size:13px; color:var(--text2); }
+/* 見出しは窓の上に出ているので、複製した側の見出しは隠す（凡例だけ残す） */
+.sv-zoom-body > .sv-card > .sv-card-h > span:first-child{ display:none; }
+/* 🔴 ここが本題＝グラフを大きく見せる */
+.sv-zoom-body svg.sv-chart{ width:100%; height:min(62vh,620px); }
+.sv-zoom-body svg.sv-stack{ width:100%; height:64px; }
+.sv-zoom-body .sv-note{ font-size:12px; }
+@media (max-width:900px){
+  .sv-zoom{ padding:10px; }
+  .sv-fdays{ grid-template-columns:1fr; }
+}

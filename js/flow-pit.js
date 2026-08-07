@@ -167,6 +167,26 @@
   }
   w.pitPhaseStartMs = phaseStartMs;
 
+  /* 🔴 v1.72.0 「その工程に入ったのはいつか」を、いまの工程以外にも聞けるようにした。
+     売上サマリーの「作業待ち → 作業完了 → 確定返車日」の日数がこれを使う。
+     ⚠ 何度も行き来したカードは **最後に入った時**を返す（`phaseStartMs` と同じ数え方）。
+     ⚠ 記録が無ければ null。**入庫日で代用しない**（代用すると「0日で終わった」という嘘の数字になる）。 */
+  function phaseEnteredMs(c, status){
+    if (!c || !status) return null;
+    var log = Array.isArray(c.log) ? c.log : [];
+    for (var i = log.length - 1; i >= 0; i--){
+      var e = log[i];
+      if (e && e.type === 'phase' && e.to === status){
+        var ms = atMs(e);
+        if (ms != null) return ms;
+      }
+    }
+    /* 記録が無い古いカードでも、**いまその工程にいる**なら写しが使える */
+    if (String(c.status || '') === String(status) && c.phaseAt) return +c.phaseAt;
+    return null;
+  }
+  w.pitPhaseEnteredMs = phaseEnteredMs;
+
   /* フローを直したあと、写し（phaseAt）を記録に合わせて書き直す。
      🔴 **記録が正・写しが従。** 逆にしないこと。 */
   function syncPhaseAt(c){

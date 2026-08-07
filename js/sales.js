@@ -471,16 +471,55 @@
     function ens(n){
       if(!F[n]){
         F[n]={cnt:0,sum:0,hi:0,hold:0,holdN:0,holdMax:0,odDays:0,odN:0,dow:[0,0,0,0,0,0,0],grp:{shaken:0,'12pt':0,general:0},grpN:{shaken:0,'12pt':0,general:0},
+              /* 🔴 v1.72.0（ゆうた指定） */
+              gapSum:0,gapN:0,gapMax:0,      /* 概算返車日 → 実際の返車日 のズレ（＋＝読みより遅れた） */
+              w2dSum:0,w2dN:0,               /* 預かりだけ：作業待ち → 作業完了 */
+              d2rSum:0,d2rN:0,               /* 預かりだけ：作業完了 → 確定返車日 */
               q:{ all:qCell(), grp:{} }};
         WGROUPS.forEach(function(w){ F[n].q.grp[w.id]=qCell(); });
       }
       return F[n];
     }
+    /* 日付だけで数える（時刻の端数で「0日」が「1日」に化けないように） */
+    function dayMs(v){
+      if (v == null || v === '') return null;
+      var d = (typeof v === 'number') ? new Date(v) : pd(String(v));
+      if (!d || isNaN(d.getTime())) return null;
+      d.setHours(0,0,0,0); return d.getTime();
+    }
+    function dayDiff(a, b){ var x=dayMs(a), y=dayMs(b); return (x==null||y==null) ? null : Math.round((y-x)/86400000); }
+
     (state.cards||[]).forEach(function(c){ var fn=c.frontStaff||c.staff||'（未割当）';
       if(c.status==='returned' && inRange(c, fromStr, toStr, todayStr)){
         var d=countDate(c); var f=ens(fn); var amt=actAmt(c); var g=workGroupOf(c);
         f.cnt++; f.sum+=amt; if(amt>f.hi)f.hi=amt; f.grp[g]+=amt; f.grpN[g]++;
         if(c.reserveDate && d){ var hd=Math.round((pd(d)-pd(c.reserveDate))/86400000); if(hd>=0){ f.hold+=hd; f.holdN++; if(hd>f.holdMax)f.holdMax=hd; } }
+
+        /* ───────── 🔴 v1.72.0 読みのズレ（暫定の預かり日数は当たっていたか） ─────────
+           概算返車日 A ＝ 入庫日 ＋ 概算 預かり日数（return-slot.js の pitReturnA 1本から取る）。
+           それと**実際に返した日**をくらべて、**＋＝読みより遅れた／−＝早く返せた**。
+           ⚠ ここで「入庫日＋◯日」を組み立て直さないこと（A の作り方は return-slot.js が持っている）。 */
+        var actual = c.returnDateFinal || c.returnDate || d;
+        var estRet = window.pitReturnA ? pitReturnA(c) : '';
+        var gap = (estRet && actual) ? dayDiff(estRet, actual) : null;
+        if (gap != null){
+          f.gapSum += gap; f.gapN++;
+          if (Math.abs(gap) > Math.abs(f.gapMax)) f.gapMax = gap;   /* いちばん外した1台（符号つき） */
+        }
+
+        /* ───────── 🔴 v1.72.0 預かりの車だけ：中身の日数 ─────────
+           作業待ち → 作業完了（＝ピットで実際にかかった日数）
+           作業完了 → 確定返車日（＝終わってから引き取られるまでの日数）
+           ⚠ 待ち・当日返しは「その日のうち」なので混ぜると平均が潰れる。**預かりだけ**（ゆうた指定）。
+           ⚠ 工程に入った時刻は flow-pit.js の pitPhaseEnteredMs 1本から取る（フローを直せばここも改まる）。 */
+        if ((window.pitDropEffective ? pitDropEffective(c) : c.dropType) === 'drop' && window.pitPhaseEnteredMs){
+          var wMs = pitPhaseEnteredMs(c, 'work'), dMs = pitPhaseEnteredMs(c, 'workDone');
+          var a1 = (wMs != null && dMs != null) ? dayDiff(wMs, dMs) : null;
+          if (a1 != null && a1 >= 0){ f.w2dSum += a1; f.w2dN++; }
+          var a2 = (dMs != null && actual) ? dayDiff(dMs, actual) : null;
+          if (a2 != null && a2 >= 0){ f.d2rSum += a2; f.d2rN++; }
+        }
+
         /* 受注の質＝基準値との差／見積との差 */
         var base=baseOf(c), q=num(c.amountQuote);
         [f.q.all, f.q.grp[g]].forEach(function(o){ o.cnt++; o.sum+=amt; o.base+=base; if(q>0){ o.qCnt++; o.qSum+=q; o.qFinal+=amt; } });
@@ -599,11 +638,42 @@
     return h;
   }
 
+  /* ================= 🔴 v1.72.0 日数まわり（ゆうた指定） =================
+     ◎① 読みのズレ（暫定の預かり日数は当たっていたか）
+        概算返車日（入庫日＋概算 預かり日数）と、**実際に返した日**の差。
+        **平均**＝ふだんどれくらい読みが甘い／堅いか。**最大**＝いちばん外した1台。
+        ＋＝読みより**遅れた** ／ −＝**早く返せた**。
+     ◎② 預かりの車だけ、中身を2つに割る
+        **作業待ち → 作業完了**（ピットで実際にかかった日数）
+        **作業完了 → 確定返車日**（終わってから引き取られるまでの日数）
+        ⚠ 待ち・当日返しは「その日のうち」なので混ぜない（平均が潰れる）。
+     ⚠ どれも**数えているだけ**。保存データは1バイトも触っていない。 */
+  function dayStr(v, sign){
+    if (v == null) return '—';
+    var s = (Math.round(v*10)/10).toFixed(1).replace(/\.0$/,'');
+    if (sign) s = (v>0?'＋':v<0?'−':'±') + s.replace('-','');
+    return s + '日';
+  }
+  function gapCls(v){ return v==null ? '' : (v>0.5?' sv-dm-late':(v<-0.5?' sv-dm-early':'')); }
+  function daysBlockHtml(r){
+    var h='<div class="sv-fbar-lb">読みのズレ／預かりの中身</div><div class="sv-fdays">';
+    h+='<div class="sv-dm'+gapCls(r.gap)+'"><span>概算とのズレ 平均</span><b>'+dayStr(r.gap,true)+'</b></div>';
+    h+='<div class="sv-dm'+gapCls(r.gapMax)+'"><span>いちばん外した</span><b>'+dayStr(r.gapMax,true)+'</b></div>';
+    h+='<div class="sv-dm"><span>作業待ち→完了<i>預かり '+(r.w2dN||0)+'台</i></span><b>'+dayStr(r.w2d)+'</b></div>';
+    h+='<div class="sv-dm"><span>完了→確定返車<i>預かり '+(r.d2rN||0)+'台</i></span><b>'+dayStr(r.d2r)+'</b></div>';
+    h+='</div>';
+    return h;
+  }
+
   function frontBody(F, fromStr, toStr){
     var view=window._svFrontView||'info';
     var DOW=['日','月','火','水','木','金','土'];
     var rows=Object.keys(F).map(function(n){ var f=F[n]; var gt=f.grp.shaken+f.grp['12pt']+f.grp.general; var dsum=f.dow.reduce(function(a,b){return a+b;},0);
-      return { name:n, f:f, cnt:f.cnt, sum:f.sum, hi:f.hi, avg:f.cnt?f.sum/f.cnt:0, hold:f.holdN?f.hold/f.holdN:null, holdMax:f.holdMax, od:f.odN?f.odDays/f.odN:null, gt:gt, dsum:dsum };
+      return { name:n, f:f, cnt:f.cnt, sum:f.sum, hi:f.hi, avg:f.cnt?f.sum/f.cnt:0, hold:f.holdN?f.hold/f.holdN:null, holdMax:f.holdMax, od:f.odN?f.odDays/f.odN:null, gt:gt, dsum:dsum,
+        /* 🔴 v1.72.0 */
+        gap:f.gapN?f.gapSum/f.gapN:null, gapMax:f.gapN?f.gapMax:null,
+        w2d:f.w2dN?f.w2dSum/f.w2dN:null, w2dN:f.w2dN,
+        d2r:f.d2rN?f.d2rSum/f.d2rN:null, d2rN:f.d2rN };
     });
     rows.sort(function(a,b){return b.sum-a.sum;});
     /* 🔴 v1.63.0（ゆうた指定）**受注の質は別の入口にしない**＝インフォグラフィックの1人ぶんのブロックに続けて描く。
@@ -613,9 +683,16 @@
          +'<button class="sv-vbtn'+(view==='table'?' on':'')+'" onclick="svSetFrontView(\'table\')">表</button></div>';
     if(!rows.length){ return h+'<div class="sv-card"><div class="sv-empty">対象データがありません</div></div>'; }
     if(view==='table'){
-      h+='<div class="sv-card"><table class="sv-table"><thead><tr><th>フロント</th><th>台数</th><th>売上</th><th>平均単価</th><th>最高単価</th><th>預り平均</th><th>預り最長</th><th>受注まで</th><th>車検%</th><th>12点%</th><th>一般%</th></tr></thead><tbody>';
-      rows.forEach(function(r){ h+='<tr><td class="sv-td-name">'+esc(r.name)+'</td><td class="sv-num">'+r.cnt+'</td><td class="sv-num" style="color:#1db97a">'+man(r.sum)+'</td><td class="sv-num">'+man(r.avg)+'</td><td class="sv-num">'+man(r.hi)+'</td><td class="sv-num">'+(r.hold!=null?r.hold.toFixed(1):'—')+'</td><td class="sv-num">'+(r.holdMax||'—')+'</td><td class="sv-num">'+(r.od!=null?r.od.toFixed(1):'—')+'</td><td class="sv-num">'+pct(r.f.grp.shaken,r.gt)+'%</td><td class="sv-num">'+pct(r.f.grp['12pt'],r.gt)+'%</td><td class="sv-num">'+pct(r.f.grp.general,r.gt)+'%</td></tr>'; });
-      h+='</tbody></table></div><div class="sv-foot">返車済み実績＋受注(連絡中→パーツ待ち)。%は売上構成比。</div>';
+      h+='<div class="sv-card sv-table-wide"><table class="sv-table"><thead><tr><th>フロント</th><th>台数</th><th>売上</th><th>平均単価</th><th>最高単価</th><th>預り平均</th><th>預り最長</th><th>受注まで</th>'
+         +'<th title="概算返車日と実際に返した日の差。＋＝遅れた">ズレ平均</th><th title="いちばん外した1台">ズレ最大</th><th title="預かりの車だけ">作業待ち→完了</th><th title="預かりの車だけ">完了→返車</th>'
+         +'<th>車検%</th><th>12点%</th><th>一般%</th></tr></thead><tbody>';
+      rows.forEach(function(r){ h+='<tr><td class="sv-td-name">'+esc(r.name)+'</td><td class="sv-num">'+r.cnt+'</td><td class="sv-num" style="color:#1db97a">'+man(r.sum)+'</td><td class="sv-num">'+man(r.avg)+'</td><td class="sv-num">'+man(r.hi)+'</td><td class="sv-num">'+(r.hold!=null?r.hold.toFixed(1):'—')+'</td><td class="sv-num">'+(r.holdMax||'—')+'</td><td class="sv-num">'+(r.od!=null?r.od.toFixed(1):'—')+'</td>'
+        +'<td class="sv-num'+gapCls(r.gap)+'">'+dayStr(r.gap,true)+'</td><td class="sv-num'+gapCls(r.gapMax)+'">'+dayStr(r.gapMax,true)+'</td>'
+        +'<td class="sv-num">'+dayStr(r.w2d)+'</td><td class="sv-num">'+dayStr(r.d2r)+'</td>'
+        +'<td class="sv-num">'+pct(r.f.grp.shaken,r.gt)+'%</td><td class="sv-num">'+pct(r.f.grp['12pt'],r.gt)+'%</td><td class="sv-num">'+pct(r.f.grp.general,r.gt)+'%</td></tr>'; });
+      h+='</tbody></table></div><div class="sv-foot">返車済み実績＋受注(連絡中→パーツ待ち)。%は売上構成比。<br>'
+        +'<b>ズレ</b>＝概算返車日（入庫日＋概算 預かり日数）と、実際に返した日の差。＋＝読みより遅れた／−＝早く返せた。<b>ズレ最大</b>はいちばん外した1台。<br>'
+        +'<b>作業待ち→完了・完了→返車</b>＝<b>預かりの車だけ</b>の平均日数（待ち・当日返しはその日のうちなので混ぜていません）。</div>';
       return h;
     }
     // info：大きめカード（v1.63.0 で「受注の質」もこの中に入れて1枚にした）
@@ -631,6 +708,9 @@
       h+='<div class="sv-fm"><span>預り最長</span><b>'+(r.holdMax?r.holdMax+'日':'—')+'</b></div>';
       h+='<div class="sv-fm"><span>受注まで</span><b>'+(r.od!=null?r.od.toFixed(1)+'日':'—')+'</b></div>';
       h+='</div>';
+      /* 🔴 v1.72.0（ゆうた指定）読みのズレ＋預かりの中身の日数。
+         ⚠ 「早い＝良い」ではないので色は付けない。**遅れ＝赤**だけ意味を持たせる。 */
+      h+=daysBlockHtml(r);
       // 作業構成比バー
       h+='<div class="sv-fbar-lb">作業構成比</div><div class="sv-segbar">';
       WGROUPS.forEach(function(x){ var v=f.grp[x.id]; var p=r.gt?v/r.gt*100:0; if(p>0) h+='<i style="width:'+p.toFixed(1)+'%;background:'+x.color+'" title="'+x.label+' '+Math.round(p)+'%"></i>'; });
@@ -676,7 +756,52 @@
     else if(tab==='work') yr?renderWorkYear(wrap):renderWorkMonth(wrap);
     else if(tab==='front') yr?renderFrontYear(wrap):renderFrontMonth(wrap);
     else yr?renderYear(wrap):renderMonth(wrap);
+    decorateCharts(wrap);
   }
+
+  /* ================= 🔴 v1.72.0 グラフを大きく見る（ゆうた指定「売上グラフにフォーカス」） =================
+     ⚠ **各グラフのコードは1行も触らない。** 描き終わったあとに、
+        グラフが入っているカードへ「拡大」ボタンを足すだけ。だから新しいグラフを足しても自動で付く。
+     ⚠ 大きい窓の中身は**カードをそのまま複製**したもの。数字を作り直さないので食い違わない。 */
+  function decorateCharts(root){
+    if(!root || !root.querySelectorAll) return;
+    Array.prototype.forEach.call(root.querySelectorAll('.sv-card'), function(card){
+      var head=card.querySelector('.sv-card-h'); if(!head) return;
+      if(head.querySelector('.sv-zoombtn')) return;
+      if(!card.querySelector('svg.sv-chart, svg.sv-stack')) return;
+      var b=document.createElement('button');
+      b.type='button'; b.className='sv-zoombtn'; b.title='大きく見る';
+      b.innerHTML='<i data-ic=expand data-ics=15></i> 拡大';
+      b.addEventListener('click', function(e){ e.stopPropagation(); svZoomOpen(card); });
+      head.appendChild(b);
+    });
+    try { if(window.icoBoot) icoBoot(root); } catch(e){}
+  }
+
+  function svZoomOpen(card){
+    var ov=document.getElementById('sv-zoom');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='sv-zoom'; ov.className='sv-zoom';
+      ov.addEventListener('click', function(e){
+        if(e.target===ov || (e.target.closest && e.target.closest('.sv-zoom-x'))) svZoomClose();
+      });
+      document.body.appendChild(ov);
+      document.addEventListener('keydown', function(e){ if(e.key==='Escape') svZoomClose(); });
+    }
+    var ttl=(card.querySelector('.sv-card-h span')||{}).textContent || 'グラフ';
+    var box=document.createElement('div'); box.className='sv-zoom-box';
+    var hd=document.createElement('div'); hd.className='sv-zoom-h';
+    hd.innerHTML='<span>'+esc(ttl)+'</span><button type="button" class="sv-zoom-x" title="閉じる（Esc）"><i data-ic=close data-ics=18></i></button>';
+    var bd=document.createElement('div'); bd.className='sv-zoom-body';
+    var cl=card.cloneNode(true);
+    Array.prototype.forEach.call(cl.querySelectorAll('.sv-zoombtn'), function(x){ x.parentNode.removeChild(x); });
+    bd.appendChild(cl);
+    ov.innerHTML=''; box.appendChild(hd); box.appendChild(bd); ov.appendChild(box);
+    ov.classList.add('open');
+    try { if(window.icoBoot) icoBoot(ov); } catch(e){}
+  }
+  function svZoomClose(){ var ov=document.getElementById('sv-zoom'); if(ov) ov.classList.remove('open'); }
+  window.svZoomOpen=svZoomOpen; window.svZoomClose=svZoomClose;
 
   // ===== PDF用：現ビューのデータモデル（sales-print.js が A4ベクターPDFに描画） =====
   function _mAll(t){ return sumTiers(t,['actual','confirmed','planned','prospect','forecast']); }
@@ -745,8 +870,8 @@
     }
     // front
     var F, period; if(yr){var Yf=window._svYear;F=collectFront(ymdL(new Date(Yf-1,11,1)),ymdL(new Date(Yf,11,0)));period=(Yf-1)+'/12〜'+Yf+'/11';}else{var ymf=window._svYM;F=collectFront(ymdL(new Date(ymf.y,ymf.m,1)),ymdL(new Date(ymf.y,ymf.m+1,0)));period=ymf.y+'年'+(ymf.m+1)+'月';}
-    var frows=Object.keys(F).map(function(n){var f=F[n];var gt=f.grp.shaken+f.grp['12pt']+f.grp.general;return {n:n,f:f,gt:gt,sum:f.sum};}).sort(function(a,b){return b.sum-a.sum;}).map(function(r){var f=r.f;return [r.n,f.cnt+'',man(f.sum),man(f.cnt?f.sum/f.cnt:0),man(f.hi),(f.holdN?(f.hold/f.holdN).toFixed(1):'—'),(f.holdMax||'—')+'',(f.odN?(f.odDays/f.odN).toFixed(1):'—'),pct(f.grp.shaken,r.gt)+'%',pct(f.grp['12pt'],r.gt)+'%',pct(f.grp.general,r.gt)+'%'];});
-    return { title:'フロント別', period:period, kpis:[], sections:[{type:'table',title:'指標（実績＋受注）',head:['名','台','売上','平均','最高','預平','預長','受注','車検','12点','一般'],rows:frows,align:['l','r','r','r','r','r','r','r','r','r','r']}]};
+    var frows=Object.keys(F).map(function(n){var f=F[n];var gt=f.grp.shaken+f.grp['12pt']+f.grp.general;return {n:n,f:f,gt:gt,sum:f.sum};}).sort(function(a,b){return b.sum-a.sum;}).map(function(r){var f=r.f;return [r.n,f.cnt+'',man(f.sum),man(f.cnt?f.sum/f.cnt:0),man(f.hi),(f.holdN?(f.hold/f.holdN).toFixed(1):'—'),(f.holdMax||'—')+'',(f.odN?(f.odDays/f.odN).toFixed(1):'—'),dayStr(f.gapN?f.gapSum/f.gapN:null,true),dayStr(f.gapN?f.gapMax:null,true),dayStr(f.w2dN?f.w2dSum/f.w2dN:null),dayStr(f.d2rN?f.d2rSum/f.d2rN:null),pct(f.grp.shaken,r.gt)+'%',pct(f.grp['12pt'],r.gt)+'%',pct(f.grp.general,r.gt)+'%'];});
+    return { title:'フロント別', period:period, kpis:[], sections:[{type:'table',title:'指標（実績＋受注）',head:['名','台','売上','平均','最高','預平','預長','受注','ズレ平','ズレ最','待→完','完→返','車検','12点','一般'],rows:frows,align:['l','r','r','r','r','r','r','r','r','r','r','r','r','r','r']}]};
   }
   window.svReportModel = svReportModel;
 
