@@ -208,6 +208,18 @@
     if (time !== undefined){
       c.returnTime = (window._normTime ? _normTime(time || '') : (time || ''));
     }
+    /* 🔴 v1.71.0（ゆうた報告「完TEL待ちから日付と時間を入れても返車カレンダーに行かない」）
+       **返車の日か時間を人が入れた＝完TELは済んでいる。**
+       ⚠ v1.70.0 まで「完TEL済とみなす」のは**日付を入れた時だけ**だった。
+          ところが完TEL待ちの車は、盤面で入れた「お客様への約束の日」を**すでに持っていることがある**。
+          その車に時間だけ入れても（＝日付欄は変えていないので change が飛ばない）
+          returnStage が callWait のまま残り、日も時間もそろっているのに
+          **ずっと完TEL待ちの箱から出られなかった**。
+       ⚠ 空にした時（取り消し）は上げない。上げると「返車済みの取り消し」で完TEL待ちに戻せなくなる。 */
+    var _wroteDate = (date !== undefined && String(date == null ? '' : date).trim() !== '');
+    var _wroteTime = (time !== undefined && String(time == null ? '' : time).trim() !== '');
+    if (c.returnStage === 'callWait' && (_wroteDate || _wroteTime)) c.returnStage = 'returnWait';
+
     c.returnTbd = false;   // 旧フラグは使わない（returnStage / 日付 に一本化）
 
     var after = pitReturnPlace(c);

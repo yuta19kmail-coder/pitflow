@@ -12,6 +12,24 @@
    ======================================== */
 (function () {
 
+  /* 🔴 v1.71.0 返車の日時は **return-slot.js の唯一の入口（pitReturnSetDateTime）** を通す。
+     ⚠ v1.70.0 まで、ドラッグだけ `c.returnDate` / `c.returnTime` に**直接書いて**いた。
+        そのため returnStage が付け替わらず、**完TEL待ちの車は完TEL待ちのまま**残った
+        （日付も時間も入っているのに「まだ電話していない」箱から出ない）。
+     ⚠ 保存・描き直し・お知らせも pitReturnCommit にまとめてある。ここで書き写さない。 */
+  function _returnDrop(c, date, time){
+    if (window.pitReturnSetDateTime){
+      var res = pitReturnSetDateTime(c, date, time);
+      if (window.pitReturnCommit) return pitReturnCommit(c, res);
+    } else {                                   /* 部品が無い時の保険（作りは今までどおり） */
+      if (date !== undefined) c.returnDate = date || '';
+      if (time !== undefined) c.returnTime = time || '';
+    }
+    if (window.PitDB) PitDB.save();
+    if (state.currentView) showView(state.currentView);
+    if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();
+  }
+
   function applyCardDrop(cardId, kind, val) {
     const c = state.cards.find(x => x.id === cardId);
     if (!c) return;
@@ -88,15 +106,14 @@
       c.reserveTime = val;
       if (state.reserveDate) c.reserveDate = ymd(state.reserveDate);
     } else if (kind === 'returnTime') {
-      c.returnTime = val;
-      if (state.returnDate) c.returnDate = ymd(state.returnDate);
+      return _returnDrop(c, state.returnDate ? ymd(state.returnDate) : undefined, val);
     } else if (kind === 'reserveDate') {        // 月カレンダー：日付だけ変更
       if (c.reserveDate === val) return;
       if (window.pitIntakeGuard && pitIntakeGuard(c, val, c.reserveDate) !== val) return;   // ×日は「それでも？」→やめたら動かさない
       c.reserveDate = val;
     } else if (kind === 'returnDate') {
       if (c.returnDate === val) return;
-      c.returnDate = val;
+      return _returnDrop(c, val, undefined);
     } else if (kind === 'reserveDateTime') {     // 週カレンダー：日付＋時刻
       const p = val.split('|');
       if (p[0] !== c.reserveDate && window.pitIntakeGuard && pitIntakeGuard(c, p[0], c.reserveDate) !== p[0]) return;
@@ -106,8 +123,7 @@
       if (p.length > 1) c.reserveTime = p[1];
     } else if (kind === 'returnDateTime') {
       const p = val.split('|');
-      c.returnDate = p[0];
-      if (p.length > 1) c.returnTime = p[1];
+      return _returnDrop(c, p[0], p.length > 1 ? p[1] : undefined);
     } else {
       return;
     }
