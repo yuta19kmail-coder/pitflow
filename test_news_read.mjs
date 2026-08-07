@@ -135,9 +135,11 @@ try {
   await p.waitForTimeout(200);
   ok('ログイン直後にポップアップが出る（1回3件まで）', first.length === 3, first);
   ok('確認した3件がクラウドに残った', (cloud.u1 && cloud.u1.pitNewsRead || []).length === 3, cloud.u1);
+  /* ⚠ お知らせはリリースのたびに増える。件数は決め打ちせず「全部 − 確認した数」で見る。 */
+  const N = await p.evaluate(() => (window.PIT_NEWS || []).length);
   {
     const n = await p.evaluate(() => document.querySelector('.si-newsbadge') && document.querySelector('.si-newsbadge').textContent);
-    ok('未読の丸が 13 になった', n === '13', n);
+    ok('未読の丸が3つ減った', n === String(N - 3), { n, N });
   }
   await p.close();
 
@@ -151,7 +153,7 @@ try {
      (cloud.u1 && cloud.u1.pitNewsRead || []).length === 6, cloud.u1);
   {
     const n = await p.evaluate(() => document.querySelector('.si-newsbadge') && document.querySelector('.si-newsbadge').textContent);
-    ok('未読の丸が 10 になった', n === '10', n);
+    ok('未読の丸がさらに3つ減った', n === String(N - 6), { n, N });
   }
   await p.close();
 
@@ -162,7 +164,7 @@ try {
   await p.waitForTimeout(150);
   await p.evaluate(() => window.pitNewsReadAll());
   await p.waitForTimeout(250);
-  ok('16件ぜんぶ既読になった', (cloud.u1 && cloud.u1.pitNewsRead || []).length === 16, cloud.u1);
+  ok('ぜんぶ既読になった', (cloud.u1 && cloud.u1.pitNewsRead || []).length === N, cloud.u1);
   await p.close();
 
   p = await openPage();
@@ -180,7 +182,7 @@ try {
   const other = await confirmAll(p);
   ok('別の人には未読として出る', other.length === 3, other);
   ok('別の人の既読は別に残る', (cloud.u2 && cloud.u2.pitNewsRead || []).length === 3, cloud.u2);
-  ok('先に入っていた人の既読は16件のまま', (cloud.u1.pitNewsRead || []).length === 16, cloud.u1);
+  ok('先に入っていた人の既読はぜんぶのまま', (cloud.u1.pitNewsRead || []).length === N, cloud.u1);
   await p.close();
 
   console.log('\n── 通信が切れている時でも、入っている既読を消さない ──');
@@ -189,8 +191,8 @@ try {
   await bootLikeProduction(p, 'u1');
   await p.evaluate(() => { window.__net.fail = false; window.pitNewsConfirm(window.PIT_NEWS[0].id); });
   await p.waitForTimeout(250);
-  ok('読めなかった時に確認しても、既読は16件のまま（消えない）',
-     (cloud.u1.pitNewsRead || []).length === 16, cloud.u1);
+  ok('読めなかった時に確認しても、既読はぜんぶのまま（消えない）',
+     (cloud.u1.pitNewsRead || []).length === N, cloud.u1);
   await p.close();
 
   console.log('\n── 画面のエラー ──');

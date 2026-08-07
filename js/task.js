@@ -40,6 +40,17 @@ function _renderKanban(board, cols){
     /* よその課から来たカードに印を付ける（見た目だけ・ONの時だけ付く） */
     const _card = (c, o) => (window.PitMyOnly && PitMyOnly.decorate)
       ? PitMyOnly.decorate(c, board, cardHtml(c, o)) : cardHtml(c, o);
+    /* 🔴 v1.69.0 この列の「絞り込む前」の並び（この盤ぶんだけ）。
+       区切りラインの位置を**担当車両のON/OFFで動かさない**ために渡す。 */
+    const ownAll = state.cards.filter(c => c && c.status === col.id && c.boardId === board.id && !c.returnStage);
+    /* 列の中身＝自分の課（区切りライン付き）＋よその課のまとまり（「◯課分」のバー）。
+       ⚠ 組み立ては myonly-pit.js / board-line.js に任せる。ここは呼ぶだけ。 */
+    const _body = (list, allOwn, opt) => {
+      const fn = c => _card(c, opt);
+      if (window.PitMyOnly && PitMyOnly.colBody) return PitMyOnly.colBody(board, col, list, allOwn, fn);
+      if (window.PitBoardLine) return PitBoardLine.renderColumn(board.id, col.id, list, fn, allOwn);
+      return list.map(fn).join('');
+    };
     const hasTD = !col.terminal && !col.side;   // 試運転エリアを付ける＝完了以外のフロー列
     let colClass = 'kanban-col';
     if (col.terminal) colClass += ' terminal';
@@ -50,12 +61,12 @@ function _renderKanban(board, cols){
     if (hasTD){
       const main = inCol.filter(c => !c.testDrive);
       const td   = inCol.filter(c => c.testDrive);
+      const mainAll = ownAll.filter(c => !c.testDrive);
       html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
       /* v1.36.0 区切りライン（board-line.js）をカードのあいだに挟む。無ければ今までどおり。 */
       html += main.length
-        ? (window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, main, c => _card(c, { kanban:true, compact:true }))
-                               : main.map(c => _card(c, { kanban:true, compact:true })).join(''))
-        : ((window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, [], function(){ return ''; }) : '') + '<div class="kanban-empty">なし</div>');
+        ? _body(main, mainAll, { kanban:true, compact:true })
+        : (_body([], mainAll, { kanban:true, compact:true }) + '<div class="kanban-empty">なし</div>');
       html += '</div>';
       // 試運転を「選ぶ」2枠（上＝通常/無タイトル・下＝🚗試運転）。どちらに落とすかで試運転の要否が直感的に分かる
       html += '<div class="kanban-td2">';
@@ -68,9 +79,8 @@ function _renderKanban(board, cols){
     } else {
       html += '<div class="kanban-col-body" data-drop="status" data-drop-val="' + col.id + '">';
       html += inCol.length
-        ? (window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, inCol, c => _card(c, { kanban: !col.side, compact:true }))
-                               : inCol.map(c => _card(c, { kanban: !col.side, compact:true })).join(''))
-        : ((window.PitBoardLine ? PitBoardLine.renderColumn(board.id, col.id, [], function(){ return ''; }) : '') + '<div class="kanban-empty">なし</div>');
+        ? _body(inCol, ownAll, { kanban: !col.side, compact:true })
+        : (_body([], ownAll, { kanban: !col.side, compact:true }) + '<div class="kanban-empty">なし</div>');
       html += '</div>';
     }
     html += '</div>';

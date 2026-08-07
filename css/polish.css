@@ -1360,6 +1360,16 @@ th.cfs-lg-d{ z-index:3; }
   padding:1px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .kb-line:hover .kb-line-bar{ border-top-color:#f0bb6a; }
 .kb-line.kb-line-drag{ opacity:.3; }
+/* 🔴 v1.69.0 「担当車両」で、よその課から集めてきたカードのまとまりの頭に付くバー（myonly-pit.js）。
+   ⚠ 全員で共有している区切りライン（黄）とは**別物**＝掴めない・保存されない。
+      取り違えないよう、色をグレーにして、カーソルも通常のまま（掴めそうに見せない）。 */
+.kb-line.kb-line-xb{ cursor:default; margin:13px 2px 7px; }
+.kb-line.kb-line-xb .kb-line-bar{ border-top:2px dotted var(--text3); }
+.kb-line.kb-line-xb .kb-line-t{ color:var(--text2); background:rgba(148,163,184,.16);
+  border-color:rgba(148,163,184,.5); }
+.kb-line.kb-line-xb:hover .kb-line-bar{ border-top-color:var(--text3); }
+/* この下の1枚目は、カードの印（国産／輸入）がバーに被らないよう少しだけ空ける */
+.kb-line.kb-line-xb + .pit-card.pcm.kb-xboard{ margin-top:11px; }
 /* 🔴 v1.37.0 ドラッグ中に「そこに入るよ」と先に見せるゴースト */
 .kb-line-ghost{ pointer-events:none; margin:5px 2px; }
 .kb-line-ghost .kb-line-bar{ border-top:3px solid #e0a33a; box-shadow:0 0 8px rgba(224,163,58,.7); }

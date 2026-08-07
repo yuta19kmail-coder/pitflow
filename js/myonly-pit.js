@@ -102,6 +102,62 @@
       '<div data-xboard="' + lb + '" class="pit-card pcm kb-xboard');
   }
 
+  /* ---------- 🔴 v1.69.0 列の中身の組み立て（ゆうた指定） ----------
+     「担当車両」がONの時、列はこう並ぶ。
+
+       ┌ 自分の課のカード（区切りラインは**元の位置のまま**）
+       │   … 隠れたカードはバーの上下から消えるだけ。バーは動かない
+       ├ ── 2課分 ────────────   ← このバー
+       └ よその課から来たカード
+
+     ⚠ 「◯課分」のバーは**見た目だけ**。保存しない・動かせない・消せない。
+        全員で共有している本物の区切りライン（board-line.js）と混ぜないこと。
+        だから `data-lineid` を持たせない＝ドラッグの対象にならない。
+     ⚠ よその課が3つ以上に増えても、課ごとに1本ずつバーが付く。 */
+  var COURSE_NO = { 'default': '1課', 'import': '2課' };
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function courseName(id){
+    if (COURSE_NO[id]) return COURSE_NO[id];
+    var b = ((w.state && state.boards) || []).find(function(x){ return x && x.id === id; });
+    return (b && b.name) || '';
+  }
+  function groupBar(text){
+    return '<div class="kb-line kb-line-xb" title="ここから下は、よその課から集めてきたあなたの担当です">'
+         + '<span class="kb-line-bar"></span>'
+         + '<span class="kb-line-t">' + esc(text) + '</span>'
+         + '<span class="kb-line-bar"></span></div>';
+  }
+  /* task.js から呼ぶ。
+     cards  … いま出すカード（絞り込み済み・順番どおり）
+     allOwn … **絞り込む前**の、この盤・この列のカード（バーの位置を決めるのに使う）
+     cardFn … カード1枚のHTML */
+  function colBody(board, col, cards, allOwn, cardFn){
+    var own = [], others = [], order = [], byBoard = {};
+    (cards || []).forEach(function(c){
+      if (!c) return;
+      if (!_on || c.boardId === board.id){ own.push(c); return; }
+      if (!byBoard[c.boardId]){ byBoard[c.boardId] = []; order.push(c.boardId); }
+      byBoard[c.boardId].push(c);
+      others.push(c);
+    });
+
+    var out = w.PitBoardLine
+      ? PitBoardLine.renderColumn(board.id, col.id, own, cardFn, allOwn)
+      : own.map(cardFn).join('');
+
+    if (!others.length) return out;
+    order.forEach(function(bid){
+      var nm = courseName(bid);
+      out += groupBar(nm ? nm + '分' : 'よその課分');
+      out += byBoard[bid].map(cardFn).join('');
+    });
+    return out;
+  }
+
   /* ---------- スイッチ ---------- */
   function rerender(){
     try {
@@ -160,6 +216,7 @@
 
   w.PitMyOnly = { pass: pass, me: me, allowed: allowed, isOn: function(){ return _on; },
                   set: setOn, refresh: paintButtons,
-                  colCards: colCards, decorate: decorate, boardLabel: boardLabel };
+                  colCards: colCards, decorate: decorate, boardLabel: boardLabel,
+                  colBody: colBody, courseName: courseName };
   console.log('[myonly-pit] ready（タスクボードの「担当車両」スイッチ）');
 })(window, document);

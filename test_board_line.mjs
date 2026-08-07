@@ -287,8 +287,14 @@ console.log('\n── ⑨ 今までの操作が壊れていないこと ──')
   const src = fs.readFileSync('js/ctxmenu-pit.js', 'utf8');
   ok('右クリックメニューに1行だけ足している', /PitBoardLine\.ctxItem\(c\)/.test(src));
   const tsrc = fs.readFileSync('js/task.js', 'utf8');
-  ok('task.js の差し込みは PitBoardLine が無くても動く（保険つき）',
-     (tsrc.match(/window\.PitBoardLine \? PitBoardLine\.renderColumn/g) || []).length === 4);
+  /* 🔴 v1.69.0 差し込みは task.js の `_body`（1か所）にまとめた。
+     PitMyOnly → PitBoardLine → 素のカード、の順に落ちる保険が付いていること。 */
+  ok('task.js の差し込みは1か所にまとまっている',
+     (tsrc.match(/const _body = /g) || []).length === 1, tsrc.match(/const _body = /g));
+  ok('PitMyOnly / PitBoardLine が無くても動く（保険つき）',
+     /PitMyOnly && PitMyOnly\.colBody/.test(tsrc)
+     && /window\.PitBoardLine\) return PitBoardLine\.renderColumn/.test(tsrc)
+     && /return list\.map\(fn\)\.join\(''\)/.test(tsrc));
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 }
 

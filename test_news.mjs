@@ -44,14 +44,20 @@ console.log('\n── 📦 お知らせ本体がコードにある ──');
       dupe: ids.size !== L.length,
       missing: L.filter(x => !x.id || !x.version || !x.date || !x.title || !x.body).map(x => x.id || '(id無し)'),
       html: L.every(x => /<p>|<ul>/.test(x.body)),
-      newest: L[0] && L[0].version
+      newest: L[0] && L[0].version,
+      /* 版がいちばん新しいもの（先頭に足す決まりが守られているか） */
+      top: L.map(x => x.version).sort((a, b) => {
+        const n = v => String(v).split('.').map(Number).reduce((s, x, i) => s + x * [10000, 100, 1][i], 0);
+        return n(b) - n(a);
+      })[0]
     };
   });
-  ok('PIT_NEWS が配られている（16件）', r.n === 16, r);
+  /* ⚠ 件数は増える（リリースのたびに1件足す決まり）。数を決め打ちしない。 */
+  ok('PIT_NEWS が配られている（16件以上）', r.n >= 16, r);
   ok('id が重複していない', r.dupe === false, r);
   ok('どの項目にも 版・日付・見出し・本文が揃っている', r.missing.length === 0, r.missing);
   ok('本文はHTML（見出し・箇条書きが使える）', r.html === true, r);
-  ok('先頭が最新版', r.newest === '1.67.0', r);
+  ok('先頭が最新版', r.newest === r.top, r);
 }
 
 console.log('\n── 🗑 手で書く口は廃止した（CarFlowと同じ） ──');
@@ -88,13 +94,14 @@ console.log('\n── 📥 受信箱＝版が新しい順・全部未読で始�
       unread: items.filter(x => x.classList.contains('is-unread')).length,
       desc, vers: vers.slice(0, 4),
       badge: (document.querySelector('.si-newsbadge') || {}).textContent || 'なし',
-      bodyHidden: items[0].querySelector('.nw-body').style.display === 'none'
+      bodyHidden: items[0].querySelector('.nw-body').style.display === 'none',
+      all: (window.PIT_NEWS || []).length
     };
   });
-  ok('16件ぜんぶ並ぶ', r.n === 16, r);
+  ok('ぜんぶ並ぶ', r.n === r.all, r);
   ok('版が新しい順', r.desc === true, r.vers);
-  ok('最初は全部未読', r.unread === 16, r);
-  ok('サイドバーの未読の丸が 16', r.badge === '16', r);
+  ok('最初は全部未読', r.unread === r.all, r);
+  ok('サイドバーの未読の丸が全件ぶん', r.badge === String(r.all), r);
   ok('本文は閉じた状態で始まる', r.bodyHidden === true, r);
 }
 
@@ -114,7 +121,7 @@ console.log('\n── 👆 開いただけでは既読にしない（読み飛�
   ok('見出しを押すと本文が開く', r.open === true, r);
   ok('🔴 開いただけでは未読のまま', r.stillUnread === true, r);
   ok('本文の下に「確認する（OK）」がある', r.hasOk === true, r);
-  ok('未読の数もまだ 16', r.badge === '16', r);
+  ok('未読の数もまだ全件ぶん', r.badge === String(await p.evaluate(() => window.PIT_NEWS.length)), r);
 
   const r2 = await p.evaluate(() => {
     document.querySelector('#news-body .nw-item .nw-ok2').click();
@@ -127,7 +134,7 @@ console.log('\n── 👆 開いただけでは既読にしない（読み飛�
     };
   });
   ok('🔴 「確認する」を押すと既読になる', r2.read === true && r2.done === true, r2);
-  ok('未読の数が 15 に減る', r2.badge === '15', r2);
+  ok('未読の数が1つ減る', r2.badge === String((await p.evaluate(() => window.PIT_NEWS.length)) - 1), r2);
   ok('既読が端末に記録される', r2.saved === 1, r2);
 }
 
@@ -192,10 +199,12 @@ console.log('\n── 📢 ログイン直後のポップアップ ──');
     last.badge = (document.querySelector('.si-newsbadge') || {}).textContent || 'なし';
     return last;
   });
+  /* ⚠ 件数はリリースのたびに増える。「全部 − 出した3件」で数える（決め打ちしない） */
+  const rest3 = String((await q.evaluate(() => window.PIT_NEWS.length)) - 3);
   ok('最後の1件は「確認」だけになる', r3.ok === '確認', r3);
-  ok('🔴 残りの件数を知らせる（ほかに 13件）', /13/.test(r3.rest) && /お知らせ/.test(r3.rest), r3.rest);
+  ok('🔴 残りの件数を知らせる（ほかに ◯件）', r3.rest.indexOf(rest3) >= 0 && /お知らせ/.test(r3.rest), r3.rest);
   ok('確認したら閉じる／3件が既読になる', r3.closed === true && r3.read === 3, r3);
-  ok('未読の丸は 13 に減っている', r3.badge === '13', r3);
+  ok('未読の丸が残りの数に減っている', r3.badge === rest3, { badge: r3.badge, rest3 });
 
   /* もう一度読み込むと、続きの3件が出る＝取り残さない */
   await q.reload();
@@ -232,7 +241,7 @@ console.log('\n── 📱 スマホでは大きな窓を被せない ──');
     badge: (document.querySelector('.si-newsbadge') || {}).textContent || 'なし'
   }));
   ok('🔴 スマホ幅ではポップアップを出さない', r.pop === false, r);
-  ok('未読の丸は出す（自分で開いて読める）', r.badge === '16', r);
+  ok('未読の丸は出す（自分で開いて読める）', r.badge === String(await m.evaluate(() => window.PIT_NEWS.length)), r);
   await m.close();
 }
 
@@ -245,7 +254,7 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
   ok('各ビューを開いてエラーなし', errs.length === 0, errs.slice(0, 5));
   const ver = await p.evaluate(() => document.querySelector('meta[name=app-version]').content);
   const vn = String(ver || '').split('.').map(Number);
-  ok('版が v1.68.0 以降', vn[0] > 1 || (vn[0] === 1 && vn[1] >= 68), ver);
+  ok('版が v1.69.0 以降', vn[0] > 1 || (vn[0] === 1 && vn[1] >= 69), ver);
 }
 
 console.log('\n' + (fail === 0 ? '🎉 ' : '⚠ ') + pass + ' OK / ' + fail + ' NG');

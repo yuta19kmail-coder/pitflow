@@ -76,22 +76,41 @@
   }
 
   /* task.js から呼ぶ。その列のカードの並びに合わせてラインを挟み込んだHTMLを返す。
-     cards … その列に並べるカードの配列（順番どおり）
-     cardHtmlFn … カード1枚のHTMLを作る関数（task.js の cardHtml をそのまま渡す） */
-  function renderColumn(boardId, status, cards, cardHtmlFn){
+     cards    … その列に**いま出す**カードの配列（順番どおり／絞り込み済みのこともある）
+     cardHtmlFn … カード1枚のHTMLを作る関数（task.js の cardHtml をそのまま渡す）
+     allCards … 🔴 v1.69.0 追加。**絞り込む前**の、その列のカードの並び（省略時は cards と同じ）
+
+     🔴 v1.69.0（ゆうた指定）「担当車両」で隠れたカードがあっても、**バーの位置は動かさない**。
+        ⚠ v1.48.0〜v1.68.1 は「どのカードの下か」だけを見ていたので、
+           相手のカードが隠れた瞬間にそのラインが**列のいちばん下へ落ちて**いた。
+           ＝押すたびに区切りの位置が変わって見える（ゆうた報告）。
+        直し＝**絞り込む前の並びの中での位置**でラインを並べ、
+           いま出ているカードのあいだに落とし込む。
+           隠れたカードは**バーの上下から消えるだけ**で、バーは同じ場所に残る。 */
+  function renderColumn(boardId, status, cards, cardHtmlFn, allCards){
     var mine = lines().filter(function(l){ return l.boardId === boardId && l.status === status; });
-    var out = '';
     if (!mine.length) return cards.map(cardHtmlFn).join('');
-    var ids = {};
-    cards.forEach(function(c){ ids[c.id] = 1; });
-    /* 先頭 */
-    mine.filter(function(l){ return l.after === TOP; }).forEach(function(l){ out += lineHtml(l); });
+
+    var full = (allCards && allCards.length) ? allCards : cards;
+    var pos = {};                                  /* カードid → 絞り込む前の並びでの位置 */
+    full.forEach(function(c, i){ if (c) pos[c.id] = i; });
+    var END = full.length + 1;                     /* 相手が居なくなったライン＝末尾 */
+
+    function at(l){
+      if (l.after === TOP) return -1;              /* 列の先頭 */
+      return (pos[l.after] != null) ? pos[l.after] : END;
+    }
+    var sorted = mine.slice().sort(function(a, b){ return at(a) - at(b); });
+
+    var out = '', li = 0;
     cards.forEach(function(c){
+      var ci = (pos[c.id] != null) ? pos[c.id] : END;
+      /* このカードより前に来るラインを先に出す（同じ位置＝そのカードの「下」なので出さない） */
+      while (li < sorted.length && at(sorted[li]) < ci){ out += lineHtml(sorted[li]); li++; }
       out += cardHtmlFn(c);
-      mine.filter(function(l){ return l.after === c.id; }).forEach(function(l){ out += lineHtml(l); });
     });
-    /* ⚠ 相手のカードが居なくなったライン（工程を移った・消えた）は**末尾に寄せて残す**。 */
-    mine.filter(function(l){ return l.after !== TOP && !ids[l.after]; }).forEach(function(l){ out += lineHtml(l); });
+    /* ⚠ 残り＝いちばん下のライン、相手のカードが居なくなったライン。**黙って消さない**。 */
+    while (li < sorted.length){ out += lineHtml(sorted[li]); li++; }
     return out;
   }
 
@@ -120,7 +139,10 @@
      ⚠ カードの**まん中より上**なら「そのカードの上」＝ひとつ前のカードの下、という数え方。 */
   function afterFromPoint(body, y){
     var kids = Array.prototype.filter.call(body.children, function(el){
-      return el.hasAttribute && el.hasAttribute('data-card-id');
+      /* 🔴 v1.69.0 よその課から集まってきたカード（`data-xboard`）は数に入れない。
+         区切りラインは**自分の課の中の区切り**なので、
+         「◯課分」より下に置けてしまうと、担当車両を切った瞬間に行き場を失う。 */
+      return el.hasAttribute && el.hasAttribute('data-card-id') && !el.hasAttribute('data-xboard');
     });
     var after = TOP;
     for (var i = 0; i < kids.length; i++){
