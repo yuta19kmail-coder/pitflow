@@ -1,4 +1,4 @@
-/* PitFlow v1.63.0 ── 受注の質（基準値との差／見積との差）＋ クイック受注
+/* PitFlow v1.64.0 ── 受注の質（基準値との差／見積との差）＋ クイック受注
    -------------------------------------------------------------------
    ◎ゆうた指定
      ①「会社平均（国産・輸入・車検12点などの振り分け後の単価）と自身の獲得受注との差分金額と％」
@@ -46,11 +46,16 @@ const W = await p.evaluate(() => {
    🔴 月平均ではなく基準値と比べるので、**1台しかいないバケツでも差がちゃんと出る**のが要点。
    ─────────────────────────────────────────────── */
 const seed = () => p.evaluate(([W]) => {
-  /* 基準値そのものを固定する（設定の概算金額の表） */
+  /* 🔴 v1.64.0 評価の基準値＝PIT_BASE_AMOUNT（裏の平均値）。設定の概算金額とは別物なので、
+     わざと**まったく違う値**を入れて「どちらを見ているか」がはっきり分かるようにする。 */
+  window.PIT_BASE_AMOUNT = {
+    default: { shaken: 100000, '12pt': 30000, general: 50000, oil: 5000 },
+    import:  { shaken: 200000, '12pt': 60000, general: 300000, oil: 9000 }
+  };
   state.settings = state.settings || {};
-  state.settings.estAmount = {
-    default: { shaken: 100000, '12pt': 30000, general: 50000, oil: 5000, _default: 100000 },
-    import:  { shaken: 200000, '12pt': 60000, general: 300000, oil: 9000, _default: 200000 }
+  state.settings.estAmount = {   /* ← こちらは概算（中央値）。評価には使われないはず */
+    default: { shaken: 1, '12pt': 1, general: 1, oil: 1, _default: 1 },
+    import:  { shaken: 1, '12pt': 1, general: 1, oil: 1, _default: 1 }
   };
   const mk = (id, front, board, wt, final, quote) => ({
     id, resNo: 'R-' + id, customer: id, car: 'x', boardId: board, division: board === 'import' ? 'div2' : 'div1',
@@ -77,8 +82,9 @@ const txt = await seed();
 {
   ok('🔴 「受注の質」の別ボタンは無くなっている（1枚に統合）', !/受注の質<\/button>/.test(await p.evaluate(() => document.getElementById('view-sales-body').innerHTML)), txt.slice(0, 200));
   ok('入口はインフォグラフィックと表の2つだけ', (await p.evaluate(() => [...document.querySelectorAll('.sv-vbtn')].map(b => b.textContent).join(','))) === 'インフォグラフィック,表');
-  ok('基準値の表が出ている', /基準値（設定の概算金額・比べるものさし）/.test(txt), txt.slice(0, 400));
-  ok('設定へ誘導する言葉が入っている', /設定 → 概算金額/.test(txt), txt.slice(0, 400));
+  ok('基準値の表が出ている', /基準値（比べるものさし）/.test(txt), txt.slice(0, 400));
+  ok('🔴 概算金額（中央値）とは別物だと断ってある', /新規予約の「概算金額」（設定・中央値）とは別の数字/.test(txt), txt.slice(0, 900));
+  ok('🔴 半年後に自動計算へ切り替える予定が書いてある', /半年ほど運用したら、実績から自動計算に切り替えます/.test(txt), txt.slice(0, 900));
   ok('国産×車検＝10万 が出ている', /国産（1課）[\s\S]{0,40}10万/.test(txt), txt.slice(0, 600));
   ok('輸入×一般＝30万 が出ている', /輸入（2課）[\s\S]{0,60}30万/.test(txt), txt.slice(0, 700));
 }
@@ -114,6 +120,9 @@ console.log('\n── 📊 軸1：基準値との差 ──');
   ok('内容ごとの行（車検）が出る', /車検/.test(sai.txt), sai.txt);
   ok('🔴 1台しかいない輸入×一般でも、基準値と比べて ±0 と出る（月平均だと必ず±0で意味がなかった所）', /一般/.test(sai.txt) && /±0/.test(sai.txt), sai.txt);
   ok('🔴 カードごとの概算（99,999万）は物差しに使っていない', !/9999/.test(sai.txt), sai.txt);
+  /* 斎藤＝車検国産(基準10万)×2 ＋ 一般輸入(基準30万)×1 → 1台あたりの基準は (10+10+30)/3 = 16.7万。
+     設定の概算金額（1円）を見ていたらここは 0万 になる。 */
+  ok('🔴 設定の概算金額（1円）ではなく、裏の基準値を見ている（1台あたり基準 16.7万）', /基準 16\.7万/.test(sai.txt), sai.txt);
 }
 
 console.log('\n── 🧾 軸2：見積との差（取りこぼし） ──');
@@ -272,6 +281,39 @@ console.log('\n── 🔗 クイック受注の車が、そのまま集計に�
   }, [W]);
   ok('🔴 見積＝受注なので「見積との差」は ±0（取りこぼし扱いにならない）', /±0/.test(r), r.slice(0, 800));
   ok('🔴 基準値（オイル 5,000円）と比べて ＋3,800円ぶんの差が出る', /＋0\.4万|＋3,800|＋0\.4/.test(r), r.slice(0, 800));
+}
+
+console.log('\n── 📚 基準値は「概算金額」と別物になっているか ──');
+{
+  const r = await p.evaluate(() => ({
+    hasFn: typeof window.pitBaseAmount === 'function',
+    /* 表に無い作業タイプ（コーティング）は概算に落ちる */
+    fallback: (function(){ state.settings.estAmount.default.coat1y = 33333; return pitBaseAmount('coat1y', 'default'); })(),
+    base: pitBaseAmount('shaken', 'default'),
+    est: pitEstAmount('shaken', 'default')
+  }));
+  ok('評価用の基準値を引く物差しがある（pitBaseAmount）', r.hasFn === true, r);
+  ok('🔴 概算（1円）ではなく基準値（10万）を返す', r.base === 100000 && r.est === 1, r);
+  ok('基準値の表に無い作業タイプは概算に落ちる（コーティング等）', r.fallback === 33333, r);
+  const cell = await p.evaluate(() => {
+    const el = [...document.querySelectorAll('.sv-card')].find(x => /基準値（比べるものさし）/.test(x.innerText));
+    return el ? el.innerText.replace(/\n+/g, ' | ') : '';
+  });
+  ok('借り物のマスには「概算」と印が付く', /概算/.test(cell), cell.slice(0, 400));
+}
+
+console.log('\n── 📝 設定画面に「いずれ自動計算」と残っているか ──');
+{
+  const t = await p.evaluate(() => {
+    try { showView('settings'); } catch (e) {}
+    const el = document.getElementById('view-settings-body') || document.body;
+    return el.innerText.replace(/\n+/g, ' | ');
+  });
+  ok('🔴 いずれ自動計算に切り替える旨が書いてある', /実績から自動計算に切り替えます/.test(t), t.slice(0, 300));
+  ok('いまの値が中央値だと書いてある', /中央値/.test(t), t.slice(0, 300));
+  ok('評価の基準値は別の数字だと書いてある', /これとは別の数字/.test(t), t.slice(0, 300));
+  ok('半年ほど運用したら、と期限が書いてある', /半年ほど運用したら/.test(t), t.slice(0, 300));
+  ok('そのとき詰めることまで残してある', /そのとき詰めること/.test(t), t.slice(0, 300));
 }
 
 console.log('\n── 🧭 まわりが壊れていないか ──');

@@ -494,13 +494,17 @@
                 「見積のうち、どれだけ取りこぼしたのか」を数字にする。
 
      ◎軸1＝**基準値との差**
-        🔴 v1.63.0（ゆうた指定）**比べる相手は、その月の会社平均ではなく「設定に入れてある基準値」**。
-           ＝ 設定 → 概算金額の表（**作業タイプ別 × 国産／輸入**）。`pitEstAmount()` がその表を読む。
+        🔴 v1.63.0（ゆうた指定）**比べる相手は、その月の会社平均ではなく「決めてある基準値」**。
+        🔴 v1.64.0（ゆうた指定）その基準値は **`pitBaseAmount()`＝実売上の「平均」**（state.js の `PIT_BASE_AMOUNT`）。
+           ⚠ **設定の概算金額（`pitEstAmount`）ではない。** あちらは新規予約用の**中央値**で、仕事が違う。
+           中央値を評価の物差しにすると、分布が右に裾を引くぶん**全員がプラスに出て**「誰が上か」が読めない。
+           平均を基準にすると**会社全体の差の合計がぴったりゼロ**＝純粋な配分になる。
         **なぜ月平均をやめたか**：月平均は自分の成績も混ざっているうえ、台数が少ない月は跳ねる。
         物差しが月ごとに動くと「先月より良くなったのか」が分からない。
         **基準値なら物差しが動かないので、誰と比べても、どの月で見ても、同じ土俵になる。**
         1台ずつ「自分が取った金額 − その車の基準値」を足していく。
         ⚠ **カードごとの概算金額（`estAmount`）は見ない**。手で直せる値なので物差しにならない（ゆうた確認済み）。
+        ⏭ **この基準値は暫定。半年ほど本番で回したら実績から自動計算に切り替える**（設計の下書きは state.js の `PIT_BASE_AMOUNT` の頭に書いてある）。
 
      ◎軸2＝**見積との差** … 見積り中→連絡中で入れた見積額（`amountQuote`）と、確定額（`amountFinal`）の差。
         マイナス＝見積から落ちた（取りこぼし）。プラス＝見積より積めた。
@@ -516,8 +520,12 @@
      ⚠ チーム（国産／輸入）の判定は、アプリ共通の `pitTeamKey()` を使う。ここで別の判定を作らない。 */
   function baseWtOf(c){ return (Array.isArray(c.workTypes)&&c.workTypes.length) ? c.workTypes[0] : c.workType; }
   function baseOf(c){
-    if(!window.pitEstAmount) return 0;
-    try { return num(pitEstAmount(baseWtOf(c), window.pitTeamKey?pitTeamKey(c):'default')); } catch(e){ return 0; }
+    var t = window.pitTeamKey ? pitTeamKey(c) : 'default';
+    try {
+      if (window.pitBaseAmount) return num(pitBaseAmount(baseWtOf(c), t));       /* 評価用＝実売上の平均 */
+      if (window.pitEstAmount)  return num(pitEstAmount(baseWtOf(c), t));        /* 部品が無い時の保険 */
+    } catch(e){}
+    return 0;
   }
 
   function diffPct(a,b){ return b>0 ? Math.round((a-b)/b*1000)/10 : 0; }    // 小数1桁の％
@@ -530,18 +538,22 @@
   function baseTableHtml(){
     var wts=(state.workTypes||[]).filter(function(w){ return w && w.id; });
     if(!wts.length) return '';
-    var h='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=ruler data-ics=16></i> 基準値（設定の概算金額・比べるものさし）</span>'
-         +'<span class="sv-legend">変えるときは 設定 → 概算金額</span></div>';
+    var h='<div class="sv-card"><div class="sv-card-h"><span><i data-ic=ruler data-ics=16></i> 基準値（比べるものさし）</span>'
+         +'<span class="sv-legend">令和8年1〜6月 実売上999伝票の平均（税抜・法定費用除く）</span></div>';
     h+='<table class="sv-table"><thead><tr><th>区分</th>'+wts.map(function(w){return '<th>'+esc(w.label)+'</th>';}).join('')+'</tr></thead><tbody>';
     [{k:'default',label:'国産（1課）'},{k:'import',label:'輸入（2課）'}].forEach(function(t){
       h+='<tr><td class="sv-td-name">'+t.label+'</td>';
       wts.forEach(function(w){
-        var v=0; try{ v=num(pitEstAmount(w.id,t.k)); }catch(e){}
-        h+='<td class="sv-num">'+(v>0?man(v):'—')+'</td>';
+        var v=0, own=false;
+        try{ v=num(pitBaseAmount(w.id,t.k)); own=!!(window.PIT_BASE_AMOUNT && PIT_BASE_AMOUNT[t.k] && PIT_BASE_AMOUNT[t.k][w.id]!=null); }catch(e){}
+        h+='<td class="sv-num">'+(v>0?man(v)+(own?'':'<i class="sv-qn">概算</i>'):'—')+'</td>';
       });
       h+='</tr>';
     });
-    h+='</tbody></table><div class="sv-note">下の「基準値との差」は、1台ずつ<b>この表の金額</b>と比べた合計です。月ごとに動かない物差しなので、先月と今月をそのまま比べられます。</div></div>';
+    h+='</tbody></table><div class="sv-note">下の「基準値との差」は、1台ずつ<b>この表の金額</b>と比べた合計です。月ごとに動かない物差しなので、先月と今月をそのまま比べられます。<br>'
+      +'⚠ これは<b>新規予約の「概算金額」（設定・中央値）とは別の数字</b>です。概算は控えめに見積もるのが仕事、こちらは真ん中を当てるのが仕事なので、兼用していません。'
+      +'「概算」と付いているマスは当時の材料が無かったぶんで、設定の概算金額をそのまま借りています。<br>'
+      +'⏭ <b>この基準値は暫定です。半年ほど運用したら、実績から自動計算に切り替えます</b>（直近6ヶ月を集計して、平均＝この物差し／中央値＝新規予約の概算）。</div></div>';
     return h;
   }
 

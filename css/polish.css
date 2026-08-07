@@ -1796,3 +1796,9 @@ th.cfs-lg-d{ z-index:3; }
 .ce-vtag.arch{ color:#e0b978; background:rgba(192,138,62,.14); border:1px solid rgba(192,138,62,.45); }
 .ce-vtag.pv{ color:#a5b4fc; background:rgba(124,140,248,.14); border:1px solid rgba(124,140,248,.45); }
 .ce-veh.ce-veh-arch{ opacity:.7; }
+
+/* ===== v1.64.0 設定▸概算金額の下に置く「いずれ自動計算にする」メモ ===== */
+.ps-note-auto{ margin-top:10px; border:1px dashed var(--border); border-radius:10px; background:var(--bg3); padding:10px 12px; }
+.ps-note-auto-h{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; color:var(--text2); margin-bottom:5px; }
+.ps-note-auto-b{ font-size:11.5px; line-height:1.75; color:var(--text3); }
+.ps-note-auto-b b{ color:var(--text2); }

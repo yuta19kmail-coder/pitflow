@@ -164,8 +164,10 @@
     const eamD = (s.estAmount && s.estAmount.default) || {};
     const eamI = (s.estAmount && s.estAmount.import) || {};
     h += '<div class="ps-card">';
-    h += '<div class="ps-h"><i data-ic=money data-ics=16></i> 概算金額の初期値（作業タイプ別・平均単価・国産／輸入）</div>';
-    h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る平均単価。<b>国産車と輸入車で別々</b>に設定できます。将来のクォーター集計（抱え高）とAI判定の材料になります。</div>';
+    h += '<div class="ps-h"><i data-ic=money data-ics=16></i> 概算金額の初期値（作業タイプ別・国産／輸入）</div>';
+    h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る金額。<b>国産車と輸入車で別々</b>に設定できます。'
+       + 'いまの値は<b>令和8年1〜6月の実売上999伝票の中央値</b>（税抜・法定費用除く）。'
+       + '<b>平均ではなく中央値</b>なのは、高額修理で上振れしたまま概算を出すとお客様への提示が高くなりすぎるためです。</div>';
     h += '<div class="ps-est2">';
     h += '<div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div>';
     (state.workTypes || []).forEach(function (w) {
@@ -177,7 +179,20 @@
        + '<span class="ps-est2-cell">' + numIn('ps-eam-default-def', eamD._default != null ? eamD._default : 100000, 0, 9999999) + '<span class="ps-unit">円</span></span>'
        + '<span class="ps-est2-cell">' + numIn('ps-eam-default-imp', eamI._default != null ? eamI._default : 100000, 0, 9999999) + '<span class="ps-unit">円</span></span></div>';
     h += '</div>';
-    h += '<div class="ps-hint">※ 初期値は売上表の実績（車検12.9万・12点5.6万・一般9.4万）＋仮置き。実態に合わせて調整してください。</div>';
+    h += '<div class="ps-hint">※ 実態に合わせて調整できます。コーティング（1Y／3M）は当時のデータが無いため仮置きです。</div>';
+    /* 🔴 v1.64.0（ゆうた指定）「忘れないように」＝いま暫定で動いていることと、半年後にどうするかをここに残す。
+          ⚠ 中身を変えるときは state.js の `PIT_BASE_AMOUNT` の頭のメモも一緒に直すこと。 */
+    h += '<div class="ps-note-auto">'
+       + '<div class="ps-note-auto-h"><i data-ic=bulb data-ics=16></i> この金額は、いずれ実績から自動計算に切り替えます（暫定運用中）</div>'
+       + '<div class="ps-note-auto-b">'
+       + '<b>いまの状態</b>：この表（中央値）は<b>新規予約の概算</b>に使っています。'
+       + '売上 ▸ フロントの「<b>受注の質</b>」で比べている基準値は<b>これとは別の数字</b>で、'
+       + '同じ実売上データの<b>平均</b>を裏に持っています（概算は控えめに、評価は真ん中を当てる、と仕事が違うため）。'
+       + '<br><b>半年ほど運用したら</b>：直近6ヶ月の実績（返車まで終わって確定額が入った台）を'
+       + '作業タイプ × 国産／輸入 のマスごとに集計して、<b>平均＝評価の基準値</b>／<b>中央値＝この概算金額</b>に自動で入れ替える予定です。'
+       + '<br><b>そのとき詰めること</b>：立ち上がりは台数が足りず平均が跳ねる（200万が1台入ると20台のマスで平均が2倍）。'
+       + 'ガクッと変わらないよう手入力値からにじり寄らせるか、大玉を内訳で切り出して見せるか、を実データを見てから決めます。'
+       + '</div></div>';
     h += '</div>';
 
     /* ===== 🏭 外注先（増減できる・v0.79.0） ===== */

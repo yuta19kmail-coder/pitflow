@@ -272,7 +272,14 @@ window.pitTodayReturn = function(id){
   c.status = 'returned';
   c.returnDate = c.returnDate || t;
   c.completedAt = t;                 // 実績カレンダーはこの日付で表示
-  if (c.amountFinal == null) c.amountFinal = (window.pitEstAmount ? (c.estAmount || pitEstAmount(c.workType)) : (c.estAmount || 0));  // 売上を固める
+  /* 🔴 v1.64.0 拾う順番を完TELのポップアップ（return-popup.js）と揃えた＝**確定→受注→見積→概算**。
+     ここだけ概算しか見ていなかったので、クイック受注で人が打った受注金額が捨てられていた。
+     ⚠ 「いくらの車か」を2か所が別々に決めない。 */
+  if (c.amountFinal == null || c.amountFinal === ''){
+    var _amt = [c.amountOrder, c.amountQuote, c.estAmount].find(function(v){ return v != null && v !== ''; });
+    if (_amt == null && window.pitEstAmount) _amt = pitEstAmount(c.workType, window.pitTeamKey ? pitTeamKey(c) : 'default');
+    c.amountFinal = (_amt != null && _amt !== '') ? Number(_amt) : 0;   // 売上を固める
+  }
   if (window.logFlow && typeof statusLabel === 'function') logFlow(c, '返車完了（実績へ）');
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
