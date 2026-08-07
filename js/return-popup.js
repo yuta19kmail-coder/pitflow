@@ -37,6 +37,8 @@
       + '    <label class="pp-lb">確定金額（請求額）</label>'
       + '    <div class="pp-moneywrap"><span class="pp-yen">¥</span>'
       + '      <input class="pp-money" id="rp-amt" type="text" inputmode="numeric" placeholder="0" oninput="PitReturnPopup.onAmt(this)"></div>'
+      /* 🧾 v1.65.1 打つたびに税込を出す（確認用）。物差しは state.js の pitTaxHint 1本。 */
+      + '    <div class="pt-tax" id="rp-tax"></div>'
       + '  </div>'
       /* 🔴 v1.60.0（ゆうた指定）返車予定日の横に「返車日未定」のチェック。
          ⚠ 新しい項目は増やさない。**チェックが入っている＝日付が空**、それだけ。
@@ -114,6 +116,7 @@
     // 金額プレフィル＝確定→受注→見積→概算
     var amt = [card.amountFinal, card.amountOrder, card.amountQuote, card.estAmount].find(function(v){ return v!=null && v!==''; });
     el('rp-amt').value = (amt!=null && amt!=='') ? Number(amt).toLocaleString() : '';
+    if (window.pitTaxHintSync) pitTaxHintSync(el('rp-amt'), el('rp-tax'));   /* 🧾 開いた時点のぶんも出す */
 
     // 日付・時間（完TEL済のみ）
     el('rp-date-field').style.display = isDone ? '' : 'none';
@@ -148,7 +151,10 @@
       pending = { card: card, mode: mode || 'callDone' };
       openModal(card, pending.mode);
     },
-    onAmt: function(input){ input.value = comma(input.value); },
+    onAmt: function(input){
+      input.value = comma(input.value);
+      if (window.pitTaxHintSync) pitTaxHintSync(input, el('rp-tax'));   /* 🧾 税込の確認表示をライブで */
+    },
     onDate: function(){ var cb = el('rp-datetbd'); if (cb && el('rp-date').value) cb.checked = false; syncDateTbd(); },
     onDateTbd: function(){ syncDateTbd(); },
     onWash: function(v){ setWash(v === '1'); },

@@ -365,6 +365,7 @@
       const cvstr = (cv!=null&&cv!=='') ? Number(cv).toLocaleString() : '';
       h += '<div class="cv-fixrow"><div class="cv-frt">'+KIND_LABEL[curKind]+'／直接入力</div><div class="cv-frb">'
         + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+curKind+'" type="text" inputmode="numeric" value="'+esc(cvstr)+'" data-prev="'+esc(cvstr)+'" oninput="cvAmtChange(\''+curKind+'\')"></div>'
+        + '<div class="pt-tax" id="cv-tax-'+curKind+'">'+(window.pitTaxHint?pitTaxHint(cvstr):'')+'</div>'
         + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div></div>';
     }
     // 💳 入金日を分ける（売掛）＝金額欄の下に。ON で入金日欄が出る。実績前はここで、実績後は完了アーカイブで操作 v0.121.0
@@ -377,6 +378,7 @@
         + '<span class="cv-fixval" id="cv-finlock">'+(faStr?('¥'+faStr):'—')+'</span>'
         + '<span class="cv-unlockwrap" id="cv-finedit" style="display:none">'
           + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-final" type="text" inputmode="numeric" value="'+esc(faStr)+'" data-prev="'+esc(faStr)+'" oninput="cvAmtChange(\'final\')">'
+          + '<div class="pt-tax" id="cv-tax-final">'+(window.pitTaxHint?pitTaxHint(faStr):'')+'</div>'
           + '<div class="cv-fixconfirm" id="cv-amtconfirm-final">金額を <b id="cv-amtnew-final"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\'final\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\'final\')">取消</button></div>'
         + '</span></div></div>';
     }
@@ -918,6 +920,8 @@
     const el=document.getElementById('cv-amt-'+kind); if(!el) return;
     const v=el.value.replace(/[^0-9]/g,'').slice(0,9);
     el.value = v ? (+v).toLocaleString() : '';
+    /* 🧾 v1.65.1 税込の確認表示をライブで（物差しは state.js の pitTaxHint 1本） */
+    if (window.pitTaxHintSync) pitTaxHintSync(el, document.getElementById('cv-tax-'+kind));
     const cf=document.getElementById('cv-amtconfirm-'+kind);
     if(el.value===el.dataset.prev){ cf.classList.remove('show'); return; }
     document.getElementById('cv-amtnew-'+kind).textContent = '¥'+(el.value||'0');

@@ -268,6 +268,43 @@ function pitEstHold(workType, dropType, team){
 window.pitEstHold = pitEstHold;
 
 /* ===================================================================
+   🧾 消費税（v1.65.1・ゆうた指定）＝**入力欄の下に出す「税込」の確認表示だけ**に使う
+   -------------------------------------------------------------------
+   🔴 **PitFlow が持つ金額はすべて税抜**（2026-07-05 ゆうた決定・恒久ルール）。
+      保存する値も、集計する値も、いっさい変えない。ここで作るのは**目で確かめるための表示**だけ。
+   ◎なぜ要るか（ゆうた指定）
+      「自分が入れるべきが税抜だと分かり、また金額があっているか確認できるように」
+      ＝整備ソフトの伝票は税込で出るので、税抜で打ったつもりが税込を打っていた、を防ぐ。
+   ⚠ 税率が変わるときは**ここだけ**直す。各ポップアップに 1.1 を書き写さないこと。
+   =================================================================== */
+window.PIT_TAX_RATE = 0.10;
+
+/* 税抜 → 税込（円未満切り捨て）。数字にならないものは null を返す（＝表示しない） */
+function pitTaxIn(v){
+  var n = (typeof v === 'string') ? Number(String(v).replace(/[^\d]/g, '')) : Number(v);
+  if (!isFinite(n) || n <= 0) return null;
+  return Math.floor(n * (1 + (window.PIT_TAX_RATE || 0)));
+}
+window.pitTaxIn = pitTaxIn;
+
+/* 入力欄の下に出す一行。空や0のときは案内だけ出す（「税抜で入れる」と分かるように）。
+   🔴 文言もここ1本。ポップアップごとに書き分けない。 */
+function pitTaxHint(v){
+  var t = pitTaxIn(v);
+  if (t == null) return '<span class="pt-tax-l">税抜で入力</span>';
+  return '<span class="pt-tax-l">税抜で入力</span><span class="pt-tax-v">税込 ¥' + t.toLocaleString() + '</span>';
+}
+window.pitTaxHint = pitTaxHint;
+
+/* 入力欄と表示欄をつなぐ。打つたびに書き替わる（ライブ）。
+   el＝input／hint＝表示する入れ物。どちらか無ければ何もしない。 */
+function pitTaxHintSync(el, hint){
+  if (!el || !hint) return;
+  hint.innerHTML = pitTaxHint(el.value);
+}
+window.pitTaxHintSync = pitTaxHintSync;
+
+/* ===================================================================
    📐 評価用の基準値（`PIT_BASE_AMOUNT`）＝「受注の質」で比べる相手  v1.64.0
    -------------------------------------------------------------------
    🔴 **概算金額（`estAmount`）とは仕事が違う。同じ数字を兼用しない。**

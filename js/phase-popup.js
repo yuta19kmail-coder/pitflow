@@ -43,6 +43,8 @@
       + '    <div class="pp-ref" id="pp-amt-ref"></div>'
       + '    <div class="pp-moneywrap"><span class="pp-yen">¥</span>'
       + '      <input class="pp-money" id="pp-amt" type="text" inputmode="numeric" placeholder="0" oninput="PitPhasePopup.onAmt(this)"></div>'
+      /* 🧾 v1.65.1 打つたびに税込を出す（確認用）。物差しは state.js の pitTaxHint 1本。 */
+      + '    <div class="pt-tax" id="pp-tax"></div>'
       + '  </div>'
       + '  <div class="pp-field" id="pp-ret-field" style="display:none">'
       + '    <label class="pp-lb">返車予定日</label>'
@@ -127,6 +129,7 @@
                    : (mode==='order' || mode==='quick') ? firstOf(card.amountOrder, card.amountQuote, card.estAmount)
                                          : firstOf(card.amountFinal, card.amountOrder, card.amountQuote, card.estAmount);
     el('pp-amt').value = (amtPrefill!=='' && amtPrefill!=null) ? Number(amtPrefill).toLocaleString() : '';
+    if (window.pitTaxHintSync) pitTaxHintSync(el('pp-amt'), el('pp-tax'));   /* 🧾 開いた時点のぶんも出す */
     el('pp-amt-ref').innerHTML = (mode==='estimate') ? '概算 '+yen(card.estAmount)
                                 : (mode==='quick')    ? '概算 '+yen(card.estAmount)+'　（見積は受注と同じ額で記録）'
                                 : (mode==='order')    ? '概算 '+yen(card.estAmount)+'　見積 '+yen(card.amountQuote)
@@ -200,6 +203,7 @@
     onAmt: function(input){
       var c = comma(input.value);
       input.value = c;
+      if (window.pitTaxHintSync) pitTaxHintSync(input, el('pp-tax'));   /* 🧾 税込の確認表示をライブで */
     },
     onPartner: function(){
       var sel = el('pp-partner'); if (!sel) return;
