@@ -12,6 +12,14 @@
 
   let _c = null;            // 現在開いているカード
   let _mechEditOpen = {};   // <i data-ic=user data-ics=16></i> 返車後カードで担当を「編集」表示にしているか（id→true）v0.129.0
+  /* 🔴 v1.67.1 「返車日未定」のチェックを外している最中か（この画面だけの印・保存しない）。
+     ⚠ v1.66.0 では「日付が空ならチェックON」と、データから逆算していた。
+        だから外しても、描き直した瞬間にまた付いてしまい**永久に外せなかった**（ゆうた報告）。
+        日付欄も使えないままなので、日付を入れて外すことすらできない＝袋小路。
+     ✅ 「これから日付を入れるつもり」は**データに書けない気持ち**なので、画面だけで覚える。
+        保存する項目は増やしていない（v1.66.0 の決めごとはそのまま）。 */
+  let _retTbdOff = false;
+  let _retTbdFor = '';      // どのカードに対しての印か（別のカードを開いたら忘れる）
   const DOW = ['日','月','火','水','木','金','土'];
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -411,7 +419,9 @@
       /* 🔴 v1.66.0（ゆうた指定）**確定返車日（C）と返車時間は「作業完了」に入ってからしか出さない。**
          C は完TELのときに決まる値なので、作業前に入力欄が見えていると先に入れられてしまう。
          ⚠ 作業前の「お客様への約束」は B（返車予定日）＝受注完了のポップアップで入れる。上のチェーンに出ている。 */
-      const _tbd = !c.returnDate && !finRet;
+      /* 🔴 v1.67.1 チェックが付くのは「日付が空」かつ「いま外しにいっていない」ときだけ。
+         外した直後は日付欄が使えるようになり、日付を入れるまで外れたまま。 */
+      const _tbd = (!c.returnDate && !finRet) && !_retTbdOff;
       h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
         + '<span class="cv-plan">予定 '+(window.pitReturnB && pitReturnB(c) ? fmtMD(pitReturnB(c)) : '—')+'</span><span class="cv-arr">→</span>'
         + '<input class="cv-fixinput" id="cv-retdate" type="date" value="'+esc(finRet || c.returnDate || '')+'"'+(_tbd?' disabled':'')+' onchange="cvSetReturn(this.value)">'
@@ -845,6 +855,10 @@
   // ===== メイン描画 =====
   window.renderCardView = function(card, hostId){
     const host = document.getElementById(hostId || 'md-body-modal'); if(!host) return;
+    /* 🔴 v1.67.1 「返車日未定を外している最中」の印は、そのカードを見ている間だけ持つ。
+       ⚠ ここで毎回リセットすると、外した直後の描き直しで元に戻ってしまう（＝直したはずのバグが再発する）。
+          だから**別のカードに変わった時だけ**忘れる。 */
+    if (_retTbdFor !== (card && card.id)) { _retTbdOff = false; _retTbdFor = (card && card.id) || ''; }
     _c = ensure(card);
     const box = host.closest('.modal-box');
     if(box){
@@ -1057,13 +1071,28 @@
       return;
     }
     if (on){
+      /* 未定にする＝日付を空にする（唯一の入口を通す）。「外している最中」の印も下ろす。 */
+      _retTbdOff = false; _retTbdFor = _c.id;
       if (window.pitReturnSetDateTime) pitReturnSetDateTime(_c, '', undefined);
       else { _c.returnDate = ''; }
       _c.returnDateFinal = null;
       if (window.logFlow) logFlow(_c, '返車日を未定に戻した');
+      save(); cvRefreshBg();
+      if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+      return;
     }
-    save(); cvRefreshBg();
+    /* 🔴 v1.67.1 チェックを外す＝「これから日付を入れる」。
+       日付欄を使えるようにするだけで、保存する値は何も変えない（まだ日が決まっていないので）。
+       ⚠ 前はここが空っぽで、描き直すとチェックが戻り、日付欄も使えないままだった＝外せなかった。 */
+    _retTbdOff = true; _retTbdFor = _c.id;
     if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+    /* 使えるようになった日付欄へ運ぶ（カレンダーが開く端末では開く） */
+    setTimeout(function(){
+      var d = document.getElementById('cv-retdate');
+      if (!d) return;
+      try { d.focus(); } catch(e){}
+      try { if (d.showPicker) d.showPicker(); } catch(e){}
+    }, 30);
   };
 
   // 返車時間（スマート入力で正規化）／洗車備考／お礼LINE不要＝完TELポップアップと同じ項目（相互反映）
