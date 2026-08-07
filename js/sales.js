@@ -86,29 +86,112 @@
 
   function sumTiers(t, ids){ var s=0; ids.forEach(function(id){ s += t[id].sum; }); return s; }
 
+  /* ================= 🔴 v1.72.0（ゆうた指定）日次グラフの「当日の前後◯日」 =================
+     ◎ゆうたの言葉
+       「グラフの描写が当日の前後5日ぐらいの描写で、**ラベルの数字とかを再描写**するイメージ」
+     ◎どういうことか
+       月まるごとの1本の線だと、日々の動きが**平べったくなって読めない**。
+       そこで **当日を真ん中に置いて、その前後◯日ぶんだけを描き直す**。
+       🔴 **横軸（日付）だけでなく、縦軸（金額）の目盛りもその範囲に合わせて引き直す。**
+          ＝0 から描かずに「その期間の下から上まで」を使うので、線の傾きがはっきり出る。
+     ⚠ **数字そのものは1円も変えていない。**（実績・目標ペース・着地予測の計算は同じもの）
+     ⚠ 当日が無い月（過去月・未来月）は当日を真ん中に置けないので**全体のまま**。 */
+  var FOCUS_OPTS = [[0,'全体'],[5,'±5日'],[10,'±10日']];
+  window.svSetFocus = function(n){ window._svFocus = +n||0; renderSales(); };
+  function focusBtns(canFocus){
+    var cur = +(window._svFocus||0);
+    return '<span class="sv-focus'+(canFocus?'':' is-off')+'">'
+      + FOCUS_OPTS.map(function(o){
+          return '<button type="button" class="sv-fbtn'+(cur===o[0]?' on':'')+'"'
+               + (canFocus?'':' disabled')+' onclick="svSetFocus('+o[0]+')">'+o[1]+'</button>';
+        }).join('')
+      + '</span>';
+  }
+  /* 目盛りの数字を「読める丸い数字」にする（1.3万・25万 のような刻み） */
+  function niceStep(span, want){
+    var raw = span/Math.max(1,(want||4));
+    if (!(raw>0)) return 1;
+    var p = Math.pow(10, Math.floor(Math.log(raw)/Math.LN10));
+    var n = raw/p;
+    var m = (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10);
+    return m*p;
+  }
+
   // ===== SVG：日次進捗チャート =====
-  function dailyChartSvg(cum, lastDay, todayIdx, min, max, landing){
+  function dailyChartSvg(cum, lastDay, todayIdx, min, max, landing, canFocus){
     var W=720, H=232, padL=52, padR=16, padT=16, padB=28;
     var pw=W-padL-padR, ph=H-padT-padB;
-    var yMax = (Math.max(max, landing, cum[lastDay]||0, min) || 1) * 1.08;
-    function X(day){ return padL + pw * (lastDay<=1 ? 0 : (day-1)/(lastDay-1)); }
-    function Y(v){ return padT + ph * (1 - v/yMax); }
-    var s = '<svg class="sv-chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img">';
-    [0, min, max].forEach(function(v){ var y=Y(v); s+='<line class="sv-grid" x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'"/>'; s+='<text class="sv-ylab" x="'+(padL-6)+'" y="'+(y+3)+'" text-anchor="end">'+man(v)+'</text>'; });
-    // 目標ペース（0→max / 0→min）
-    s+='<line class="sv-pace sv-pace-max" x1="'+X(1)+'" y1="'+Y(0)+'" x2="'+X(lastDay)+'" y2="'+Y(max)+'"/>';
-    s+='<line class="sv-pace sv-pace-min" x1="'+X(1)+'" y1="'+Y(0)+'" x2="'+X(lastDay)+'" y2="'+Y(min)+'"/>';
-    if (todayIdx>=1){
-      var pts=[]; for(var k=1;k<=todayIdx;k++){ pts.push(X(k).toFixed(1)+','+Y(cum[k]).toFixed(1)); }
-      s+='<path class="sv-actual-area" d="M'+X(1).toFixed(1)+','+Y(0).toFixed(1)+' L'+pts.join(' L')+' L'+X(todayIdx).toFixed(1)+','+Y(0).toFixed(1)+' Z"/>';
-      s+='<polyline class="sv-actual-line" points="'+pts.join(' ')+'"/>';
-      if (todayIdx < lastDay) s+='<line class="sv-proj" x1="'+X(todayIdx).toFixed(1)+'" y1="'+Y(cum[todayIdx]).toFixed(1)+'" x2="'+X(lastDay).toFixed(1)+'" y2="'+Y(landing).toFixed(1)+'"/>';
-      s+='<circle class="sv-actual-dot" cx="'+X(todayIdx).toFixed(1)+'" cy="'+Y(cum[todayIdx]).toFixed(1)+'" r="3.5"/>';
-      s+='<line class="sv-today" x1="'+X(todayIdx).toFixed(1)+'" y1="'+padT+'" x2="'+X(todayIdx).toFixed(1)+'" y2="'+(padT+ph)+'"/>';
+
+    /* 描く日の範囲。全体＝1〜末日／フォーカス＝当日の前後◯日（月の端で切る）。
+       ⚠ 当日が無い月（過去・未来）は真ん中に置くものが無いので、必ず全体で描く。 */
+    var foc=canFocus ? (+(window._svFocus||0)) : 0, d0=1, d1=lastDay;
+    if (foc>0 && todayIdx>=1){
+      d0=Math.max(1, todayIdx-foc); d1=Math.min(lastDay, todayIdx+foc);
+      if (d1-d0 < 1){ d0=1; d1=lastDay; foc=0; }     /* 幅が無いと線が引けない */
+    } else foc=0;
+
+    /* 目標ペースと着地予測は「その日の値」を出せる（どちらも直線）。フォーカスの上下端を測るのに使う。 */
+    function paceAt(v, d){ return lastDay<=1 ? v : v*(d-1)/(lastDay-1); }
+    function projAt(d){
+      if (todayIdx<1 || todayIdx>=lastDay) return cum[todayIdx]||0;
+      return cum[todayIdx] + (landing-cum[todayIdx])*(d-todayIdx)/(lastDay-todayIdx);
     }
-    var step = Math.max(1, Math.ceil(lastDay/8));
-    for(var d=1; d<=lastDay; d+=step){ s+='<text class="sv-xlab" x="'+X(d).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle">'+d+'</text>'; }
-    if ((lastDay-1)%step!==0) s+='<text class="sv-xlab" x="'+X(lastDay).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle">'+lastDay+'</text>';
+
+    /* 縦軸の上下。全体は今までどおり 0 から。フォーカスは**見えている値の下〜上**まで。 */
+    var yLo=0, yHi;
+    if (!foc){
+      yHi = (Math.max(max, landing, cum[lastDay]||0, min) || 1) * 1.08;
+    } else {
+      var vs=[];
+      for (var q=d0;q<=d1;q++){
+        vs.push(paceAt(min,q), paceAt(max,q));
+        if (todayIdx>=1 && q<=todayIdx) vs.push(cum[q]||0);
+        if (todayIdx>=1 && q>=todayIdx) vs.push(projAt(q));
+      }
+      yLo=Math.min.apply(null,vs); yHi=Math.max.apply(null,vs);
+      if (!(yHi>yLo)) { yHi=yLo+1; }
+      var pad=(yHi-yLo)*0.12; yLo=Math.max(0,yLo-pad); yHi=yHi+pad;
+    }
+    function X(day){ return padL + pw * (d1<=d0 ? 0 : (day-d0)/(d1-d0)); }
+    function Y(v){ return padT + ph * (1 - (v-yLo)/(yHi-yLo||1)); }
+    function clampX(d){ return Math.min(d1, Math.max(d0, d)); }
+
+    var s = '<svg class="sv-chart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img">';
+
+    /* 🔴 目盛りの数字も引き直す（ここが「ラベルの数字とかを再描写」） */
+    var ys=[];
+    if (!foc){ ys=[0, min, max]; }
+    else { var st=niceStep(yHi-yLo,4); for(var g=Math.ceil(yLo/st)*st; g<=yHi+1e-6; g+=st) ys.push(g); }
+    ys.forEach(function(v){ var y=Y(v);
+      s+='<line class="sv-grid" x1="'+padL+'" y1="'+y.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y.toFixed(1)+'"/>';
+      s+='<text class="sv-ylab" x="'+(padL-6)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end">'+man(v)+'</text>'; });
+
+    // 目標ペース（0→max / 0→min）。フォーカス中は、その範囲を切り取った線分になる。
+    s+='<line class="sv-pace sv-pace-max" x1="'+X(d0)+'" y1="'+Y(paceAt(max,d0)).toFixed(1)+'" x2="'+X(d1)+'" y2="'+Y(paceAt(max,d1)).toFixed(1)+'"/>';
+    s+='<line class="sv-pace sv-pace-min" x1="'+X(d0)+'" y1="'+Y(paceAt(min,d0)).toFixed(1)+'" x2="'+X(d1)+'" y2="'+Y(paceAt(min,d1)).toFixed(1)+'"/>';
+
+    if (todayIdx>=1){
+      var a0=clampX(d0), a1=clampX(Math.min(todayIdx,d1));
+      if (a1>=a0){
+        var pts=[]; for(var k=a0;k<=a1;k++){ pts.push(X(k).toFixed(1)+','+Y(cum[k]||0).toFixed(1)); }
+        var base=(padT+ph).toFixed(1);   /* 面の下辺＝枠の底（フォーカスで 0 が画面外でも塗りが切れない） */
+        s+='<path class="sv-actual-area" d="M'+X(a0).toFixed(1)+','+base+' L'+pts.join(' L')+' L'+X(a1).toFixed(1)+','+base+' Z"/>';
+        if (pts.length>1) s+='<polyline class="sv-actual-line" points="'+pts.join(' ')+'"/>';
+      }
+      if (todayIdx < lastDay && todayIdx <= d1){
+        var p0=Math.max(todayIdx,d0);
+        s+='<line class="sv-proj" x1="'+X(p0).toFixed(1)+'" y1="'+Y(projAt(p0)).toFixed(1)+'" x2="'+X(d1).toFixed(1)+'" y2="'+Y(projAt(d1)).toFixed(1)+'"/>';
+      }
+      if (todayIdx>=d0 && todayIdx<=d1){
+        s+='<circle class="sv-actual-dot" cx="'+X(todayIdx).toFixed(1)+'" cy="'+Y(cum[todayIdx]||0).toFixed(1)+'" r="3.5"/>';
+        s+='<line class="sv-today" x1="'+X(todayIdx).toFixed(1)+'" y1="'+padT+'" x2="'+X(todayIdx).toFixed(1)+'" y2="'+(padT+ph)+'"/>';
+      }
+    }
+    /* 🔴 横軸の日付も引き直す（フォーカス中は1日ずつ） */
+    var span=d1-d0+1;
+    var step = foc ? (span<=12?1:2) : Math.max(1, Math.ceil(lastDay/8));
+    for(var d=d0; d<=d1; d+=step){ s+='<text class="sv-xlab'+(d===todayIdx?' is-today':'')+'" x="'+X(d).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle">'+d+'</text>'; }
+    if ((d1-d0)%step!==0) s+='<text class="sv-xlab" x="'+X(d1).toFixed(1)+'" y="'+(H-9)+'" text-anchor="middle">'+d1+'</text>';
     s+='</svg>';
     return s;
   }
@@ -175,10 +258,17 @@
     h += '</div>';
 
     // 日次進捗チャート
+    /* 🔴 v1.72.0 見出しに「全体／±5日／±10日」。当日が無い月（過去・未来）は押せない。 */
+    var _canFocus = (isThis && todayIdx>=1 && data.lastDay>2);   /* 当月だけ（当日が真ん中に来る月だけ） */
     h += '<div class="sv-card"><div class="sv-card-h"><span><i data-ic=chart data-ics=16></i> 日次の進捗（返車＝実績の累計）</span><span class="sv-legend">'
-       + '<i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-proj"></i>着地予測 <i class="sv-lg sv-lg-min"></i>最低ペース <i class="sv-lg sv-lg-max"></i>最高ペース</span></div>';
-    h += dailyChartSvg(data.cum, data.lastDay, todayIdx, tg.min, tg.max, landing);
-    h += '<div class="sv-note">実績は<b>実績カウント日</b>で計上。まだ返していない車は<b>返車予定日の月</b>に積む（予定が翌月ならこの月には出ない）。返車予定日が未定・予定日を過ぎた車は当月に寄せる。点線＝残りを今のパイプラインで積んだ着地予測。</div></div>';
+       + '<i class="sv-lg sv-lg-actual"></i>実績累計 <i class="sv-lg sv-lg-proj"></i>着地予測 <i class="sv-lg sv-lg-min"></i>最低ペース <i class="sv-lg sv-lg-max"></i>最高ペース</span>'
+       + focusBtns(_canFocus) + '</div>';
+    h += dailyChartSvg(data.cum, data.lastDay, todayIdx, tg.min, tg.max, landing, _canFocus);
+    h += '<div class="sv-note">実績は<b>実績カウント日</b>で計上。まだ返していない車は<b>返車予定日の月</b>に積む（予定が翌月ならこの月には出ない）。返車予定日が未定・予定日を過ぎた車は当月に寄せる。点線＝残りを今のパイプラインで積んだ着地予測。'
+       + (_canFocus && (+(window._svFocus||0))>0
+           ? '<br>🔎 <b>いま「当日の前後'+(+window._svFocus)+'日」だけを描いています。</b>縦の目盛りもこの期間に合わせて引き直しているので、<b>0円から始まっていません</b>（動きを大きく見せるため）。'
+           : (_canFocus ? '<br>🔎 <b>±5日／±10日</b>を押すと、当日の前後だけを描き直します（縦の目盛りもその期間に合わせます）。' : ''))
+       + '</div></div>';
 
     // 確度別サマリー（6区分）
     h += '<div class="sv-tiers">';
@@ -756,52 +846,9 @@
     else if(tab==='work') yr?renderWorkYear(wrap):renderWorkMonth(wrap);
     else if(tab==='front') yr?renderFrontYear(wrap):renderFrontMonth(wrap);
     else yr?renderYear(wrap):renderMonth(wrap);
-    decorateCharts(wrap);
   }
 
-  /* ================= 🔴 v1.72.0 グラフを大きく見る（ゆうた指定「売上グラフにフォーカス」） =================
-     ⚠ **各グラフのコードは1行も触らない。** 描き終わったあとに、
-        グラフが入っているカードへ「拡大」ボタンを足すだけ。だから新しいグラフを足しても自動で付く。
-     ⚠ 大きい窓の中身は**カードをそのまま複製**したもの。数字を作り直さないので食い違わない。 */
-  function decorateCharts(root){
-    if(!root || !root.querySelectorAll) return;
-    Array.prototype.forEach.call(root.querySelectorAll('.sv-card'), function(card){
-      var head=card.querySelector('.sv-card-h'); if(!head) return;
-      if(head.querySelector('.sv-zoombtn')) return;
-      if(!card.querySelector('svg.sv-chart, svg.sv-stack')) return;
-      var b=document.createElement('button');
-      b.type='button'; b.className='sv-zoombtn'; b.title='大きく見る';
-      b.innerHTML='<i data-ic=expand data-ics=15></i> 拡大';
-      b.addEventListener('click', function(e){ e.stopPropagation(); svZoomOpen(card); });
-      head.appendChild(b);
-    });
-    try { if(window.icoBoot) icoBoot(root); } catch(e){}
-  }
 
-  function svZoomOpen(card){
-    var ov=document.getElementById('sv-zoom');
-    if(!ov){
-      ov=document.createElement('div'); ov.id='sv-zoom'; ov.className='sv-zoom';
-      ov.addEventListener('click', function(e){
-        if(e.target===ov || (e.target.closest && e.target.closest('.sv-zoom-x'))) svZoomClose();
-      });
-      document.body.appendChild(ov);
-      document.addEventListener('keydown', function(e){ if(e.key==='Escape') svZoomClose(); });
-    }
-    var ttl=(card.querySelector('.sv-card-h span')||{}).textContent || 'グラフ';
-    var box=document.createElement('div'); box.className='sv-zoom-box';
-    var hd=document.createElement('div'); hd.className='sv-zoom-h';
-    hd.innerHTML='<span>'+esc(ttl)+'</span><button type="button" class="sv-zoom-x" title="閉じる（Esc）"><i data-ic=close data-ics=18></i></button>';
-    var bd=document.createElement('div'); bd.className='sv-zoom-body';
-    var cl=card.cloneNode(true);
-    Array.prototype.forEach.call(cl.querySelectorAll('.sv-zoombtn'), function(x){ x.parentNode.removeChild(x); });
-    bd.appendChild(cl);
-    ov.innerHTML=''; box.appendChild(hd); box.appendChild(bd); ov.appendChild(box);
-    ov.classList.add('open');
-    try { if(window.icoBoot) icoBoot(ov); } catch(e){}
-  }
-  function svZoomClose(){ var ov=document.getElementById('sv-zoom'); if(ov) ov.classList.remove('open'); }
-  window.svZoomOpen=svZoomOpen; window.svZoomClose=svZoomClose;
 
   // ===== PDF用：現ビューのデータモデル（sales-print.js が A4ベクターPDFに描画） =====
   function _mAll(t){ return sumTiers(t,['actual','confirmed','planned','prospect','forecast']); }

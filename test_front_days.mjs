@@ -1,9 +1,10 @@
-/* PitFlow v1.72.0 ── 売上サマリー：読みのズレ／預かりの中身／グラフの拡大
+/* PitFlow v1.72.0 ── 売上サマリー：読みのズレ／預かりの中身／日次グラフの「当日の前後◯日」
    -------------------------------------------------------------------
    ◎ゆうた指定
      ・フロント欄に、暫定預かり（＝概算返車日）と実際の返車日の **平均差分と最大差分**
      ・**預かりに限って**、作業待ち→作業完了／作業完了→確定返車日 の **共に平均日数**
-     ・売上グラフに**フォーカス（拡大表示）**
+     ・売上グラフに**フォーカス**＝「当日の前後5日ぐらいの描写で、**ラベルの数字とかを再描写**」
+       （最初に「窓で大きく開く」を作って差し戻された。**大きく映すのではなく、描く期間を狭めて引き直す**）
 
    ◎数え方の決めごと
      ・概算返車日 A ＝ 入庫日 ＋ 概算 預かり日数（return-slot.js の pitReturnA 1本）
@@ -133,46 +134,91 @@ console.log('\n── ③ 表でも同じ数字が出る ──');
   await p.waitForTimeout(300);
 }
 
-console.log('\n── ④ 🔴 グラフの拡大 ──');
+console.log('\n── ④ 🔴 日次グラフ「当日の前後◯日」 ──');
 {
-  await p.evaluate(() => { window._svTab = 'sales'; window.showView('sales'); });
-  await p.waitForTimeout(700);
-  const n = await p.evaluate(() => document.querySelectorAll('#view-sales-body .sv-zoombtn').length);
-  ok('グラフのあるカードに「拡大」が付いている（1つ以上）', n >= 1, n);
-  ok('グラフの無いカードには付いていない', await p.evaluate(() =>
-    Array.from(document.querySelectorAll('#view-sales-body .sv-card'))
-      .every(c => !!c.querySelector('svg.sv-chart, svg.sv-stack') || !c.querySelector('.sv-zoombtn'))));
-  await p.evaluate(() => document.querySelector('#view-sales-body .sv-zoombtn').click());
-  await p.waitForTimeout(300);
-  const z = await p.evaluate(() => {
-    const ov = document.getElementById('sv-zoom');
-    const svg = ov && ov.querySelector('svg.sv-chart');
-    return { open: !!(ov && ov.classList.contains('open')), hasSvg: !!svg,
-             h: svg ? Math.round(svg.getBoundingClientRect().height) : 0,
-             title: ov ? (ov.querySelector('.sv-zoom-h span')||{}).textContent : '',
-             btnInside: !!(ov && ov.querySelector('.sv-zoombtn')) };
+  /* 今月の1日から今日まで、毎日返車がある形にする（線が動くデータ） */
+  await p.evaluate(() => {
+    const now=new Date(); const Y=now.getFullYear(), M=now.getMonth(), D=now.getDate();
+    const d=n=>window.ymd(new Date(Y,M,n));
+    state.cards=[];
+    for(let i=1;i<=D;i++){
+      state.cards.push({ id:'S'+i, resNo:'S'+i, customer:'客'+i, car:'アクア', maker:'トヨタ',
+        boardId:'default', division:'div1', status:'returned', frontStaff:'テスト太郎',
+        workTypes:['shaken'], workType:'shaken', dropType:'drop', estHoldDays:5,
+        reserveDate:d(Math.max(1,i-3)), returnDate:d(i), returnDateFinal:d(i), completedAt:d(i),
+        amountFinal: 200000 + i*1000 });
+    }
+    window._svTab='sales'; window._svMode='month'; window._svFocus=0; window.showView('sales');
   });
-  ok('🔴 大きい窓が開く', z.open === true, z);
-  ok('中にグラフが入っている', z.hasSvg === true, z);
-  ok('🔴 元より大きく描かれている（300px以上）', z.h >= 300, z);
-  ok('見出しが引き継がれている', !!(z.title||'').trim(), z);
-  ok('窓の中に「拡大」ボタンは残っていない', z.btnInside === false, z);
-  await p.keyboard.press('Escape');
-  await p.waitForTimeout(250);
-  ok('Esc で閉じる', await p.evaluate(() => !document.getElementById('sv-zoom').classList.contains('open')));
-  /* 描き直しても二重に付かない */
-  await p.evaluate(() => { window.showView('sales'); window.showView('sales'); });
+  await p.waitForTimeout(700);
+  const read = () => p.evaluate(() => {
+    const card = Array.from(document.querySelectorAll('#view-sales-body .sv-card'))
+      .find(c => c.querySelector('svg.sv-chart'));
+    if (!card) return { no:true };
+    const svg = card.querySelector('svg.sv-chart');
+    return {
+      btns: Array.from(card.querySelectorAll('.sv-fbtn')).map(b => b.textContent.trim()),
+      on: (card.querySelector('.sv-fbtn.on')||{}).textContent,
+      x: Array.from(svg.querySelectorAll('.sv-xlab')).map(t => t.textContent.trim()),
+      y: Array.from(svg.querySelectorAll('.sv-ylab')).map(t => t.textContent.trim()),
+      today: (svg.querySelector('.sv-xlab.is-today')||{}).textContent,
+      line: !!svg.querySelector('.sv-actual-line')
+    };
+  });
+  const today = await p.evaluate(() => new Date().getDate());
+  const lastDay = await p.evaluate(() => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth()+1,0).getDate(); });
+
+  const all = await read();
+  ok('見出しに 全体／±5日／±10日 が出ている',
+     JSON.stringify(all.btns) === JSON.stringify(['全体','±5日','±10日']), all.btns);
+  ok('はじめは「全体」', all.on === '全体', all.on);
+  ok('全体では 1 から末日まで', all.x[0] === '1' && all.x[all.x.length-1] === String(lastDay), all.x);
+  ok('全体の縦軸は 0 から始まる', all.y[0] === '0万', all.y);
+
+  await p.evaluate(() => window.svSetFocus(5));
+  await p.waitForTimeout(700);
+  const f5 = await read();
+  const lo5 = Math.max(1, today-5), hi5 = Math.min(lastDay, today+5);
+  ok('🔴 ±5日を押すと、当日の前後5日だけになる',
+     f5.x[0] === String(lo5) && f5.x[f5.x.length-1] === String(hi5), { x:f5.x, lo5, hi5 });
+  ok('🔴 横軸は1日ずつ引き直される（日付が飛ばない）',
+     f5.x.length === (hi5-lo5+1) && f5.x.every((v,i) => +v === lo5+i), f5.x);
+  ok('🔴 当日のラベルが太字になっている', f5.today === String(today), f5.today);
+  ok('🔴 縦軸の目盛りも引き直される（全体の時と違う）',
+     JSON.stringify(f5.y) !== JSON.stringify(all.y) && f5.y.length >= 2, { all:all.y, f5:f5.y });
+  ok('実績の線は消えていない', f5.line === true, f5);
+
+  await p.evaluate(() => window.svSetFocus(10));
+  await p.waitForTimeout(700);
+  const f10 = await read();
+  const lo10 = Math.max(1, today-10), hi10 = Math.min(lastDay, today+10);
+  ok('±10日でも同じように引き直される',
+     f10.x[0] === String(lo10) && f10.x[f10.x.length-1] === String(hi10), f10.x);
+  ok('±10日のほうが幅が広い', (hi10-lo10) >= (hi5-lo5), { f5:[lo5,hi5], f10:[lo10,hi10] });
+
+  await p.evaluate(() => window.svSetFocus(0));
   await p.waitForTimeout(600);
-  ok('描き直しても「拡大」が二重に付かない', await p.evaluate(() =>
-    Array.from(document.querySelectorAll('#view-sales-body .sv-card'))
-      .every(c => c.querySelectorAll('.sv-zoombtn').length <= 1)));
+  const back = await read();
+  ok('「全体」に戻せる', JSON.stringify(back.x) === JSON.stringify(all.x), back.x);
+
+  /* 当日が無い月（先月）は押せない */
+  await p.evaluate(() => { window.svShiftMonth(-1); });
+  await p.waitForTimeout(700);
+  ok('🔴 当日が無い月では押せない（当日を真ん中に置けないため）', await p.evaluate(() => {
+    const card = Array.from(document.querySelectorAll('#view-sales-body .sv-card'))
+      .find(c => c.querySelector('svg.sv-chart'));
+    return Array.from(card.querySelectorAll('.sv-fbtn')).every(b => b.disabled);
+  }));
+  await p.evaluate(() => { window.svShiftMonth(0); });
+  await p.waitForTimeout(600);
 }
 
 console.log('\n── ⑤ データを触っていない ──');
 {
-  ok('🔴 カードの中身が変わっていない', await p.evaluate(() => {
-    const c = state.cards.find(x => x.id === 'P1');
-    return c.returnDate && c.reserveDate && c.estHoldDays === 5 && c.log.length === 2 && !c.returnDatePlan;
+  ok('🔴 グラフを切り替えてもカードの中身は変わらない', await p.evaluate(() => {
+    const before = JSON.stringify(state.cards);
+    window.svSetFocus(5); window.svSetFocus(10); window.svSetFocus(0);
+    return JSON.stringify(state.cards) === before;
   }));
 }
 
