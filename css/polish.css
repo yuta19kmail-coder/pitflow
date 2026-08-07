@@ -1802,3 +1802,16 @@ th.cfs-lg-d{ z-index:3; }
 .ps-note-auto-h{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:800; color:var(--text2); margin-bottom:5px; }
 .ps-note-auto-b{ font-size:11.5px; line-height:1.75; color:var(--text3); }
 .ps-note-auto-b b{ color:var(--text2); }
+
+/* ===== v1.64.1 設定▸概算日数／概算金額の入力枠（ゆうた指摘） =====
+   ・上下の矢印（スピナー）を消す＝数字を打つだけの欄なので、あっても押さないし幅を食う
+   ・金額は7桁（1,150,200）まで入るので、日数と同じ66pxでは切れていた → 金額の表だけ枠を広げる
+   ⚠ 日数の表は今までどおりの幅（1〜2桁しか入らないため）。 */
+.ps-est2-cell .ps-num::-webkit-outer-spin-button,
+.ps-est2-cell .ps-num::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; }
+.ps-est2-cell .ps-num{ -moz-appearance:textfield; appearance:textfield; }
+
+.ps-est2-money{ max-width:620px; }
+.ps-est2-money .ps-est2-head,
+.ps-est2-money .ps-est2-row{ grid-template-columns:1fr 160px 160px; }
+.ps-est2-money .ps-est2-cell .ps-num{ width:112px; text-align:right; font-variant-numeric:tabular-nums; }

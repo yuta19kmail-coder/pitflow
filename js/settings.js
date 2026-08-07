@@ -168,7 +168,7 @@
     h += '<div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る金額。<b>国産車と輸入車で別々</b>に設定できます。'
        + 'いまの値は<b>令和8年1〜6月の実売上999伝票の中央値</b>（税抜・法定費用除く）。'
        + '<b>平均ではなく中央値</b>なのは、高額修理で上振れしたまま概算を出すとお客様への提示が高くなりすぎるためです。</div>';
-    h += '<div class="ps-est2">';
+    h += '<div class="ps-est2 ps-est2-money">';
     h += '<div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div>';
     (state.workTypes || []).forEach(function (w) {
       h += '<div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:' + w.color + '"></span>' + esc(w.label) + '</span>'
