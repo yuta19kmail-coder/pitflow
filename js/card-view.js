@@ -680,9 +680,23 @@
       + '<div class="cv-prog">'+n+' / '+items.length+' 完了</div><div class="cv-checks">'+h2+'</div></div>';
   }
 
-  /* ===== 🧑‍🔧 作業担当（点検担当者／整備担当者）＝メンバー欄から選ぶ・重複OK・最大10人（v0.129.0） =====
-     ・1人選ぶと次の空欄が出る。同じ人を複数回でもOK＝作業割合になる。保持＝c.inspectors[]/c.mechanics[]。
-     ・返車済み（実績化後）は「割合表示」に切替（<i data-ic=pencil data-ics=15></i>で編集に戻せる）。配分計算は mech-summary.js。 */
+  /* ===== 🧑‍🔧 作業担当（点検担当者／整備担当者） =====
+     🔴 v1.67.0（ゆうた確定・動かせるモックで4案くらべて **案B** に決定）
+        **名前のチップをタップするだけ**で入る。もう一度タップで **×2・×3…**＝その人の取り分が増える。✕ で外す。
+        ⚠ 前はプルダウンを縦に足す形で、**「同じ人を2回選ぶ＝重み」がどこにも書いていなかった**ので、
+           知らない人には「間違えて2回選んだ」ようにしか見えなかった。チップなら **×2 が数字で見える**。
+        ◎ 現場のいちばん多い形（「今日は蓮沼と箱崎」）が **1タップずつで終わる**のがねらい。
+
+     🔴 **配分（％）はライブ**。前は**返車済みになってから**しか出ていなかったが、
+        タップするたびにその場で計算し直す。
+
+     🔴 **金額は出さない**（ゆうた指定）。
+        「最終確定はまだ出ていないし、金額を見るとやっぱり自分の方がちょっと多いかな？とか思っちゃうから％だけに」
+        ＝ 配分の**割合**だけを見せる。金額の内訳が要るときは 作業サマリー（管理側の集計）で見る。
+
+     ・保持＝`c.inspectors[]` / `c.mechanics[]`（名前の配列・重複OK）＋ `inspectorIds` / `mechanicIds`。
+       **持ち方は今までと同じ**。入れ方の見た目だけ変えた（過去のカードもそのまま読める）。
+     ・配分計算は mech-summary.js の `pitMechAlloc` 1本。ここで計算しない。 */
   const MECH_MAX = 10;
   /* 点検・整備の担当候補＝メンバー画面で「メカ」にチェックした人。
      まだ誰もチェックしていない時は、今までどおり全員を出す（空にして困らないように）。v1.4.0 */
@@ -691,42 +705,46 @@
     var mech = all.filter(function(s){ return s.mech; });
     return (mech.length ? mech : all).map(function(s){ return s.name; }).filter(Boolean);
   }
-  function mechSel(role, idx, val, opts, no){
-    let h = '<div class="cf-mech-row"><span class="cf-mech-no" title="'+no+'人目">'+no+'</span>';
-    h += '<select class="cf-input cf-mech-sel" onchange="cvMechPick(\''+role+'\','+idx+',this.value)">';
-    h += '<option value="">―</option>';
-    opts.forEach(function(n){ h += '<option value="'+esc(n)+'"'+(n===val?' selected':'')+'>'+esc(n)+'</option>'; });
-    h += '</select></div>';
-    return h;
+  /* 名前の配列 → { 名前: 回数 } と、出てきた順 */
+  function mechCount(arr){
+    var cnt = {}, order = [];
+    (Array.isArray(arr)?arr:[]).forEach(function(n){
+      if (!n) return;
+      if (!(n in cnt)){ cnt[n] = 0; order.push(n); }
+      cnt[n]++;
+    });
+    return { cnt: cnt, order: order };
   }
   function mechPicker(c, role, title, icon){
     const arr = Array.isArray(c[role]) ? c[role] : [];
-    /* v1.8.0：すでに入っている人が候補に無くても（退職・名簿外）選択肢に残す＝消えない */
+    const co = mechCount(arr);
+    /* すでに入っている人が候補に無くても（退職・名簿外）チップに残す＝消えない */
     const opts = mechOpts().slice();
-    arr.forEach(function(n){ if (n && opts.indexOf(n) < 0) opts.push(n); });
-    const boxes = arr.slice(0, MECH_MAX);
-    let h = '<div class="cf-mech-block"><div class="cf-label">'+icon+' '+title+'</div><div class="cf-mech-rows">';
-    boxes.forEach(function(nm, i){ h += mechSel(role, i, nm, opts, i+1); });
-    if (boxes.length < MECH_MAX) h += mechSel(role, boxes.length, '', opts, boxes.length+1);
+    co.order.forEach(function(n){ if (opts.indexOf(n) < 0) opts.push(n); });
+    const kind = (role === 'inspectors') ? 'i' : 'm';
+    let h = '<div class="cf-mech-block cf-mech-'+kind+'">'
+          + '<div class="cf-label">'+icon+' '+title+'<em class="cf-mech-cnt">'+(arr.length ? arr.length+'枠' : 'なし')+'</em></div>'
+          + '<div class="cf-mech-chips">';
+    opts.forEach(function(n){
+      const k = co.cnt[n] || 0;
+      const full = (arr.length >= MECH_MAX && !k);
+      h += '<button type="button" class="cf-mchip'+(k?' on':'')+(full?' full':'')+'"'
+        + (full ? ' disabled title="これ以上は増やせません（最大'+MECH_MAX+'枠）"' : ' onclick="cvMechTap(\''+role+'\',\''+esc(n)+'\')"')
+        + '>'+esc(n)+(k>1?'<i class="cf-mchip-x">×'+k+'</i>':'')
+        + (k?'<span class="cf-mchip-off" title="外す" onclick="event.stopPropagation();cvMechOff(\''+role+'\',\''+esc(n)+'\')">✕</span>':'')
+        + '</button>';
+    });
     h += '</div></div>';
     return h;
   }
   function mechSectionHtml(c){
-    const returned = (c.status === 'returned');
-    const showAlloc = returned && !_mechEditOpen[c.id];
     let h = '<div class="cv-sec"><div class="cv-sect"><i data-ic=user data-ics=16></i> 作業担当（点検・整備）</div>';
-    if (showAlloc){
-      h += (window.pitMechAllocText ? pitMechAllocText(c) : '');
-      h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')"><i data-ic=pencil data-ics=15></i> 割り当てを編集</button></div>';
-    } else {
-      h += mechPicker(c, 'inspectors', '点検担当者', '<i data-ic=search data-ics=16></i>');
-      h += mechPicker(c, 'mechanics',  '整備担当者', '<i data-ic=wrench data-ics=16></i>');
-      h += '<div class="cf-mech-note">1人選ぶと次の欄が出ます（最大'+MECH_MAX+'人・同じ人を複数回でもOK＝作業割合になります）。整備者が居なければ点検者が全額、点検者が居なければ整備者が全額。</div>';
-      if (returned){
-        h += '<div class="cf-mech-actions"><button type="button" class="cv-editmini" onclick="cvMechToggleEdit(\''+c.id+'\')">割合表示に戻す</button></div>';
-        h += '<div class="cf-mech-preview">' + (window.pitMechAllocText ? pitMechAllocText(c) : '') + '</div>';
-      }
-    }
+    h += mechPicker(c, 'inspectors', '点検担当者', '<i data-ic=search data-ics=16></i>');
+    h += mechPicker(c, 'mechanics',  '整備担当者', '<i data-ic=wrench data-ics=16></i>');
+    h += '<div class="cf-mech-note">タップで追加／もう一度タップで <b>×2・×3…</b>（その人の取り分が増えます）／<b>✕</b> で外す。'
+       + '整備担当が居なければ点検担当が全部、点検担当が居なければ点検料ぶんも整備担当へ回ります。</div>';
+    /* 🔴 配分（％）はライブ。返車前でも出す。 */
+    h += '<div class="cf-mech-preview" id="cv-mech-live">' + (window.pitMechAllocText ? pitMechAllocText(c) : '') + '</div>';
     h += '</div>';
     return h;
   }
@@ -735,26 +753,41 @@
      改名しても実績が別人に割れないようにするため。番号が取れない人は '' が入る。 */
   function _idKey(role){ return role === 'inspectors' ? 'inspectorIds' : 'mechanicIds'; }
   function _idOf(name){ const m = (name && window.pitStaffByName) ? pitStaffByName(name) : null; return m ? m.id : ''; }
-  window.cvMechPick = function(role, idx, val){
-    if (!_c) return;
+  function _mechArrs(role){
     if (!Array.isArray(_c[role])) _c[role] = [];
-    const arr = _c[role];
     const ik = _idKey(role);
-    if (!Array.isArray(_c[ik])) _c[ik] = arr.map(function(n){ return _idOf(n); });
-    const ids = _c[ik];
-    if (idx >= arr.length){
-      if (val && arr.length < MECH_MAX) { arr.push(val); ids.push(_idOf(val)); }   // 末尾の空欄＝追加
-    } else {
-      if (val === '') { arr.splice(idx, 1); ids.splice(idx, 1); }                  // ―＝削除（順に詰まる）
-      else { arr[idx] = val; ids[idx] = _idOf(val); }                              // 差し替え
+    if (!Array.isArray(_c[ik])) _c[ik] = _c[role].map(function(n){ return _idOf(n); });
+    return { arr: _c[role], ids: _c[ik] };
+  }
+  /* 🔴 v1.67.0 チップをタップ＝1枠増やす（同じ人をもう一度なら ×2・×3…＝取り分が増える） */
+  window.cvMechTap = function(role, name){
+    if (!_c || !name) return;
+    const A = _mechArrs(role);
+    if (A.arr.length >= MECH_MAX) return;
+    A.arr.push(name); A.ids.push(_idOf(name));
+    save();
+    _mechRerender();
+  };
+  /* ✕ ＝その人を全部外す（×2 でも1回で消える。押し直しの手間を作らない） */
+  window.cvMechOff = function(role, name){
+    if (!_c || !name) return;
+    const A = _mechArrs(role);
+    for (let i = A.arr.length - 1; i >= 0; i--){
+      if (A.arr[i] === name){ A.arr.splice(i, 1); A.ids.splice(i, 1); }
     }
     save();
     _mechRerender();
   };
-  window.cvMechToggleEdit = function(id){
-    _mechEditOpen[id] = !_mechEditOpen[id];
-    _mechRerender();
+  /* 旧UI（プルダウン）から呼ばれていた口。過去の画面が残っていても落ちないように残す。 */
+  window.cvMechPick = function(role, idx, val){
+    if (!_c) return;
+    const A = _mechArrs(role);
+    if (idx >= A.arr.length){ if (val && A.arr.length < MECH_MAX){ A.arr.push(val); A.ids.push(_idOf(val)); } }
+    else if (val === ''){ A.arr.splice(idx, 1); A.ids.splice(idx, 1); }
+    else { A.arr[idx] = val; A.ids[idx] = _idOf(val); }
+    save(); _mechRerender();
   };
+  window.cvMechToggleEdit = function(id){ _mechEditOpen[id] = !_mechEditOpen[id]; _mechRerender(); };
 
   function officeTab(c){
     const items = ['入金処理','原価チェック','ファイルバラシ'];

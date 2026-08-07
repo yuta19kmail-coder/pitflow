@@ -87,26 +87,35 @@
   }
   window.pitMechAlloc = pitMechAlloc;
 
-  /* ===== カード「整備」タブ用：割合表示（埋め込み） ===== */
+  /* ===== カード「整備」タブ用：配分表示（埋め込み・ライブ） =====
+     🔴 v1.67.0（ゆうた指定）**ここは％だけ。金額は出さない。**
+        「最終確定はまだ出ていないし、金額を見るとやっぱり自分の方がちょっと多いかな？とか思っちゃうから％だけに」
+        ＝ みんなが見るカードの上に、人ごとの**金額**を並べない。
+     ⚠ 金額の内訳が要るときは **作業サマリー**（管理側の集計ビュー）で見る。あちらは金額のまま。
+     ⚠ 点検と整備は**別々の枠**を分け合うので、％は**その枠の中での割合**。
+        上の帯（点検料ぶん◯% ／ 作業ぶん◯%）が無いと「点検100%」が「全部その人」に読めてしまうので、帯は必ず出す。 */
   function pitMechAllocText(c){
     var a = pitMechAlloc(c);
     if(!a){
-      return '<div class="cf-mech-note">確定売上（または概算）が無いため、割合はまだ計算できません。</div>';
+      return '<div class="cf-mech-note">担当者を選ぶと、ここに配分（％）が出ます。</div>';
     }
-    var h = '<div class="mech-alloc">';
-    h += '<div class="mech-alloc-head">確定売上 <b>'+yen(a.total)+'</b>　'
-       + '<span class="mech-alloc-sub">点検料 '+yen(a.fee)+' ／ 作業 '+yen(a.work)+'</span></div>';
     if(a.unassigned){
-      h += '<div class="cf-mech-note">担当者が未割り当てです（この売上は誰にも配分されていません）。</div>';
-      return h + '</div>';
+      return '<div class="cf-mech-note">担当者を選ぶと、ここに配分（％）が出ます。</div>';
     }
+    var fp = a.total>0 ? (a.fee/a.total*100) : 0;
+    var wp = 100 - fp;
+    var h = '<div class="mech-alloc">';
+    /* 点検ぶん／作業ぶんの帯（％だけ） */
+    h += '<div class="mech-split">'
+       + (fp>0 ? '<i class="ms-i" style="width:'+fp.toFixed(1)+'%">'+(fp>=14?'点検 '+Math.round(fp)+'%':'')+'</i>' : '')
+       + (wp>0 ? '<i class="ms-m" style="width:'+wp.toFixed(1)+'%">'+(wp>=14?'作業 '+Math.round(wp)+'%':'')+'</i>' : '')
+       + '</div>';
+    h += '<div class="mech-split-lb"><span>点検ぶん '+Math.round(fp)+'%</span><span>作業ぶん '+Math.round(wp)+'%</span></div>';
     function row(o, kind, cls){
       return '<div class="mech-alloc-row '+cls+'">'
-        + '<span class="mech-alloc-nm">'+esc(o.name)+'</span>'
+        + '<span class="mech-alloc-nm">'+esc(o.name)+(o.count>1?'<i class="mech-alloc-x">×'+o.count+'</i>':'')+'</span>'
         + '<span class="mech-alloc-kind">'+kind+'</span>'
-        + '<span class="mech-alloc-pct">'+Math.round(o.share*100)+'%</span>'
-        + '<span class="mech-alloc-veh">'+veh(o.vehicles)+'台</span>'
-        + '<span class="mech-alloc-amt">'+yen(o.amount)+'</span></div>';
+        + '<span class="mech-alloc-pct">'+Math.round(o.share*100)+'%</span></div>';
     }
     a.inspectors.forEach(function(o){ h += row(o, '<i data-ic=search data-ics=16></i>点検', 'insp'); });
     a.mechanics.forEach(function(o){ h += row(o, '<i data-ic=wrench data-ics=16></i>整備', 'mech'); });
