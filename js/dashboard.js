@@ -160,7 +160,9 @@ function renderDashboard(){
   const dow = '日月火水木金土'[today.getDay()];
 
   const inToday   = state.cards.filter(function(c){ return c.reserveDate === tStr && _dashHeld(c); }).length;
-  const outToday  = state.cards.filter(function(c){ return c.returnDate === tStr && _dashHeld(c); }).length;
+  /* 🔴 v1.65.0 返車の日は return-slot.js の物差し1本から取る */
+  const _outOn = function(c, ds){ return window.pitReturnListDate ? (pitReturnListDate(c) === ds) : (c.returnDate === ds && _dashHeld(c)); };
+  const outToday  = state.cards.filter(function(c){ return _outOn(c, tStr); }).length;
   const heldNow   = dashOccupancy(tStr, tStr);
   const freeSigned = cap - heldNow;   // 今日の駐車場空き（マイナス＝オーバー）
   const parkCol = dashParkCol(freeSigned);
@@ -214,7 +216,7 @@ function renderDashboard(){
   teams.forEach(function(t){
     const held = _dashHeldOnTeam(t.key, tStr, tStr);
     const tin  = state.cards.filter(function(c){ return c.boardId === t.key && c.reserveDate === tStr && _dashHeld(c); }).length;
-    const tout = state.cards.filter(function(c){ return c.boardId === t.key && c.returnDate === tStr && _dashHeld(c); }).length;
+    const tout = state.cards.filter(function(c){ return c.boardId === t.key && _outOn(c, tStr); }).length;
     h += '<div class="dash-team"><div class="dash-team-n">' + t.name + '</div>'
        + '<div class="dash-team-stats"><span class="big"><b>' + held + '</b>台 預かり</span><span>本日入庫 ' + tin + '</span><span>本日返車 ' + tout + '</span></div></div>';
   });

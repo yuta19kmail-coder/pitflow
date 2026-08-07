@@ -43,7 +43,7 @@
   var TEXTS = [
     'customer', 'kana', 'tel', 'plate', 'maker', 'car', 'model',
     'menu', 'memo', 'karteNo', 'lstepId', 'lineId', 'lineStatus',
-    'reserveTime', 'returnDate', 'returnDateFinal', 'decided',
+    'reserveTime', 'returnDate', 'returnDatePlan', 'returnDateFinal', 'decided',
     'boardId', 'division', 'frontStaff', 'workType', 'dropType', 'dropType2',
     'estHoldDays', 'repeat', 'customerId', 'outsource', 'outsourceDate',
     'loanerId', 'loanerModel', 'phase', 'bayId'

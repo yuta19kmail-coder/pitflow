@@ -142,9 +142,12 @@
       el('pp-title').textContent = '受注完了';
       el('pp-amt-lb').textContent = '確定見積金額';
       el('pp-ret-field').style.display = '';
-      var retPrefill = card.returnDateFinal || card.returnDate || addDaysISO(todayISO(), 7);
+      /* 🔴 v1.65.0 プレフィル＝B（すでに約束済み）→ A（概算＝入庫日＋預かり日数） */
+      var retPrefill = card.returnDatePlan
+        || (window.pitReturnA ? pitReturnA(card) : '')
+        || addDaysISO(todayISO(), 7);
       el('pp-ret').value = retPrefill;
-      el('pp-note').textContent = '確定見積と、お客様に伝えた返車予定日を入れてください。';
+      el('pp-note').textContent = 'お客様に伝えた返車予定日です。確定するのは完TELのときなので、ここは予定として記録します（売上の見込みに使います）。';
       el('pp-ok').textContent = 'パーツ待ちへ';
       // 受注時に車販部門への依頼トリガーを設定（返車予定日の下）
       var _ids = (Array.isArray(card.workTypes) && card.workTypes.length) ? card.workTypes : (card.workType ? [card.workType] : []);
@@ -162,8 +165,8 @@
       el('pp-title').textContent = 'クイック受注';
       el('pp-amt-lb').textContent = '受注金額';
       el('pp-ret-field').style.display = '';
-      el('pp-ret').value = card.returnDateFinal || card.returnDate || todayISO();   /* 当日をあらかじめ入れておく */
-      el('pp-note').textContent = '見積を挟まずに進みます。受注金額を入れれば、見積金額も同じ額として記録します。返車予定日は当日を入れてあります（変えられます）。';
+      el('pp-ret').value = card.returnDatePlan || todayISO();   /* 当日をあらかじめ入れておく */
+      el('pp-note').textContent = '見積を挟まずに進みます。受注金額を入れれば、見積金額も同じ額として記録します。返車予定日は当日を入れてあります（変えられます）。確定するのは完TELのときです。';
       el('pp-ok').textContent = statusName(pending.to) + 'へ';
     } else { // final（作業完了）
       el('pp-title').textContent = '作業完了 — 確定金額';
@@ -231,10 +234,12 @@
           }
           else card.amountFinal = Number(amt);
         }
-        /* 🔴 クイック受注＝返車予定日を入れる（既定は当日）。実績の月がここで決まる（v1.61.0）ので必ず入れる。 */
+        /* 🔴 クイック受注＝返車予定日を入れる（既定は当日）。売上の見込みの月がここで決まる。
+           ⚠ v1.65.0 これも **B＝約束** に入れる。飛ばしても返車カレンダーには出さない（完TEL関門は素通りさせない）。
+              待ち・当日返しの車は、そもそも入庫日にカレンダーへ自動で出るので不足はない。 */
         if (p.mode === 'quick'){
           var rq = el('pp-ret') ? el('pp-ret').value : '';
-          if (rq){ card.returnDate = rq; card.returnDateFinal = rq; }
+          if (rq) card.returnDatePlan = rq;
           try {
             if (window.logFlow) logFlow(card, 'クイック受注（見積を挟まず ' + statusName(p.to) + ' へ）'
               + (amt !== '' ? '　受注＝見積 ¥' + Number(amt).toLocaleString() : '')
@@ -244,7 +249,10 @@
         // 返車予定日（order時のみ）＋車販依頼トリガー
         if (p.mode === 'order'){
           var r = el('pp-ret') ? el('pp-ret').value : '';
-          if (r){ card.returnDateFinal = r; if (!card.returnDate) card.returnDate = r; }
+          /* 🔴 v1.65.0（ゆうた確定）ここで入れるのは **B＝お客様への約束**であって、確定返車日（C）ではない。
+             売上の見込み（今月に入るか）には使うが、**返車カレンダーには使わない**。
+             カレンダーは完TELを通したときの確定日（C）だけで動く。 */
+          if (r) card.returnDatePlan = r;
           var _hl = el('pp-headlight'); if (_hl) card.headlight = _hl.checked;
           var _co = el('pp-coatingok'); if (_co) card.coatingOK = _co.checked;
           var _sr = el('pp-salesreq');  if (_sr) card.salesReq  = _sr.checked;

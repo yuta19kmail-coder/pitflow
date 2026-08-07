@@ -387,7 +387,10 @@ window.pitReserveDayPopup = function(dateStr, mode){
   /* v1.33.0 物差しは state.js に一本化（ショートカットの時間もここで解決される） */
   const _min = function(t){ return window.pitTimeMin ? pitTimeMin(t) : 99999; };
   const cards = state.cards.filter(function(c){
-    if (mode === 'return') return c.returnDate === dateStr && c.status !== 'returned' && c.status !== 'scrap';
+    /* 🔴 v1.65.0 セル本体と同じ物差し（pitReturnListDate）で拾う。
+          ここが違うと「セルは1件なのに開くと3件」になる（実際にそうなっていた）。 */
+    if (mode === 'return') return window.pitReturnListDate ? (pitReturnListDate(c) === dateStr)
+                                                           : (c.returnDate === dateStr && c.status !== 'returned' && c.status !== 'scrap');
     return c.reserveDate === dateStr && c.status === 'reserved';
   }).sort(function(a, b){
     return _min(mode === 'return' ? (a.returnTime || a.reserveTime) : a.reserveTime) - _min(mode === 'return' ? (b.returnTime || b.reserveTime) : b.reserveTime);

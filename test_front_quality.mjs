@@ -230,7 +230,7 @@ console.log('\n── ⚡ クイック受注：入れた値がどう入るか �
     PitPhasePopup.close(true);
     const c = state.cards.find(x => x.id === 'QK');
     return { order: c.amountOrder, quote: c.amountQuote, final: c.amountFinal,
-             returnDate: c.returnDate, returnDateFinal: c.returnDateFinal,
+             plan: c.returnDatePlan, returnDate: c.returnDate, returnDateFinal: c.returnDateFinal,
              status: c.status, committed: window._qkCommitted(),
              flow: (c.log || []).map(e => e.label || (e.type + ':' + e.to)) };
   });
@@ -238,7 +238,8 @@ console.log('\n── ⚡ クイック受注：入れた値がどう入るか �
   ok('🔴 受注金額が入る', after.order === 8800, after);
   ok('🔴 見積金額も同じ額で入る（見積＝受注の扱い）', after.quote === 8800, after);
   ok('確定金額はまだ入れない（完TELで入れる）', after.final == null, after);
-  ok('🔴 返車予定日が当日で入る', after.returnDate === W.today && after.returnDateFinal === W.today, after);
+  /* 🔴 v1.65.0 ここで入るのは **B＝返車予定日（約束）**。確定返車日（C）は完TELで入る。 */
+  ok('🔴 返車予定日（予定＝B）が当日で入る', after.plan === W.today && !after.returnDate, after);
   ok('フローに「クイック受注」と残る', after.flow.some(x => /クイック受注/.test(String(x))), after.flow);
 
   /* 打ち直した日付が効くこと */
@@ -250,9 +251,9 @@ console.log('\n── ⚡ クイック受注：入れた値がどう入るか �
     document.getElementById('pp-amt').value = '12,000';
     document.getElementById('pp-ret').value = '2026-12-24';
     PitPhasePopup.close(true);
-    return { order: c.amountOrder, quote: c.amountQuote, rd: c.returnDate, st: c.status };
+    return { order: c.amountOrder, quote: c.amountQuote, rd: c.returnDatePlan, st: c.status };
   });
-  ok('日付を打ち直したらその日が入る', other.rd === '2026-12-24' && other.order === 12000 && other.quote === 12000, other);
+  ok('日付を打ち直したらその日が予定（B）に入る', other.rd === '2026-12-24' && other.order === 12000 && other.quote === 12000, other);
 
   /* キャンセルしたら何も入らない・動かない */
   const cancel = await p.evaluate(() => {
@@ -262,7 +263,7 @@ console.log('\n── ⚡ クイック受注：入れた値がどう入るか �
     PitPhasePopup.maybeIntercept(c, 'check', 'work', function(){ c.status = 'work'; });
     document.getElementById('pp-amt').value = '99,999';
     PitPhasePopup.close(false);
-    return { order: c.amountOrder, quote: c.amountQuote, rd: c.returnDate, st: c.status };
+    return { order: c.amountOrder, quote: c.amountQuote, rd: c.returnDatePlan, st: c.status };
   });
   ok('キャンセルしたら金額も日付も入らず、工程も動かない', cancel.order == null && cancel.quote == null && !cancel.rd && cancel.st === 'check', cancel);
 }

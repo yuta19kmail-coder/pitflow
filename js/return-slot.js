@@ -29,6 +29,127 @@
 
   function _esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
 
+  /* ===============================================================
+     ⓪ 返車日の3段チェーン（v1.65.0・ゆうた指定）  A → B → C
+     ---------------------------------------------------------------
+     🔴 **今回の根本原因＝「返車予定日」という1つの欄に、意味の違う3つの日付を詰め込んでいた。**
+
+     | | 名前 | いつ決まるか | 誰が入れるか | 時間 |
+     |---|---|---|---|---|
+     | **A** | 概算返車日 | 予約を取った時点 | **自動**（入庫日＋概算預かり日数） | なし |
+     | **B** | 返車予定日 | 受注完了（連絡中→パーツ待ち） | 人が入れる＝お客様への**約束** | なし |
+     | **C** | 確定返車日 | 完TELのとき | 人が入れる＝**確定** | **あり** |
+
+     ◎どこが何を見るか（ゆうた確定 2026-08-07）
+       ・返車カレンダー／当日ビュー … **C だけ**（＋待・当は入庫日で自動＝下の②）
+       ・売上の見込み（今月に入るか） … **C → B → A** の順に見る
+       ・売上の実績 … 実績カウント日（`completedAt`／sales-count.js）
+       ・返車時間は **C にしか付かない**
+
+     ◎保存の形
+       ・**A は持たない。毎回計算する。**（入庫日も預かり日数も既にあるので、写しを作ると必ず食い違う）
+       ・**B ＝ `returnDatePlan`**（v1.65.0 で新設）
+       ・**C ＝ `returnDate`**（従来どおり。返車カレンダーはこれを見ているので作りは変わらない）
+     ⚠ **旧データの吸収**：v1.65.0 より前は、盤面にいる車の `returnDate` に「受注時の約束」が入っていた。
+        それは **B とみなして読む**（データは書き換えない＝移行スクリプトを走らせない）。
+   =============================================================== */
+
+  /* 受付タイプに「待」か「当」が付いているか（2つ選択にも対応）。
+     🔴 この2つは**入庫日にそのまま返る**ので、完TEL関門を通らなくても返車の一覧に出す（ゆうた指定）。
+     ⚠ 駐車場の占有判定（pitDropEffective＝預>当>待）とは考え方が違う。あちらは「いちばん重い方」、
+        こちらは「1つでも付いていれば当日返しがあり得る」。取りこぼさない側に倒す。 */
+  function pitDropIsSameDay(c){
+    if (!c) return false;
+    return [c.dropType, c.dropType2].some(function(t){ return t === 'wait' || t === 'sameDay'; });
+  }
+
+  function _pad(n){ return (n < 10 ? '0' : '') + n; }
+  function _ymd(d){ return d.getFullYear() + '-' + _pad(d.getMonth()+1) + '-' + _pad(d.getDate()); }
+  function _today(){ var t = new Date(); t.setHours(0,0,0,0); return _ymd(t); }
+  function _addDays(str, n){
+    var p = String(str||'').split('-'); if (p.length !== 3) return '';
+    var d = new Date(+p[0], (+p[1])-1, +p[2]); if (isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() + n); return _ymd(d);
+  }
+
+  /* A＝概算返車日（入庫日＋概算預かり日数）。持たずに毎回計算する。 */
+  function pitReturnA(c){
+    if (!c || !c.reserveDate) return '';
+    var hold = 5;
+    if (window.pitSalesHoldOf) hold = +pitSalesHoldOf(c) || 0;
+    else if (c.estHoldDays != null && c.estHoldDays !== '') hold = +c.estHoldDays || 0;
+    else if (window.pitEstHold) { try { hold = +pitEstHold(c.workType, c.dropType, window.pitTeamKey?pitTeamKey(c):'default') || 0; } catch(e){} }
+    return _addDays(c.reserveDate, Math.max(0, hold));
+  }
+
+  /* B＝返車予定日（受注のときにお客様へ伝えた約束の日） */
+  function pitReturnB(c){
+    if (!c) return '';
+    if (c.returnDatePlan) return String(c.returnDatePlan);
+    /* 旧データの吸収：まだ盤面にいて（完TEL前）、待・当でもない車の日付は「約束」だった */
+    if (!c.returnStage && !pitDropIsSameDay(c) && c.returnDate) return String(c.returnDate);
+    return '';
+  }
+
+  /* C＝確定返車日
+     ・完TELを通った車（returnStage あり）＝その日付が確定
+     ・待・当の車＝完TEL前でも確定日を持てる（「やっぱり明日取りに行くわ」に対応・ゆうた指定） */
+  function pitReturnC(c){
+    if (!c) return '';
+    if (c.returnStage) return String(c.returnDate || '');
+    if (pitDropIsSameDay(c)) return String(c.returnDate || '');
+    return '';
+  }
+
+  function pitReturnDates(c){ return { a: pitReturnA(c), b: pitReturnB(c), c: pitReturnC(c) }; }
+
+  /* ---------------------------------------------------------------
+     ⓪-2 「返車の一覧に、どの日で出すか」＝ここ1本で決める
+     🔴 返車カレンダー・当日ビュー・ダッシュボード・新規予約の右パネルは、**全部これを呼ぶだけ**。
+        「returnDate が…かつ returnStage が…」と条件を書き写さないこと。
+
+     ・C が入っていれば → その日
+     ・待・当で C がまだ → **入庫日**。ただし **その日にならないと出さない**（ゆうた指定：入庫前は出さない）
+     ・預かりで完TEL前 → **出さない**（盤面で入れた日付はあくまで約束＝B なので、カレンダーには使わない）
+     --------------------------------------------------------------- */
+  function pitReturnListDate(c, todayStr){
+    if (!c || c.status === 'returned' || c.status === 'scrap' || c.status === 'cancelled') return '';
+    var C = pitReturnC(c);
+    if (C) return C;
+    if (pitDropIsSameDay(c) && c.reserveDate){
+      var td = todayStr || _today();
+      if (String(c.reserveDate) <= td) return String(c.reserveDate);   /* その日になったら自動で入る */
+    }
+    return '';
+  }
+
+  /* 並び順の分（時刻）。返車時間は C にしか付かないので、無い車は**最後尾（終日）**へ回す。
+     ⚠ 入庫時刻で代用しないこと（ゆうた指定「終日予定で最後尾。C が入った段階で並び替える」）。 */
+  function pitReturnSortMin(c){
+    var t = c && c.returnTime;
+    if (!t) return Infinity;
+    var m = window.pitTimeMin ? pitTimeMin(t) : null;
+    return (m == null || m >= 99999) ? Infinity : m;
+  }
+  /* 「終日」＝**完TEL前の待ち・当日返し**で、まだ返車時間が決まっていない車。
+     🔴 完TEL済で時間だけ未定の車は「終日」ではなく **「時刻未定」**（意味が違うので混ぜない）。
+        ・時刻未定 … 日は決まった（完TEL済）が、時間がまだ
+        ・終日     … 入庫日に返るのは決まっているが、そもそも確定返車日をまだ持っていない */
+  function pitReturnAllDay(c){
+    if (!c) return false;
+    if (pitReturnSortMin(c) !== Infinity) return false;   // 時間があるなら終日ではない
+    return !c.returnStage && pitDropIsSameDay(c);
+  }
+
+  window.pitDropIsSameDay  = pitDropIsSameDay;
+  window.pitReturnA        = pitReturnA;
+  window.pitReturnB        = pitReturnB;
+  window.pitReturnC        = pitReturnC;
+  window.pitReturnDates    = pitReturnDates;
+  window.pitReturnListDate = pitReturnListDate;
+  window.pitReturnSortMin  = pitReturnSortMin;
+  window.pitReturnAllDay   = pitReturnAllDay;
+
   /* ---------------------------------------------------------------
      ① 行き先の物差し
      --------------------------------------------------------------- */
@@ -66,7 +187,11 @@
     if (date !== undefined){
       c.returnDate = date || '';
       if (c.returnDate){
-        c.returnStage = 'returnWait';
+        /* 🔴 日付が入った＝完TEL済とみなして返車待ちへ上げる（v1.60.0）。
+           ⚠ v1.65.0 例外＝**待・当の車**。完TEL前でも確定日を持てる決まり（「やっぱり明日取りに行くわ」）なので、
+              まだ盤面にいる（returnStage が無い）うちは、日付を入れただけで完TEL済にしない。
+              勝手に完TEL済にすると、作業が終わっていないのに盤面から消える。 */
+        if (c.returnStage || !pitDropIsSameDay(c)) c.returnStage = 'returnWait';
         c.returnDateFinal = c.returnDate;
       }
     }

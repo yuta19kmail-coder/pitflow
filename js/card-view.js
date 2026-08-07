@@ -313,6 +313,23 @@
       const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
       return arrow + '<span class="cv-aseg'+(k[0]===curKind?' cur':'')+'"><span class="cv-alb">'+k[1]+'</span><span class="cv-aval" id="cv-chv-'+k[0]+'">'+moneyStr(c[k[2]])+'</span></span>';
     }).join('');
+    /* 📅 v1.65.0（ゆうた指定）返車日＝概算→予定→確定 を1行チェーン表示（金額と同じ形・表示のみ）。
+       ⚠ **印刷するカルテ表紙は触っていない**（予約が入った時点で刷るので、予定・確定の頃には刷り直さない）。
+       物差しは return-slot.js の `pitReturnDates` 1本。ここで日付を組み立てないこと。 */
+    const RD = window.pitReturnDates ? pitReturnDates(c) : { a:'', b:'', c:'' };
+    const RKINDS = [
+      ['a','概算', RD.a, '入庫日＋概算 預かり日数（自動）'],
+      ['b','予定', RD.b, '受注のときにお客様へ伝えた返車予定日'],
+      ['c','確定', RD.c, '完TELのときに決まった確定返車日（返車カレンダーはこれで動く）']
+    ];
+    const curD = RD.c ? 'c' : (RD.b ? 'b' : 'a');
+    const dstr = function(v){ return v ? (window.fmtMD ? fmtMD(v) : v) : '—'; };
+    let dchain = RKINDS.map(function(k, i){
+      const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
+      return arrow + '<span class="cv-aseg'+(k[0]===curD?' cur':'')+'" title="'+esc(k[3])+'"><span class="cv-alb">'+k[1]+'</span><span class="cv-aval">'+dstr(k[2])+'</span></span>';
+    }).join('');
+    if (RD.c && c.returnTime) dchain += '<span class="cv-dtime"><i data-ic=clock data-ics=14></i> '+esc(c.returnTime)+'</span>';
+
     // 🤝 外注欄（status==='outsource' のとき自動追加：どこに出しているか／メモ／完了予定日＝戻りの日数）
     let osSec = '';
     if (c.status === 'outsource'){
@@ -340,7 +357,8 @@
         + '<input class="cv-fixinput" type="date" value="'+esc(c.outsourceDue||'')+'" onchange="cvOutDue(this.value)"></div></div>';
       osSec += '</div>';
     }
-    let h = osSec + '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>';
+    let h = osSec + '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>'
+          + '<div class="cv-amchain cv-dchain">'+dchain+'</div>';
     // 今のフェーズの金額だけ、返車予定と同じサイズの入力欄を出す（概算は自動なので入力なし）
     if (curKind && curKind !== 'est'){
       const cv = c[KIND_FIELD[curKind]];

@@ -882,7 +882,8 @@ function _cfsDayListHtml(c){
   const live = function (x){ return x.status !== 'returned' && x.status !== 'scrap' && x.status !== 'canceled'; };
   /* v1.17.0：他の人が書きかけの下書き（_draft）は、この一覧にも出さない */
   const intake = (state.cards||[]).filter(function(x){ return x && !x._draft && x.id!==me && x.reserveDate===ds && live(x); });
-  const ret    = (state.cards||[]).filter(function(x){ return x && !x._draft && x.id!==me && x.returnDate===ds && live(x); });
+  /* 🔴 v1.65.0 返車の日は return-slot.js の物差し1本から取る */
+  const ret    = (state.cards||[]).filter(function(x){ return x && !x._draft && x.id!==me && live(x) && (window.pitReturnListDate ? pitReturnListDate(x)===ds : x.returnDate===ds); });
   const BRK = [{from:'12:00',to:'13:00'},{from:'15:30',to:'16:30'}];
   function evHtml(x, t){
     const imp = (x.boardId==='import');

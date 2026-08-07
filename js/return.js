@@ -1,7 +1,14 @@
 /* ========================================
    return.js
    返車ビュー（当日／週／月／2ヶ月）
-   ※ reserve.js のミラー実装。フィルタは returnDate で行う
+   ----------------------------------------
+   🔴 v1.65.0（ゆうた確定）**「どの日に出すか」は return-slot.js の `pitReturnListDate()` 1本で決める。**
+      ここに「returnDate が…かつ returnStage が…」と条件を書き写さないこと。
+      ・完TELを通った車 … 確定返車日（C）の日
+      ・待・当の車       … **入庫日**。ただし**その日にならないと出さない**（入庫前は出さない）
+      ・預かりで完TEL前  … 出さない（盤面で入れた日付は「約束」＝B なのでカレンダーには使わない）
+   🔴 並び順も1本（`pitReturnSortMin`）。**返車時間は確定返車日にしか付かない**ので、
+      時間がまだ無い車は「終日」として**いちばん後ろ**に置く（入庫時刻で代用しない）。
    ======================================== */
 
 function renderReturn(){
@@ -55,9 +62,7 @@ function renderReturnDay(){
     slots.push(String(h).padStart(2,'0') + ':00');
   }
 
-  const todays = state.cards.filter(c =>
-    c.returnDate === dateStr && c.status !== 'returned' && c.returnStage === 'returnWait'
-  );
+  const todays = state.cards.filter(c => pitReturnListDate(c) === dateStr);
 
   let html = '';
   html += PitCal.noticeHtml();
@@ -72,9 +77,9 @@ function renderReturnDay(){
   if (todays.length === 0){
     html += '<div style="text-align:center;color:var(--text3);padding:30px;">本日の返車予定はありません</div>';
   } else {
-    const tkey = c => (c.returnTime || c.reserveTime || '');
-    /* v1.34.0 枠分けは共通の物差しへ（ショートカット・枠の外の時刻もちゃんと入る） */
-    const _hourOf = c => pitTimeHour(tkey(c), 9, 18);
+    /* 🔴 v1.65.0 返車時間だけで枠に入れる。**入庫時刻で代用しない**（終日は最後尾へ）。 */
+    const _hourOf = c => (window.pitReturnAllDay && pitReturnAllDay(c)) ? null : pitTimeHour(c.returnTime || '', 9, 18);
+    const _allDay = c => (window.pitReturnAllDay ? pitReturnAllDay(c) : !c.returnTime);
     slots.forEach(time => {
       const hh = time.slice(0,2);
       const inSlot = todays.filter(c => _hourOf(c) === hh);
@@ -88,11 +93,19 @@ function renderReturnDay(){
       }
       html += '</div></div>';
     });
-    // 時刻未定のカードを末尾に（ここへドロップで時刻を未定に戻せる）
-    const noTime = todays.filter(c => _hourOf(c) === null);   /* v1.34.0 */
+    /* 時刻未定＝完TEL済で日は決まったが時間がまだ（ここへドロップで時刻を未定に戻せる） */
+    const noTime = todays.filter(c => _hourOf(c) === null && !_allDay(c));   /* v1.34.0 */
     if (noTime.length > 0){
       html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
       html += noTime.map(c => cardHtml(c, { compact: true })).join('');
+      html += '</div></div>';
+    }
+    /* 🔴 v1.65.0 終日＝待ち・当日返しで、まだ返車時間が決まっていない車（ゆうた指定）。
+       いちばん後ろに置き、確定返車日＋時間が入った段階で上の枠へ並び替わる。 */
+    const allDay = todays.filter(c => _allDay(c));
+    if (allDay.length > 0){
+      html += '<div class="reserve-slot rs-allday"><div class="reserve-slot-time">終日<small>待ち・当日返し</small></div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
+      html += allDay.map(c => cardHtml(c, { compact: true })).join('');
       html += '</div></div>';
     }
   }
@@ -120,7 +133,7 @@ function renderReturnWeek(){
     const isClosed = PitCal.isClosed(dStr);
     const calNote = PitCal.label(dStr);
     const cnt = state.cards.filter(c =>
-      c.returnDate === dStr && c.status !== 'returned' && c.returnStage === 'returnWait'
+      pitReturnListDate(c) === dStr
     ).length;
     const hol = (window.Holidays && Holidays.name(dStr)) || null;
     html += '<div class="reserve-week-head' + (isToday ? ' today' : '') + (isClosed ? ' closed' : '') + (hol ? ' holiday' : '') + '">';
@@ -139,9 +152,9 @@ function renderReturnWeek(){
       const dStr = ymd(d);
       const isClosed = PitCal.isClosed(dStr);
       const inCell = state.cards.filter(c =>
-        c.returnDate === dStr &&
-        pitTimeHour(c.returnTime || c.reserveTime, 9, 18) === hh &&   /* v1.34.0 */
-        c.status !== 'returned' && c.returnStage === 'returnWait'
+        pitReturnListDate(c) === dStr &&
+        !(window.pitReturnAllDay && pitReturnAllDay(c)) &&
+        pitTimeHour(c.returnTime || '', 9, 18) === hh   /* v1.65.0 返車時間だけで見る */
       );
       html += '<div class="reserve-week-cell' + (isClosed ? ' closed' : '') + '" data-drop="returnDateTime" data-drop-val="' + dStr + '|' + hh + ':00">';
       inCell.forEach(c => { html += (window.weekMiniCard ? weekMiniCard(c, hh, true) : ''); });
@@ -151,8 +164,8 @@ function renderReturnWeek(){
   /* 🔴 v1.34.0 時刻未定の行（返車側も同じ）。枠に入らないカードを消さない。 */
   {
     const tbd = days.map(d => state.cards.filter(c =>
-      c.returnDate === ymd(d) && c.status !== 'returned' && c.returnStage === 'returnWait' &&
-      pitTimeHour(c.returnTime || c.reserveTime, 9, 18) === null));
+      pitReturnListDate(c) === ymd(d) &&
+      pitTimeHour(c.returnTime || '', 9, 18) === null));
     if (tbd.some(a => a.length)){
       html += '<div class="reserve-week-cell reserve-week-time rwk-tbd-h">時刻未定</div>';
       days.forEach((d, i) => {
@@ -211,7 +224,7 @@ function _rmlRowsReturn(from, to){
     const calNote = PitCal.label(ds);
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
-      .filter(c => c.returnDate === ds && c.status !== 'returned' && c.returnStage === 'returnWait')
+      .filter(c => pitReturnListDate(c) === ds)
       /* v1.33.0 ショートカットも正しく並ぶよう共通の物差しで */
       .sort((a, b) => pitTimeMin(a.returnTime || a.reserveTime) - pitTimeMin(b.returnTime || b.reserveTime));
 
@@ -302,9 +315,7 @@ function monthGridCellsReturn(refDate){
     if (dow === 0) dowClass = ' sun';
     if (dow === 6) dowClass = ' sat';
 
-    const cardsOfDay = state.cards.filter(c =>
-      c.returnDate === dateStr && c.status !== 'returned' && c.returnStage === 'returnWait'
-    );
+    const cardsOfDay = state.cards.filter(c => pitReturnListDate(c) === dateStr);
 
     const visible = cardsOfDay.slice(0, 3);
     const remaining = cardsOfDay.length - visible.length;

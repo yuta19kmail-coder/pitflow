@@ -34,6 +34,8 @@
   /* 🔴 v1.61.0 「売上をどの日に数えるか」は物差し1本（js/sales-count.js）から取る。**写しを作らない**
         実績＝実績カウント日（completedAt）／まだ返していない車＝返車予定日 */
   function mdCountDate(c) { return window.pitSalesCountDate ? pitSalesCountDate(c) : String((c && (c.completedAt || c.returnDateFinal || c.returnDate)) || ''); }
+  /* 🔴 v1.65.0 「返車の一覧にどの日で出すか」は return-slot.js の物差し1本。ここで条件を書き写さない。 */
+  function mdRetDate(c) { return window.pitReturnListDate ? pitReturnListDate(c) : ((c && c.status !== 'returned' && c.status !== 'scrap') ? (c.returnDate || '') : ''); }
   function yen(n) { return '¥' + (Math.round(+n || 0)).toLocaleString('ja-JP'); }
   function man(n) { n = Math.round(+n || 0); if (Math.abs(n) >= 10000) return (Math.round(n / 1000) / 10) + '万'; return n.toLocaleString('ja-JP'); }
   function manUnit(n) { return Math.abs(Math.round(+n || 0)) >= 10000 ? '万' : '円'; }
@@ -259,10 +261,9 @@
     returnout: {
       title: '今日の返車', icon: '📤', jump: 'return', sizes: ['s', 'm', 'l'],
       body: function (sz) {
-        var list = C.cards.filter(function (c) { return c.returnDate === C.tStr && c.status !== 'scrap'; });
-        var done = list.filter(function (c) { return c.status === 'returned'; }).length;
-        if (sz === 's') return kpi(list.length, '台', '返車済 ' + done + '台', 'b');
-        var pend = list.filter(function (c) { return c.status !== 'returned'; });
+        var pend = C.cards.filter(function (c) { return mdRetDate(c) === C.tStr; });
+        var done = C.cards.filter(function (c) { return c.status === 'returned' && (c.completedAt === C.tStr || c.returnDate === C.tStr); }).length;
+        if (sz === 's') return kpi(pend.length + done, '台', '返車済 ' + done + '台', 'b');
         if (!pend.length) return empty('本日の返車待ちはありません');
         return '<div class="md-list">' + pend.slice(0, 8).map(function (c) { return rowCard(c.id, (c.returnTime ? '<b>' + esc(c.returnTime) + '</b> ' : '') + esc(nm(c)) + ' ' + esc(carOf(c)), wtChip(c)); }).join('') + '</div>' + (sz === 'l' ? openFoot('return', '返車') : '');
       },
@@ -503,7 +504,7 @@
       title: '返車予定', icon: '📤', person: true, sizes: ['s', 'm', 'l'],
       body: function (sz, item) {
         var ns = targetNames(item);
-        var list = C.cards.filter(function (c) { return inTarget(taskStaff(c), ns) && c.status !== 'returned' && c.status !== 'scrap' && c.returnDate && c.returnDate >= C.tStr; }).sort(function (a, b) { return a.returnDate === b.returnDate ? (pitTimeMin(a.returnTime) - pitTimeMin(b.returnTime)) : (a.returnDate < b.returnDate ? -1 : 1); });   /* v1.33.0 */
+        var list = C.cards.filter(function (c) { var d = mdRetDate(c); return inTarget(taskStaff(c), ns) && d && d >= C.tStr; }).sort(function (a, b) { var da = mdRetDate(a), db = mdRetDate(b); return da === db ? ((window.pitReturnSortMin ? pitReturnSortMin(a) : 0) - (window.pitReturnSortMin ? pitReturnSortMin(b) : 0)) : (da < db ? -1 : 1); });   /* v1.65.0 物差し1本 */
         if (sz === 's') return kpi(list.length, '件', '担当の返車予定', 'b');
         if (!list.length) return empty('担当の返車予定はありません');
         return '<div class="md-list">' + list.slice(0, sz === 'l' ? 12 : 6).map(function (c) { return rowCard(c.id, esc((window.fmtMD ? fmtMD(c.returnDate) : c.returnDate)) + (c.returnTime ? ' ' + esc(c.returnTime) : '') + '　' + esc(nm(c)) + ' ' + esc(carOf(c)), wtChip(c)); }).join('') + '</div>';

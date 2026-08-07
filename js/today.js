@@ -72,18 +72,23 @@ function renderToday(){
   const intake = state.cards
     .filter(c => c.reserveDate === dayStr && c.status === 'reserved')
     .sort((a,b) => _todMin(a.reserveTime) - _todMin(b.reserveTime));
-  // 返車リスト＝今日返車予定でまだ返していない。返車済みにすると実績へ移りここから消える
+  /* 返車リスト＝今日返車予定でまだ返していない。返車済みにすると実績へ移りここから消える
+     🔴 v1.65.0 「どの日に出すか」は return-slot.js の pitReturnListDate 1本。ここで条件を書き写さない。
+     🔴 並び順も1本。返車時間が無い車（待ち・当日返しで完TEL前）は**終日＝最後尾**（入庫時刻で代用しない）。 */
+  const _rmin = c => (window.pitReturnSortMin ? pitReturnSortMin(c) : _todMin(c.returnTime));
   const returns = state.cards
-    .filter(c => c.returnDate === dayStr && c.status !== 'returned' && c.status !== 'scrap')
-    .sort((a,b) => _todMin(a.returnTime || a.reserveTime) - _todMin(b.returnTime || b.reserveTime));
+    .filter(c => (window.pitReturnListDate ? pitReturnListDate(c) === dayStr
+                                           : (c.returnDate === dayStr && c.status !== 'returned' && c.status !== 'scrap')))
+    .sort((a,b) => _rmin(a) - _rmin(b));
 
   // 入庫：今日の予約総数（返車済み含む）を固定表示。残＝まだ来ていない（status=reserved）
   const intakeTotal = state.cards.filter(c => c.reserveDate === dayStr && c.status !== 'scrap').length;
   const inLeft  = state.cards.filter(c => c.reserveDate === dayStr && c.status === 'reserved').length;
   const inMoved = intakeTotal - inLeft;   // すでに入った台数（1台でも動けば残を表示）
   // 返車：今日の返車総数を固定。残＝まだ返してない
-  const returnTotal = state.cards.filter(c => c.returnDate === dayStr && c.status !== 'scrap').length;
-  const returnDone  = state.cards.filter(c => c.returnDate === dayStr && c.status === 'returned').length;
+  const _retDone = c => c.status === 'returned' && (c.completedAt === dayStr || c.returnDate === dayStr);
+  const returnDone  = state.cards.filter(_retDone).length;
+  const returnTotal = returns.length + returnDone;
   const outLeft = returnTotal - returnDone;
   const outMoved = returnDone;
 
@@ -215,7 +220,21 @@ window.pitTodaySaveDt = function(id, isReturn){
   if (!c) return;
   const d = (document.getElementById('ta-dt-d') || {}).value || '';
   const t = (document.getElementById('ta-dt-t') || {}).value || '';
-  if (isReturn){ c.returnDate = d; c.returnTime = t; }
+  if (isReturn){
+    /* 🔴 v1.65.0 返車の日時は return-slot.js の唯一の入口（pitReturnSetDateTime）を通す。
+       ここで直に書いていたので、行き先の再判定も画面の描き直しもお知らせも出ていなかった
+       （v1.60.0「入れたのに移動しない」と同じ形が、ここだけ残っていた）。
+       ⚠ ここで入れるのは **C＝確定返車日**。待ち・当日返しの「やっぱり明日取りに行くわ」もここで動く。 */
+    if (window.pitReturnSetDateTime){
+      var res = pitReturnSetDateTime(c, d, t);
+      pitTodayActionClose();
+      if (window.pitReturnCommit) pitReturnCommit(c, res, { silent: true });
+      renderToday();
+      if (window.pitToast) pitToast('返車の日時を変更しました' + (res && res.moved && window.pitReturnPlaceLabel && res.after ? '（' + pitReturnPlaceLabel(res.after) + 'へ）' : ''));
+      return;
+    }
+    c.returnDate = d; c.returnTime = t;
+  }
   else { c.reserveDate = d; c.reserveTime = t; if (d) c.intakeTbd = false; }
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
@@ -229,8 +248,10 @@ window.pitTodayCancel = function(id, isReturn){
   if (!c) return;
   if (isReturn){
     if (!confirm('返車予定をキャンセルして「返車・未定」へ戻しますか？')) return;
-    c.returnTbd = true;
-    c.returnDate = '';
+    /* 🔴 v1.65.0 `returnTbd` は v1.60.0 で廃止した旧フラグ。日付を空にすれば「返車日未定」に戻る。
+       書き込みは唯一の入口（pitReturnSetDateTime）を通す。 */
+    if (window.pitReturnSetDateTime) pitReturnSetDateTime(c, '', '');
+    else { c.returnDate = ''; c.returnTime = ''; }
     if (window.logFlow) logFlow(c, '返車予定キャンセル（未定へ）');
   } else {
     if (!confirm('この入庫予約をキャンセルしますか？\n「未入庫」リストに残り、1ヶ月後に自動でアーカイブされます。')) return;

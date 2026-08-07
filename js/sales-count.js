@@ -59,15 +59,23 @@
     return 5;
   }
 
-  /* ===== ①その車の金額を「いつ」数えるか ===== */
+  /* ===== ①その車の金額を「いつ」数えるか =====
+     🔴 v1.65.0（ゆうた確定）返車日は**3段のチェーン**になった（return-slot.js）。
+        まだ返していない車は **C（確定返車日）→ B（受注時の約束）→ A（概算＝入庫日＋預かり日数）** の順に見る。
+        ゆうた指定「予定で月内に入るか入らないかは B を見る」＋ 完TEL済なら C のほうが確かなので C を先に。
+     ⚠ ここで日付を組み立てないこと。**物差しは return-slot.js の 1本**。 */
   function pitSalesCountDate(c){
     if (!c) return '';
     /* 実績＝実績カウント日が正。返車日は予備（v1.57.0 で completedAt が売上の基準になった） */
     if (c.status === 'returned') return s(c.completedAt) || s(c.returnDateFinal) || s(c.returnDate);
-    /* 進行中・予約＝返車予定日 */
+    if (window.pitReturnDates){
+      var d = pitReturnDates(c);
+      return s(d.c) || s(d.b) || s(d.a);
+    }
+    /* 部品が無い時の保険（読み込み順が崩れた場合） */
+    if (s(c.returnDatePlan)) return s(c.returnDatePlan);
     if (s(c.returnDate)) return s(c.returnDate);
-    /* 返車予定日が無い予約は、入庫予定日＋概算 預かり日数で着地の目安を出す */
-    if (c.status === 'reserved' && s(c.reserveDate)) return addStr(s(c.reserveDate), holdOf(c));
+    if (s(c.reserveDate)) return addStr(s(c.reserveDate), holdOf(c));
     return '';   /* ＝未定 */
   }
 

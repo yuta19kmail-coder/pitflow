@@ -412,3 +412,8 @@ input.cv-fixinput[type=date]{ color-scheme:dark; }
   color:#a5b4fc; background:rgba(124,140,248,.14); border:1px solid rgba(124,140,248,.45); border-radius:8px; padding:5px 11px; }
 .cf-pv-hint{ font-size:11px; line-height:1.6; color:var(--text3); }
 .cf-pv-hint b{ color:var(--text2); }
+
+/* ===== v1.65.0 返車日の3段チェーン（概算→予定→確定）。金額チェーンの真下に置く ===== */
+.cv-dchain{ margin-top:6px; }
+.cv-dchain .cv-aval{ font-variant-numeric:tabular-nums; }
+.cv-dtime{ margin-left:10px; font-size:12px; font-weight:700; color:var(--text2); display:inline-flex; align-items:center; gap:3px; }

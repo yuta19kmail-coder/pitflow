@@ -967,3 +967,7 @@ select.cf-input{
 @media (max-width:768px){
   .cf-row{flex-direction:column;align-items:stretch}
 }
+
+/* ===== v1.65.0 返車ビュー・当日の「終日」枠（待ち・当日返しで返車時間がまだ無い車） ===== */
+.reserve-slot.rs-allday .reserve-slot-time{ color:var(--text2); font-weight:800; }
+.reserve-slot.rs-allday .reserve-slot-time small{ display:block; font-size:9.5px; font-weight:600; color:var(--text3); margin-top:1px; }
