@@ -417,3 +417,10 @@ input.cv-fixinput[type=date]{ color-scheme:dark; }
 .cv-dchain{ margin-top:6px; }
 .cv-dchain .cv-aval{ font-variant-numeric:tabular-nums; }
 .cv-dtime{ margin-left:10px; font-size:12px; font-weight:700; color:var(--text2); display:inline-flex; align-items:center; gap:3px; }
+
+/* ===== v1.66.0 確定返車日まわり（返車日未定チェック／返車時間の入力ガイド） ===== */
+.cv-tbdchk{ display:inline-flex; align-items:center; gap:5px; margin-left:10px; font-size:11.5px; color:var(--text2); cursor:pointer; white-space:nowrap; }
+.cv-tbdchk input{ width:14px; height:14px; accent-color:var(--brand,#1f7a4d); cursor:pointer; }
+.cv-fixrow-time .cv-frb{ display:block; }
+.cv-timeslot{ display:block; max-width:340px; }
+.cv-timeslot .cf-time{ width:100%; }

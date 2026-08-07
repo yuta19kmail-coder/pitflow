@@ -230,6 +230,78 @@ console.log('\n── 📥 入れ口が正しい欄に書いているか ──'
   ok('その日付で返車カレンダーに移る', editDt.listDate === W.tomorrow, editDt);
 }
 
+console.log('\n── 🃏 カード詳細の確定返車日まわり（v1.66.0） ──');
+{
+  const mk = (id, x) => Object.assign({ id, resNo: 'R-' + id, customer: '山田', car: 'アクア', boardId: 'default',
+    division: 'div1', workType: 'oil', workTypes: ['oil'], dropType: 'drop' }, x);
+
+  /* ① 作業完了に入る前は、確定返車日（C）の欄そのものを出さない */
+  const before = await p.evaluate(([W, mkS]) => {
+    const mk = eval('(' + mkS + ')');
+    state.cards = [mk('CV1', { status: 'work', reserveDate: W.today, returnDatePlan: W.today })];
+    openDetail('CV1');
+    return {
+      date: !!document.getElementById('cv-retdate'),
+      tbd: !!document.getElementById('cv-rettbd'),
+      guide: !!document.querySelector('#cv-time-slot .cf-time'),
+      /* チェーン（概算→予定→確定）は出たまま＝進み具合は見える */
+      chain: !!document.querySelector('.cv-dchain')
+    };
+  }, [W, mk.toString()]);
+  ok('🔴 作業待ちでは確定返車日の欄を出さない', before.date === false && before.tbd === false && before.guide === false, before);
+  ok('チェーン（概算→予定→確定）は出たまま＝進み具合は見える', before.chain === true, before);
+
+  /* ② 作業完了に入ったら出る＋返車時間はショートカット付き */
+  const after = await p.evaluate(([W, mkS]) => {
+    const mk = eval('(' + mkS + ')');
+    state.cards = [mk('CV2', { status: 'workDone', returnStage: 'returnWait', reserveDate: W.today, returnDate: W.today, returnTime: '14:00' })];
+    openDetail('CV2');
+    return {
+      date: !!document.getElementById('cv-retdate'),
+      tbd: !!document.getElementById('cv-rettbd'),
+      guide: !!document.querySelector('#cv-time-slot .cf-time'),
+      picker: !!document.querySelector('#cv-time-slot .cf-time-pick'),
+      chips: [...document.querySelectorAll('#cv-time-slot .cf-time-quick .cf-chip')].map(x => x.textContent),
+      mainVal: (document.querySelector('#cv-time-slot .cf-time-main') || {}).value
+    };
+  }, [W, mk.toString()]);
+  ok('作業完了に入ったら確定返車日の欄が出る', after.date === true, after);
+  ok('🔴 返車時間に入力ガイド（打ち込み＋ピッカー＋ショートカット）が付いている', after.guide && after.picker, after);
+  ok('🔴 AM・PM などのショートカットが並ぶ', after.chips.includes('AM') && after.chips.includes('PM') && after.chips.includes('未定'), after.chips);
+  ok('返車のショートカットは9つ（予約の「鍵ポスト」ではなく「勝手に取る」が入る）',
+     after.chips.length === 9 && after.chips.includes('勝手に取る') && !after.chips.includes('鍵ポスト'), after.chips);
+  ok('いま入っている時間が枠に出ている', after.mainVal === '14:00', after);
+
+  /* ③ ショートカットを押すと返車時間が入る（＝行き先も動く） */
+  const chip = await p.evaluate(() => {
+    const btns = [...document.querySelectorAll('#cv-time-slot .cf-time-quick .cf-chip')];
+    const t = btns.find(x => x.textContent === '未定'); t.click();
+    const c = state.cards[0];
+    return { time: c.returnTime, place: pitReturnPlace(c) };
+  });
+  ok('🔴 ショートカットを押すと返車時間に入り、行き先も「返車時間未定」へ動く', chip.time === '未定' && chip.place === 'timeTbd', chip);
+
+  /* ④ 返車日未定のチェック */
+  const tbd = await p.evaluate(() => {
+    cvReturnDateTbd(true);
+    const c = state.cards[0];
+    return { date: c.returnDate, fin: c.returnDateFinal, place: pitReturnPlace(c),
+             disabled: (document.getElementById('cv-retdate') || {}).disabled,
+             checked: (document.getElementById('cv-rettbd') || {}).checked };
+  });
+  ok('🔴 「返車日未定」を入れると日付が空になり「返車日未定」へ動く', tbd.date === '' && tbd.place === 'dateTbd', tbd);
+  ok('チェック中は日付欄が触れない（入れ違いを防ぐ）', tbd.disabled === true && tbd.checked === true, tbd);
+
+  /* ⑤ 日付を入れ直したら返車カレンダーへ戻る（前は位置が動かなかった） */
+  const back = await p.evaluate(([W]) => {
+    cvSetReturn(W.tomorrow);
+    const c = state.cards[0];
+    return { date: c.returnDate, fin: c.returnDateFinal, place: pitReturnPlace(c), listDate: pitReturnListDate(c) };
+  }, [W]);
+  ok('🔴 確定返車日を直したら返車カレンダー上の位置も動く', back.date === W.tomorrow && back.listDate === W.tomorrow, back);
+  ok('確定返車日の控えも一緒に揃う', back.fin === W.tomorrow, back);
+}
+
 console.log('\n── 🧭 まわりが壊れていないか ──');
 {
   await p.evaluate(() => { state.cards = []; });

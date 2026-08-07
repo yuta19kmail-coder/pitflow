@@ -302,6 +302,10 @@
     return h;
   }
 
+  /* 🔴 v1.66.0 確定返車日（C）を出してよいか＝**作業完了に入ってから**（ゆうた指定）。
+     ここ1か所で決める。画面のあちこちで status を並べない。 */
+  function cvCanFixReturn(c){ return !!c && (c.status === 'workDone' || c.status === 'returned' || !!c.returnStage); }
+
   function coverTab(c){
     // 💰 金額＝概算→見積もり→受注→確定 を1行チェーン表示（全部 表示のみ）。
     const KINDS = [['est','概算','estAmount'],['quote','見積','amountQuote'],['order','受注','amountOrder'],['final','確定','amountFinal']];
@@ -403,13 +407,27 @@
         + '</span></div></div>';
       h += resultDateRow(c);
       h += '</div>';
-    } else {
+    } else if (cvCanFixReturn(c)){
+      /* 🔴 v1.66.0（ゆうた指定）**確定返車日（C）と返車時間は「作業完了」に入ってからしか出さない。**
+         C は完TELのときに決まる値なので、作業前に入力欄が見えていると先に入れられてしまう。
+         ⚠ 作業前の「お客様への約束」は B（返車予定日）＝受注完了のポップアップで入れる。上のチェーンに出ている。 */
+      const _tbd = !c.returnDate && !finRet;
       h += '<div class="cv-fixrow"><div class="cv-frt">確定 返車予定日／カレンダーで選択</div><div class="cv-frb">'
-        + '<span class="cv-plan">予定 '+(c.returnDate?fmtMD(c.returnDate):'—')+'</span><span class="cv-arr">→</span>'
-        + '<input class="cv-fixinput" type="date" value="'+esc(finRet)+'" onchange="cvSetReturn(this.value)"></div></div>';
-      // 返車時間（新規予約と同じスマート入力＝900/9時半/9:00-10:00 など）
-      h += '<div class="cv-fixrow"><div class="cv-frt">返車時間（例 900 / 9時半 / 9:00-10:00）</div><div class="cv-frb">'
-        + '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px"></div></div></div>';
+        + '<span class="cv-plan">予定 '+(window.pitReturnB && pitReturnB(c) ? fmtMD(pitReturnB(c)) : '—')+'</span><span class="cv-arr">→</span>'
+        + '<input class="cv-fixinput" id="cv-retdate" type="date" value="'+esc(finRet || c.returnDate || '')+'"'+(_tbd?' disabled':'')+' onchange="cvSetReturn(this.value)">'
+        /* 🔴 v1.66.0 返車日未定のチェック（完TELポップアップと同じ考え方＝**日付が空、それだけ**。新しい保存項目は増やさない） */
+        + '<label class="cv-tbdchk"><input type="checkbox" id="cv-rettbd"'+(_tbd?' checked':'')+' onchange="cvReturnDateTbd(this.checked)"> 返車日未定</label>'
+        + '</div></div>';
+      /* 返車時間＝**新規予約・完TELとまったく同じ入力ガイド**（打ち込み／ピッカー／ショートカット）。
+         🔴 中身は return-slot.js の共通部品。ここでHTMLを書き写さない（v1.60.0 の決めごと）。 */
+      h += '<div class="cv-fixrow cv-fixrow-time"><div class="cv-frt">返車時間</div><div class="cv-frb">'
+        + '<span class="cv-timeslot" id="cv-time-slot">'
+        + (window.pitTimeGuideHtml
+            ? pitTimeGuideHtml(c.returnTime || '', { list: window.PIT_RETURN_TIME_QUICK, cls: 'cv-timeguide' })
+            : '<input class="cv-fixinput" type="text" value="'+esc(c.returnTime||'')+'" placeholder="未定" onchange="cvReturnTime(this)" style="width:210px">')
+        + '</span></div></div></div>';
+    } else {
+      h += '</div>';
     }
     // 💳 入金（売掛）＝実績カードは確定売上金額・返車日と同じロック行テイストで表示（入金済＝🔒確定・入金待ち＝オレンジ）v0.122.0
     if (c.status === 'returned') h += paymentLockRow(c);
@@ -812,7 +830,16 @@
       + popsHtml(card)
       + '</div>';
     cvBuildCal();
+    cvBindTimeGuide();
   };
+
+  /* 返車時間の入力ガイドを配線（打ち込み／ピッカー／ショートカット）。
+     🔴 部品も配線も return-slot.js のものを借りる。ここで作らない。 */
+  function cvBindTimeGuide(){
+    const slot = document.getElementById('cv-time-slot'); if (!slot) return;
+    const wrap = slot.querySelector('.cf-time'); if (!wrap || !window.pitTimeGuideBind) return;
+    pitTimeGuideBind(wrap, { onCommit: function(v){ if (window.cvReturnTime) cvReturnTime(v); } });
+  }
 
   /* ===================================================================
      ✏ 予約を編集（v1.56.0・ゆうた指定）
@@ -946,8 +973,17 @@
       return;
     }
     const _before = _c ? (_c.completedAt || '（なし）') : '';
-    _c.returnDateFinal = v || null;
-    if(v && !_c.returnDate) _c.returnDate = v;
+    /* 🔴 v1.66.0 書き込みは return-slot.js の唯一の入口を通す。
+       ここは長いあいだ「returnDate が空のときだけ入れる」だったので、
+       **確定返車日を直しても返車カレンダー上の位置が動かなかった**（v1.60.0 と同じ形の取り残し）。 */
+    if (window.pitReturnSetDateTime){
+      var _res = pitReturnSetDateTime(_c, v || '', undefined);
+      _c.returnDateFinal = v || null;
+      if (window.pitReturnCommit && _c.status !== 'returned') pitReturnCommit(_c, _res, { silent: true });
+    } else {
+      _c.returnDateFinal = v || null;
+      if (v) _c.returnDate = v;
+    }
     // 実績（返車完了）カードで返車日を直したら、確定返車日＝実績カレンダーの表示日(completedAt)も合わせて動かす v0.118.1
     if(v && _c.status === 'returned'){
       _c.returnDate = v; _c.completedAt = v;
@@ -978,12 +1014,38 @@
     save(); cvRefreshBg();
     if(window.renderCardView) renderCardView(_c,'md-body-modal');
   };
+  /* 🔴 v1.66.0 返車日未定のチェック＝**日付を空にする、それだけ**（完TELポップアップと同じ決めごと）。
+     新しい保存項目は作らない。書き込みは return-slot.js の唯一の入口を通す。 */
+  window.cvReturnDateTbd = function(on){
+    if (!_c) return;
+    if (_c.status === 'returned' && !canEditResultDate()){
+      if (window.UI && UI.alert) UI.alert('実績になったカードの返車日を直せるのは、設定権限（管理）のある人だけです。', { title: '変更できません' });
+      if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+      return;
+    }
+    if (on){
+      if (window.pitReturnSetDateTime) pitReturnSetDateTime(_c, '', undefined);
+      else { _c.returnDate = ''; }
+      _c.returnDateFinal = null;
+      if (window.logFlow) logFlow(_c, '返車日を未定に戻した');
+    }
+    save(); cvRefreshBg();
+    if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+  };
+
   // 返車時間（スマート入力で正規化）／洗車備考／お礼LINE不要＝完TELポップアップと同じ項目（相互反映）
   window.cvReturnTime = function(input){
     var v = (input && typeof input === 'object') ? input.value : input;
     v = (window._normTime ? _normTime(v) : v) || '';
     if (input && typeof input === 'object') input.value = v;
-    _c.returnTime = v; save(); cvRefreshBg();
+    /* 🔴 v1.66.0 時間も唯一の入口を通す。「時刻未定 ⇄ 返車カレンダー」の行き来がここでも効くように。 */
+    if (window.pitReturnSetDateTime){
+      var res = pitReturnSetDateTime(_c, undefined, v);
+      if (window.pitReturnCommit && _c.status !== 'returned') pitReturnCommit(_c, res, { silent: true });
+    } else {
+      _c.returnTime = v;
+    }
+    save(); cvRefreshBg();
   };
   window.cvWashNote = function(v){ _c.washNote = (v||'').trim(); save(); };
   window.cvNoThanks = function(on){ _c.noThanksLine = !!on; save(); };
