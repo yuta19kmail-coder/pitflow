@@ -123,13 +123,23 @@
     return '';
   }
 
-  /* 並び順の分（時刻）。返車時間は C にしか付かないので、無い車は**最後尾（終日）**へ回す。
-     ⚠ 入庫時刻で代用しないこと（ゆうた指定「終日予定で最後尾。C が入った段階で並び替える」）。 */
-  function pitReturnSortMin(c){
-    var t = c && c.returnTime;
-    if (!t) return Infinity;
+  /* 並び順の分（時刻）。返車時間は C にしか付かないので、無い車は時間の枠に入れない。
+     ⚠ 入庫時刻で代用しないこと（ゆうた指定「終日予定で最後尾。C が入った段階で並び替える」）。
+     🔴 v1.70.0（ゆうた確定）その日の並びは
+        **時間の枠 → 終日（80000）→ 時刻未定・空（90000台〜99999）** の順。
+        ＝終日は PM の後ろだが、**時刻未定より前**。 */
+  var ALLDAY_MIN = 80000;
+  function _timeMin(t){
+    if (!t) return null;
     var m = window.pitTimeMin ? pitTimeMin(t) : null;
-    return (m == null || m >= 99999) ? Infinity : m;
+    return (m == null || m >= 99999) ? null : m;
+  }
+  function pitReturnSortMin(c){
+    if (!c) return 99999;
+    var m = _timeMin(c.returnTime);
+    if (m != null) return m;                            /* 時刻／時刻不明の言葉（90000台） */
+    if (pitReturnAllDay(c)) return (window.PIT_TIME_ALLDAY || ALLDAY_MIN);   /* 終日 */
+    return 99999;                                       /* 時刻未定＝いちばん最後 */
   }
   /* 「終日」＝**完TEL前の待ち・当日返し**で、まだ返車時間が決まっていない車。
      🔴 完TEL済で時間だけ未定の車は「終日」ではなく **「時刻未定」**（意味が違うので混ぜない）。
@@ -137,8 +147,8 @@
         ・終日     … 入庫日に返るのは決まっているが、そもそも確定返車日をまだ持っていない */
   function pitReturnAllDay(c){
     if (!c) return false;
-    if (pitReturnSortMin(c) !== Infinity) return false;   // 時間があるなら終日ではない
-    return !c.returnStage && pitDropIsSameDay(c);
+    if (c.returnStage || !pitDropIsSameDay(c)) return false;
+    return _timeMin(c.returnTime) == null;              /* 時間があるなら終日ではない */
   }
 
   window.pitDropIsSameDay  = pitDropIsSameDay;

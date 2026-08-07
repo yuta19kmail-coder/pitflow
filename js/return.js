@@ -77,12 +77,17 @@ function renderReturnDay(){
   if (todays.length === 0){
     html += '<div style="text-align:center;color:var(--text3);padding:30px;">本日の返車予定はありません</div>';
   } else {
-    /* 🔴 v1.65.0 返車時間だけで枠に入れる。**入庫時刻で代用しない**（終日は最後尾へ）。 */
+    /* 🔴 v1.65.0 返車時間だけで枠に入れる。**入庫時刻で代用しない**。
+       🔴 v1.70.0 枠は「いちばん遅くなり得る時刻」で決まる＝**朝一は9時／AM は12時**の枠。
+          並びは **時間の枠 → 終日 → 時刻未定**（ゆうた確定）。 */
     const _hourOf = c => (window.pitReturnAllDay && pitReturnAllDay(c)) ? null : pitTimeHour(c.returnTime || '', 9, 18);
     const _allDay = c => (window.pitReturnAllDay ? pitReturnAllDay(c) : !c.returnTime);
+    /* 🔴 v1.70.0 枠の中も時間順（並べ替えていなかったので登録順で出ていた） */
+    const _min = c => (window.pitReturnSortMin ? pitReturnSortMin(c) : pitTimeMin(c.returnTime || ''));
+    const _bySort = (a, b) => _min(a) - _min(b);
     slots.forEach(time => {
       const hh = time.slice(0,2);
-      const inSlot = todays.filter(c => _hourOf(c) === hh);
+      const inSlot = todays.filter(c => _hourOf(c) === hh).sort(_bySort);
       html += '<div class="reserve-slot' + (isClosed ? ' closed' : '') + '">';
       html += '<div class="reserve-slot-time">' + time + '〜</div>';
       html += '<div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="' + time + '">';
@@ -93,19 +98,21 @@ function renderReturnDay(){
       }
       html += '</div></div>';
     });
-    /* 時刻未定＝完TEL済で日は決まったが時間がまだ（ここへドロップで時刻を未定に戻せる） */
-    const noTime = todays.filter(c => _hourOf(c) === null && !_allDay(c));   /* v1.34.0 */
-    if (noTime.length > 0){
-      html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
-      html += noTime.map(c => cardHtml(c, { compact: true })).join('');
-      html += '</div></div>';
-    }
-    /* 🔴 v1.65.0 終日＝待ち・当日返しで、まだ返車時間が決まっていない車（ゆうた指定）。
-       いちばん後ろに置き、確定返車日＋時間が入った段階で上の枠へ並び替わる。 */
-    const allDay = todays.filter(c => _allDay(c));
+    /* 🔴 v1.70.0 終日＝待ち・当日返しで、まだ返車時間が決まっていない車（ゆうた指定）。
+       **PM の後ろ・時刻未定の前**。確定返車日＋時間が入った段階で上の枠へ並び替わる。
+       ⚠ v1.69.0 までは時刻未定より下だった。 */
+    const allDay = todays.filter(c => _allDay(c)).sort(_bySort);
     if (allDay.length > 0){
       html += '<div class="reserve-slot rs-allday"><div class="reserve-slot-time">終日<small>待ち・当日返し</small></div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
       html += allDay.map(c => cardHtml(c, { compact: true })).join('');
+      html += '</div></div>';
+    }
+    /* 時刻未定＝完TEL済で日は決まったが時間がまだ（ここへドロップで時刻を未定に戻せる）。
+       🔴 v1.70.0 **いちばん最後**（ゆうた確定「時間未定系は一番最後」）。 */
+    const noTime = todays.filter(c => _hourOf(c) === null && !_allDay(c)).sort(_bySort);   /* v1.34.0 */
+    if (noTime.length > 0){
+      html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div><div class="reserve-slot-cards" data-drop="returnTime" data-drop-val="">';
+      html += noTime.map(c => cardHtml(c, { compact: true })).join('');
       html += '</div></div>';
     }
   }
@@ -225,8 +232,11 @@ function _rmlRowsReturn(from, to){
     const hol = (window.Holidays && Holidays.name(ds)) || null;
     const cardsOfDay = state.cards
       .filter(c => pitReturnListDate(c) === ds)
-      /* v1.33.0 ショートカットも正しく並ぶよう共通の物差しで */
-      .sort((a, b) => pitTimeMin(a.returnTime || a.reserveTime) - pitTimeMin(b.returnTime || b.reserveTime));
+      /* 🔴 v1.70.0 並びは return-slot.js の物差し1本。
+         ⚠ v1.69.0 まで、ここだけ**返車時間が無いと入庫時刻で代用**していた。
+            当日ビュー・日ビューは「代用しない＝終日」なので、同じ車が画面によって違う位置に出ていた。 */
+      .sort((a, b) => (window.pitReturnSortMin ? pitReturnSortMin(a) : pitTimeMin(a.returnTime || ''))
+                    - (window.pitReturnSortMin ? pitReturnSortMin(b) : pitTimeMin(b.returnTime || '')));
 
     let dCls = '';
     if (ds === todayStr) dCls += ' today';

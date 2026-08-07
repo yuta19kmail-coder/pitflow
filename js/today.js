@@ -311,7 +311,11 @@ window.pitTodayReturn = function(id){
 
 /* カードと休憩を時間順にブロック分け：[{break?, cards:[...]}] の配列を返す */
 function _todBuildRows(cards, isReturn){
-  const tOf = c => isReturn ? _todMin(c.returnTime || c.reserveTime) : _todMin(c.reserveTime);
+  /* 🔴 v1.70.0 **一覧を並べたのと同じ物差しで区切る。**
+     ⚠ v1.69.0 までは、ここだけ「返車時間が無ければ入庫時刻」で代用していたので、
+        並び自体は最後尾なのに**休憩ブロックだけ入庫時刻の位置**に紛れていた。 */
+  const tOf = c => isReturn ? (window.pitReturnSortMin ? pitReturnSortMin(c) : _todMin(c.returnTime))
+                            : _todMin(c.reserveTime);
   const blocks = [];
   let ci = 0;
   // 休憩の前→休憩→…→最後、の順にカードを割り振る

@@ -897,7 +897,12 @@ function _cfsDayListHtml(c){
   }
   function col(list, isRet){
     if (!list.length) return '<div class="dl-empty">予定なし</div>';
-    const items = list.map(function(x){ const tt = isRet ? (x.returnTime||x.reserveTime||'') : (x.reserveTime||''); return { min: toMin(tt), html: evHtml(x, tt.split('-')[0]) }; });
+    /* 🔴 v1.70.0 返車側の並びは return-slot.js の物差し1本（入庫時刻で代用しない） */
+    const items = list.map(function(x){
+      const tt = isRet ? (x.returnTime || '') : (x.reserveTime || '');
+      const mn = isRet ? (window.pitReturnSortMin ? pitReturnSortMin(x) : toMin(tt)) : toMin(tt);
+      return { min: mn, html: evHtml(x, tt.split('-')[0]) };
+    });
     BRK.forEach(function(b){ items.push({ min: toMin(b.from), html: '<div class="dl-brk"><i data-ic=cup data-ics=15></i> 休憩 '+b.from+'–'+b.to+'</div>' }); });
     items.sort(function(a,b){ return a.min-b.min; });
     return items.map(function(i){ return i.html; }).join('');

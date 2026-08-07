@@ -70,12 +70,17 @@ function renderReserveDay(){
   html += '</div></div>';
 
   /* 🔴 v1.34.0 枠分けは共通の物差し（pitTimeHour）へ。
-     これで「朝一」「AM」も 9時の枠に入り、8:00・19:00 のような枠の外の時刻も端の枠に寄る。
-     時刻不明（決まり次第・レッカー・鍵ポスト・未定・空）は下の「時刻未定」の枠へまとめる。 */
+     8:00・19:00 のような枠の外の時刻も端の枠に寄る。
+     時刻不明（決まり次第・レッカー・鍵ポスト・未定・空）は下の「時刻未定」の枠へまとめる。
+     🔴 v1.70.0 枠は「いちばん遅くなり得る時刻」で決まる＝**朝一は9時／AM は12時**の枠。 */
   const _hourOf = c => pitTimeHour(c.reserveTime, 9, 18);
+  /* 🔴 v1.70.0（ゆうた確定）**枠の中も時間順に並べる。**
+     ⚠ v1.69.0 まで並べ替えていなかったので、9時の枠に 09:45 → 09:05 の順で出ることがあった
+        （週・月・当日ビューは時間順なので、同じ日の同じ車が画面によって違う順に見えていた）。 */
+  const _bySort = (a, b) => pitTimeMin(a.reserveTime) - pitTimeMin(b.reserveTime);
   slots.forEach(time => {
     const hh = time.slice(0,2);
-    const inSlot = todays.filter(c => _hourOf(c) === hh);
+    const inSlot = todays.filter(c => _hourOf(c) === hh).sort(_bySort);
     /* 🚫 その日の受付時間（午前休み・午後休み・早締めもここに出る） */
     const cutoffH = PitCal.cutoffHour(dateStr);
     const openH   = parseInt(String(PitCal.openTime(dateStr)).slice(0,2), 10) || 0;
@@ -95,7 +100,7 @@ function renderReserveDay(){
   });
   /* 時刻未定のカード＝いちばん下にまとめて出す（ここへドロップで時刻を空に戻せる）。
      🔴 v1.34.0 まで、この枠が無かったので**画面から消えていた**。 */
-  const _noTime = todays.filter(c => _hourOf(c) === null);
+  const _noTime = todays.filter(c => _hourOf(c) === null).sort(_bySort);
   if (_noTime.length > 0){
     html += '<div class="reserve-slot"><div class="reserve-slot-time">時刻未定</div>';
     html += '<div class="reserve-slot-cards" data-drop="reserveTime" data-drop-val="">';

@@ -105,7 +105,11 @@ function renderCarSales(){
   // ⑥ その他依頼事項
   const salesReq = cards.filter(c => c.salesReq && _csActive(c));
 
-  const sortTime = (a,b) => String(a.returnTime||a.reserveTime||'99:99').localeCompare(String(b.returnTime||b.reserveTime||'99:99'));
+  /* 🔴 v1.70.0 物差しは state.js の pitTimeMin 1本（v1.69.0 まで文字くらべで並びが狂っていた）。
+     ⚠ ここは洗車・コーティングの「その日にやる作業」の一覧なので、
+        返車時間が無ければ入庫時刻で見る（カレンダーの「代用しない」とは別の目的）。 */
+  const _tmin = t => (window.pitTimeMin ? pitTimeMin(t) : (t ? 0 : 99999));
+  const sortTime = (a,b) => _tmin(a.returnTime||a.reserveTime||'') - _tmin(b.returnTime||b.reserveTime||'');
   const sortDate = (a,b) => String(a.returnDate||'9999').localeCompare(String(b.returnDate||'9999'));
 
   const split = (arr, flag) => ({ open: arr.filter(c=>!c[flag]), done: arr.filter(c=>c[flag]) });

@@ -55,7 +55,11 @@ function _availList(team, ds){
   const cards = (state.cards || []).filter(function (c) {
     return c.boardId === team && c.reserveDate === ds && c.status !== 'scrap' && c.status !== 'returned';
   }).sort(function (a, b) {
-    return String(a.reserveTime || '99:99').localeCompare(String(b.reserveTime || '99:99'));
+    /* 🔴 v1.70.0 物差しは state.js の pitTimeMin 1本。
+       ⚠ v1.69.0 まで**文字くらべ**で並べていたので、「朝一」が「夕方」より後ろ、
+          「お昼」が「PM」より先、空が「13:30」より先、という並びになっていた。 */
+    var f = window.pitTimeMin || function (t){ return t ? 0 : 99999; };
+    return f(a.reserveTime) - f(b.reserveTime);
   });
 
   let dlabel = '';
