@@ -239,6 +239,10 @@
   function onSignedOut() {
     window.fb.currentUser = null;
     window.fb.currentMember = null;
+    /* 🔴 v1.68.1 お知らせの既読は人ごと。ログアウトしたら忘れる。
+       ⚠ 忘れないと、同じ端末で次に入った人が前の人の既読を引き継ぎ、
+          その人には新着が一度も出なくなる。 */
+    if (window.pitNewsForget) { try { window.pitNewsForget(); } catch (e) {} }
     setBusy(false);
     showLogin();
     authReady();

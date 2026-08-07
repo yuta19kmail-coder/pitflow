@@ -315,6 +315,10 @@ window.PIT_NEWS = [
   var POPUP_MAX = 3;
 
   var _read = null;      // 既読の id の入れ物
+  /* 🔴 v1.68.1 いま抱えている既読が「どこの・誰のぶんか」の印。
+     ⚠ これが無いと、**ログインが済む前**に読んだ「この端末の控え（＝からっぽ）」を
+        本物として抱えたまま二度と読み直さない。＝毎回ぜんぶ未読に戻る。 */
+  var _readKey = null;
 
   function LIST() { return (window.PIT_NEWS || []).slice(); }
 
@@ -332,26 +336,75 @@ window.PIT_NEWS = [
   }
   function verCmp(a, b) { return verNum(a) - verNum(b); }
 
-  /* ---- 既読 ---- */
-  function loadRead() {
-    if (_read) return Promise.resolve(_read);
-    if (cloud()) {
-      return window.fb.company().collection('userPrefs').doc(window.fb.currentUser.uid).get()
-        .then(function (d) { _read = ((d.exists && (d.data() || {}).pitNewsRead) || []).slice(); return _read; })
-        .catch(function () { _read = []; return _read; });
-    }
-    try { _read = JSON.parse(localStorage.getItem(LS_READ) || '[]'); } catch (e) { _read = []; }
-    return Promise.resolve(_read);
+  /* ---- 既読 ----
+     🔴 v1.68.1 既読の置き場は3通りある。取り違えると「確認したのにまた出る」になる。
+        cloud:{uid} … 本番でログインが済んでいる＝クラウド（人ごと）
+        wait       … 本番だがログインがまだ＝**どこも読まない**（からっぽを本物と思い込まない）
+        local      … 練習用サイト＝この端末の控え                                */
+  function readKey() {
+    if (cloud()) return 'cloud:' + window.fb.currentUser.uid;
+    if (window.PIT_CLOUD) return 'wait';
+    return 'local';
   }
-  function saveRead() {
+  function loadRead() {
+    var key = readKey();
+    if (_read && _readKey === key && key !== 'wait') return Promise.resolve(_read);
+
+    if (key === 'wait') {
+      /* ログインの返事を待っている最中。ここで控えを読むと、
+         そのあとクラウドを一度も見ないまま「ぜんぶ未読」で固まる。 */
+      if (!_read) { _read = []; _readKey = 'wait'; }
+      return Promise.resolve(_read);
+    }
+
+    if (key === 'local') {
+      try { _read = JSON.parse(localStorage.getItem(LS_READ) || '[]'); } catch (e) { _read = []; }
+      _readKey = 'local';
+      return Promise.resolve(_read);
+    }
+
+    var keep = (_read || []).slice();   // 読み込みの最中に押された「確認」を落とさない
+    return window.fb.company().collection('userPrefs').doc(window.fb.currentUser.uid).get()
+      .then(function (d) {
+        var arr = ((d.exists && (d.data() || {}).pitNewsRead) || []).slice();
+        keep.forEach(function (id) { if (arr.indexOf(id) < 0) arr.push(id); });
+        _read = arr; _readKey = key;
+        return _read;
+      })
+      .catch(function (e) {
+        console.warn('[news] 既読の読み込みに失敗', e);
+        _read = keep;
+        _readKey = null;              // 印は付けない＝次に呼ばれた時にもう一度読みに行く
+        return _read;
+      });
+  }
+  /* 既読を残す。
+     🔴 クラウドへは **足したぶんだけ**（arrayUnion）送る。
+        一覧を丸ごと上書きすると、読み込みに失敗していた時に
+        **クラウドに入っている既読を消してしまう**（v1.68.0 の事故）。 */
+  function saveRead(add) {
     if (cloud()) {
+      var ids = (add && add.length) ? add : (_read || []);
+      if (!ids.length) return;
+      var FV = window.fb.FieldValue;
+      var payload = (FV && FV.arrayUnion)
+        ? { pitNewsRead: FV.arrayUnion.apply(null, ids) }
+        : { pitNewsRead: (_read || []).slice() };
       window.fb.company().collection('userPrefs').doc(window.fb.currentUser.uid)
-        .set({ pitNewsRead: _read }, { merge: true })
+        .set(payload, { merge: true })
         .catch(function (e) { console.warn('[news] 既読の記録に失敗', e); });
     } else {
-      try { localStorage.setItem(LS_READ, JSON.stringify(_read)); } catch (e) {}
+      try { localStorage.setItem(LS_READ, JSON.stringify(_read || [])); } catch (e) {}
     }
   }
+  /* 人が入れ替わった時に忘れる（ログアウト時に auth-pit.js が呼ぶ）。
+     ⚠ 忘れないと、次に入った人に前の人の既読が引き継がれてポップアップが出ない。 */
+  window.pitNewsForget = function () {
+    _read = null; _readKey = null;
+    window._nwPopShown = false;
+    window._nwQueue = null; window._nwQueueIdx = 0;
+    paintBadge();
+  };
   /* seed:true（出した時点で全員既読扱い）か、記録に入っていれば既読 */
   function isRead(a) {
     if (a && a.seed) return true;
@@ -359,12 +412,13 @@ window.PIT_NEWS = [
   }
   function markRead(id) {
     if (!_read) _read = [];
-    if (_read.indexOf(id) < 0) { _read.push(id); saveRead(); }
+    if (_read.indexOf(id) < 0) { _read.push(id); saveRead([id]); }
     paintBadge();
   }
   window.pitNewsReadAll = function () {
-    _read = LIST().map(function (a) { return a.id; });
-    saveRead(); paintBadge(); renderNews();
+    var all = LIST().map(function (a) { return a.id; });
+    _read = all.slice();
+    saveRead(all); paintBadge(); renderNews();
   };
 
   function unread() {
