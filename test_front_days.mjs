@@ -169,8 +169,9 @@ console.log('\n── ④ 🔴 日次グラフ「当日の前後◯日」 ──
   const lastDay = await p.evaluate(() => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth()+1,0).getDate(); });
 
   const all = await read();
-  ok('見出しに 全体／±5日／±10日 が出ている',
-     JSON.stringify(all.btns) === JSON.stringify(['全体','±5日','±10日']), all.btns);
+  /* 🔴 v1.72.1 並びは 広い → 狭い（ゆうた指定） */
+  ok('見出しに 全体／±10日／±5日 の順で出ている',
+     JSON.stringify(all.btns) === JSON.stringify(['全体','±10日','±5日']), all.btns);
   ok('はじめは「全体」', all.on === '全体', all.on);
   ok('全体では 1 から末日まで', all.x[0] === '1' && all.x[all.x.length-1] === String(lastDay), all.x);
   ok('全体の縦軸は 0 から始まる', all.y[0] === '0万', all.y);
