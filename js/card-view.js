@@ -20,6 +20,17 @@
         保存する項目は増やしていない（v1.66.0 の決めごとはそのまま）。 */
   let _retTbdOff = false;
   let _retTbdFor = '';      // どのカードに対しての印か（別のカードを開いたら忘れる）
+  /* 🆕 v1.73.0（ゆうた指定）表紙の「金額の並び」「返車日の並び」を**あとから直す**ための開閉。
+     ◎困っていたこと＝工程が進むと、前の段階で入れた金額や日付が画面から消えて直せなかった。
+       ・概算 金額／概算 預かり日数 … 入庫したら「予約を編集」からしか触れない
+       ・見積もり金額・受注金額 … その工程を過ぎると入力欄が消える
+       ・予定 返車日（B） … 受注完了のポップアップでしか入れられず、あとから直す入口が無かった
+     ◎決めごと（ゆうた）
+       🔴 直せるのは**通った段階だけ**。まだ来ていない先の段階は今までどおり出さない
+          （確定 返車日・返車時間は「作業完了」に入ってから＝v1.66.0 の決めごとを崩さない）。
+       🔴 概算も直せる。概算 返車日（A）は「入庫日＋概算 預かり日数」の自動計算なので**日数のほうを直す**。
+     ⚠ 開いている／閉じているは**画面だけの状態**（保存しない）。別のカードを開いたら閉じる。 */
+  let _chainEditMoney = false, _chainEditDate = false, _chainEditFor = '';
   const DOW = ['日','月','火','水','木','金','土'];
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -314,12 +325,89 @@
      ここ1か所で決める。画面のあちこちで status を並べない。 */
   function cvCanFixReturn(c){ return !!c && (c.status === 'workDone' || c.status === 'returned' || !!c.returnStage); }
 
+  /* ===================================================================
+     💰 金額の並び（概算 → 見積 → 受注 → 確定）＝物差しは この3つの表だけ。
+     🔴 v1.73.0 で表を関数の外へ出した。理由＝「いまどの段階か」を
+        並びの表示と、あとから直す編集ブロックの**両方**が見るため。
+        中で組み立て直すと、片方だけ直して食い違う（＝写しの罠）。
+     =================================================================== */
+  const AMT_KINDS = [['est','概算','estAmount'],['quote','見積','amountQuote'],['order','受注','amountOrder'],['final','確定','amountFinal']];
+  const AMT_CUR   = { check:'quote', estim:'quote', contact:'order', parts:'final', work:'final', workDone:'final' };
+  const AMT_LABEL = { est:'概算 金額', quote:'見積もり金額', order:'受注金額', final:'確定金額（請求額）' };
+
+  /* 🆕 v1.73.0 「いまの工程までに通った段階」＝あとから直してよい欄（ゆうた指定）。
+     ・概算はいつでも直せる（予約のときの読みなので、あとで直したい場面がある）
+     ・先の段階は返さない＝作業前に確定金額を入れられる、が起きない */
+  function amtOpenKinds(c){
+    const cur = AMT_CUR[c && c.status] || ((c && c.status === 'returned') ? 'final' : null);
+    const out = ['est'];
+    if (!cur) return out;                       /* 予約・キャンセル等＝概算だけ */
+    for (let i = 1; i < AMT_KINDS.length; i++){
+      out.push(AMT_KINDS[i][0]);
+      if (AMT_KINDS[i][0] === cur) break;
+    }
+    return out;
+  }
+
+  /* 金額1つぶんの入力欄。🔴 いまの工程の欄も、あとから直す欄も**これ1本**で作る。
+     （id は cv-amt-◯ で1画面に1つ＝編集ブロックを開いている間は下の直接入力を出さない） */
+  function amtEditRow(c, kind, suffix){
+    const f = AMT_FIELD[kind], v = c[f];
+    const s = (v != null && v !== '') ? Number(v).toLocaleString() : '';
+    return '<div class="cv-fixrow"><div class="cv-frt">' + AMT_LABEL[kind] + (suffix || '') + '</div><div class="cv-frb">'
+      + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+kind+'" type="text" inputmode="numeric" value="'+esc(s)+'" data-prev="'+esc(s)+'" oninput="cvAmtChange(\''+kind+'\')"></div>'
+      + '<div class="pt-tax" id="cv-tax-'+kind+'">'+(window.pitTaxHint?pitTaxHint(s):'')+'</div>'
+      + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+kind+'">金額を <b id="cv-amtnew-'+kind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+kind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+kind+'\')">取消</button></div></div>';
+  }
+
+  /* 並びの右端に置く ✏編集 */
+  function chainEditBtn(which, on){
+    return '<button type="button" class="cv-chedit'+(on?' on':'')+'" id="cv-chedit-'+which+'" onclick="cvChainEdit(\''+which+'\')" title="あとから直す">'
+         + '<i data-ic=pencil data-ics=13></i> 編集</button>';
+  }
+
+  /* 💰 あとから直す＝金額 */
+  function moneyEditBox(c){
+    /* 実績カードの確定金額は、下の「確定売上金額」がロック＋✏編集を持っている。
+       同じ欄を2つ出すと、片方が古い数字のまま残る＝写し。だからここでは出さない。 */
+    const kinds = amtOpenKinds(c).filter(function(k){ return !(c.status === 'returned' && k === 'final'); });
+    let h = '<div class="cv-editbox" id="cv-ebox-money"><div class="cv-ebhead"><span><i data-ic=pencil data-ics=14></i> 金額を直す</span>'
+          + '<button type="button" class="cv-ebclose" onclick="cvChainEdit(\'money\')">閉じる</button></div>'
+          + '<div class="cv-ebnote">いまの工程までに通った欄だけ出しています。入れるのは<b>税抜</b>です。</div>'
+          + '<div class="cv-ebgrid">' + kinds.map(function(k){ return amtEditRow(c, k); }).join('') + '</div>';
+    if (c.status === 'returned') h += '<div class="cv-ebnote">確定金額（請求額）は、この下の「確定売上金額」から直せます。</div>';
+    return h + '</div>';
+  }
+
+  /* 📅 あとから直す＝返車日
+     🔴 確定（C）と返車時間は**この下の専用欄が持っている**ので、ここには置かない（写しを作らない）。
+        ここが持つのは「概算 預かり日数（＝A の材料）」と「予定 返車日（B）」の2つだけ。 */
+  function dateEditBox(c){
+    const A = window.pitReturnA ? pitReturnA(c) : '';
+    const hold = (c.estHoldDays == null || c.estHoldDays === '') ? '' : String(c.estHoldDays);
+    const B = window.pitReturnB ? pitReturnB(c) : (c.returnDatePlan || '');
+    let h = '<div class="cv-editbox" id="cv-ebox-date"><div class="cv-ebhead"><span><i data-ic=pencil data-ics=14></i> 返車日を直す</span>'
+          + '<button type="button" class="cv-ebclose" onclick="cvChainEdit(\'date\')">閉じる</button></div>'
+          + '<div class="cv-ebgrid">'
+          + '<div class="cv-fixrow"><div class="cv-frt">概算 預かり日数（概算 返車日はここから自動）</div><div class="cv-frb">'
+          + '<input class="cv-fixinput" id="cv-esthold" type="text" inputmode="numeric" style="width:84px" value="'+esc(hold)+'" onchange="cvEstHold(this.value)">'
+          + '<span class="cv-plan">日</span><span class="cv-arr">→</span>'
+          + '<span class="cv-plan" id="cv-estretday">概算 返車日 '+(A?fmtMD(A):'—')+'</span></div></div>'
+          + '<div class="cv-fixrow"><div class="cv-frt">予定 返車日（お客様に伝えた約束の日）</div><div class="cv-frb">'
+          + '<input class="cv-fixinput" id="cv-retplan" type="date" value="'+esc(B)+'" onchange="cvSetPlanReturn(this.value)"></div></div>'
+          + '</div>';
+    h += '<div class="cv-ebnote">' + (cvCanFixReturn(c)
+          ? '確定 返車日と返車時間は、この下の欄で直せます。'
+          : '確定 返車日と返車時間は<b>作業完了</b>に入ってから出ます（完TELで決まる日なので、先に入れられないようにしています）。')
+       + '</div>';
+    return h + '</div>';
+  }
+
   function coverTab(c){
-    // 💰 金額＝概算→見積もり→受注→確定 を1行チェーン表示（全部 表示のみ）。
-    const KINDS = [['est','概算','estAmount'],['quote','見積','amountQuote'],['order','受注','amountOrder'],['final','確定','amountFinal']];
-    const curKind = ({ check:'quote', estim:'quote', contact:'order', parts:'final', work:'final', workDone:'final' })[c.status] || null;
-    const KIND_FIELD = { quote:'amountQuote', order:'amountOrder', final:'amountFinal' };
-    const KIND_LABEL = { quote:'見積もり金額', order:'受注金額', final:'確定金額（請求額）' };
+    // 💰 金額＝概算→見積もり→受注→確定 を1行チェーン表示（表示のみ／直すのは右端の ✏編集 から）。
+    const KINDS = AMT_KINDS;
+    const curKind = AMT_CUR[c.status] || null;
+    const KIND_LABEL = AMT_LABEL;
     const moneyStr = function(v){ return (v!=null&&v!=='') ? '¥'+Number(v).toLocaleString() : '—'; };
     let chain = KINDS.map(function(k, i){
       const arrow = i>0 ? '<span class="cv-amarr">→</span>' : '';
@@ -369,16 +457,16 @@
         + '<input class="cv-fixinput" type="date" value="'+esc(c.outsourceDue||'')+'" onchange="cvOutDue(this.value)"></div></div>';
       osSec += '</div>';
     }
-    let h = osSec + '<div class="cv-sec"><div class="cv-amchain">'+chain+'</div>'
-          + '<div class="cv-amchain cv-dchain">'+dchain+'</div>';
-    // 今のフェーズの金額だけ、返車予定と同じサイズの入力欄を出す（概算は自動なので入力なし）
-    if (curKind && curKind !== 'est'){
-      const cv = c[KIND_FIELD[curKind]];
-      const cvstr = (cv!=null&&cv!=='') ? Number(cv).toLocaleString() : '';
-      h += '<div class="cv-fixrow"><div class="cv-frt">'+KIND_LABEL[curKind]+'／直接入力</div><div class="cv-frb">'
-        + '<span class="cv-yenmark">¥</span><input class="cv-fixinput cv-money" id="cv-amt-'+curKind+'" type="text" inputmode="numeric" value="'+esc(cvstr)+'" data-prev="'+esc(cvstr)+'" oninput="cvAmtChange(\''+curKind+'\')"></div>'
-        + '<div class="pt-tax" id="cv-tax-'+curKind+'">'+(window.pitTaxHint?pitTaxHint(cvstr):'')+'</div>'
-        + '<div class="cv-fixconfirm" id="cv-amtconfirm-'+curKind+'">金額を <b id="cv-amtnew-'+curKind+'"></b> に変更しますか？ <button class="cv-ok" onclick="cvAmtOK(\''+curKind+'\')">OK</button><button class="cv-ng" onclick="cvAmtNG(\''+curKind+'\')">取消</button></div></div>';
+    /* 🆕 v1.73.0 並びの右端に ✏編集 を1つずつ（ゆうた指定・案1＝押すとすぐ下に入力欄が開く）。 */
+    let h = osSec + '<div class="cv-sec">'
+          + '<div class="cv-chainline"><div class="cv-amchain">'+chain+'</div>'+chainEditBtn('money', _chainEditMoney)+'</div>'
+          + (_chainEditMoney ? moneyEditBox(c) : '')
+          + '<div class="cv-chainline"><div class="cv-amchain cv-dchain">'+dchain+'</div>'+chainEditBtn('date', _chainEditDate)+'</div>'
+          + (_chainEditDate ? dateEditBox(c) : '');
+    /* 今のフェーズの金額だけ、返車予定と同じサイズの入力欄を出す（概算は自動なので入力なし）。
+       ⚠ 編集ブロックを開いている間は出さない＝**同じ欄が画面に2つ**にならないようにする。 */
+    if (curKind && curKind !== 'est' && !_chainEditMoney){
+      h += amtEditRow(c, curKind, '／直接入力');
     }
     // 💳 入金日を分ける（売掛）＝金額欄の下に。ON で入金日欄が出る。実績前はここで、実績後は完了アーカイブで操作 v0.121.0
     if (c.status !== 'returned') h += paymentControlHtml(c);
@@ -859,6 +947,8 @@
        ⚠ ここで毎回リセットすると、外した直後の描き直しで元に戻ってしまう（＝直したはずのバグが再発する）。
           だから**別のカードに変わった時だけ**忘れる。 */
     if (_retTbdFor !== (card && card.id)) { _retTbdOff = false; _retTbdFor = (card && card.id) || ''; }
+    /* 🆕 v1.73.0 「編集」を開いた状態も、そのカードを見ている間だけ持つ（別のカードに変わったら閉じる）。 */
+    if (_chainEditFor !== (card && card.id)) { _chainEditMoney = false; _chainEditDate = false; _chainEditFor = (card && card.id) || ''; }
     _c = ensure(card);
     const box = host.closest('.modal-box');
     if(box){
@@ -1003,15 +1093,70 @@
   };
   window.cvAmtOK = function(kind){
     const el=document.getElementById('cv-amt-'+kind); const v=el.value.replace(/[^0-9]/g,'').slice(0,9);
+    const _bef = _c[AMT_FIELD[kind]];
     _c[AMT_FIELD[kind]] = v ? +v : null; el.dataset.prev=el.value;
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
     const chv=document.getElementById('cv-chv-'+kind);   // 上のチェーンに即反映
     if(chv) chv.textContent = v ? '¥'+(+v).toLocaleString() : '—';
+    /* 🆕 v1.73.0 「編集」から**あとで直した**ときは、誰がいつ直したか辿れるようにフローへ残す。
+       ⚠ いまの工程の直接入力（ふだんの入力）は今までどおり残さない＝フローが金額の打ち直しで埋まらないように。 */
+    const _n = v ? +v : null;
+    if (_chainEditMoney && window.logFlow && String(_bef == null ? '' : _bef) !== String(_n == null ? '' : _n)){
+      const _s = function(x){ return (x != null && x !== '') ? '¥' + Number(x).toLocaleString() : '未入力'; };
+      try { logFlow(_c, AMT_LABEL[kind] + 'を ' + _s(_bef) + ' → ' + _s(_n) + ' に変更（表紙の編集）'); } catch(e){}
+    }
     save();
   };
   window.cvAmtNG = function(kind){
     const el=document.getElementById('cv-amt-'+kind); el.value=el.dataset.prev;
     document.getElementById('cv-amtconfirm-'+kind).classList.remove('show');
+  };
+
+  /* ===================================================================
+     🆕 v1.73.0（ゆうた指定）表紙の「金額の並び」「返車日の並び」を あとから直す
+     -------------------------------------------------------------------
+     ・開け閉めは画面だけ（保存しない）。押した並びだけが開く。
+     ・🔴 直せるのは**通った段階だけ**（amtOpenKinds / cvCanFixReturn）。
+     ・🔴 概算 返車日（A）は自動計算なので、直すのは**概算 預かり日数**のほう。
+     ⚠ 概算 預かり日数と予定 返車日は、どちらも**売上をどの月に数えるか**を動かす
+        （sales-count.js＝C→B→A の順に見る）。だから必ずフローに残す。
+     =================================================================== */
+  window.cvChainEdit = function(which){
+    if (!_c) return;
+    if (which === 'money') _chainEditMoney = !_chainEditMoney;
+    else                   _chainEditDate  = !_chainEditDate;
+    _chainEditFor = _c.id;
+    if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+  };
+
+  /* 概算 預かり日数（＝概算 返車日 A の材料）。空にしたら「決めていない」＝作業タイプの目安に戻る。 */
+  window.cvEstHold = function(v){
+    if (!_c) return;
+    const s = String(v == null ? '' : v).replace(/[^0-9]/g,'').slice(0,3);
+    const bef = (_c.estHoldDays == null || _c.estHoldDays === '') ? '' : String(_c.estHoldDays);
+    if (s === bef) return;
+    _c.estHoldDays = (s === '') ? null : +s;
+    if (window.logFlow){
+      try { logFlow(_c, '概算 預かり日数を ' + (bef === '' ? '未設定' : bef + '日') + ' → ' + (s === '' ? '未設定' : s + '日') + ' に変更（表紙の編集）'); } catch(e){}
+    }
+    save(); cvRefreshBg();
+    if (window.renderCardView) renderCardView(_c, 'md-body-modal');
+  };
+
+  /* 予定 返車日（B）＝受注のときにお客様へ伝えた約束の日。
+     🔴 保存するのは `returnDatePlan` だけ。確定（C＝returnDate）には手を出さない。
+        ここで C を触ると「まだ確定していない車が返車カレンダーに出る」が復活する（v1.65.0 の穴）。 */
+  window.cvSetPlanReturn = function(v){
+    if (!_c) return;
+    const bef = String((window.pitReturnB ? pitReturnB(_c) : _c.returnDatePlan) || '');
+    const nv  = String(v || '');
+    if (bef === nv) return;
+    _c.returnDatePlan = nv;
+    if (window.logFlow){
+      try { logFlow(_c, '予定 返車日（お客様への約束）を ' + (bef || '未定') + ' → ' + (nv || '未定') + ' に変更（表紙の編集）'); } catch(e){}
+    }
+    save(); cvRefreshBg();
+    if (window.renderCardView) renderCardView(_c, 'md-body-modal');
   };
   window.cvSetReturn = function(v){
     /* 🔴 v1.57.0 実績になったカードの返車日は**実績カウント日も動かす**ので、管理だけ。 */
