@@ -183,14 +183,16 @@ function _undRow(c, kind){
 window.pitUndSetIntake = function(id){
   const c = state.cards.find(x => x.id === id);
   if (!c) return;
-  const d = prompt('入庫日を入れてください（例 2026-06-20）', c.reserveDate || ymd(new Date()));
-  if (!d) return;
-  c.reserveDate = d.trim();
-  c.intakeTbd = false;
-  if (window.logFlow) logFlow(c, '入庫日を設定（予約へ）');
-  if (window.PitDB) PitDB.save();
-  renderReserveTbd();
-  if (window.pitToast) pitToast(''+ c.reserveDate + 'の予約に入れました');
+  /* 🔵 v1.75.0 ブラウザ純正の prompt をやめてアプリ内の入力ダイアログ（pitAskText）に。 */
+  pitAskText('入庫日を入れてください（例 2026-06-20）', c.reserveDate || ymd(new Date()), { ok:'入れる' }).then(function (d) {
+    if (!d) return;
+    c.reserveDate = String(d).trim();
+    c.intakeTbd = false;
+    if (window.logFlow) logFlow(c, '入庫日を設定（予約へ）');
+    if (window.PitDB) PitDB.save();
+    renderReserveTbd();
+    if (window.pitToast) pitToast(''+ c.reserveDate + 'の予約に入れました');
+  });
 };
 
 /* 未入庫 → 予約に戻す（再度連絡が来た等） */
@@ -210,13 +212,14 @@ window.pitUndRestore = function(id){
 window.pitUndComplete = function(id){
   const c = state.cards.find(x => x.id === id);
   if (!c) return;
-  const d = prompt('完TEL！ 返車日を入れてください（例 2026-06-20）', c.returnDate || ymd(new Date()));
-  if (!d) return;
-  c.returnDate = d.trim();
-  c.returnTbd = false;
-  c.completeCallAt = ymd(new Date());
-  if (window.logFlow) logFlow(c, '完TEL → 返車日設定');
-  if (window.PitDB) PitDB.save();
-  renderReturnTbd();
-  if (window.pitToast) pitToast(''+ c.returnDate + 'の返車予定に入れました');
+  pitAskText('完TEL！ 返車日を入れてください（例 2026-06-20）', c.returnDate || ymd(new Date()), { ok:'入れる' }).then(function (d) {
+    if (!d) return;
+    c.returnDate = String(d).trim();
+    c.returnTbd = false;
+    c.completeCallAt = ymd(new Date());
+    if (window.logFlow) logFlow(c, '完TEL → 返車日設定');
+    if (window.PitDB) PitDB.save();
+    renderReturnTbd();
+    if (window.pitToast) pitToast(''+ c.returnDate + 'の返車予定に入れました');
+  });
 };

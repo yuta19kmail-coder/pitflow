@@ -371,15 +371,16 @@
   const W = window.WorkContent;
   W.settingsCardHtml = settingsCardHtml;
   W.mountSettings = mountSettings;
-  W.wcAddPart = function () { const v = (prompt('追加する部位名は？') || '').trim(); if (!v) return; cfg().parts.push(v); save(); renderEditor(); };
+  /* 🔵 v1.75.0 ブラウザ純正の prompt / confirm をやめてアプリ内ダイアログ（pitAskText / pitAsk）に。 */
+  W.wcAddPart = function () { pitAskText('追加する部位名は？', '', { ok:'追加' }).then(function (v) { v = (v || '').trim(); if (!v) return; cfg().parts.push(v); save(); renderEditor(); }); };
   W.wcDelPart = function (i) { cfg().parts.splice(i, 1); save(); renderEditor(); };
-  W.wcAddSym = function () { const v = (prompt('追加する症状名は？') || '').trim(); if (!v) return; cfg().symptoms.push({ name: v, parts: 'all', sub: [] }); save(); renderEditor(); };
-  W.wcDelSym = function (i) { const s = cfg().symptoms[i]; if (!confirm('症状「' + (s ? s.name : '') + '」を削除しますか？')) return; cfg().symptoms.splice(i, 1); save(); renderEditor(); };
+  W.wcAddSym = function () { pitAskText('追加する症状名は？', '', { ok:'追加' }).then(function (v) { v = (v || '').trim(); if (!v) return; cfg().symptoms.push({ name: v, parts: 'all', sub: [] }); save(); renderEditor(); }); };
+  W.wcDelSym = function (i) { const s = cfg().symptoms[i]; pitAsk('症状「' + (s ? s.name : '') + '」を削除しますか？', { danger:true, ok:'削除する' }).then(function (yes) { if (!yes) return; cfg().symptoms.splice(i, 1); save(); renderEditor(); }); };
   W.wcSymName = function (i, v) { v = (v || '').trim(); if (v) { cfg().symptoms[i].name = v; save(); } };
   W.wcSymScope = function (i, v) { cfg().symptoms[i].parts = (v === 'all') ? 'all' : []; save(); renderEditor(); };
   W.wcSymParts = function (i, v) { cfg().symptoms[i].parts = String(v || '').split(/[、,]/).map(function (x) { return x.trim(); }).filter(Boolean); save(); };
   W.wcSymSub = function (i, v) { cfg().symptoms[i].sub = String(v || '').split(/[、,]/).map(function (x) { return x.trim(); }).filter(Boolean); save(); };
-  W.wcAddChip = function (gi) { const v = (prompt('追加するチップの文言は？') || '').trim(); if (!v) return; cfg().chipGroups[gi].items.push(v); save(); renderEditor(); };
+  W.wcAddChip = function (gi) { pitAskText('追加するチップの文言は？', '', { ok:'追加' }).then(function (v) { v = (v || '').trim(); if (!v) return; cfg().chipGroups[gi].items.push(v); save(); renderEditor(); }); };
   W.wcDelChip = function (gi, ii) { cfg().chipGroups[gi].items.splice(ii, 1); save(); renderEditor(); };
 
   console.log('[work-content] ready');

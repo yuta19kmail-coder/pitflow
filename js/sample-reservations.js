@@ -133,11 +133,19 @@
   window.seedSampleReservations = function (opts) {
     opts = opts || {};
     if (!Array.isArray(state.customers) || state.customers.length === 0){
-      alert('先に顧客データが必要です（顧客ビューでサンプル投入 or 実データを入れてから実行してください）。');
+      pitAlert('先に顧客データが必要です（顧客ビューでサンプル投入 or 実データを入れてから実行してください）。');
       return;
     }
-    if (!opts.silent && !confirm('今のサンプル予約（カード）を全部消して、顧客データから\n前後約2ヶ月ぶんのサンプル（過去＝実績／未来＝予約／今＝預かり中）を敷き詰めます。\n※このサンプルは保存され、リロードしても消えません。\nよろしいですか？')) return;
+    /* 🔵 v1.75.0 聞くのはアプリ内ダイアログ。⚠ 中身は _go に切り出して呼ぶ（silent の時は聞かずに直行）。 */
+    if (!opts.silent){
+      pitAsk('サンプル予約を作り直しますか？', { danger:true, ok:'作り直す',
+              detail:'今のサンプル予約（カード）を全部消して、顧客データから前後約2ヶ月ぶん（過去＝実績／未来＝予約／今＝預かり中）を敷き詰めます。\n※このサンプルは保存され、リロードしても消えません。' })
+        .then(function(yes){ if (yes) _go(); });
+      return;
+    }
+    _go();
 
+    function _go(){
     const closed = Array.isArray(state.settings.closedDow) ? state.settings.closedDow : [];
     const isClosed = (d) => closed.indexOf(d.getDay()) >= 0;
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -412,9 +420,10 @@
     // ★リロードしない＝読込時の自動処理（顧客の自動入替など）を再実行させない。現在ビューを再描画するだけ。
     if (window.showView) showView(state.currentView || 'dashboard');
     if (ok === false){
-      alert('カードは作りましたが保存に失敗しました（容量オーバーの可能性）。\n台数を減らして再実行してください。');
+      pitAlert('カードは作りましたが保存に失敗しました（容量オーバーの可能性）。\n台数を減らして再実行してください。');
     } else {
-      alert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。\n※このサンプルは保存され、リロードしても消えません。\n顧客控えはそのまま保持しています。');
+      pitAlert('サンプルを作り直しました（カード ' + cards.length + ' 枚・前後約2ヶ月）。\n※このサンプルは保存され、リロードしても消えません。\n顧客控えはそのまま保持しています。');
+    }
     }
   };
 })();

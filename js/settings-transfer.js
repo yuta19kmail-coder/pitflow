@@ -57,17 +57,18 @@
     r.onload = function () {
       var d;
       try { d = JSON.parse(String(r.result)); }
-      catch (e) { alert('このファイルは読めませんでした（中身が壊れているようです）'); return; }
+      catch (e) { pitAlert('このファイルは読めませんでした（中身が壊れているようです）'); return; }
       if (!d || d._kind !== 'pitflow-settings') {
-        alert('PitFlow の設定ファイルではないようです。\n書き出しで作った「PitFlow設定_日付.json」を選んでください。');
+        pitAlert('PitFlow の設定ファイルではないようです。\n書き出しで作った「PitFlow設定_日付.json」を選んでください。');
         return;
       }
-      var msg = 'この設定で今の設定を置き換えます。\n\n'
-              + '・予約カード／顧客／代車／自社車両には触りません\n'
-              + '・置き換わるのは 設定・作業タイプ・外注先・PIT配置図・入庫ルールの判定・付箋の色 です\n\n'
-              + 'よろしいですか？';
-      if (!confirm(msg)) return;
+      var det = '・予約カード／顧客／代車／自社車両には触りません\n'
+              + '・置き換わるのは 設定・作業タイプ・外注先・PIT配置図・入庫ルールの判定・付箋の色 です';
+      pitAsk('この設定で今の設定を置き換えます。よろしいですか？', { title:'設定の読み込み', ok:'置き換える', detail:det })
+        .then(function (yes) { if (yes) _go(); });
+      return;
 
+      function _go(){
       KEYS.forEach(function (k) {
         if (d[k] === undefined || d[k] === null) return;
         if (k === 'settings') {
@@ -83,8 +84,9 @@
       }
       if (window.pitLog) pitLog('設定ファイルを読み込んだ', { kind: 'settings', label: String(d._at || '') });
       if (window.PitDB) PitDB.save(true);
-      alert('設定を読み込みました。画面を作り直します。');
+      pitAlert('設定を読み込みました。画面を作り直します。');
       location.reload();
+      }
     };
     r.readAsText(f, 'utf-8');
   };

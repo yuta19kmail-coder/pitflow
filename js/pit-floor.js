@@ -492,7 +492,11 @@
 
   // サンプル工場（建物の外壁＋シャッター＋PIT＝1列5枚を2列に並べる）を一発で入れる
   function loadSample() {
-    if (!confirm('サンプルの工場レイアウトを読み込みます。今の配置は置き換わります。よろしいですか？')) return;
+    /* 🔵 v1.75.0 聞くのはアプリ内ダイアログ。中身は _go に切り出して呼ぶ。 */
+    pitAsk('サンプルの工場レイアウトを読み込みますか？', { danger:true, ok:'読み込む', detail:'今の配置は置き換わります。' })
+      .then(function(yes){ if (yes) _go(); });
+    return;
+    function _go(){
     var W = 22, H = 14, m = 0.4;
     var f = fp(); f.cols = W; f.rows = H;
     f.shapes = [
@@ -510,6 +514,7 @@
     var sc = document.getElementById('pf-scale'); if (sc) sc.value = W;
     var lb = document.getElementById('pf-scale-lb'); if (lb) lb.textContent = '横' + W + 'マス';
     render(); paintProps();
+    }
   }
 
   // 配置図を別ファイルに書き出し（バックアップ）／読み込み（復元）
@@ -525,7 +530,8 @@
     var inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json';
     inp.onchange = function () {
       var fl = inp.files && inp.files[0]; if (!fl) return;
-      if (!confirm('読み込むと今の配置は置き換わります。よろしいですか？')) return;
+      pitAsk('読み込むと今の配置は置き換わります。よろしいですか？', { danger:true, ok:'読み込む' }).then(function(yes){
+      if (!yes) return;
       var rd = new FileReader();
       rd.onload = function () {
         try {
@@ -536,9 +542,10 @@
           var sc = document.getElementById('pf-scale'); if (sc) sc.value = fp().cols;
           var lb = document.getElementById('pf-scale-lb'); if (lb) lb.textContent = '横' + fp().cols + 'マス';
           render(); paintProps();
-        } catch (e) { alert('読み込みに失敗しました: ' + e.message); }
+        } catch (e) { pitAlert('読み込みに失敗しました: ' + e.message); }
       };
       rd.readAsText(fl);
+      });
     };
     inp.click();
   }

@@ -26,10 +26,17 @@
       var r = new FileReader();
       r.onload = function () {
         var arr;
-        try { arr = JSON.parse(r.result); } catch (e) { alert('JSONの読み込みに失敗しました：' + e.message); return; }
-        if (!Array.isArray(arr)) { alert('JSONの形式が配列ではありません。'); return; }
-        if (!confirm('顧客 ' + arr.length + ' 件を取り込みます。\n今の顧客控え（' + ((state.customers || []).length) + '件）は全置き換えされます。\n\n※この端末のブラウザ内（localStorage）だけに反映・本番には送りません。\nよろしいですか？')) return;
+        try { arr = JSON.parse(r.result); } catch (e) { pitAlert('JSONの読み込みに失敗しました：' + e.message); return; }
+        if (!Array.isArray(arr)) { pitAlert('JSONの形式が配列ではありません。'); return; }
+        /* 🔵 v1.75.0 聞くのはアプリ内ダイアログ（pitAsk）＝答えは後から返る。
+           ⚠ 取り込みの本体は **_go に切り出して** そこから呼ぶ（.then の中に本文を写さない）。 */
+        pitAsk('顧客 ' + arr.length + ' 件を取り込みます。よろしいですか？',
+               { title:'顧客データの取り込み', ok:'取り込む',
+                 detail:'今の顧客控え（' + ((state.customers || []).length) + '件）は全置き換えされます。\n※この端末のブラウザ内だけに反映・本番には送りません。' })
+          .then(function (yes) { if (yes) _go(); });
+        return;
 
+        function _go(){
         // ★容量対策：JSONの全フィールドを丸ごと持たず、PitFlowが使う項目だけに絞って取り込む（localStorage節約）。
         var out = arr.map(function (c) {
           var contacts = (Array.isArray(c.contacts) ? c.contacts : []).map(function (ct) {
@@ -70,7 +77,8 @@
         if (st) st.textContent = '取込済 ' + out.length + ' 件';
         var veh = out.reduce(function (n, c) { return n + (c.vehicles ? c.vehicles.length : 0); }, 0);
         if (window.toast) toast('顧客 '+ out.length + '件／車両 '+ veh + '台を取り込みました（この端末のみ）');
-        else alert('取り込み完了：顧客 ' + out.length + ' 件／車両 ' + veh + ' 台');
+        else pitAlert('取り込み完了：顧客 ' + out.length + ' 件／車両 ' + veh + ' 台');
+        }
       };
       r.readAsText(f, 'utf-8');
     };

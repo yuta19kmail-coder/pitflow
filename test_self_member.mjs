@@ -55,8 +55,12 @@ console.log('\n── ① ソースの見張り ──');
   const ver = /<meta name="app-version" content="([\d.]+)">/.exec(html);
   ok('版の表示がそろっている（meta＋画面2か所）',
      !!ver && (html.match(new RegExp('v' + ver[1].replace(/\./g, '\\.') + '<', 'g')) || []).length >= 2, ver && ver[1]);
-  ok('付箋とメンバーのキャッシュ番号を上げた',
-     /board-notes\.js\?v=8/.test(html) && /members-pit\.js\?v=14/.test(html));
+  /* 🔴 v1.75.0 ここは番号を**決め打ち**していたので、直すたびに落ちていた（版を上げるのは正しい作業なのに）。
+     「その時より**下がっていないか**」だけを見る形にした。 */
+  const vnum = (re) => { const m = re.exec(html); return m ? +m[1] : -1; };
+  ok('付箋とメンバーのキャッシュ番号が下がっていない',
+     vnum(/board-notes\.js\?v=(\d+)/) >= 8 && vnum(/members-pit\.js\?v=(\d+)/) >= 14,
+     { bn: vnum(/board-notes\.js\?v=(\d+)/), mp: vnum(/members-pit\.js\?v=(\d+)/) });
 }
 
 /* ===== ② 実際に動かす ===== */

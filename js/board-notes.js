@@ -391,10 +391,13 @@
     const r = n.replies.find(x => x.id === replyId);
     if (!r) return;
     if (!_canDeleteReply(r)) { _toast('自分の返信だけ消せます'); return; }
-    if (!confirm('この返信を消しますか？')) return;
-    n.replies = n.replies.filter(x => x.id !== replyId);
-    _save();
-    renderBoardNotes();
+    /* 🔵 v1.75.0 聞くのはアプリ内ダイアログ（pitAsk）＝答えは後から returns（非同期）。 */
+    pitAsk('この返信を消しますか？', { danger: true, ok: '消す' }).then(function (yes) {
+      if (!yes) return;
+      n.replies = n.replies.filter(x => x.id !== replyId);
+      _save();
+      renderBoardNotes();
+    });
   }
   window.deleteBoardNoteReply = deleteBoardNoteReply;
 
@@ -454,11 +457,13 @@
   function deleteBoardNoteFromCard(noteId) {
     const n = _notes().find(x => x.id === noteId);
     if (!n) return;
-    if (!confirm(`付箋「${n.title || '(無題)'}」を消去しますか？`)) return;
-    const i = _notes().findIndex(x => x.id === noteId);
-    if (i >= 0) _notes().splice(i, 1);
-    _save();
-    renderBoardNotes();
+    pitAsk(`付箋「${n.title || '(無題)'}」を消去しますか？`, { danger: true, ok: '消去する' }).then(function (yes) {
+      if (!yes) return;
+      const i = _notes().findIndex(x => x.id === noteId);
+      if (i >= 0) _notes().splice(i, 1);
+      _save();
+      renderBoardNotes();
+    });
   }
   window.deleteBoardNoteFromCard = deleteBoardNoteFromCard;
 

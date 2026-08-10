@@ -789,7 +789,14 @@
   };
   window.mydClosePresets = function () { $('myd-preset').classList.remove('show'); };
   window.mydRenamePreset = function (i, v) { var m = md(); if (m.presets[i]) { m.presets[i].name = (v || '').trim() || ('プリセット' + (i + 1)); save(); renderPresets(); } };
-  window.mydDeletePreset = function (i) { var m = md(); if (m.presets.length <= 1) return; if (!confirm('このプリセットを削除しますか？')) return; m.presets.splice(i, 1); if (m.active >= m.presets.length) m.active = m.presets.length - 1; save(); renderPresets(); renderFlow(); mydOpenPresets(); };
+  window.mydDeletePreset = function (i) {
+    var m = md(); if (m.presets.length <= 1) return;
+    pitAsk('このプリセットを削除しますか？', { danger:true, ok:'削除する' }).then(function(yes){
+      if (!yes) return;
+      m.presets.splice(i, 1); if (m.active >= m.presets.length) m.active = m.presets.length - 1;
+      save(); renderPresets(); renderFlow(); mydOpenPresets();
+    });
+  };
   window.mydAddPreset = function () {
     var m = md(); var t = $('md-new-tmpl') ? $('md-new-tmpl').value : '';
     var layout = t && TEMPLATES[t] ? T(t) : JSON.parse(JSON.stringify(curLayout()));

@@ -89,10 +89,12 @@
     console.log('[sample-customers] 投入 ' + (n || 400) + ' 人 → 計 ' + state.customers.length);
   };
   window.clearCustomers = function () {
-    if (!confirm('顧客の控えを全部削除しますか？\n（整備ソフトの台帳には影響しません）')) return;
-    state.customers = [];
-    if (window.PitDB) PitDB.save();
-    if (window.renderCustomers) renderCustomers();
+    pitAsk('顧客の控えを全部削除しますか？', { danger:true, ok:'削除する', detail:'整備ソフトの台帳には影響しません。' }).then(function (yes) {
+      if (!yes) return;
+      state.customers = [];
+      if (window.PitDB) PitDB.save();
+      if (window.renderCustomers) renderCustomers();
+    });
   };
 
   // 起動時：空 or 旧フォーマット（vehicles配列が無い＝1台1レコードの旧型）かつ全部サンプルなら新モデルへ自動入替

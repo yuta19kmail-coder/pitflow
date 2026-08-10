@@ -166,7 +166,7 @@
           console.warn('[PitDB] 保存失敗', e);
           if (!self._saveErrAlerted){
             self._saveErrAlerted = true;
-            try { alert('データの保存に失敗しました（ブラウザの保存容量オーバーの可能性）。\nこのままだとリロードで最後に保存できた状態に戻ります。\nサンプルの台数を減らす／不要データを整理してください。'); } catch (_) {}
+            try { pitAlert('データの保存に失敗しました（ブラウザの保存容量オーバーの可能性）。\nこのままだとリロードで最後に保存できた状態に戻ります。\nサンプルの台数を減らす／不要データを整理してください。'); } catch (_) {}
           }
           return false;
         }
@@ -180,12 +180,14 @@
     /* サンプルに戻す（本番では使えない＝みんなのデータを消してしまうため） */
     resetSample: function () {
       if (this.mode === 'cloud' || this.mode === 'cloud-pending') {
-        alert('本番ではサンプルに戻せません。\n（この操作は全員の本物のデータを消してしまうため）\n練習したい時はデモ版を使ってください。');
+        pitAlert('本番ではサンプルに戻せません。\n（この操作は全員の本物のデータを消してしまうため）\n練習したい時はデモ版を使ってください。');
         return;
       }
-      if (!confirm('サンプルデータに戻します。\n今の編集内容は消えます。よろしいですか？')) return;
-      try { localStorage.removeItem(LS_KEY); } catch (e) {}
-      location.reload();
+      pitAsk('サンプルデータに戻します。よろしいですか？', { title:'サンプルに戻す', detail:'今の編集内容は消えます。', danger:true, ok:'戻す' }).then(function (yes) {
+        if (!yes) return;
+        try { localStorage.removeItem(LS_KEY); } catch (e) {}
+        location.reload();
+      });
     },
 
     /* 保存済み設定を初期値の上にマージ（将来 設定項目が増えても古い保存で欠けないように） */

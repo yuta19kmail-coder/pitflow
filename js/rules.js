@@ -647,20 +647,24 @@
 
   window.pitRuleOk = function () {
     if (!_draft) return;
-    if (!confirm('この内容で全面的に反映します。よろしいですか？')) return;
-    KEYS.forEach(function (k) { state.settings[k] = _draft[k]; });
-    _draft = null;
-    if (window.PitDB) PitDB.save(true);
-    renderRules();
-    _flash('反映しました');
+    pitAsk('この内容で全面的に反映します。よろしいですか？', { ok:'反映する' }).then(function (yes) {
+      if (!yes) return;
+      KEYS.forEach(function (k) { state.settings[k] = _draft[k]; });
+      _draft = null;
+      if (window.PitDB) PitDB.save(true);
+      renderRules();
+      _flash('反映しました');
+    });
   };
 
   window.pitRuleCancel = function () {
     if (!_draft) return;
-    if (!confirm('編集をやめて元に戻します。いじった内容は消えます。よろしいですか？')) return;
-    _draft = null;
-    renderRules();
-    _flash('↩ 元に戻しました');
+    pitAsk('編集をやめて元に戻します。よろしいですか？', { danger:true, ok:'元に戻す', detail:'いじった内容は消えます。' }).then(function (yes) {
+      if (!yes) return;
+      _draft = null;
+      renderRules();
+      _flash('↩ 元に戻しました');
+    });
   };
 
   /* ===== 編集ハンドラ（すべて下書きにだけ効く） ===== */

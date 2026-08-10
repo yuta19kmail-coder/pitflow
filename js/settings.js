@@ -313,9 +313,12 @@
   window.pitWtDel = function (i) {
     const w = state.workTypes[i];
     if (!w) return;
-    if (!confirm('作業タイプ「' + w.label + '」を削除しますか？\n（過去のカードのデータは消えません。選択肢から消えるだけです）')) return;
-    state.workTypes.splice(i, 1);
-    _wtSave();
+    pitAsk('作業タイプ「' + w.label + '」を削除しますか？', { danger:true, ok:'削除する',
+            detail:'過去のカードのデータは消えません。選択肢から消えるだけです。' }).then(function (yes) {
+      if (!yes) return;
+      state.workTypes.splice(i, 1);
+      _wtSave();
+    });
   };
   /* 併用可（重複チェックOK）＝他の作業を選んでいても追加で選べる作業（例：3M/1Y コーティング） */
   window.pitWtToggleCombo = function (i) {
@@ -347,14 +350,19 @@
   window.pitOsDel = function (i) {
     const arr = state.settings.outsourcePartners || [];
     if (i < 0 || i >= arr.length) return;
-    if (!confirm('外注先「' + arr[i] + '」を削除しますか？\n（過去のカードのデータは消えません）')) return;
-    arr.splice(i, 1);
-    _osSave();
+    pitAsk('外注先「' + arr[i] + '」を削除しますか？', { danger:true, ok:'削除する',
+            detail:'過去のカードのデータは消えません。' }).then(function (yes) {
+      if (!yes) return;
+      arr.splice(i, 1);
+      _osSave();
+    });
   };
 
   /* 初期値に戻す（このページの項目だけ。🧩ルールページの内容＝ルール・辞書・予約枠・目標・単価は保持） */
   window.pitSettingsReset = function () {
-    if (!confirm('設定を初期値に戻します。よろしいですか？\n（予約・カードのデータと、ルールページの内容は消えません）')) return;
+    pitAsk('設定を初期値に戻します。よろしいですか？', { danger:true, ok:'戻す',
+            detail:'予約・カードのデータと、ルールページの内容は消えません。' }).then(function (yes) {
+      if (!yes) return;
     const keep = {
       rules:      state.settings.rules,
       ruleDict:   state.settings.ruleDict,
@@ -369,6 +377,7 @@
     if (window.PitDB) PitDB.save(true);
     renderSettings();
     pitSettingsFlash('↩ 初期値に戻しました');
+    });
   };
 
   let _flashT = null;

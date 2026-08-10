@@ -246,15 +246,22 @@ window.pitTodaySaveDt = function(id, isReturn){
 window.pitTodayCancel = function(id, isReturn){
   const c = state.cards.find(x => x.id === id);
   if (!c) return;
+  /* 🔵 v1.75.0 聞くのはアプリ内ダイアログ（pitAsk）。
+     ⚠ 聞き方は入庫／返車で2通りあるが、**続きは _go 1本**（写しを作らない）。 */
+  const ask = isReturn
+    ? pitAsk('返車予定をキャンセルして「返車・未定」へ戻しますか？', { danger:true, ok:'戻す' })
+    : pitAsk('この入庫予約をキャンセルしますか？', { danger:true, ok:'キャンセルする',
+              detail:'「未入庫」リストに残り、1ヶ月後に自動でアーカイブされます。' });
+  ask.then(function(yes){ if (yes) _go(); });
+
+  function _go(){
   if (isReturn){
-    if (!confirm('返車予定をキャンセルして「返車・未定」へ戻しますか？')) return;
     /* 🔴 v1.65.0 `returnTbd` は v1.60.0 で廃止した旧フラグ。日付を空にすれば「返車日未定」に戻る。
        書き込みは唯一の入口（pitReturnSetDateTime）を通す。 */
     if (window.pitReturnSetDateTime) pitReturnSetDateTime(c, '', '');
     else { c.returnDate = ''; c.returnTime = ''; }
     if (window.logFlow) logFlow(c, '返車予定キャンセル（未定へ）');
   } else {
-    if (!confirm('この入庫予約をキャンセルしますか？\n「未入庫」リストに残り、1ヶ月後に自動でアーカイブされます。')) return;
     c.status = 'cancelled';
     c.cancelledAt = ymd(new Date());
     if (window.logFlow) logFlow(c, 'キャンセル（来店なし）');
@@ -263,6 +270,7 @@ window.pitTodayCancel = function(id, isReturn){
   pitTodayActionClose();
   renderToday();
   if (window.pitToast) pitToast(isReturn ? '返車・未定へ戻しました': '未入庫へ移しました');
+  }
 };
 window.pitTodayActionClose = function(){
   const back = document.getElementById('today-action');

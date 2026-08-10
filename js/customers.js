@@ -429,7 +429,7 @@
   }
   function _deny(){
     if(window.UI && UI.alert) UI.alert('戻せるのは管理者だけです', { detail:'アーカイブから戻す操作は、PitFlow の役割が「管理」の人だけができます。' });
-    else alert('戻せるのは管理者だけです。');
+    else pitAlert('戻せるのは管理者だけです。');
   }
   window.custArchive=function(id){
     const c=list().find(r=>r.id===id); if(!c) return;
@@ -483,8 +483,10 @@
     });
   };
   window.custReseed=function(){
-    if(!confirm('サンプル顧客を入れ替えます（今の控えは消えます）。よろしいですか？')) return;
-    if(window.seedSampleCustomers) seedSampleCustomers(400,true);
+    pitAsk('サンプル顧客を入れ替えます（今の控えは消えます）。よろしいですか？', { danger:true, ok:'入れ替える' }).then(function(yes){
+      if(!yes) return;
+      if(window.seedSampleCustomers) seedSampleCustomers(400,true);
+    });
   };
 
   /* ===== モーダル共通 ===== */

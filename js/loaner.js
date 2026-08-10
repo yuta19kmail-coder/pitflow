@@ -779,10 +779,13 @@ window.loDraftUndoOne = function(id){
 };
 window.loDraftDiscard = function(){
   if (!_loDraftOrig || !_loChangedList().length) return;
-  if (!confirm('下書き中の代車変更を全部破棄します。よろしいですか？')) return;
-  (state.loanerAssigns||[]).forEach(function(a){ const o=_loDraftOrig[a.id]; if(o){ a.loanerId=o.loanerId; a.fromDate=o.fromDate; a.toDate=o.toDate; } });
-  _loDraftOrig = null;
-  _loRefresh();
+  /* 🔵 v1.75.0 聞くのはアプリ内ダイアログ（pitAsk）＝答えは後から返る。 */
+  pitAsk('下書き中の代車変更を全部破棄します。よろしいですか？', { danger:true, ok:'破棄する' }).then(function(yes){
+    if (!yes) return;
+    (state.loanerAssigns||[]).forEach(function(a){ const o=_loDraftOrig[a.id]; if(o){ a.loanerId=o.loanerId; a.fromDate=o.fromDate; a.toDate=o.toDate; } });
+    _loDraftOrig = null;
+    _loRefresh();
+  });
 };
 window.loDraftApply = function(){
   if (!_loDraftOrig) return;
@@ -790,11 +793,14 @@ window.loDraftApply = function(){
   // ★今回の編集で「新しく」重複が発生した予約がある時だけ警告（元から重なっていた既存重複・無関係な重複ではブロックしない）。
   const bad = _loNewBad();
   const changedBad = changed.some(function(a){ return bad.has(a.id); });
-  if (changedBad){
-    if (!confirm('動かした代車の期間が、別の貸出と重複します。\nそれでもこのまま反映しますか？')) return;
-  } else {
-    if (!confirm(changed.length + ' 件の代車変更をまとめて反映します。よろしいですか？')) return;
-  }
+  /* 🔵 v1.75.0 聞き方は2通りあるが、**続きは _go 1本**（写しを作らない）。 */
+  const ask = changedBad
+    ? pitAsk('それでもこのまま反映しますか？', { title:'期間が重複します', danger:true, ok:'反映する',
+              detail:'動かした代車の期間が、別の貸出と重複します。' })
+    : pitAsk(changed.length + ' 件の代車変更をまとめて反映します。よろしいですか？', { ok:'反映する' });
+  ask.then(function(yes){ if (yes) _go(); });
+
+  function _go(){
   _loApplySnap = _loDraftOrig;   // 実行前の状態＝やり直し用
   // 紐づくカードの代車情報を同期
   changed.forEach(function(a){
@@ -804,15 +810,18 @@ window.loDraftApply = function(){
   _loDraftOrig = null;
   if (window.PitDB) PitDB.save();
   _loRefresh();
-  alert('反映しました（' + changed.length + '件）。直後なら「↩ やり直す」で実行前に戻せます。');
+  pitAlert('反映しました（' + changed.length + '件）。直後なら「↩ やり直す」で実行前に戻せます。');
+  }
 };
 window.loDraftUndoApply = function(){
   if (!_loApplySnap) return;
-  if (!confirm('直前の一括実行を取り消して、実行前の状態に戻します。よろしいですか？')) return;
+  pitAsk('直前の一括実行を取り消して、実行前の状態に戻します。よろしいですか？', { ok:'元に戻す' }).then(function(yes){
+    if (!yes) return;
   (state.loanerAssigns||[]).forEach(function(a){ const o=_loApplySnap[a.id]; if(o){ a.loanerId=o.loanerId; a.fromDate=o.fromDate; a.toDate=o.toDate; const card=a.cardId?(state.cards||[]).find(function(c){return c.id===a.cardId;}):null; if(card){card.loanerId=a.loanerId;card.loanerFrom=a.fromDate;card.loanerTo=a.toDate;} } });
   _loApplySnap = null;
   if (window.PitDB) PitDB.save();
   _loRefresh();
+  });
 };
 
 /* ===== v0.99.0 代車バッジ クリック＝操作メニュー（当日ビュー式：詳細/返却確定/代車キャンセル） ===== */
@@ -902,24 +911,28 @@ window.loReturnConfirm = function(aid){
   if (!a) { _loBadgePopClose(); return; }
   const el = document.getElementById('lo-ret-date');
   const rd = el && el.value ? el.value : ymd(new Date());
-  if (!confirm('返却日 ' + rd + ' で確定します。よろしいですか？')) return;
-  a.returned = true; a.returnedAt = rd;
-  if (rd < a.toDate) a.toDate = rd;   // 早く返ってきたらバーを実際の返却日まで縮める
-  const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
-  if (card){ card.loanerTo = a.toDate; card.loanerReturned = true; }
-  if (window.PitDB) PitDB.save();
-  _loBadgePopClose(); renderLoaner();
+  pitAsk('返却日 ' + rd + ' で確定します。よろしいですか？', { ok:'確定する' }).then(function(yes){
+    if (!yes) return;
+    a.returned = true; a.returnedAt = rd;
+    if (rd < a.toDate) a.toDate = rd;   // 早く返ってきたらバーを実際の返却日まで縮める
+    const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
+    if (card){ card.loanerTo = a.toDate; card.loanerReturned = true; }
+    if (window.PitDB) PitDB.save();
+    _loBadgePopClose(); renderLoaner();
+  });
 };
 window.loCancelLoaner = function(aid){
   const a = (state.loanerAssigns || []).find(function(x){ return x.id === aid; });
   if (!a) { _loBadgePopClose(); return; }
   const card = a.cardId ? (state.cards || []).find(function(c){ return c.id === a.cardId; }) : null;
   const nm = card ? ((window.pitCustSurname ? pitCustSurname(card) : (card.customer || '')) || 'この予約') : (a.customer || 'この貸出');
-  if (!confirm(nm + ' の代車をキャンセルします（カレンダーから外します）。\nよろしいですか？')) return;
-  state.loanerAssigns = (state.loanerAssigns || []).filter(function(x){ return x.id !== aid; });
-  if (card){ card.needLoaner = false; card.loanerId = ''; card.loanerFrom = ''; card.loanerTo = ''; card.loanerFixed = false; }
-  if (window.PitDB) PitDB.save();
-  _loBadgePopClose(); renderLoaner();
+  pitAsk(nm + ' の代車をキャンセルしますか？', { danger:true, ok:'キャンセルする', detail:'カレンダーから外します。' }).then(function(yes){
+    if (!yes) return;
+    state.loanerAssigns = (state.loanerAssigns || []).filter(function(x){ return x.id !== aid; });
+    if (card){ card.needLoaner = false; card.loanerId = ''; card.loanerFrom = ''; card.loanerTo = ''; card.loanerFixed = false; }
+    if (window.PitDB) PitDB.save();
+    _loBadgePopClose(); renderLoaner();
+  });
 };
 
 /* ===== v0.98.0 予約以外の貸出ブロック／緊急車両追加（軽量モーダル） ===== */
@@ -968,14 +981,23 @@ window.loAddManualBlock = function(prefill){
 window.loSaveManualBlock = function(){
   const g = function(id){ const e = document.getElementById(id); return e ? e.value : ''; };
   const lo = g('lmb-lo'), pp = g('lmb-pp'), cust = g('lmb-cust').trim(), from = g('lmb-from'), to = g('lmb-to');
-  if (!lo || !from || !to){ alert('代車と期間を入れてください'); return; }
-  if (to < from){ alert('「まで」は「から」以降にしてください'); return; }
+  if (!lo || !from || !to){ pitAlert('代車と期間を入れてください'); return; }
+  if (to < from){ pitAlert('「まで」は「から」以降にしてください'); return; }
   const conf = _loConflictAssigns(lo, from, to);
-  if (conf.length && !confirm('この代車は選んだ期間、すでに他の貸出・予約と重複します：\n\n'+ _loConflictMsg(conf) + '\n\nそれでも登録しますか？')) return;
+  /* 🔵 v1.75.0 重複した時だけ聞く。**続きは _go 1本**（聞く道と聞かない道で写しを作らない）。 */
+  if (conf.length){
+    pitAsk('それでも登録しますか？', { title:'期間が重複します', danger:true, ok:'登録する',
+            detail:'この代車は選んだ期間、すでに他の貸出・予約と重複します：\n\n' + _loConflictMsg(conf) })
+      .then(function(yes){ if (yes) _go(); });
+    return;
+  }
+  _go();
+  function _go(){
   state.loanerAssigns = state.loanerAssigns || [];
   state.loanerAssigns.push({ id:'la'+Date.now().toString(36), loanerId:lo, cardId:null, customer:(cust||'(貸出)'), purpose:pp, fromDate:from, toDate:to, manual:true });
   if (window.PitDB) PitDB.save();
   _loModalClose(); renderLoaner();
+  }
 };
 
 /* 🚨 緊急車両を追加（社用車から選ぶ or 手入力）＝一番左に列・返車で消える（履歴は残す） */
@@ -996,18 +1018,25 @@ window.loEmgSrc = function(){ const v = document.getElementById('lem-src').value
 window.loSaveEmergency = function(){
   const g = function(id){ const e = document.getElementById(id); return e ? e.value : ''; };
   const src = g('lem-src'); let model = '', plate = '';
-  if (src === '__manual__'){ model = g('lem-model').trim(); plate = g('lem-plate').trim(); if (!model){ alert('車名を入れてください'); return; } }
+  if (src === '__manual__'){ model = g('lem-model').trim(); plate = g('lem-plate').trim(); if (!model){ pitAlert('車名を入れてください'); return; } }
   else if (src){ const c = (state.companyCars || []).find(function(x){ return x.id === src; }); if (c){ model = c.model || c.name || '社用車'; plate = c.plate || ''; } }
-  else { alert('社用車を選ぶか「手入力する」を選んでください'); return; }
+  else { pitAlert('社用車を選ぶか「手入力する」を選んでください'); return; }
   const cust = g('lem-cust').trim(), pp = (g('lem-pp').trim() || '緊急'), from = g('lem-from'), to = g('lem-to');
-  if (!from || !to){ alert('期間を入れてください'); return; }
-  if (to < from){ alert('「まで」は「から」以降にしてください'); return; }
+  if (!from || !to){ pitAlert('期間を入れてください'); return; }
+  if (to < from){ pitAlert('「まで」は「から」以降にしてください'); return; }
   const srcId = (src && src !== '__manual__') ? src : '';
   // 同じ社用車(srcId) or 同じナンバーの車が、その期間すでに緊急で出ていないか衝突チェック
   const dupLo = (state.loaners || []).filter(function(l){ return l.emergency && ((srcId && l.srcId === srcId) || (plate && l.plate && l.plate === plate)); });
   let conf = [];
   dupLo.forEach(function(l){ conf = conf.concat(_loConflictAssigns(l.id, from, to)); });
-  if (conf.length && !confirm('この車両（'+ _loEsc(model) + (plate ? '/ '+ _loEsc(plate) : '') + '）は選んだ期間、すでに緊急で出ています：\n\n'+ _loConflictMsg(conf) + '\n\nそれでも追加しますか？')) return;
+  if (conf.length){
+    pitAsk('それでも追加しますか？', { title:'すでに緊急で出ています', danger:true, ok:'追加する',
+            detail:'この車両（'+ _loEsc(model) + (plate ? ' / '+ _loEsc(plate) : '') + '）は選んだ期間、すでに緊急で出ています：\n\n' + _loConflictMsg(conf) })
+      .then(function(yes){ if (yes) _go(); });
+    return;
+  }
+  _go();
+  function _go(){
   const lid = 'emg' + Date.now().toString(36);
   state.loaners = state.loaners || [];
   state.loaners.push({ id:lid, name:'緊急', model:model, plate:plate, srcId:srcId, emergency:true, category:'normal', etc:false, navi:false, iso:false });
@@ -1015,4 +1044,5 @@ window.loSaveEmergency = function(){
   state.loanerAssigns.push({ id:'la'+Date.now().toString(36), loanerId:lid, cardId:null, customer:(cust||'(緊急)'), purpose:pp, fromDate:from, toDate:to, manual:true, emergency:true });
   if (window.PitDB) PitDB.save();
   _loModalClose(); renderLoaner();
+  }
 };
