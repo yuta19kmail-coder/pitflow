@@ -276,6 +276,15 @@ window.pitTodayDetail = function(id){
 window.pitTodayCheckIn = function(id){
   const c = state.cards.find(x => x.id === id);
   if (!c) return;
+  /* 🔵 v1.74.0（ゆうた指定）承認待ちのままなら**1回だけ聞いて通す**。止めない。
+     🔴 聞き方は approval-pit.js の1本（ここに文言を書き写さない）。 */
+  if (window.pitAskApprovalBeforeIntake && c.approvalPending){
+    pitAskApprovalBeforeIntake(c, function(){ _pitTodayCheckInGo(c); });
+    return;
+  }
+  _pitTodayCheckInGo(c);
+};
+function _pitTodayCheckInGo(c){
   c.status = 'check';
   if (!c.actualInAt) c.actualInAt = ymd(new Date());   // 実入庫日
   if (window.logFlow && typeof statusLabel === 'function') logFlow(c, '入庫（点検待ちへ）');
@@ -284,7 +293,7 @@ window.pitTodayCheckIn = function(id){
   renderToday();
   if (window.pitLog) pitLog('入庫済みにした', { cardId: c.id, kind: 'in', label: ((window.pitCustName?pitCustName(c):c.customer)? (window.pitCustName?pitCustName(c):c.customer)+' 様':'') + (c.car? ' / '+c.car:'') });
   if (window.pitToast) pitToast('入庫済み → タスク「点検待ち」へ移動しました');
-};
+}
 /* 返車済み：実績へ。completedAtを今日に・売上を確定値で固める */
 window.pitTodayReturn = function(id){
   const c = state.cards.find(x => x.id === id);

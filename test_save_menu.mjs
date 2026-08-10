@@ -89,7 +89,8 @@ await p.click('#cs-menu-btn');
 const items=await p.evaluate(()=>Array.from(document.querySelectorAll('#cs-menu-panel .vh-mi b')).map(x=>x.textContent.trim()));
 console.log('   ',JSON.stringify(items));
 ok('開く', await p.evaluate(()=>getComputedStyle(document.getElementById('cs-menu-panel')).display)!=='none');
-ok('5つ・順番どおり', JSON.stringify(items)===JSON.stringify(['仮予約で保存','入庫中に印刷して保存','入庫中に保存のみ','予約保存のみ','表紙印刷のみ']), items);
+/* 🔵 v1.74.0 いちばん上に「承認に回して保存」が増えた（ゆうた指定）。以下は今までどおりの並び。 */
+ok('6つ・順番どおり（承認が先頭）', JSON.stringify(items)===JSON.stringify(['承認に回して保存','仮予約で保存','入庫中に印刷して保存','入庫中に保存のみ','予約保存のみ','表紙印刷のみ']), items);
 ok('下に開く（ボタンより下）', await p.evaluate(()=>{
   const b=document.getElementById('cs-menu-btn').getBoundingClientRect();
   const q=document.getElementById('cs-menu-panel').getBoundingClientRect(); return q.top>=b.bottom-1; }));

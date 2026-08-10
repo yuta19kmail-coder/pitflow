@@ -187,6 +187,8 @@
     (function(){
       var bd = [];
       if (c.tentative) bd.push('<span class="ph-b ph-b-kari" title="仮予約">仮</span>');   // 仮予約は先頭に〇仮（v0.100.5）
+      /* 🔵 v1.74.0 承認待ちも先頭に〇承。印のHTMLは approval-pit.js 1本 */
+      if (window.pitApprovalBadge && pitApprovalBadge(c, 'hover')) bd.push(pitApprovalBadge(c, 'hover'));
       var wids = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
       wids.forEach(function(id){
         var w = (window.state && state.workTypes || []).find(function(x){ return x.id === id; });

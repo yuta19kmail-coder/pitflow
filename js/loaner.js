@@ -487,6 +487,8 @@ function _loRenderDays(start, n){
         const card = a.cardId ? state.cards.find(function(c){ return c.id === a.cardId; }) : null;
         const isEmg = !!a.emergency;
         const isKari = !!(card && card.tentative);   // 仮予約の代車＝バッジに「仮」 v0.100.0
+        /* 🔵 v1.74.0 承認待ちの代車＝バッジに「承」（枠は本予約と同じに埋まる＝ゆうた指定） */
+        const _apr = (window.pitApprovalBadge && card) ? pitApprovalBadge(card, 'lo') : '';
         const fixed = !!(card && card.loanerFixed);
         const returned = !!a.returned;
         const teamColor = _loTeamColor(a);
@@ -498,9 +500,9 @@ function _loRenderDays(start, n){
         if (isStart){
           if (compact){
             // 省スペース：客名＝苗字/法人略記(㈱)（長い時だけ…）＋車種（長い時だけ…）＋固（黄）。詳細はホバーでフルサイズ札。
-            labelHtml = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : '') + '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
+            labelHtml = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : _apr) + '<span class="lo-lbl mini"><span class="lo-mininm">' + _loEsc(_nm) + '</span>' + (carTxt ? '<span class="lo-minicar">' + _loEsc(carTxt) + '</span>' : '') + (fixed ? '<span class="lo-fix">固</span>' : '') + '</span>';
           } else {
-            labelHtml = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : '')
+            labelHtml = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : _apr)
               + '<span class="lo-lbl full">'
               + '<span class="lo-nm">' + _nm + ' 様</span>'
               + '<span class="lo-car2"><span class="lo-cartxt">' + (carTxt ? _loEsc(carTxt) : '') + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
@@ -855,12 +857,13 @@ window.loInfoHover = function(el, aid){
   const memo = card ? (card.loanerOther || '') : (a.purpose || '');
   const fixed = !!(card && card.loanerFixed);
   const isKari = !!(card && card.tentative);   // 仮予約 v0.100.4
+  const _apr = (window.pitApprovalBadge && card) ? pitApprovalBadge(card, 'lo') : '';   // 🔵 v1.74.0 承認待ち
   const teamColor = _loTeamColor(a);
   let p = document.getElementById('lo-info'); if (!p){ p = document.createElement('div'); p.id = 'lo-info'; document.body.appendChild(p); }
   p.className = 'lo-info lo-badge full' + (isKari ? ' lo-kari' : '');   // フルサイズ札と同じ見た目
   p.style.setProperty('--lo-team', teamColor);
   p.style.background = teamColor;
-  p.innerHTML = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : '')
+  p.innerHTML = (isKari ? '<span class="kari-lo" title="仮予約">仮</span>' : _apr)
     + '<span class="lo-lbl full"><span class="lo-nm">' + _loEsc(nm) + ' 様</span>'
     + '<span class="lo-car2"><span class="lo-cartxt">' + _loEsc(car) + '</span>' + (fixed ? '<span class="lo-fix">固定</span>' : '') + '</span>'
     + (memo ? '<span class="lo-memo">' + _loEsc(memo) + '</span>' : '') + '</span>';

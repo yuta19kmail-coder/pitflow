@@ -172,12 +172,41 @@ function _pitSaveTentativeGo(){
     if (c._draft) delete c._draft;   /* v1.17.0：ここで初めて確定＝保存される */
     if (window.pitClearDraftKeep) pitClearDraftKeep();
     c.tentative = true;
+    c.approvalPending = false;       /* 🔵 v1.74.0 仮予約と承認待ちは別物＝同時に立てない */
     if (window.logFlow) logFlow(c, '仮予約で登録');
     if (window.pitToast) pitToast('仮予約として登録しました');
   }
   closeDetail();
 }
 window.pitSaveTentative = pitSaveTentative;
+
+/* 🔵 v1.74.0（ゆうた指定）承認に回して保存＝**枠は埋めたまま、承認待ちとして登録する**。
+   -------------------------------------------------------------------
+   ◎仮予約との違い（ここを取り違えないこと）
+     ・仮予約 … まだ確定していない「仮おさえ」。カレンダーには「仮」で載る
+     ・承認に回す … **予約そのものは確定**。人の目で確かめてもらう待ちなので、
+                    入庫カレンダーも代車も**本予約と同じに枠が埋まる**（ゆうた指定）
+     ・外れ方 … 仮＝詳細の⋮メニューで本予約に確定／承認＝承認バーの「承認して印刷して保存」
+   🔴 承認者はアカウントで縛らない。誰でも承認できる（ルールは現場側で決める＝ゆうた指定）。 */
+function pitSaveApproval(){
+  if (!_pitSaveOnce()) return;                        /* 二度押しを飲み込む */
+  if (_pitCardIsBlankNow()){ _pitAskBlankSave('承認に回して保存').then(function(ok){ if (ok) _pitSaveApprovalGo(); }); return; }
+  _pitSaveApprovalGo();
+}
+function _pitSaveApprovalGo(){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  if (c){
+    if (c._draft) delete c._draft;   /* ここで初めて確定＝保存される */
+    if (window.pitClearDraftKeep) pitClearDraftKeep();
+    c.approvalPending = true;
+    c.tentative = false;             /* 🔴 仮ではない＝本予約扱い（枠は埋まる） */
+    const who = (window.pitFlowMe ? (pitFlowMe() || '') : '');
+    if (window.logFlow) logFlow(c, '承認に回した' + (who ? '／' + who : ''));
+    if (window.pitToast) pitToast('承認待ちとして登録しました（予約ビュー ▸ 未定 ▸ 承認待ち）');
+  }
+  closeDetail();
+}
+window.pitSaveApproval = pitSaveApproval;
 
 /* ===================================================================
    v1.17.0  「保存する」と「← やめる」を、はっきり分ける

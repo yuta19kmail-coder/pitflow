@@ -1831,3 +1831,85 @@ th.cfs-lg-d{ z-index:3; }
 .pt-tax{ display:flex; align-items:baseline; gap:8px; margin-top:5px; font-size:11px; line-height:1.4; }
 .pt-tax-l{ color:var(--text3); font-weight:700; letter-spacing:.02em; }
 .pt-tax-v{ color:var(--text2); font-weight:800; font-variant-numeric:tabular-nums; }
+
+/* ===========================================================
+   🔵 承認制度（v1.74.0・ゆうた指定／案A＝青の丸「承」）
+   -----------------------------------------------------------
+   仮予約（オレンジ #f59e0b）と**一目で見分ける**ために青（#378ADD）。
+   形・大きさは仮とまったく同じ＝現場が覚え直さなくていい。
+   🔴 カード詳細だけは丸い印を出さず、文字で「承認待」（ゆうた指定）。
+      あわせて仮予約側も「仮予約」の文字だけに揃えた（ペンのアイコンを外した）。
+   =========================================================== */
+/* 承認待ちカードの左ボーダー＝二重線（仮＝点線 と見分ける） */
+.pit-card.is-approval{ position:relative; border-left-style:double; border-left-width:6px; }
+
+/* ① compactカード：様の直後（.kari-name と同じ形） */
+.appr-name{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  width:19px; height:19px; margin-left:4px;
+  border:1.5px solid #1e5fc2; color:#fff; background:#378ADD;
+  border-radius:50%; font-family:serif; font-weight:900; font-size:12px; line-height:1; letter-spacing:0;
+}
+/* ② 予約標準カード（full）：上寄り中央の丸スタンプ（.kari-stamp と同じ位置・大きさ） */
+.appr-stamp{
+  position:absolute;
+  top:var(--k-top,27%); left:var(--k-left,46%);
+  transform:translate(-50%,-50%);
+  width:var(--k-d,42px); height:var(--k-d,42px);
+  display:flex; align-items:center; justify-content:center;
+  font-family:serif; font-weight:900; font-size:var(--k-size,26px); letter-spacing:-1px;
+  color:rgba(55,138,221,.95); border:2px solid rgba(55,138,221,.95); border-radius:50%;
+  text-shadow:1px 1px 0 rgba(255,255,255,.35); pointer-events:none; z-index:6;
+}
+/* ③ 月／2ヶ月カレンダー行の右端 */
+.appr-edge{
+  flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; border:1.5px solid #1e5fc2; color:#fff; background:#378ADD;
+  border-radius:50%; font-family:serif; font-weight:900; font-size:11px; line-height:1; vertical-align:middle;
+}
+.rml-ev .appr-edge{ float:right; margin-left:6px; }
+.reserve-month-event .appr-edge{ margin-left:4px; }
+/* ④ 週ミニカードのバッジ群 */
+.appr-mini{
+  display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px;
+  font-size:11px; font-weight:900; line-height:1; color:#fff; background:#378ADD;
+  border:1.5px solid #1e5fc2; border-radius:50%; font-family:serif; vertical-align:middle; padding:0 2px;
+}
+/* ⑤ 代車カレンダーの札 */
+.appr-lo{
+  position:absolute; top:50%; right:6px; transform:translateY(-50%);
+  width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+  font-family:serif; font-weight:900; font-size:13px; line-height:1;
+  color:#fff; border:1.5px solid #1e5fc2; border-radius:50%; background:#378ADD;
+  box-shadow:0 1px 3px rgba(0,0,0,.3); pointer-events:none; z-index:3;
+}
+.lo-badge.mini .appr-lo{ width:16px; height:16px; font-size:10px; right:3px; }
+/* ⑥ ホバー情報カードのバッジ列 */
+.ph-b.appr-hb{
+  width:20px; min-width:20px; height:20px; padding:0; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center;
+  color:#fff; background:#378ADD; border:1.5px solid #1e5fc2;
+  font-family:serif; font-weight:900; font-size:12px; line-height:1;
+}
+/* ⑦ カード詳細＝文字だけ（丸い印は出さない・ゆうた指定） */
+.cv-apprbadge{ font-size:11px; font-weight:800; color:#378ADD; background:#378ADD1f;
+  border:1px solid #378ADD66; border-radius:7px; padding:2px 8px; }
+
+/* 予約詳細のいちばん上に出る承認バー */
+.cv-apbar{ border:1px solid #378ADD66; background:#378ADD14; border-radius:12px; padding:12px 14px; margin-bottom:14px; }
+.cv-apt{ font-size:12.5px; font-weight:800; color:#378ADD; display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+.cv-apnote{ font-size:11.5px; color:var(--text3); line-height:1.6; margin-bottom:10px; }
+.cv-apacts{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.cv-apok{ font-size:13px; font-weight:800; color:#fff; background:#378ADD; border:1px solid #1e5fc2;
+  border-radius:9px; padding:9px 16px; display:inline-flex; align-items:center; gap:7px; cursor:pointer; }
+.cv-apok:hover{ background:#1e5fc2; }
+.cv-apsub{ font-size:12px; font-weight:700; color:#378ADD; background:transparent; border:1px solid #378ADD88;
+  border-radius:9px; padding:8px 12px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+.cv-apsub:hover{ background:#378ADD1a; }
+.cv-apwho{ font-size:11px; color:var(--text3); margin-left:auto; font-weight:700; }
+
+/* 未定タブ：承認待ちBOXの「開いて承認する」 */
+.rtbd-act.go{ border-color:#378ADD; color:#378ADD; font-weight:800; }
+.rtbd-act.go:hover{ background:#378ADD1a; color:#378ADD; }
+/* その他保存メニューの「承認に回して保存」 */
+.vh-mi.vh-mi-appr b{ color:#378ADD; }

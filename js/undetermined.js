@@ -44,7 +44,12 @@ function renderReserveTbd(){
   wrap.style.display = '';
   pitAutoArchive();
 
-  const tentative = state.cards.filter(c => c.status === 'reserved' && c.tentative);
+  /* 🔵 v1.74.0（ゆうた指定）承認待ちBOX。
+     ⚠ 予約段階だけで絞らない＝**承認されないまま入庫してしまった車も拾う**（決めごと②で通すため）。
+        返車済み・キャンセル・アーカイブだけ外す。取り残したら「承認され忘れ」に誰も気づけない。 */
+  const approval  = state.cards.filter(c => c.approvalPending && !c.archived
+                                            && c.status !== 'returned' && c.status !== 'cancelled' && c.status !== 'scrap');
+  const tentative = state.cards.filter(c => c.status === 'reserved' && c.tentative && !c.approvalPending);
   const intakeTbd = state.cards.filter(c => c.status === 'reserved' && c.intakeTbd && !c.tentative);
   const noShow    = state.cards.filter(c => c.status === 'cancelled' && !c.archived);
 
@@ -57,6 +62,11 @@ function renderReserveTbd(){
     + (note ? '<div class="und-note">' + note + '</div>' : '') + '</div>';
 
   let h = '<div class="ret-tbd-cols">';
+
+  /* 🔵 承認待ち＝いちばん左（ゆうた指定）。カードごとに「開いて承認する」を下げる。 */
+  h += col('<span class="appr-edge">承</span> 承認待ち <small>（承認まち）</small>', approval.length,
+    approval.length ? approval.map(c => item(c, '<button class="rtbd-act go" onclick="event.stopPropagation();openDetail(\'' + c.id + '\')"><i data-ic=check data-ics=16></i> 開いて承認する</button>')).join('') : empty,
+    '承認待ちでも<b>入庫カレンダー・代車の枠は埋まっています</b>。開いて内容を確認し、表紙を印刷して承認すると、ここから消えて通常の予約になります。');
 
   h += col('<i data-ic=pencil data-ics=16></i> 仮予約 <small>（仮おさえ）</small>', tentative.length,
     tentative.length ? tentative.map(c => item(c, '')).join('') : empty,

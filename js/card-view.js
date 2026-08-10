@@ -86,6 +86,7 @@
     if(c.headlight == null) c.headlight = false;
     if(c.coatingOK == null) c.coatingOK = false;
     if(c.tentative == null) c.tentative = false;   // 仮予約フラグ（旧データ対策）v0.100.0
+    if(c.approvalPending == null) c.approvalPending = false;   // 🔵 v1.74.0 承認待ちフラグ（旧データ対策）
     return c;
   }
 
@@ -299,7 +300,9 @@
 
   // ===== 右カラム＝タブ本体 =====
   function rightHtml(c){
-    let h = pbarHtml(c);
+    /* 🔵 v1.74.0 承認待ちなら、いちばん上に承認バー（承認する入口はここ1つだけ）。
+       ⚠ 予約段階でも、入庫してしまったあとでも同じ場所に出る＝取り残さない。 */
+    let h = (window.pitApprovalBarHtml ? pitApprovalBarHtml(c) : '') + pbarHtml(c);
     /* 🔴 v1.56.0 予約の段階は「予約詳細」だけ。表紙・整備・バックオフィスはまだ出す意味がない。 */
     if (isReserveStage(c)){
       h += '<div class="cv-tabs cv-tabs-one">'
@@ -906,7 +909,10 @@
     let h = '<div class="cv-top">'
       + (c.resNo?'<span class="cv-resno">'+esc(c.resNo)+'</span>':'')
       + '<span class="cv-status" style="color:'+sc+';border-color:'+sc+'66;background:'+sc+'1f">'+esc(sl)+'</span>'
-      + (c.tentative?'<span class="cv-karibadge"><i data-ic=pencil data-ics=16></i> 仮予約</span>':'')
+      /* 🔵 v1.74.0（ゆうた指定）**カード詳細だけは丸い印を出さず、文字だけ**にする。
+         「承認待」と「仮予約」。⚠ 仮予約側のペンのアイコンもここで外した（並びをそろえるため）。 */
+      + (c.approvalPending?'<span class="cv-apprbadge">承認待</span>':'')
+      + (c.tentative?'<span class="cv-karibadge">仮予約</span>':'')
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
       + '<button class="cv-iconbtn" title="表紙を印刷" onclick="pitPrintCover(\''+c.id+'\')"><i data-ic=printer data-ics=16></i></button>'
