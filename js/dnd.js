@@ -109,18 +109,37 @@
       return _returnDrop(c, state.returnDate ? ymd(state.returnDate) : undefined, val);
     } else if (kind === 'reserveDate') {        // 月カレンダー：日付だけ変更
       if (c.reserveDate === val) return;
-      if (window.pitIntakeGuard && pitIntakeGuard(c, val, c.reserveDate) !== val) return;   // ×日は「それでも？」→やめたら動かさない
+      /* 🔵 v1.74.1 ×・休の日は「それでも？」と聞く。聞くのが**アプリ内ダイアログ**になったので答えを待つ。
+         ⚠ 続きは _finishDrop（保存＋描き直し）1本を通す＝写しを作らない。 */
+      if (window.pitIntakeGuard){
+        pitIntakeGuard(c, val, c.reserveDate, function (fin) {
+          if (fin !== val) return;              // やめたら動かさない
+          c.reserveDate = val;
+          _finishDrop();
+        });
+        return;
+      }
       c.reserveDate = val;
     } else if (kind === 'returnDate') {
       if (c.returnDate === val) return;
       return _returnDrop(c, val, undefined);
     } else if (kind === 'reserveDateTime') {     // 週カレンダー：日付＋時刻
       const p = val.split('|');
-      if (p[0] !== c.reserveDate && window.pitIntakeGuard && pitIntakeGuard(c, p[0], c.reserveDate) !== p[0]) return;
-      c.reserveDate = p[0];
       /* v1.34.0 「時刻未定」の行（"日付|" で時刻が空）へ落としたら、時刻を空に戻す。
          ⚠ p[1] の真偽ではなく **区切りがあるかどうか** で見る（'' も正式な値だから）。 */
-      if (p.length > 1) c.reserveTime = p[1];
+      const _setDT = function(){
+        c.reserveDate = p[0];
+        if (p.length > 1) c.reserveTime = p[1];
+      };
+      if (p[0] !== c.reserveDate && window.pitIntakeGuard){
+        pitIntakeGuard(c, p[0], c.reserveDate, function (fin) {
+          if (fin !== p[0]) return;             // やめたら動かさない
+          _setDT();
+          _finishDrop();
+        });
+        return;
+      }
+      _setDT();
     } else if (kind === 'returnDateTime') {
       const p = val.split('|');
       return _returnDrop(c, p[0], p.length > 1 ? p[1] : undefined);
@@ -128,9 +147,16 @@
       return;
     }
 
-    if (window.PitDB) PitDB.save();
-    if (state.currentView) showView(state.currentView);
-    if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();  // PiP小窓も同期（2画面連携）
+    _finishDrop();
+
+    /* 落としたあとの後始末（保存 → 描き直し → PiP同期）。
+       🔵 v1.74.1 入庫日のガードが非同期になったので、**答えが返ってから**ここを通ることがある。
+       ⚠ だから1本の関数にしてある。書き写さないこと。 */
+    function _finishDrop(){
+      if (window.PitDB) PitDB.save();
+      if (state.currentView) showView(state.currentView);
+      if (window.PitPip && PitPip.isOpen && PitPip.isOpen()) PitPip.refresh();  // PiP小窓も同期（2画面連携）
+    }
   }
   window.applyCardDrop = applyCardDrop;
 

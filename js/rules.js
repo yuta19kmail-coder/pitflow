@@ -350,14 +350,26 @@
     window._pitToastT = setTimeout(function () { el.classList.remove('show'); }, 3200);
   };
 
-  /* 予約挿入ガード：×＝「それでも入れますか？」と一言聞く（強制はしない）／△＝トーストで一言だけ
-     戻り値＝確定する日付（やめたら元の日付に戻す） */
-  window.pitIntakeGuard = function (card, newDate, oldDate) {
-    if (!newDate || newDate === oldDate || !window.pitVerdict) return newDate;
+  /* ===================================================================
+     予約挿入ガード：×（受付終了）や 休（定休日）の日に入れようとしたら**一言聞く**（強制はしない）
+     ／△＝トーストで一言だけ。
+     -------------------------------------------------------------------
+     🔴 v1.74.1（ゆうた報告）**ブラウザ純正の confirm を使っていた。**
+        全アプリで「ブラウザ標準の confirm・prompt はやめる」と決めてある（2026-07-28）のに、
+        ここだけ取り残されていた。**アプリ内ダイアログ（ui-dialog.js）に入れ替えた。**
+     🔴 そのぶん**答えが返るのが後になる（非同期）**ので、形を
+        「戻り値で返す」→「**決まったら done(日付) を呼ぶ**」に変えた。
+        ⚠ 呼ぶ側（予約カレンダーのタップ・入庫日欄・ドラッグ）は**全部 done で受け取る**こと。
+           古い書き方（戻り値を見る）だと、必ず「やめた」と同じ扱いになって日付が入らない。
+     done(finalDate) … 入れてよい＝newDate／やめた＝oldDate（無ければ空）
+     =================================================================== */
+  window.pitIntakeGuard = function (card, newDate, oldDate, done) {
+    const fin = (typeof done === 'function') ? done : function(){};
+    if (!newDate || newDate === oldDate || !window.pitVerdict) { fin(newDate); return; }
     /* v1.19.0：過去の日付はそのまま通す。
        「もう入庫してしまった車をあとから記録する」ための日付なので、
        これから受け付けられるか（○△×・休業日）を聞いても意味がない。 */
-    if (newDate < ymd(new Date())) return newDate;
+    if (newDate < ymd(new Date())) { fin(newDate); return; }
     const v = pitVerdict(newDate);
     const team = (card && card.boardId === 'import') ? 'import' : 'default';
     const tv = v[team];
@@ -366,12 +378,22 @@
     const dLabel = (dd.getMonth() + 1) + '/' + dd.getDate() + '（' + '日月火水木金土'[dd.getDay()] + '）';
     const tName = (team === 'import') ? '輸入' : '国産';
     if (tv.mark === '×' || tv.mark === '休') {
-      const head = (tv.mark === '休') ? '休業日' : '受付終了（×）';
-      const ok = confirm(''+ dLabel + 'の'+ tName + 'は '+ head + 'です。\n理由：'+ tv.reason + (tv.by === 'ai'? '（AI判定）': '') + '\n\nそれでも予約を入れますか？（最終判断は人でOK）');
-      return ok ? newDate : (oldDate || '');
+      const head  = (tv.mark === '休') ? '休業日' : '受付終了（×）';
+      const title = dLabel + 'の' + tName + 'は ' + head + 'です';
+      const why   = (tv.reason || '') + (tv.by === 'ai' ? '（AI判定）' : '');
+      const msg   = 'それでも予約を入れますか？';
+      if (window.UI && UI.confirm){
+        UI.confirm(msg, { title: title, detail: (why ? '理由：' + why + '\n\n' : '') + '最終判断は人でOKです。',
+                          ok: 'それでも入れる', cancel: 'やめる' })
+          .then(function (ok) { fin(ok ? newDate : (oldDate || '')); });
+        return;
+      }
+      /* ui-dialog が無い環境だけの保険 */
+      fin(window.confirm(title + '\n' + (why ? '理由：' + why + '\n' : '') + '\n' + msg) ? newDate : (oldDate || ''));
+      return;
     }
     if (tv.mark === '△') pitToast('△ ' + dLabel + ' ' + tName + '：' + tv.reason);
-    return newDate;
+    fin(newDate);
   };
 
   /* ===== 画面 ===== */
@@ -806,7 +828,7 @@
       const ds = _ds(d);
       const v = _verdictC(c, ds);
       const cls = (v.day === '○') ? ' vd-ok' : (v.day === '△') ? ' vd-mid' : (v.day === '×') ? ' vd-ng' : ' closed';
-      g += '<div class="rl-g-c'+ cls + (window._rlTestDate === ds ? 'sel': '') + '"onclick="pitRuleDay(\''+ ds + '\')"title="'+ v.default.mark + '／'+ v.import.mark + '">'+ v.day + '</div>';
+      g += '<div class="rl-g-c'+ cls + (window._rlTestDate === ds ? ' sel': '') + '" onclick="pitRuleDay(\''+ ds + '\')"title="'+ v.default.mark + '／'+ v.import.mark + '">'+ v.day + '</div>';
     });
     g += '</div>';
     box.innerHTML = g;

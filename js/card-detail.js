@@ -1093,7 +1093,11 @@ function _cfsCalHtml(c, team, tStr, ro){
     }
     const dayClick = ro ? '' : ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"';
     const avSel = (ro && window._availPick === ds) ? ' av-sel' : '';   // 空きカレンダービュー：選択日のハイライト
-    h += '<div class="cfs-day'+ cls + (!ro && c.reserveDate === ds ? 'sel': '') + (ds === tStr ? 'today': '') + avSel + '"data-ds="'+ ds + '"data-team="'+ team + '"'+ dayClick + 'title="'+ (ym.m + 1) + '/'+ dd + (hol ? '・'+ hol : '') + (num ? '：'+ num + '台': '') + '">'
+    /* 🔴 v1.74.1（ゆうた報告「表示に変なバグ」）**クラスの前の半角スペースが抜けていた。**
+       `cfs-day ok` ＋ `sel` が `cfs-day oksel` になり、
+       ①選んだ日が緑に光らない ②今日の点線枠が出ない ③**○/△/満/休 の色まで消える**（ok が別名になるため）。
+       ⚠ 見た目だけの話に見えるが、「どの日を選んだのか分からない」＝入れ間違いのもと。 */
+    h += '<div class="cfs-day'+ cls + (!ro && c.reserveDate === ds ? ' sel': '') + (ds === tStr ? ' today': '') + avSel + '" data-ds="'+ ds + '" data-team="'+ team + '"'+ dayClick + ' title="'+ (ym.m + 1) + '/'+ dd + (hol ? '・'+ hol : '') + (num ? '：'+ num + '台': '') + '">'
        + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';
@@ -1375,10 +1379,14 @@ window.cfPickDate = function (ds, team) {
     return;
   }
   const judge = { boardId: team || c.boardId };   // ガードはチームだけ見る
-  const fin = (window.pitIntakeGuard) ? pitIntakeGuard(judge, ds, c.reserveDate) : ds;
-  if (fin !== ds) return;   // やめた
-  c.reserveDate = ds;
-  renderCardForm(c);
+  /* 🔵 v1.74.1 ガードは**アプリ内ダイアログ**になった＝答えを待つ（done で受け取る）。 */
+  const apply = function (fin) {
+    if (fin !== ds) return;   // やめた
+    c.reserveDate = ds;
+    renderCardForm(c);
+  };
+  if (window.pitIntakeGuard) pitIntakeGuard(judge, ds, c.reserveDate, apply);
+  else apply(ds);
 };
 
 /* ⏱最短入庫カードのタップ → 入庫日セット＋カレンダーをその月へジャンプ。
@@ -1387,8 +1395,10 @@ window.cfPickShort = function (ds, team, kind) {
   const c = state.cards.find(x => x.id === _editingCardId);
   if (!c) return;
   const judge = { boardId: team || c.boardId };
-  const fin = (window.pitIntakeGuard) ? pitIntakeGuard(judge, ds, c.reserveDate) : ds;
-  if (fin !== ds) return;
+  /* 🔵 v1.74.1 ガードの答えを待ってから進む（中身は _go に切り出した＝写しを作らない）。 */
+  if (window.pitIntakeGuard) pitIntakeGuard(judge, ds, c.reserveDate, function (fin) { if (fin === ds) _go(); });
+  else _go();
+  function _go(){
   c.reserveDate = ds;
   const p = ds.split('-');
   window._cfsYM = { y: +p[0], m: +p[1] - 1 };   // 予約カレンダーをその月へ
@@ -1403,6 +1413,7 @@ window.cfPickShort = function (ds, team, kind) {
     const sc = document.getElementById('cfs-lg-scroll');
     const tr = sc && sc.querySelector('tr[data-ds="' + ds + '"]');
     if (sc && tr) sc.scrollTop = Math.max(0, tr.offsetTop - 60);   // ガントを該当日へ
+  }
   }
 };
 
@@ -2052,12 +2063,20 @@ function bindCardFormEvents(root){
       if (!key) return;
       let v = el.value;
       if (el.type === 'number') v = v === '' ? null : Number(v);
-      // 入庫日の変更は受付○△×ガードを通す（×＝「それでも入れますか？」・△＝一言トースト・強制はしない）
+      /* 入庫日の変更は受付○△×ガードを通す（×・休＝「それでも入れますか？」・△＝一言トースト・強制はしない）
+         🔵 v1.74.1 ガードがアプリ内ダイアログになった＝**答えを待ってから続きをやる**。
+         ⚠ 続きは `_applyChange` 1本に切り出して、どちらの道からも同じものを通す（写しを作らない）。 */
       if (key === 'reserveDate' && window.pitIntakeGuard) {
-        const fin = pitIntakeGuard(c, v, el.dataset.prev || '');
-        if (fin !== v) { el.value = fin; v = fin; }
-        el.dataset.prev = fin;
+        pitIntakeGuard(c, v, el.dataset.prev || '', function (fin) {
+          if (fin !== v) el.value = fin;
+          el.dataset.prev = fin;
+          _applyChange(fin);
+        });
+        return;
       }
+      _applyChange(v);
+
+      function _applyChange(v){
       c[key] = v;
       if (window.PitDB) PitDB.save();   // v0.83.1 変更を自動保存
       /* v1.8.0：担当を選んだら「誰か（メンバーの番号）」も一緒に持つ。
@@ -2075,6 +2094,7 @@ function bindCardFormEvents(root){
       // v0.84.0 右パネル（選んだ日の入庫/返車・担当のMHS予定・担当ハイライト）を更新するため再描画
       // v0.92.0 LINE状態・Lステップ番号の変更でも再描画（OK選択でLステップ欄を出す／リンク生成）
       if (key === 'reserveDate' || key === 'frontStaff' || key === 'reserveStaff' || key === 'lineStatus' || key === 'lstepId') { renderCardForm(c); return; }
+      }
     });
   });
 
