@@ -205,7 +205,11 @@
        ※置き場(lotNormal)は対象外＝休み中も預かり車は置き場を使い続ける */
     if (target === 'capDefault' || target === 'capImport' || target === 'capBoth') {
       const br = _inBreak(cfg, dateStr);
-      if (br) return { value: 0, pct: -100, zero: true, rules: [], closed: '<i data-ic=parasol data-ics=16></i> ' + (br.label || '長期休み') };
+      /* 🔴 v1.75.1（ゆうた報告「変な表記が出る」）**ここにアイコンのタグを混ぜない。**
+         `closed` と `reason` は**文字として**使われる（確認の窓・トースト・title・表）。
+         タグを入れると、そのまま `<i data-ic=parasol …>` と読めない文字で出る。
+         ⚠ 飾りが要る場所は**出す側**で足すこと。中身（データ）は文字だけにする。 */
+      if (br) return { value: 0, pct: -100, zero: true, rules: [], closed: (br.label || '長期休み') };
       /* 🚫 v1.50.0 休業日は MHS の定休日カレンダー（定休・祝休・臨時休業・特別営業まで込み） */
       if (window.PitCal && PitCal.isClosed(dateStr)) {
         return { value: 0, pct: -100, zero: true, rules: [], closed: PitCal.label(dateStr) || '定休日' };
@@ -306,14 +310,15 @@
     const cnt = _bookCount(team, dStr);
     const left = eff.value - cnt;
     let mark, reason;
-    if (eff.zero)            { mark = '×'; reason = '<i data-ic=puzzle data-ics=16></i>ルールで受付停止（' + eff.rules.map(function (n) { return '#' + n; }).join('・') + '）'; }
+    /* 🔴 v1.75.1 reason は**文字だけ**（アイコンのタグを混ぜない）。上の注記を参照。 */
+    if (eff.zero)            { mark = '×'; reason = 'ルールで受付停止（' + eff.rules.map(function (n) { return '#' + n; }).join('・') + '）'; }
     else if (left <= 0)      { mark = '×'; reason = '枠が埋まりました（' + cnt + '/' + eff.value + '台）＝受付終了'; }
     else if (left === 1)     { mark = '△'; reason = '残り1台（' + cnt + '/' + eff.value + '台）'; }
     else                     { mark = '○'; reason = '空きあり（残り' + left + '台）'; }
     /* ⚠注意ルールがある日は ○ を △ に落とす（理由つき） */
     if (mark === '○') {
       const rs = _rulesForC(cfg, dStr);
-      if (rs.warns.length) { mark = '△'; reason = '<i data-ic=warn data-ics=16></i> ' + rs.warns.map(function (w) { return w.msg; }).join('／'); }
+      if (rs.warns.length) { mark = '△'; reason = rs.warns.map(function (w) { return w.msg; }).join('／'); }
     }
     return { mark: mark, reason: reason, cnt: cnt, cap: eff.value, by: 'calc' };
   }
@@ -378,21 +383,32 @@
     const dLabel = (dd.getMonth() + 1) + '/' + dd.getDate() + '（' + '日月火水木金土'[dd.getDay()] + '）';
     const tName = (team === 'import') ? '輸入' : '国産';
     if (tv.mark === '×' || tv.mark === '休') {
-      const head  = (tv.mark === '休') ? '休業日' : '受付終了（×）';
-      const title = dLabel + 'の' + tName + 'は ' + head + 'です';
-      const why   = (tv.reason || '') + (tv.by === 'ai' ? '（AI判定）' : '');
-      const msg   = 'それでも予約を入れますか？';
-      if (window.UI && UI.confirm){
-        UI.confirm(msg, { title: title, detail: (why ? '理由：' + why + '\n\n' : '') + '最終判断は人でOKです。',
-                          ok: 'それでも入れる', cancel: 'やめる' })
+      /* 🔴 v1.75.1（ゆうた指定）**見出しは「何が起きているか」を素直な日本語で。**
+         前は「8/14（金）の国産は 休業日です／理由：お盆休業＝受付なし」と、
+         裏の言い回しがそのまま出ていて読みづらかった。
+         ⚠ 日付・課・休みの名前は**下の小さい行**へ。見出しは1行で言い切る。 */
+      const head = (tv.mark === '休')
+        ? '選択した日は休業日に指定されています'
+        : '選択した日は受付が終了しています';
+      /* ⚠ 休みの日は見出しで「休業日」と言い切っているので、理由の末尾の「＝受付なし」は落とす
+         （「お盆休業＝受付なし」と二重に言わない）。休みの**名前**だけを下の行に残す。 */
+      let why  = (window.pitPlainText ? pitPlainText(tv.reason || '') : (tv.reason || ''));
+      if (tv.mark === '休') why = why.replace(/＝受付なし\s*$/, '');
+      why += (tv.by === 'ai' ? '（AI判定）' : '');
+      const sub  = dLabel + '・' + tName + (why ? '　' + why : '');
+      const msg  = 'それでも予約を入れますか？';
+      if (window.pitAsk){
+        pitAsk(head, { detail: sub + '\n\n' + msg + '（最終判断は人でOKです）',
+                       ok: 'それでも入れる', cancel: 'やめる' })
           .then(function (ok) { fin(ok ? newDate : (oldDate || '')); });
         return;
       }
-      /* ui-dialog が無い環境だけの保険 */
-      fin(window.confirm(title + '\n' + (why ? '理由：' + why + '\n' : '') + '\n' + msg) ? newDate : (oldDate || ''));
+      /* 入口（ask-pit.js）が読み込めていない時だけの保険 */
+      fin(window.confirm(head + '\n' + sub + '\n\n' + msg) ? newDate : (oldDate || ''));
       return;
     }
-    if (tv.mark === '△') pitToast('△ ' + dLabel + ' ' + tName + '：' + tv.reason);
+    /* ⚠ トーストも「文字だけ」の場所。念のため飾りを落としてから出す（v1.75.1）。 */
+    if (tv.mark === '△') pitToast('△ ' + dLabel + ' ' + tName + '：' + (window.pitPlainText ? pitPlainText(tv.reason) : tv.reason));
     fin(newDate);
   };
 

@@ -69,9 +69,14 @@ console.log('\n── 🚫 定休日をタップした時 ──');
   ok('🔴 ブラウザ純正のポップアップを出さない', native.length === 0, native);
   ok('アプリ内ダイアログが出る', await dlgOpen() === 1);
   const t = await dlgText();
+  /* 🔴 v1.75.1（ゆうた指定）見出しは「何が起きているか」を素直な日本語で言い切る。 */
+  ok('見出しが「選択した日は休業日に指定されています」', /選択した日は休業日に指定されています/.test(t), t);
   ok('「それでも予約を入れますか？」と聞く', /それでも予約を入れますか/.test(t), t);
-  ok('理由（定休）を出す', /定休|休業/.test(t), t);
+  ok('日付・課・理由は下の小さい行に出る', /定休|休業/.test(t) && /国産|輸入/.test(t), t);
   ok('ボタンは「やめる」と「それでも入れる」', /やめる/.test(t) && /それでも入れる/.test(t), t);
+  /* 🔴 v1.75.1（ゆうた報告）窓の中に **アイコンのタグがそのまま出ていた**
+     （`<i data-ic=parasol data-ics=16></i> お盆休業＝受付なし`）。二度と出さない。 */
+  ok('🔴 窓の中に読めないタグが出ていない', !/data-ic|<i |<\/i>|&lt;/.test(t), t);
 
   await p.click('#uid-no'); await p.waitForTimeout(400);
   const c1 = await cardNow();
@@ -144,6 +149,29 @@ console.log('\n── 🖱 ドラッグで定休日に落とした時も同じ �
   await p.waitForTimeout(300);
   await p.click('#uid-ok'); await p.waitForTimeout(500);
   ok('🔴 それでも入れるなら動く', await p.evaluate(() => state.cards[0].reserveDate) === days.closed, await p.evaluate(() => state.cards[0].reserveDate));
+}
+
+console.log('\n── 🏖 長期休み（お盆・年末年始）でも、読めない文字を出さない ──');
+{
+  /* ゆうたが見たのは「お盆休業」の日。長期休みは `closed` に名前が入るので、
+     そこにアイコンのタグが混ざっていると窓に出てしまっていた。 */
+  /* 長期休みは MHS の定休日カレンダー（PitCal.breaks）から来る。ここでは差し替えて再現する。 */
+  await p.evaluate(o => {
+    window.__brOrig = PitCal.breaks;
+    PitCal.breaks = function () { return [{ label: 'お盆休業', from: o.open, to: o.open }]; };
+  }, days);
+  await newCard(); await p.waitForTimeout(600);
+  await p.click('.cfs-day[data-ds="' + days.open + '"][data-team="default"]');
+  await p.waitForTimeout(400);
+  const t = await dlgText();
+  ok('長期休みの日も確認が出る', await dlgOpen() === 1, t);
+  ok('🔴 「お盆休業」が読める文字で出る', /お盆休業/.test(t), t);
+  ok('🔴 アイコンのタグが混ざっていない', !/data-ic|<i |<\/i>|&lt;/.test(t), t);
+  /* 元（rules.js）が文字だけを返しているか＝入口の保険に頼りきらない */
+  const raw = await p.evaluate(o => pitVerdict(o.open).default.reason, days);
+  ok('🔴 元の理由（reason）自体にタグが入っていない', !/data-ic|<i /.test(raw), raw);
+  if (await dlgOpen()) { await p.click('#uid-no'); await p.waitForTimeout(250); }
+  await p.evaluate(() => { if (window.__brOrig) PitCal.breaks = window.__brOrig; });
 }
 
 console.log('\n── 🧰 ガードの形（呼ぶ側が間違えないように） ──');
