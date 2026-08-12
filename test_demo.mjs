@@ -55,6 +55,11 @@ console.log('\n── ① 🔴 PIT_DEMO が無ければ何も起きない（本�
      await p.evaluate(() => !!window.pitIsDemo && window.pitIsDemo() === false));
   ok('デモ用のCSSも入れていない',
      await p.evaluate(() => !document.getElementById('pit-demo-css')));
+  ok('🔴 大きな札も出ない', await p.evaluate(() => !document.querySelector('.pit-demo-flag')));
+  ok('🔴 body に印も付かない', await p.evaluate(() => !document.body.classList.contains('pit-demo-mode')));
+  /* 🔴 サンプルの中身も今までどおり（試験55本がここを踏んでいる） */
+  ok('🔴 サンプルの中身は今までどおり（架空の名前に変わっていない）',
+     await p.evaluate(() => !state.cards.some(c => /デモ|テスト|サンプル|レンシュウ/.test((c.customer||'') + (c.car||'') + (c.maker||'')))));
   ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
   await p.close();
 }
@@ -81,6 +86,55 @@ console.log('\n── ② デモ版だとひと目で分かる ──');
   ok('pitIsDemo() が true', await p.evaluate(() => window.pitIsDemo() === true));
   ok('保存はこの端末だけ（クラウドにつながっていない）',
      await p.evaluate(() => window.PIT_CLOUD === false));
+
+  /* 🔴 v1.79.0（ゆうた指定）「ヘッダーに**大きく**デモ版と分かるように」
+     ⚠ 見間違い（本番のつもりで練習用を触る／その逆）は現場の実害。**小さくしないこと。** */
+  const flag = await p.evaluate(() => {
+    const f = document.querySelector('#topbar .pit-demo-flag');
+    if (!f) return null;
+    const r = f.getBoundingClientRect(), cs = getComputedStyle(f);
+    return { text: f.innerText.replace(/\s+/g, ' ').trim(), w: Math.round(r.width), h: Math.round(r.height),
+             size: parseFloat(cs.fontSize), weight: cs.fontWeight, bg: cs.backgroundImage + cs.backgroundColor,
+             inBar: !!f.closest('#topbar') };
+  });
+  ok('🔴 トップバーに大きな札が出る', !!flag, flag);
+  ok('🔴 「デモ版」と書いてある', !!flag && /デモ版/.test(flag.text), flag);
+  ok('🔴 本番ではないと言い添えてある', !!flag && /本番ではありません/.test(flag.text), flag);
+  ok('🔴 版の横の小さい印より大きい（12px以上）', !!flag && flag.size >= 12, flag);
+  ok('🔴 太字（700以上）', !!flag && parseInt(flag.weight, 10) >= 700, flag);
+  ok('🔴 オレンジで塗ってある（枠だけにしない）', !!flag && /245, ?158, ?11|f59e0b|249, ?178, ?60/.test(flag.bg), flag);
+  ok('🔴 トップバーの中にある', !!flag && flag.inBar, flag);
+  ok('🔴 body にも印が付く（画面の上に帯）',
+     await p.evaluate(() => document.body.classList.contains('pit-demo-mode')));
+
+  /* 🔴 v1.79.0（ゆうた指定）カードを見て本番と混同しないこと */
+  console.log('\n── ②-2 🔴 サンプルの中身が「明らかに架空」 ──');
+  const real = await p.evaluate(() => {
+    const NG = ['トヨタ','ホンダ','日産','マツダ','スズキ','ダイハツ','スバル','BMW','ベンツ','メルセデス','VW','MINI','アウディ','プジョー','ボルボ',
+                'アクア','プリウス','N-BOX','ノート','セレナ','タント','フィット','ハスラー','ゴルフ',
+                '佐藤','鈴木','高橋','田中','伊藤','渡辺','山本','中村','小林','加藤'];
+    const hit = {};
+    const scan = v => { if (!v) return; NG.forEach(w => { if (String(v).indexOf(w) >= 0) hit[w] = (hit[w] || 0) + 1; }); };
+    state.cards.forEach(c => { scan(c.customer); scan(c.maker); scan(c.car); scan(c.plate); });
+    (state.customers || []).forEach(c => { scan(c.name); (c.vehicles || []).forEach(v => { scan(v.maker); scan(v.car); scan(v.plate); }); });
+    return hit;
+  });
+  ok('🔴 実在の名字・メーカー・車種が1つも出てこない', Object.keys(real).length === 0, real);
+  const looks = await p.evaluate(() => ({
+    cards: state.cards.length,
+    custs: (state.customers || []).length,
+    names: state.cards.slice(0, 20).map(c => c.customer).filter(Boolean),
+    cars : state.cards.slice(0, 20).map(c => c.car).filter(Boolean),
+    tels : state.cards.slice(0, 20).map(c => c.tel).filter(Boolean)
+  }));
+  ok('🔴 名前が「デモ◯◯」など架空と分かる',
+     looks.names.length > 0 && looks.names.every(n => /デモ|テス|サンプル|レンシュウ/.test(n)), looks.names.slice(0, 5));
+  ok('🔴 車名が「テスト◯」など架空と分かる',
+     looks.cars.length > 0 && looks.cars.every(c => /テスト/.test(c)), looks.cars.slice(0, 5));
+  ok('🔴 電話は 000-0000-XXXX（本当にかけてしまわない）',
+     looks.tels.length > 0 && looks.tels.every(t => /^000-0000-\d{4}$/.test(t)), looks.tels.slice(0, 3));
+  ok('件数は控えめ（カード400枚未満）', looks.cards < 400, looks.cards);
+  ok('でも空っぽではない（練習になる程度はある）', looks.cards > 50 && looks.custs > 20, looks);
 
   /* ③ 最初の1回だけ案内 */
   console.log('\n── ③ 最初の1回だけ「練習用です」と伝える ──');
@@ -209,10 +263,37 @@ console.log('\n── ⑤ 🔴 作りの見張り（デモ版の中身を散ら�
   ok('🔴 デモ版のために読むファイルは demo-pit.js の1本だけ',
      (html.match(/js\/demo-[a-z-]*\.js/g) || []).length === 1,
      html.match(/js\/demo-[a-z-]*\.js/g));
-  ok('demo-pit.js は ask-pit.js より後ろに読む（pitAlert を使うため）',
-     html.indexOf('js/demo-pit.js') > html.indexOf('js/ask-pit.js'));
-  ok('demo-pit.js は reset-pit.js より後ろに読む（pitIsDemo を先に用意する）',
-     html.indexOf('js/demo-pit.js') > html.indexOf('js/reset-pit.js'));
+  /* 🔴 v1.79.0 読み込む場所が変わった。
+     sample-*.js が**読み込みのその場で** pitIsDemo() を見て中身を切り替えるので、
+     demo-pit.js は**サンプルより前**に居ないと間に合わない。
+     ⚠ pitAlert（ask-pit.js）はもっと後ろだが、案内はログイン後なので問題ない。 */
+  ok('🔴 demo-pit.js は firebase-init.js より後ろ（PIT_DEMO が決まってから）',
+     html.indexOf('js/demo-pit.js') > html.indexOf('js/firebase-init.js'));
+  ok('🔴 demo-pit.js は sample-data.js より前（サンプルが pitIsDemo を見るため）',
+     html.indexOf('js/demo-pit.js') < html.indexOf('js/sample-data.js'));
+  ok('🔴 demo-pit.js は sample-customers.js より前',
+     html.indexOf('js/demo-pit.js') < html.indexOf('js/sample-customers.js'));
+  ok('🔴 demo-pit.js は sample-fleet.js より前',
+     html.indexOf('js/demo-pit.js') < html.indexOf('js/sample-fleet.js'));
+  ok('demo-pit.js は reset-pit.js より前（pitIsDemo を先に用意する）',
+     html.indexOf('js/demo-pit.js') < html.indexOf('js/reset-pit.js'));
+
+  /* 🔴 サンプルの中身の切り替えは「表」だけ＝作る手順を2本にしない */
+  const sc = fs.readFileSync('js/sample-customers.js', 'utf8');
+  ok('🔴 sample-customers.js は pitIsDemo を借りている（自分で location を読まない）',
+     /pitIsDemo/.test(sc) && !/location\.search/.test(sc));
+  ok('🔴 人を作る手順は1本だけ（デモ用の別関数を作っていない）',
+     (sc.match(/function genPerson/g) || []).length === 1);
+  const sf = fs.readFileSync('js/sample-fleet.js', 'utf8');
+  ok('🔴 カードを作る手順も1本だけ',
+     (sf.match(/function baseCard/g) || []).length === 1);
+
+  /* 🔴 お知らせのリンク＝アプリを閉じてしまわないこと */
+  const np = fs.readFileSync('js/news-pit.js', 'utf8');
+  const linkLine = (np.match(/<a class="nw-btn[^>]*>/) || [''])[0];
+  ok('お知らせにデモ版のURLが入っている', /pitflow-demo/.test(np), linkLine);
+  ok('🔴 別のタブで開く（target="_blank"）', /target="_blank"/.test(linkLine), linkLine);
+  ok('🔴 rel="noopener" が付いている', /rel="noopener"/.test(linkLine), linkLine);
 }
 
 await b.close();
