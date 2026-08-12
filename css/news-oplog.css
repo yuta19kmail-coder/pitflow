@@ -146,8 +146,24 @@
 .op-label a{ color:#2ea567; text-decoration:none }
 .op-label a:hover{ text-decoration:underline }
 
+/* 🔴 v1.84.0 1件だけ消す（マスターにだけ出る）
+   ⚠ ふだんは薄く、その行に触れた時だけはっきりさせる。
+      完全に隠す（opacity:0）とスマホ・タブレットでは**指では出せない**ので薄いまま置く。 */
+.op-row.op-can-del{ grid-template-columns:88px 90px minmax(150px,1fr) minmax(120px,1.4fr) 32px }
+.op-del{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; padding:0; border-radius:7px; cursor:pointer;
+  border:1px solid transparent; background:transparent; color:var(--text3);
+  opacity:.35; transition:opacity .12s, color .12s, background .12s, border-color .12s;
+}
+.op-row:hover .op-del{ opacity:1 }
+.op-del:hover{ color:#f87171; border-color:rgba(239,68,68,.45); background:rgba(239,68,68,.12) }
+.op-del:focus-visible{ opacity:1; outline:2px solid rgba(239,68,68,.6); outline-offset:1px }
+
 @media (max-width:760px){
   .op-row{ grid-template-columns:1fr; gap:2px; padding:11px 14px }
+  .op-row.op-can-del{ grid-template-columns:1fr 32px; grid-auto-flow:row dense }
+  .op-row.op-can-del .op-del{ grid-column:2; grid-row:1 / span 4; opacity:.6; align-self:center }
   .op-label{ white-space:normal }
 }
 
