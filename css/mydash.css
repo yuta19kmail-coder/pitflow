@@ -262,3 +262,18 @@ body.md-edit .myd-fabbar { position: fixed; right: 22px; bottom: 22px; margin: 0
    （小サイズだと「預..」のように潰れていた） */
 body.md-edit .md-bh { flex-wrap: wrap; row-gap: 4px; }
 body.md-edit .md-bh h3 { max-width: none; }
+
+/* =========================================================
+   🔴 v1.87.0 押して開いたとき（数字→細／中身→中）
+   ---------------------------------------------------------
+   ・細＝チップ（.md-chips）／中＝盤面と同じカード（.pit-card.pcm）
+   ・カードの絵そのものは reserve.js の cardHtml を借りている。ここでは並べ方だけ。
+   ========================================================= */
+.md-deep-t { font-size: 11px; color: var(--text3); font-weight: 700; margin: 2px 0 7px; }
+.md-cards { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.md-cards .pit-card.pcm { flex: 0 0 204px; width: 204px; max-width: 204px; cursor: pointer; }
+.md-more .md-open { margin-top: 10px; }
+@media (max-width: 760px) {
+  .md-cards { flex-direction: column; }
+  .md-cards .pit-card.pcm { flex: 1 1 auto; width: 100%; max-width: none; }
+}

@@ -158,6 +158,32 @@
     if (list.length > lim) h += '<span class="md-cp md-cp-more">ほか ' + (list.length - lim) + (unit || '台') + '</span>';
     return h + '</div>';
   }
+  /* =========================================================
+     🔴 v1.87.0 BOXを押したときの出しかた（ゆうた案 2026-08-12）
+     ---------------------------------------------------------
+       数字のBOX  → 押すと **細表示（チップ）** ＝「誰の何の車か」が1行ずつ
+       中身のBOX  → 押すと **中表示（本物のカード）** ＝盤面と同じ見た目
+       どちらも下に **「◯◯を開く」** が付く（ビューへ飛ぶ）
+     ＝ 数字 → 細 → 中 → ビュー、と1段ずつ濃くなる。
+     ⚠ カードの絵は `cardHtml(c, {compact:true})`（reserve.js）を借りる。
+        ここで似たものを作らない＝盤面と見た目がズレるため。
+     ========================================================= */
+  function listOf(def, it) { try { return (def.pick ? def.pick(it) : []) || []; } catch (e) { console.error('[mydash] pick error', e); return []; } }
+  function listBody(def, sz, it) {
+    var list = listOf(def, it);
+    return (def.head ? def.head(list, it) : '') + chipsOf(list, sz, def.chip, def.none, def.unit);
+  }
+  function cardsBody(def, sz, it, lim) {
+    var list = listOf(def, it);
+    if (!list.length) return '<div class="md-cp-none">' + esc(def.none || '該当なし') + '</div>';
+    lim = lim || (sz === 's' ? 8 : sz === 'm' ? 16 : 40);
+    var html = list.slice(0, lim).map(function (c) {
+      return (typeof window.cardHtml === 'function') ? cardHtml(c, { compact: true }) : '';
+    }).join('');
+    return '<div class="md-cards">' + html + '</div>' +
+      (list.length > lim ? '<div class="md-more-n">ほか ' + (list.length - lim) + (def.unit || '台') + '</div>' : '');
+  }
+
   /* 中身モードの1行目＝小さい数字（BOXの見出しの下） */
   function lnum(n, u, sub) {
     return '<div class="md-lnum' + (isZero(n) ? ' zero' : '') + '"><b>' + n + '</b>' + (u ? '<small>' + u + '</small>' : '') +
@@ -340,6 +366,17 @@
     return C.cards.filter(function (c) { if (c.status !== 'returned') return false; var rd = mdCountDate(c); return rd >= C.moS && rd <= C.moE && inTarget(taskStaff(c), ns); })
       .sort(function (a, b) { return amt(b) - amt(a); });
   }
+  /* 車検予定：未設定 → 候補 → 決定 の順（いちばん手が要るものが先） */
+  function shakenKind(c) {
+    var s2 = c.inspSchedule || {};
+    if (s2.decided) return 'd';
+    if (s2.slots && Object.keys(s2.slots).some(function (k) { return (s2.slots[k] || []).length; })) return 'c';
+    return 'u';
+  }
+  function pickShakenPlan() {
+    var s = shakenStat();
+    return s.unsetList.concat(s.candList, s.decidedList);
+  }
   function fmd(d) { return d ? (window.fmtMD ? fmtMD(d) : d) : ''; }
 
   // ---------------------------------------------------------
@@ -351,13 +388,10 @@
 
     hold: {
       title: '預かり中', icon: '🅿️', jump: 'dashboard', sizes: ['s', 'm', 'l'], dv: 'num',
-      list: function (sz) {
-        var list = pickHold(), lim = longHoldDays();
-        var held = window.dashOccupancy ? dashOccupancy(C.tStr) : list.length;
-        return lnum(held, '台', '置場 ' + C.cap + '台中') +
-          chipsOf(list, sz, function (c) { var d = daysAgo(c.reserveDate); return cp(c.id, cpWho(c) + wtChip(c) + cpN(d != null ? d + '日目' : ''), d != null && d >= lim); },
-            '預かり中の車はありません');
-      },
+      pick: pickHold,
+      head: function (list) { var held = window.dashOccupancy ? dashOccupancy(C.tStr) : list.length; return lnum(held, '台', '置場 ' + C.cap + '台中'); },
+      chip: function (c) { var d = daysAgo(c.reserveDate), lim = longHoldDays(); return cp(c.id, cpWho(c) + wtChip(c) + cpN(d != null ? d + '日目' : ''), d != null && d >= lim); },
+      none: '預かり中の車はありません',
       body: function (sz) {
         var held = window.dashOccupancy ? dashOccupancy(C.tStr) : 0;
         var d = window._dashHeldOnTeam ? _dashHeldOnTeam('default', C.tStr) : 0;
@@ -369,7 +403,7 @@
           '<div class="md-bar"><i style="width:' + Math.min(100, Math.round(ratio * 100)) + '%;background:' + col + '"></i></div>' +
           '<div class="md-tiny">置場 ' + C.cap + '台中 ' + held + '台（' + Math.round(ratio * 100) + '%）</div>';
       },
-      more: function () { var v = []; for (var i = 0; i < 14; i++) v.push(window.dashOccupancy ? dashOccupancy(ymd(addDays(C.today, i))) : 0); return '<div class="md-tiny">直近14日の預かり台数（赤＝満杯）</div>' + spark(v, C.cap); }
+      more: function () { var v = []; for (var i = 0; i < 14; i++) v.push(window.dashOccupancy ? dashOccupancy(ymd(addDays(C.today, i))) : 0); return '<div class="md-tiny">直近14日の預かり台数（赤＝満杯）</div>' + spark(v, C.cap) + openFoot('work', 'Pitリスト'); }
     },
 
     park: {
@@ -410,13 +444,10 @@
 
     intake: {
       title: '今日の入庫', icon: '📥', jump: 'today', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickIntake(), left = list.filter(function (c) { return c.status === 'reserved'; }).length;
-        return lnum(list.length, '台', '未来店 ' + left + '台') +
-          chipsOf(list, sz, function (c) {
-            return cp(c.id, cpT(c.reserveTime) + cpWho(c) + cpDai(c) + wtChip(c), c.status === 'reserved' && pitTimeMin(c.reserveTime) < 0);
-          }, '本日の入庫予定はありません');
-      },
+      pick: pickIntake,
+      head: function (list) { var left = list.filter(function (c) { return c.status === 'reserved'; }).length; return lnum(list.length, '台', '未来店 ' + left + '台'); },
+      chip: function (c) { return cp(c.id, cpT(c.reserveTime) + cpWho(c) + cpDai(c) + wtChip(c), c.status === 'reserved' && pitTimeMin(c.reserveTime) < 0); },
+      none: '本日の入庫予定はありません',
       body: function (sz) {
         var list = pickIntake();
         var left = list.filter(function (c) { return c.status === 'reserved'; }).length;
@@ -433,12 +464,13 @@
 
     returnout: {
       title: '今日の返車', icon: '📤', jump: 'return', sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz) {
-        var pend = pickReturnOut();
+      pick: pickReturnOut,
+      head: function (list) {
         var done = C.cards.filter(function (c) { return c.status === 'returned' && (c.completedAt === C.tStr || c.returnDate === C.tStr); }).length;
-        return lnum(pend.length + done, '台', '返車済 ' + done + '台') +
-          chipsOf(pend, sz, function (c) { return cp(c.id, cpT(c.returnTime) + cpWho(c) + wtChip(c)); }, '本日の返車待ちはありません');
+        return lnum(list.length + done, '台', '返車済 ' + done + '台');
       },
+      chip: function (c) { return cp(c.id, cpT(c.returnTime) + cpWho(c) + wtChip(c)); },
+      none: '本日の返車待ちはありません',
       body: function (sz) {
         var pend = pickReturnOut();
         var done = C.cards.filter(function (c) { return c.status === 'returned' && (c.completedAt === C.tStr || c.returnDate === C.tStr); }).length;
@@ -451,11 +483,10 @@
 
     telwait: {
       title: '完TEL待ち', icon: '📞', jump: 'return', sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz) {
-        var list = pickTelWait();
-        return lnum(list.length, '件', '完了連絡がまだ') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + cpN(teamOf(c) === 'import' ? '輸入' : '国産')); }, '完了連絡はぜんぶ済み', '件');
-      },
+      pick: pickTelWait,
+      head: function (list) { return lnum(list.length, '件', '完了連絡がまだ'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + cpN(teamOf(c) === 'import' ? '輸入' : '国産')); },
+      none: '完了連絡はぜんぶ済み', unit: '件',
       body: function (sz) {
         var list = pickTelWait();
         if (sz === 's') return kpi(list.length, '件', '完了連絡がまだ', list.length ? 'o' : 'g');
@@ -467,13 +498,10 @@
 
     returnwait: {
       title: '返車待ち', icon: '🔔', jump: 'return', sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz) {
-        var list = pickReturnWait();
-        return lnum(list.length, '件', '完TEL済・返車待ち') +
-          chipsOf(list, sz, function (c) {
-            return cp(c.id, cpWho(c) + cpN(c.returnDate ? fmd(c.returnDate) + (c.returnTime ? ' ' + c.returnTime : '') : '日未定'), c.returnDate === C.tStr);
-          }, '返車待ちはありません', '件');
-      },
+      pick: pickReturnWait,
+      head: function (list) { return lnum(list.length, '件', '完TEL済・返車待ち'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + cpN(c.returnDate ? fmd(c.returnDate) + (c.returnTime ? ' ' + c.returnTime : '') : '日未定'), c.returnDate === C.tStr); },
+      none: '返車待ちはありません', unit: '件',
       body: function (sz) {
         var list = pickReturnWait();
         if (sz === 's') return kpi(list.length, '件', '完TEL済・返車待ち', 'o');
@@ -485,14 +513,10 @@
 
     pay: {
       title: '入金待ち（売掛）', icon: '💰', jump: 'return', sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz) {
-        var list = pickPay(), sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
-        return lnum(list.length, '件', man(sum) + ' 未回収') +
-          chipsOf(list, sz, function (c) {
-            var d = daysAgo(c.returnDate);
-            return cp(c.id, cpWho(c) + cpN((d != null ? d + '日前 ' : '') + yen(amt(c)), 'amt'), d != null && d >= 30);
-          }, '入金待ちはありません', '件');
-      },
+      pick: pickPay,
+      head: function (list) { var sum = list.reduce(function (a, c) { return a + amt(c); }, 0); return lnum(list.length, '件', man(sum) + ' 未回収'); },
+      chip: function (c) { var d = daysAgo(c.returnDate); return cp(c.id, cpWho(c) + cpN((d != null ? d + '日前 ' : '') + yen(amt(c)), 'amt'), d != null && d >= 30); },
+      none: '入金待ちはありません', unit: '件',
       body: function (sz) {
         var list = pickPay();
         var sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
@@ -508,12 +532,10 @@
        完TEL待ち（telwait）と入金待ち（pay）は前からあるので、足したのは日未定・時間未定の2つ。 */
     retDateTbd: {
       title: '返車日未定', icon: '📅', jump: 'return', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickRetDateTbd();
-        return lnum(list.length, '件', '完TEL済・日にち待ち') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + wtChip(c) + cpN(c.amountFinal != null ? yen(c.amountFinal) : '', 'amt')); },
-            '返車日未定はありません', '件');
-      },
+      pick: pickRetDateTbd,
+      head: function (list) { return lnum(list.length, '件', '完TEL済・日にち待ち'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + wtChip(c) + cpN(c.amountFinal != null ? yen(c.amountFinal) : '', 'amt')); },
+      none: '返車日未定はありません', unit: '件',
       body: function (sz) {
         var list = pickRetDateTbd();
         if (sz === 's') return kpi(list.length, '件', '完TEL済・日にち待ち', list.length ? 'o' : 'g');
@@ -527,12 +549,10 @@
 
     retTimeTbd: {
       title: '返車時間未定', icon: '🕒', jump: 'return', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickRetTimeTbd();
-        return lnum(list.length, '件', '日にち決定・時間待ち') +
-          chipsOf(list, sz, function (c) { var d = c.returnDateFinal || c.returnDate; return cp(c.id, cpT(fmd(d)) + cpWho(c) + wtChip(c), d === C.tStr); },
-            '返車時間未定はありません', '件');
-      },
+      pick: pickRetTimeTbd,
+      head: function (list) { return lnum(list.length, '件', '日にち決定・時間待ち'); },
+      chip: function (c) { var d = c.returnDateFinal || c.returnDate; return cp(c.id, cpT(fmd(d)) + cpWho(c) + wtChip(c), d === C.tStr); },
+      none: '返車時間未定はありません', unit: '件',
       body: function (sz) {
         var list = pickRetTimeTbd();
         if (sz === 's') return kpi(list.length, '件', '日にち決定・時間待ち', list.length ? 'o' : 'g');
@@ -547,12 +567,10 @@
     /* ===== 予約の未定欄（v1.86.0）＝ 予約ビューの「未定」タブと同じ4つ ===== */
     approval: {
       title: '承認待ち', icon: '✅', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickApproval();
-        return lnum(list.length, '台', '承認がまだ（枠は埋まっている）') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.reserveDate)) + cpWho(c) + wtChip(c), true); },
-            '承認待ちはありません');
-      },
+      pick: pickApproval,
+      head: function (list) { return lnum(list.length, '台', '承認がまだ（枠は埋まっている）'); },
+      chip: function (c) { return cp(c.id, cpT(fmd(c.reserveDate)) + cpWho(c) + wtChip(c), true); },
+      none: '承認待ちはありません',
       body: function (sz) {
         var list = pickApproval();
         if (sz === 's') return kpi(list.length, '台', '承認がまだ', list.length ? 'r' : 'g');
@@ -566,12 +584,10 @@
 
     tentative: {
       title: '仮予約', icon: '✏️', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickTentative();
-        return lnum(list.length, '台', '仮おさえ') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.reserveDate) || '日未定') + cpWho(c) + wtChip(c)); },
-            '仮予約はありません');
-      },
+      pick: pickTentative,
+      head: function (list) { return lnum(list.length, '台', '仮おさえ'); },
+      chip: function (c) { return cp(c.id, cpT(fmd(c.reserveDate) || '日未定') + cpWho(c) + wtChip(c)); },
+      none: '仮予約はありません',
       body: function (sz) {
         var list = pickTentative();
         if (sz === 's') return kpi(list.length, '台', '仮おさえ', list.length ? 'o' : 'g');
@@ -585,11 +601,10 @@
 
     intakeTbd: {
       title: '入庫日未定', icon: '🅿️', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickIntakeTbd();
-        return lnum(list.length, '台', 'パーツ待ち・入庫日決まらず') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + wtChip(c)); }, '入庫日未定はありません');
-      },
+      pick: pickIntakeTbd,
+      head: function (list) { return lnum(list.length, '台', 'パーツ待ち・入庫日決まらず'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + wtChip(c)); },
+      none: '入庫日未定はありません',
       body: function (sz) {
         var list = pickIntakeTbd();
         if (sz === 's') return kpi(list.length, '台', '入庫日が決まらず', list.length ? 'o' : 'g');
@@ -601,14 +616,13 @@
 
     noShow: {
       title: '未入庫', icon: '🚫', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var list = pickNoShow();
-        return lnum(list.length, '台', '来店なし・キャンセル') +
-          chipsOf(list, sz, function (c) {
-            var d = daysAgo(c.cancelledAt);
-            return cp(c.id, cpWho(c) + cpN(c.cancelledAt ? fmd(c.cancelledAt) + '取消' + (d != null ? '・あと' + Math.max(0, 30 - d) + '日' : '') : ''));
-          }, '未入庫はありません');
+      pick: pickNoShow,
+      head: function (list) { return lnum(list.length, '台', '来店なし・キャンセル'); },
+      chip: function (c) {
+        var d = daysAgo(c.cancelledAt);
+        return cp(c.id, cpWho(c) + cpN(c.cancelledAt ? fmd(c.cancelledAt) + '取消' + (d != null ? '・あと' + Math.max(0, 30 - d) + '日' : '') : ''));
       },
+      none: '未入庫はありません',
       body: function (sz) {
         var list = pickNoShow();
         if (sz === 's') return kpi(list.length, '台', '来店なし・キャンセル', list.length ? 'o' : 'g');
@@ -644,13 +658,11 @@
     },
 
     longhold: {
-      title: '長期預かり', icon: '⏳', jump: null, sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var lim = longHoldDays(), list = pickLongHold();
-        return lnum(list.length, '台', lim + '日以上') +
-          chipsOf(list, sz, function (c) { var d = daysAgo(c.reserveDate); return cp(c.id, cpWho(c) + wtChip(c) + cpN(d + '日目'), d >= lim * 2); },
-            lim + '日以上の長期預かりはありません');
-      },
+      title: '長期預かり', icon: '⏳', jump: 'work', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      pick: pickLongHold,
+      head: function (list) { return lnum(list.length, '台', longHoldDays() + '日以上'); },
+      chip: function (c) { var d = daysAgo(c.reserveDate), lim = longHoldDays(); return cp(c.id, cpWho(c) + wtChip(c) + cpN(d + '日目'), d >= lim * 2); },
+      none: '長期預かりはありません',
       body: function (sz) {
         var lim = longHoldDays();
         var list = pickLongHold();
@@ -659,16 +671,15 @@
         var lm = sz === 'xl' ? 40 : (sz === 'l' ? 12 : 5);
         return '<div class="md-' + (sz === 'xl' ? 'scroll md-scroll-tall' : 'list') + '">' + list.slice(0, lm).map(function (c) { var d = daysAgo(c.reserveDate); return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), d + '日目', d >= lim * 2 ? 'tag rd' : 'tag'); }).join('') + (list.length > lm ? '<div class="md-more-n">ほか ' + (list.length - lm) + '台</div>' : '') + '</div>';
       },
-      more: function () { return ''; }
+      more: function () { return openFoot('work', 'Pitリスト'); }
     },
 
     order: {
       title: '受注残', icon: '💵', jump: null, sizes: ['s', 'm', 'l'],
-      list: function (sz) {
-        var list = pickOrder(), sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
-        return lnum(amtVal(sum), amtUnit(sum), '受注済・未返車 ' + list.length + '台') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + cpN(yen(amt(c)), 'amt')); }, '受注残はありません');
-      },
+      pick: pickOrder,
+      head: function (list) { var sum = list.reduce(function (a, c) { return a + amt(c); }, 0); return lnum(amtVal(sum), amtUnit(sum), '受注済・未返車 ' + list.length + '台'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + cpN(yen(amt(c)), 'amt')); },
+      none: '受注残はありません',
       body: function (sz) {
         var list = pickOrder();
         var sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
@@ -682,22 +693,15 @@
 
     shakenPlan: {
       title: '車検予定', icon: '🔎', jump: 'shakencal', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
-      list: function (sz) {
-        var s = shakenStat();
-        /* 🔴 並びは **未設定 → 候補 → 決定**。
-           いちばん手が要るのは「日取りが決まっていない車」なので先頭に出す。 */
-        var rows = s.unsetList.map(function (c) { return { c: c, k: 'u' }; })
-                   .concat(s.candList.map(function (c) { return { c: c, k: 'c' }; }))
-                   .concat(s.decidedList.map(function (c) { return { c: c, k: 'd' }; }));
-        return lnum(s.unset, '台', '未設定 ／ 候補 ' + s.cand + '・決定 ' + s.decided) +
-          chipsOf(rows, sz, function (r) {
-            var s2 = r.c.inspSchedule || {};
-            var when = r.k === 'u' ? '日取り未定'
-                     : r.k === 'c' ? '候補あり'
-                     : fmd(s2.decided) + (s2.decidedSlot === 'pm' ? ' 午後' : s2.decidedSlot === 'am' ? ' 午前' : '');
-            return cp(r.c.id, cpT(when) + cpWho(r.c), r.k === 'u');
-          }, '車検の予定はありません');
+      pick: pickShakenPlan,
+      head: function () { var s = shakenStat(); return lnum(s.unset, '台', '未設定 ／ 候補 ' + s.cand + '・決定 ' + s.decided); },
+      chip: function (c) {
+        var k = shakenKind(c), s2 = c.inspSchedule || {};
+        var when = k === 'u' ? '日取り未定' : k === 'c' ? '候補あり'
+                 : fmd(s2.decided) + (s2.decidedSlot === 'pm' ? ' 午後' : s2.decidedSlot === 'am' ? ' 午前' : '');
+        return cp(c.id, cpT(when) + cpWho(c), k === 'u');
       },
+      none: '車検の予定はありません',
       body: function (sz) {
         var s = shakenStat();
         if (sz === 's') return kpi(s.decided, '台', '候補 ' + s.cand + '・未設定 ' + s.unset, 'pu');
@@ -737,11 +741,10 @@
 
     resultMonth: {
       title: '当月実績', icon: '✅', jump: 'result', sizes: ['s', 'm', 'l', 'xl'],
-      list: function (sz) {
-        var list = pickResultMonth(), sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
-        return lnum(list.length, '台', '当月完成 / ' + man(sum)) +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.completedAt)) + cpWho(c) + wtChip(c)); }, '当月の実績はまだありません');
-      },
+      pick: pickResultMonth,
+      head: function (list) { var sum = list.reduce(function (a, c) { return a + amt(c); }, 0); return lnum(list.length, '台', '当月完成 / ' + man(sum)); },
+      chip: function (c) { return cp(c.id, cpT(fmd(c.completedAt)) + cpWho(c) + wtChip(c)); },
+      none: '当月の実績はまだありません',
       body: function (sz) {
         var list = pickResultMonth();
         var sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
@@ -820,12 +823,10 @@
     // ===== 個人（担当者）フォーカス =====
     p_reserve: {
       title: '予約一覧', icon: '📅', person: true, sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz, item) {
-        var list = pickPReserve(item);
-        return lnum(list.length, '件', '直近の担当予約') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.reserveDate) + (c.reserveTime ? ' ' + c.reserveTime : '')) + cpWho(c) + wtChip(c), c.reserveDate === C.tStr); },
-            '担当の予約はありません', '件');
-      },
+      pick: pickPReserve,
+      head: function (list) { return lnum(list.length, '件', '直近の担当予約'); },
+      chip: function (c) { return cp(c.id, cpT(fmd(c.reserveDate) + (c.reserveTime ? ' ' + c.reserveTime : '')) + cpWho(c) + wtChip(c), c.reserveDate === C.tStr); },
+      none: '担当の予約はありません', unit: '件',
       body: function (sz, item) {
         var list = pickPReserve(item);
         if (sz === 's') return kpi(list.length, '件', '直近の担当予約', 'b');
@@ -835,11 +836,10 @@
     },
     p_task: {
       title: 'タスク', icon: '📋', person: true, sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz, item) {
-        var list = pickPTask(item);
-        return lnum(list.length, '件', '自分のタスク') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + cpN(TASK_LABEL[c.status] || c.status)); }, 'アクティブなタスクはありません', '件');
-      },
+      pick: pickPTask,
+      head: function (list) { return lnum(list.length, '件', '自分のタスク'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + cpN(TASK_LABEL[c.status] || c.status)); },
+      none: 'アクティブなタスクはありません', unit: '件',
       body: function (sz, item) {
         var list = pickPTask(item);
         if (sz === 's') return kpi(list.length, '件', '自分のタスク', list.length ? 'o' : 'g');
@@ -853,12 +853,10 @@
     },
     p_return: {
       title: '返車予定', icon: '📤', person: true, sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz, item) {
-        var list = pickPReturn(item);
-        return lnum(list.length, '件', '担当の返車予定') +
-          chipsOf(list, sz, function (c) { var d = mdRetDate(c); return cp(c.id, cpT(fmd(d) + (c.returnTime ? ' ' + c.returnTime : '')) + cpWho(c) + wtChip(c), d === C.tStr); },
-            '担当の返車予定はありません', '件');
-      },
+      pick: pickPReturn,
+      head: function (list) { return lnum(list.length, '件', '担当の返車予定'); },
+      chip: function (c) { var d = mdRetDate(c); return cp(c.id, cpT(fmd(d) + (c.returnTime ? ' ' + c.returnTime : '')) + cpWho(c) + wtChip(c), d === C.tStr); },
+      none: '担当の返車予定はありません', unit: '件',
       body: function (sz, item) {
         var list = pickPReturn(item);
         if (sz === 's') return kpi(list.length, '件', '担当の返車予定', 'b');
@@ -868,11 +866,10 @@
     },
     p_resstaff: {
       title: '予約担当 直近10件', icon: '📞', person: true, sizes: ['s', 'm', 'l'], dv: 'list',
-      list: function (sz, item) {
-        var list = pickPResStaff(item);
-        return lnum(list.length, '件', '受付した直近') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.bookedAt) + ' 受付') + cpWho(c) + wtChip(c)); }, '予約担当の履歴はありません', '件');
-      },
+      pick: pickPResStaff,
+      head: function (list) { return lnum(list.length, '件', '受付した直近'); },
+      chip: function (c) { return cp(c.id, cpT(fmd(c.bookedAt) + ' 受付') + cpWho(c) + wtChip(c)); },
+      none: '予約担当の履歴はありません', unit: '件',
       body: function (sz, item) {
         var list = pickPResStaff(item);
         if (sz === 's') return kpi(list.length, '件', '受付した直近', 'pu');
@@ -882,11 +879,10 @@
     },
     p_sales: {
       title: '売上', icon: '💴', person: true, sizes: ['s', 'm', 'l'], dv: 'num',
-      list: function (sz, item) {
-        var list = pickPSales(item), sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
-        return lnum(amtVal(sum), amtUnit(sum), '当月 ' + list.length + '台') +
-          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + cpN(yen(amt(c)), 'amt')); }, '当月の担当実績はありません');
-      },
+      pick: pickPSales,
+      head: function (list) { var sum = list.reduce(function (a, c) { return a + amt(c); }, 0); return lnum(amtVal(sum), amtUnit(sum), '当月 ' + list.length + '台'); },
+      chip: function (c) { return cp(c.id, cpWho(c) + cpN(yen(amt(c)), 'amt')); },
+      none: '当月の担当実績はありません',
       body: function (sz, item) {
         var list = pickPSales(item);
         var sum = list.reduce(function (a, c) { return a + amt(c); }, 0);
@@ -906,7 +902,7 @@
         既定は「読んだ瞬間に誰へ何をするかが決まるもの＝中身」「量や進み具合が主役＝数字」で振ってある。 */
   var VWL = { num: '数字', list: '中身', both: '両方' };
   function viewOf(it, def) {
-    if (!def || !def.list) return 'num';                 /* 中身を持たないBOXは数字だけ */
+    if (!def || !def.pick) return 'num';                 /* 中身を持たないBOXは数字だけ */
     var v = it && it.v;
     if (v === 'num' || v === 'list' || v === 'both') return v;
     return def.dv === 'list' ? 'list' : 'num';
@@ -1046,10 +1042,22 @@
            ⚠ 「両方」の数字は **必ず小サイズの形（kpi）** を使うこと。
               大きいサイズの body は中に一覧を持っていることがあり、そのまま出すと中身が二重になる。 */
         var vw = viewOf(it, def);
-        if (vw === 'list') bodyHtml = safe(def.list, it.s, it);
-        else if (vw === 'both') bodyHtml = safe(def.body, 's', it) + '<div class="md-bothsep"></div>' + safe(def.list, it.s, it);
+        if (vw === 'list') bodyHtml = safe(listBody, def, it.s, it);
+        else if (vw === 'both') bodyHtml = safe(def.body, 's', it) + '<div class="md-bothsep"></div>' + safe(listBody, def, it.s, it);
         else bodyHtml = safe(def.body, it.s, it);
-        if (!noexp) moreHtml = '<div class="md-more">' + safe(def.more, it.s, it) + '</div>';
+        /* 押して開いたとき＝1段濃くする（数字→細／中身→中）。中身を持たないBOXは今までどおり */
+        if (!noexp) {
+          var deep = '';
+          if (def.pick) {
+            var n = listOf(def, it).length;
+            deep = (vw === 'num')
+              /* 数字BOX → 細（チップ）。⚠ 数字は上に出ているので head は付けない */
+              ? '<div class="md-deep-t">中身（' + n + (def.unit || '台') + '）</div>' + chipsOf(listOf(def, it), 'l', def.chip, def.none, def.unit)
+              /* 中身BOX → 中（盤面と同じカード） */
+              : '<div class="md-deep-t">カードで見る（' + n + (def.unit || '台') + '）</div>' + cardsBody(def, it.s, it);
+          }
+          moreHtml = '<div class="md-more">' + deep + safe(def.more, it.s, it) + '</div>';
+        }
       }
       return '<section class="md-box md-' + it.s + (noexp ? ' md-noexp' : '') + (def.shortcut ? ' md-scbox' : '') + '" data-idx="' + idx + '" draggable="true">' +
         '<div class="md-bh"><span class="md-grip"><i data-ic=grip data-ics=16></i></span><span class="md-ic">' + icoE(def.icon) + '</span><h3>' + esc(title) + '</h3>' +
@@ -1063,14 +1071,17 @@
   }
   /* 見せ方の切替チップ（カスタマイズ中だけ見える。サイズチップのすぐ右） */
   function viewChips(it, def, idx) {
-    if (!def.list) return '';                            /* 中身を持たないBOXには出さない */
+    if (!def.pick) return '';                            /* 中身を持たないBOXには出さない */
     var cur = viewOf(it, def);
     return '<span class="md-vwsep"></span>' + ['num', 'list', 'both'].map(function (v) {
       return '<span class="md-vwchip' + (cur === v ? ' on' : '') + '" onclick="mydSetView(event,' + idx + ',\'' + v + '\')">' + VWL[v] + '</span>';
     }).join('');
   }
   function moveTools(idx) { return '<span class="md-tbtn" onclick="mydMove(event,' + idx + ',-1)">↑</span><span class="md-tbtn" onclick="mydMove(event,' + idx + ',1)">↓</span><span class="md-tbtn del" onclick="mydRemove(event,' + idx + ')"><i data-ic=close data-ics=16></i></span>'; }
-  function safe(fn, sz, it) { try { return fn ? fn(sz, it) : ''; } catch (e) { console.error('[mydash] render error', e); return '<div class="md-empty">表示エラー</div>'; } }
+  function safe(fn) {
+    var a = [].slice.call(arguments, 1);
+    try { return fn ? fn.apply(null, a) : ''; } catch (e) { console.error('[mydash] render error', e); return '<div class="md-empty">表示エラー</div>'; }
+  }
 
   // ---------------------------------------------------------
   // 挙動
@@ -1098,7 +1109,7 @@
   window.mydSetView = function (e, idx, v) {
     if (e) e.stopPropagation();
     var l = curLayout(); if (!l[idx]) return;
-    var def = boxDef(l[idx]); if (!def || !def.list) return;
+    var def = boxDef(l[idx]); if (!def || !def.pick) return;
     if (v !== 'num' && v !== 'list' && v !== 'both') return;
     l[idx].v = v; setCurLayout(l); renderFlow(); save();
   };

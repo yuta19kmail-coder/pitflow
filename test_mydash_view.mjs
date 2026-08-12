@@ -139,6 +139,40 @@ try {
   });
   ok('カード詳細が開いた', opened === 'ok', opened);
 
+  console.log('\n── 🔴 押して開いたとき（数字→細／中身→中） ──');
+  /* 数字BOX（預かり中を数字に戻す）→ 開くとチップ（細）が出る */
+  await p.evaluate(i => window.mydSetView(null, i, 'num'), idx);
+  await p.waitForTimeout(400);
+  await p.evaluate(() => {
+    const box = [].slice.call(document.querySelectorAll('.md-box')).find(b => /預かり中/.test((b.querySelector('h3') || {}).textContent || ''));
+    box.click();
+  });
+  await p.waitForTimeout(600);
+  const numDeep = await p.evaluate(() => {
+    const box = document.querySelector('.md-box.md-exp'); if (!box) return null;
+    return { chips: box.querySelectorAll('.md-more .md-cp').length, cards: box.querySelectorAll('.md-more .pit-card').length,
+             open: !!box.querySelector('.md-more .md-open') };
+  });
+  ok('数字BOXを開くと細（チップ）が出る', numDeep && numDeep.chips > 0, numDeep);
+  ok('数字BOXの中にカード（中）は出さない', numDeep && numDeep.cards === 0, numDeep);
+  ok('「◯◯を開く」が付いている', numDeep && numDeep.open, numDeep);
+
+  /* 中身BOX（今日の入庫）→ 開くと本物のカード（中）が出る */
+  await p.evaluate(() => {
+    const box = [].slice.call(document.querySelectorAll('.md-box')).find(b => /今日の入庫/.test((b.querySelector('h3') || {}).textContent || ''));
+    box.click();
+  });
+  await p.waitForTimeout(700);
+  const listDeep = await p.evaluate(() => {
+    const box = [].slice.call(document.querySelectorAll('.md-box.md-exp')).find(b => /今日の入庫/.test((b.querySelector('h3') || {}).textContent || ''));
+    if (!box) return null;
+    return { cards: box.querySelectorAll('.md-more .pit-card').length, open: !!box.querySelector('.md-more .md-open') };
+  });
+  ok('中身BOXを開くとカード（中）が出る', listDeep && listDeep.cards > 0, listDeep);
+  ok('こちらにも「◯◯を開く」が付いている', listDeep && listDeep.open, listDeep);
+  await p.evaluate(() => document.body.click());
+  await p.waitForTimeout(300);
+
   console.log('\n── 画面のエラー ──');
   ok('赤いエラーが出ていない', errs.length === 0, errs.slice(0, 4));
 } finally {
