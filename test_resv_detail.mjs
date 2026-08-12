@@ -363,7 +363,10 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
   ok('工程が動いていれば空ではない', rules.phase === false, rules);
   ok('何か打ってあれば空ではない', rules.typed === false, rules);
 
-  /* 「印刷して保存」＝空なら表紙だけ刷って、予約は作らない */
+  /* 🔴 v1.78.0（ゆうた指定）「印刷して保存」＝**足りなければ印刷にも行かせない。**
+     ⚠ v1.76.0 までは「まっさらなら表紙だけ刷る」道が関門の手前にあった。**その道を廃止した。**
+        「印刷して保存」を押したのに紙だけ出るのが分かりにくかったため。
+     🔴 見たいのは「**刷った＝保存された**が必ず成り立つ」こと。 */
   const pr = await p.evaluate(() => {
     state.cards = state.cards.filter(x => x.id !== 'cP1');
     const c = { id: 'cP1', resNo: 'P-TEST', status: 'reserved', _draft: true,
@@ -371,17 +374,35 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
       log: [{ label: '予約作成', at: Date.now() }] };
     state.cards.push(c);
     window._pitLastSaveAt = 0;          /* 二度押しの見張りを解除してから試す */
-    let printed = 0; const keep = window.pitPrintCover;
+    let printed = 0, told = null;
+    const keep = window.pitPrintCover, keepA = window.pitAlert;
     window.pitPrintCover = function(){ printed++; };
+    window.pitAlert = function(t, o){ told = { t: t, d: (o && o.detail) || '' }; return Promise.resolve(true); };
     openCard('cP1', 'modal');           /* _editingCardId をこのカードに向ける */
     pitSaveAndPrint();
-    window.pitPrintCover = keep;
+    window.pitPrintCover = keep; window.pitAlert = keepA;
     const d = state.cards.find(x => x.id === 'cP1');
-    return { printed: printed, stillDraft: !!(d && d._draft), logs: (d.log || []).map(e => e.label) };
+    return { printed: printed, stillDraft: !!(d && d._draft), told: told, logs: (d.log || []).map(e => e.label) };
   });
-  ok('🔴 空のときは表紙だけ刷る', pr.printed === 1, pr);
+  ok('🔴 空のときは印刷にも行かない', pr.printed === 0, pr);
   ok('🔴 予約は作らない（下書きのまま）', pr.stillDraft === true, pr);
   ok('🔴 「表紙を印刷して保存」の記録も付けない', pr.logs.indexOf('表紙を印刷して保存') < 0, pr);
+  ok('🔴 足りないと教える', !!pr.told && /保存できません/.test(pr.told.t), pr.told);
+  ok('🔴 どこが足りないか名前で伝える', !!pr.told && /カナ/.test(pr.told.d), pr.told);
+
+  /* 空の表紙を刷りたい人の逃げ道＝「表紙印刷のみ」は今までどおり刷れる */
+  const po = await p.evaluate(() => {
+    window._pitLastSaveAt = 0;
+    let printed = 0; const keep = window.pitPrintCover;
+    window.pitPrintCover = function(){ printed++; };
+    openCard('cP1', 'modal');
+    pitPrintCoverOnly();
+    window.pitPrintCover = keep;
+    const d = state.cards.find(x => x.id === 'cP1');
+    return { printed: printed, stillDraft: !!(d && d._draft) };
+  });
+  ok('🔴 「表紙印刷のみ」なら空でも刷れる（逃げ道は残す）', po.printed === 1, po);
+  ok('🔴 それでも予約は作らない', po.stillDraft === true, po);
 
   /* 中身が入っていれば今までどおり保存される
      ⚠ v1.76.0 から赤（必須）が空だと関門で止まるので、**赤も黄も全部埋めてから**試す */

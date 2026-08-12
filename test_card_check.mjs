@@ -104,6 +104,38 @@ console.log('\n── 🚫 赤が残っていたら、どの保存でも止ま�
   }
 }
 
+/* 🔴 v1.78.0（ゆうた指定）「印刷して保存」で止めた時は、**印刷にも行かせない**。
+   ⚠ v1.76.0 までは「まっさらなら表紙だけ刷る」道が関門の手前にあった。**その道は廃止した。**
+   🔴 守りたいのは「**刷った＝保存された**」が必ず成り立つこと（紙が出たのに予約が無い、を起こさない）。
+   ⚠ 空の表紙を刷りたい人の逃げ道＝「表紙印刷のみ」は**残す**。 */
+console.log('\n── 🖨 v1.78.0 止めた時は印刷にも行かない ──');
+{
+  for (const [name, blank] of [['まっさらなカード', true], ['名前だけ入れたカード', false]]){
+    await newCard(); await p.waitForTimeout(700);
+    if (!blank) await p.evaluate(() => { const c = state.cards[state.cards.length - 1]; c.customer = 'テスト 太郎'; });
+    await p.evaluate(() => { window.__printed = 0; window.__keepPrint = window.pitPrintCover;
+                             window.pitPrintCover = function(){ window.__printed++; }; });
+    await p.evaluate(() => pitSaveAndPrint());
+    await p.waitForTimeout(500);
+    ok(name + '：🔴 印刷にも行かない', await p.evaluate(() => window.__printed) === 0);
+    ok(name + '：止まって「保存できません」と出る',
+       await dlgOpen() === 1 && /保存できません/.test(await dlgText()), await dlgText());
+    ok(name + '：🔴 カードが保存されていない', await savedCount() === 0, await savedCount());
+    if (await dlgOpen()) { await p.click('#uid-ok'); await p.waitForTimeout(300); }
+    await p.evaluate(() => { window.pitPrintCover = window.__keepPrint; });
+  }
+
+  /* 逃げ道＝「表紙印刷のみ」は空でも刷れる（現場の「紙だけ欲しい」を殺さない） */
+  await newCard(); await p.waitForTimeout(700);
+  await p.evaluate(() => { window.__printed = 0; window.__keepPrint = window.pitPrintCover;
+                           window.pitPrintCover = function(){ window.__printed++; }; });
+  await p.evaluate(() => pitPrintCoverOnly());
+  await p.waitForTimeout(500);
+  ok('🔴 「表紙印刷のみ」なら空でも刷れる（逃げ道は残す）', await p.evaluate(() => window.__printed) === 1);
+  ok('🔴 それでも予約は作らない', await savedCount() === 0, await savedCount());
+  await p.evaluate(() => { window.pitPrintCover = window.__keepPrint; });
+}
+
 console.log('\n── 🗣 止めた時に、どこがダメかを名前で伝える ──');
 {
   await newCard(); await p.waitForTimeout(700);

@@ -1,6 +1,10 @@
 /* ========================================
-   reset-pit.js  -  本番データの初期化（PitFlow）
-   v1.2.0（2026-08-01）
+   reset-pit.js  -  本番データの初期化 ／ デモ版の「まっさらにする」（PitFlow）
+   v1.3.0（2026-08-12）
+   ----------------------------------------
+   🟠 v1.3.0（2026-08-12）＝**デモ版（練習用サイト）でも出す**ようにした。
+      やること（消すもの・残すもの・「初期化」と打たせる関門）は**本番と全く同じ**。
+      違うのは**言い方だけ**＝`L()` にまとめてある。**道を2本に分けない。**
    ----------------------------------------
    ◎ なにをするもの
      設定画面のいちばん下に「本番データの初期化」を出す。押すと、いま入っている
@@ -44,7 +48,30 @@
 
   function isCloud()  { return !!w.PIT_CLOUD; }
   function isAdmin()  { return !w.pitIsAdmin || w.pitIsAdmin(); }
-  function canShow()  { return isCloud() && isAdmin(); }
+  /* 🟠 v1.77.0 デモ版（練習用サイト）でも出す＝**まっさらから練習し直せる**ように。
+     ⚠ 判定は demo-pit.js の `pitIsDemo()` 1本を借りる（location.search をここで読み直さない）。
+     ⚠ サンプルモードは全員が「管理」あつかい（auth-pit.js）なので isAdmin は素通りする。 */
+  function isDemo()   { return !!(w.pitIsDemo && w.pitIsDemo()); }
+  function canShow()  { return (isCloud() || isDemo()) && isAdmin(); }
+
+  /* 🟠 デモ版と本番で**言い方だけ**変える。
+     🔴 中身（消すもの・残すもの・「初期化」と打たせる関門）は変えない＝道を2本にしない。 */
+  function L() {
+    var demo = isDemo() && !isCloud();
+    return {
+      head: demo ? 'ぜんぶ消して、まっさらにする' : '本番データの初期化',
+      lead: demo
+        ? '練習で作ったものを<b>全部消して空っぽ</b>にします。設定（PIT配置図・作業タイプ・外注先・入庫ルールの判定・付箋の色）は残ります。<br>' +
+          'サンプルの入った状態に戻したい時は、<b>開発用サンプル ▸ 予約サンプルを作り直す</b>を使ってください。'
+        : '予約カード・お客様・代車・自社車両・付箋を<b>全部消して空っぽ</b>にします。' +
+          '設定（PIT配置図・作業タイプ・外注先・入庫ルールの判定・付箋の色）とメンバーは残ります。<br>' +
+          '運用を0件から始めるための操作です。<b>消したものは戻せません。</b>',
+      btn: demo ? 'まっさらにする…' : '初期化する…',
+      lead2: demo
+        ? '下の内容を<b>全部消します</b>。ここはデモ版なので、<b>本番のデータには影響しません</b>。'
+        : '下の内容を<b>全部消します</b>。消したものは戻せません。いま開いている全員の画面からも、すぐに消えます。'
+    };
+  }
   function esc(s)     { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
   function counts() {
@@ -107,12 +134,11 @@
     var box = d.createElement('div');
     box.id = 'pit-reset-box';
     box.className = 'pit-reset-box';
+    var t = L();
     box.innerHTML =
-      '<h4><i data-ic=warn data-ics=16></i> 本番データの初期化</h4>' +
-      '<p>予約カード・お客様・代車・自社車両・付箋を<b>全部消して空っぽ</b>にします。' +
-      '設定（PIT配置図・作業タイプ・外注先・入庫ルールの判定・付箋の色）とメンバーは残ります。<br>' +
-      '運用を0件から始めるための操作です。<b>消したものは戻せません。</b></p>' +
-      '<button class="pr-go" onclick="pitOpenReset()">初期化する…</button>';
+      '<h4><i data-ic=warn data-ics=16></i> ' + t.head + '</h4>' +
+      '<p>' + t.lead + '</p>' +
+      '<button class="pr-go" onclick="pitOpenReset()">' + t.btn + '</button>';
     host.appendChild(box);
     try { if (w.icoBoot) w.icoBoot(box); } catch (e) {}   /* 見張り役が自動で入れてくれるが、念のため */
   }
@@ -132,13 +158,13 @@
       return '<tr><td>' + esc(r.name) + '</td><td class="n">' + r.n + ' 件</td></tr>';
     }).join('');
 
+    var t = L();
     var o = d.createElement('div');
     o.id = 'pit-reset-ovl';
     o.innerHTML =
       '<div class="pr-card">' +
-        '<h3>本番データの初期化</h3>' +
-        '<div class="pr-lead">下の内容を<b>全部消します</b>。消したものは戻せません。' +
-        'いま開いている全員の画面からも、すぐに消えます。</div>' +
+        '<h3>' + t.head + '</h3>' +
+        '<div class="pr-lead">' + t.lead2 + '</div>' +
         '<table>' + rows + '<tr><td><b>合計</b></td><td class="n">' + c.total + ' 件</td></tr></table>' +
         '<div class="pr-keep">残るもの：設定・PIT配置図・作業タイプ・外注先・入庫ルールの判定・付箋の色・メンバー・お知らせ・操作ログ</div>' +
         '<input class="pr-type" id="pr-type" type="text" placeholder="ここに「初期化」と入力してください" autocomplete="off">' +
@@ -171,7 +197,7 @@
                       .map(function (r) { return r.name + ' ' + r.n + '件'; }).join('／') || '（0件）';
 
     /* 先に操作ログへ（消える前の件数を残す） */
-    try { if (w.pitLog) w.pitLog('本番データの初期化', { label: label, kind: 'reset' }); } catch (e) {}
+    try { if (w.pitLog) w.pitLog(L().head, { label: label, kind: 'reset' }); } catch (e) {}
 
     TARGETS.forEach(function (t) {
       if (w.state && Array.isArray(w.state[t.key])) w.state[t.key].length = 0;
@@ -186,7 +212,9 @@
     } catch (e) { console.warn('[reset-pit] 画面の描き直しでエラー', e); }
 
     var msg = (ok === false) ? '消せませんでした。通信を確認してもう一度お試しください'
-                             : '初期化しました（' + c.total + '件）。全員の画面からも消えます';
+            : (isDemo() && !isCloud())
+              ? 'まっさらにしました（' + c.total + '件）。設定 ▸ 開発用サンプル からサンプルを入れ直せます'
+              : '初期化しました（' + c.total + '件）。全員の画面からも消えます';
     if (w.showToast) w.showToast(msg); else if (w.pitToast) w.pitToast(msg);
     console.log('[reset-pit] 初期化', label);
   };
