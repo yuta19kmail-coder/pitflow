@@ -23,7 +23,13 @@ import path from 'path';
   const from = src.indexOf('var _pitLastSaveAt = 0;');
   const to   = src.indexOf('function renderCardForm(c)');
   if (from < 0 || to < 0) throw new Error('card-detail.js の保存まわりが見つかりません（関数名が変わった？）');
-  fs.writeFileSync(path.join(dir,'_save-part.js'), src.slice(from,to));
+  /* 🔴 v1.76.0 すべての保存が **_pitCardGuard（赤なら止める／黄なら1回聞く）** を通るようになった。
+     ⚠ 本物を切り出して足す（写しを作らない）。ここも本体の並びが変わったら落ちる＝それでよい。 */
+  const gFrom = src.indexOf('function _cardMarkMisses(c, root){');
+  const gTo   = src.indexOf('/* 再描画後に赤枠を貼り直す', gFrom);
+  if (gFrom < 0 || gTo < 0) throw new Error('card-detail.js から入力チェック＋関門を切り出せません（構成が変わった？）');
+  fs.writeFileSync(path.join(dir,'_save-part.js'),
+    'let _cardBodyId = "md-body";\nlet _cardCheckOn = false;\n' + src.slice(gFrom,gTo) + '\n' + src.slice(from,to));
 
   const h = fs.readFileSync(path.join(dir,'index.html'),'utf8');
   const head = h.slice(h.indexOf('<section id="view-card" class="view">'), h.indexOf('<div id="md-body"'));
@@ -38,6 +44,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:sans-serif}
 .view-title{flex:1}
 </style><body>
 ${head}</section>
+<div id="md-body"></div>
 <script>
 /* PitFlow の土台をうすく再現（保存関数が呼ぶものだけ） */
 var _editingCardId='c1';
@@ -51,8 +58,15 @@ window.pitLog=function(a,o){ window.__logs.push({a:a,o:o}); };
 window.logFlow=function(c,l){ window.__flow.push(l); };
 window.pitClearDraftKeep=function(){ window.__draftCleared++; };
 window.UI={ alert:function(t,o){ window.__alert={t:t,o:o}; return Promise.resolve(true); } };
+window.pitAlert=function(t,o){ window.__alert={t:t,o:o}; return Promise.resolve(true); };
+/* 🟡 v1.76.0 黄（入れたほうがいい）の確認。既定は「このまま保存する」＝今までの試験がそのまま通る */
+window.__askAnswer=true;
+window.pitAsk=function(t,o){ window.__ask={t:t,o:o}; return Promise.resolve(window.__askAnswer); };
+/* 🔴 v1.76.0 赤（必須）が全部入った土台。見たい所だけを上書きして試す */
+window.__FULL={ kana:'タナカ', repeat:'repeater', tel:'090-0000-0000', dropType:'wait', workType:'oil' };
 window.__reset=function(card){
-  state.cards=[Object.assign({id:'c1'},card)]; _editingCardId='c1';
+  state.cards=[Object.assign({id:'c1'},window.__FULL,card)]; _editingCardId='c1';
+  _cardCheckOn=false; window.__ask=null; window.__askAnswer=true;
   window._pitLastSaveAt=0;   /* 🔴 v1.56.1 二度押しの見張りを毎回まっさらに（続けて試すので） */
   window.__closed=0; window.__printed=[]; window.__toasts=[]; window.__logs=[]; window.__flow=[]; window.__draftCleared=0; window.__alert=null;
 };
@@ -100,7 +114,7 @@ await p.click('#cs-menu-btn'); await p.mouse.click(5,380);
 ok('外側クリックで閉じる', await p.evaluate(()=>getComputedStyle(document.getElementById('cs-menu-panel')).display)==='none');
 
 const run=async (setup,fn)=>{ await p.evaluate(c=>window.__reset(c),setup); await p.evaluate(f=>{ eval(f); },fn); await p.waitForTimeout(60);
-  return p.evaluate(()=>({card:window.__card(),closed:window.__closed,printed:window.__printed,toasts:window.__toasts,logs:window.__logs,flow:window.__flow,draft:window.__draftCleared,alert:window.__alert})); };
+  return p.evaluate(()=>({card:window.__card(),closed:window.__closed,printed:window.__printed,toasts:window.__toasts,logs:window.__logs,flow:window.__flow,draft:window.__draftCleared,alert:window.__alert,ask:window.__ask})); };
 
 console.log('\n── ③ 入庫中に保存のみ（過去日・国産＝1課） ──');
 let r=await run({_draft:true,status:'reserved',boardId:'default',customer:'田中',car:'ノート',reserveDate:PAST},'pitSaveInWork(false)');
@@ -126,18 +140,38 @@ ok('表紙を印刷した',          r.printed.length===1&&r.printed[0]==='c1', 
 ok('トーストが2課',           /2課/.test(r.toasts[0]), r.toasts);
 ok('元の画面へ戻る',          r.closed===1, r.closed);
 
-console.log('\n── ⑤ 入庫日が空 → 今日を入れる ──');
+/* 🔴 v1.76.0 入庫日は**赤（必須）**になった＝ボタンからは空のまま保存できない。
+   　 空なら今日を入れる仕掛けは**念のための受け皿**として残っている（直接呼べば効く）。 */
+console.log('\n── ⑤ 入庫日が空 → 関門で止まる／受け皿は生きている ──');
 r=await run({_draft:true,status:'reserved',boardId:'default',reserveDate:''},'pitSaveInWork(false)');
-ok('入庫日に今日が入る',      r.card.reserveDate===TODAY, r.card.reserveDate);
-ok('実入庫日も今日',          r.card.actualInAt===TODAY, r.card.actualInAt);
-ok('入れた旨を知らせる',      /今日/.test(r.toasts[0]), r.toasts);
+ok('🔴 保存しない（下書きのまま）', r.card._draft===true, r.card._draft);
+ok('🔴 画面を閉じない',             r.closed===0, r.closed);
+ok('🔴 足りないと教える',           !!r.alert && /保存できません/.test(r.alert.t), r.alert);
+ok('🔴 どこがダメか名前で伝える',   !!r.alert && /入庫日/.test(r.alert.o.detail||''), r.alert);
+r=await run({_draft:true,status:'reserved',boardId:'default',reserveDate:''},'_pitSaveInWorkGo(false)');
+ok('受け皿：入庫日に今日が入る',    r.card.reserveDate===TODAY, r.card.reserveDate);
+ok('受け皿：実入庫日も今日',        r.card.actualInAt===TODAY, r.card.actualInAt);
+ok('受け皿：入れた旨を知らせる',    /今日/.test(r.toasts[0]), r.toasts);
 
-console.log('\n── ⑥ 国産/輸入が未選択 → 止めて教える ──');
+/* 🟡 v1.76.0 国産/輸入は**黄（入れたほうがいい）**に落ちた＝1回聞いて、それでも進めば下の案内で止まる */
+console.log('\n── ⑥ 国産/輸入が未選択 → 1回聞いて、進めても止めて教える ──');
 r=await run({_draft:true,status:'reserved',boardId:null,reserveDate:PAST},'pitSaveInWork(false)');
+ok('🟡 黄で1回聞く',             !!r.ask && /国産車／輸入車/.test(r.ask.o.detail||''), r.ask);
 ok('保存しない（下書きのまま）', r.card._draft===true, r.card._draft);
 ok('status を変えない',          r.card.status==='reserved', r.card.status);
 ok('画面を閉じない',             r.closed===0, r.closed);
-ok('アプリ内ダイアログで教える',  !!r.alert && /国産|輸入/.test(r.alert.t), r.alert);
+ok('アプリ内ダイアログで教える',  !!r.alert && /国産|輸入/.test((r.alert.t||'')+(r.alert.o&&r.alert.o.detail||'')), r.alert);
+ok('🟡「入力に戻る」を選べば保存に進まない', await (async()=>{
+  await p.evaluate(d=>{ window.__reset({_draft:true,status:'reserved',boardId:'default',reserveDate:d,menu:''}); window.__askAnswer=false; }, PAST);
+  await p.evaluate(()=>{ pitSaveInWork(false); }); await p.waitForTimeout(80);
+  return p.evaluate(()=>window.__card()._draft===true && window.__closed===0);
+})());
+
+console.log('\n── ⑤-2 赤が足りない時は「すべての保存」で止まる（ゆうた指定） ──');
+for (const [label,fn] of [['予約保存のみ','pitSaveCard()'],['仮予約で保存','pitSaveTentative()'],['印刷して保存','pitSaveAndPrint()'],['入庫中に保存','pitSaveInWork(false)']]){
+  r=await run({_draft:true,status:'reserved',boardId:'default',reserveDate:TODAY,car:'ノート',kana:''},fn);
+  ok(label+'：赤（カナ）で止まる', r.card._draft===true && r.closed===0 && !!r.alert && /保存できません/.test(r.alert.t), {d:r.card._draft,c:r.closed,a:r.alert&&r.alert.t});
+}
 
 console.log('\n── ⑦ 表紙印刷のみ（刷るだけ・保存しない・画面に残る） ──');
 r=await run({_draft:true,status:'reserved',boardId:'default',reserveDate:TODAY},'pitPrintCoverOnly()');

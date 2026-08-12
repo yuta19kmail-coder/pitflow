@@ -1219,9 +1219,15 @@
 .und-act:hover{ background:rgba(29,185,122,.2); }
 @media (max-width:768px){ .und-half{ max-width:100%; } }
 
-/* 🔎 入力チェックの漏れハイライト（v0.28.1） */
+/* 🔎 入力チェックの漏れハイライト（v0.28.1）
+   🔴 赤（.cf-miss）＝**無いと保存できない**（v1.76.0・ゆうた指定）
+   🟡 黄（.cf-warn）＝**入れなくてもいいが、入るのでは？**（保存の前に1回だけ聞く）
+   ⚠ 同じ形（枠）で色だけ変える＝現場が「どっちが重いか」を色で覚えられる。 */
 .cf-miss{ outline:2px solid #ef4444 !important; outline-offset:2px; border-radius:8px; animation:cfMiss .5s ease 2; }
 @keyframes cfMiss{ 50%{ outline-color:rgba(239,68,68,.25); } }
+.cf-warn{ outline:2px solid #f59e0b !important; outline-offset:2px; border-radius:8px; animation:cfWarn .5s ease 2; }
+@keyframes cfWarn{ 50%{ outline-color:rgba(245,158,11,.25); } }
+.cf-namebox.cf-warn{ border-color:#f59e0b; }
 
 /* 🚙 代車の空き＝代車ビュー式ミニガント（v0.27.4） */
 .cfs-lg-scroll{ overflow:auto; max-height:420px; border:1px solid var(--border); border-radius:8px; }

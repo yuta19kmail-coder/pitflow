@@ -383,10 +383,13 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
   ok('🔴 予約は作らない（下書きのまま）', pr.stillDraft === true, pr);
   ok('🔴 「表紙を印刷して保存」の記録も付けない', pr.logs.indexOf('表紙を印刷して保存') < 0, pr);
 
-  /* 中身が入っていれば今までどおり保存される */
+  /* 中身が入っていれば今までどおり保存される
+     ⚠ v1.76.0 から赤（必須）が空だと関門で止まるので、**赤も黄も全部埋めてから**試す */
   const pr2 = await p.evaluate(() => {
     const c = state.cards.find(x => x.id === 'cP1');
-    c.customer = '山田 太郎';
+    Object.assign(c, { customer:'山田 太郎', kana:'ヤマダ タロウ', repeat:'repeater', tel:'090-0000-0000',
+                       dropType:'wait', workType:'oil', boardId:'default', maker:'トヨタ', car:'アクア',
+                       reserveTime:'10:00', menu:'オイル交換' });
     window._pitLastSaveAt = 0;
     let printed = 0; const keep = window.pitPrintCover;
     window.pitPrintCover = function(){ printed++; };
@@ -399,23 +402,27 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
   ok('中身があれば今までどおり刷って保存する', pr2.printed === 1 && pr2.draft === false, pr2);
   ok('その時は記録も付く', pr2.logs.indexOf('表紙を印刷して保存') >= 0, pr2);
 
-  /* 「保存する」＝空なら1回聞く（既定は入力に戻る） */
+  /* 「保存する」＝空なら予約にならない
+     🔴 v1.76.0 で入口が変わった。空のカードは**赤（必須）が全部空**なので、
+        「空のまま作りますか？」より手前の**関門**で止まり、どこが足りないかを名前で伝える。
+     ⚠ 見るべきは「空の予約ができないこと」＝2026-08-06 に本番で6枚できた件の再発防止。 */
   const sv = await p.evaluate(() => {
     state.cards = state.cards.filter(x => x.id !== 'cS1');
     state.cards.push({ id: 'cS1', resNo: 'S-TEST', status: 'reserved', _draft: true,
       bookedAt: '2026-08-06', reserveDate: '2026-08-06', reserveStaff: 'コバモ', log: [{ label: '予約作成', at: Date.now() }] });
     window._pitLastSaveAt = 0;
-    let asked = 0; const keep = UI.confirm;
-    UI.confirm = function(){ asked++; return Promise.resolve(false); };   /* 「入力に戻る」を選ぶ */
+    let told = null; const keep = window.pitAlert;
+    window.pitAlert = function(t, o){ told = { t: t, d: (o && o.detail) || '' }; return Promise.resolve(true); };
     openCard('cS1', 'modal');
     pitSaveCard();
-    UI.confirm = keep;
-    return { asked: asked };
+    window.pitAlert = keep;
+    return { told: told };
   });
   await p.waitForTimeout(200);
   const svAfter = await p.evaluate(() => { const d = state.cards.find(x => x.id === 'cS1'); return { draft: !!(d && d._draft) }; });
-  ok('🔴 空で「保存する」を押すと1回聞く', sv.asked === 1, sv);
-  ok('🔴 「入力に戻る」なら予約にならない', svAfter.draft === true, svAfter);
+  ok('🔴 空で「保存する」を押すと止めて教える', !!sv.told && /保存できません/.test(sv.told.t), sv);
+  ok('🔴 どこが足りないか名前で伝える', !!sv.told && /カナ/.test(sv.told.d) && /TEL/.test(sv.told.d), sv);
+  ok('🔴 予約にならない（下書きのまま）', svAfter.draft === true, svAfter);
 
   const src = fs.readFileSync('js/blank-cards.js', 'utf8');
   ok('🔴 空カード判定が「手で足した記録／工程」だけを見ている',
@@ -427,7 +434,10 @@ console.log('\n── 🔴 v1.56.1 「反応しないから連打」を受け止
   /* ① 二度押しは飲み込む */
   const dbl = await p.evaluate(() => {
     state.cards = state.cards.filter(x => x.id !== 'cD1');
+    /* ⚠ v1.76.0 の関門で止まらないよう、赤も黄も埋めておく（見たいのは連打の飲み込み） */
     state.cards.push({ id: 'cD1', resNo: 'D-TEST', status: 'reserved', _draft: true, customer: '連打 太郎',
+      kana:'レンダ タロウ', repeat:'repeater', tel:'090-0000-0000', dropType:'wait', workType:'oil',
+      boardId:'default', maker:'トヨタ', car:'アクア', reserveTime:'10:00', menu:'オイル交換',
       bookedAt: '2026-08-06', reserveDate: '2026-08-06', log: [{ label: '予約作成', at: Date.now() }] });
     window._pitLastSaveAt = 0;          /* 二度押しの見張りを解除してから試す */
     let printed = 0; const keepP = window.pitPrintCover, keepT = window.pitToast;

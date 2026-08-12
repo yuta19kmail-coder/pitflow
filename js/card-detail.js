@@ -162,9 +162,12 @@ function _pitAskBlankSave(title){
    本予約への確定は予約詳細画面の⋮メニューで行う（v0.100.0）。 */
 function pitSaveTentative(){
   if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
-  /* 🔴 v1.56.1 中身が空なら1回聞く（下の _pitAskBlankSave の注記を参照） */
-  if (_pitCardIsBlankNow()){ _pitAskBlankSave('仮予約で登録').then(function(ok){ if (ok) _pitSaveTentativeGo(); }); return; }
-  _pitSaveTentativeGo();
+  /* 🚦 v1.76.0 赤が空なら止める／黄だけなら1回聞く（仮予約も止める＝ゆうた指定） */
+  _pitCardGuard('仮予約で登録', function(){
+    /* 🔴 v1.56.1 中身が空なら1回聞く（下の _pitAskBlankSave の注記を参照） */
+    if (_pitCardIsBlankNow()){ _pitAskBlankSave('仮予約で登録').then(function(ok){ if (ok) _pitSaveTentativeGo(); }); return; }
+    _pitSaveTentativeGo();
+  });
 }
 function _pitSaveTentativeGo(){
   const c = state.cards.find(x => x.id === _editingCardId);
@@ -190,8 +193,10 @@ window.pitSaveTentative = pitSaveTentative;
    🔴 承認者はアカウントで縛らない。誰でも承認できる（ルールは現場側で決める＝ゆうた指定）。 */
 function pitSaveApproval(){
   if (!_pitSaveOnce()) return;                        /* 二度押しを飲み込む */
-  if (_pitCardIsBlankNow()){ _pitAskBlankSave('承認に回して保存').then(function(ok){ if (ok) _pitSaveApprovalGo(); }); return; }
-  _pitSaveApprovalGo();
+  _pitCardGuard('承認に回して保存', function(){
+    if (_pitCardIsBlankNow()){ _pitAskBlankSave('承認に回して保存').then(function(ok){ if (ok) _pitSaveApprovalGo(); }); return; }
+    _pitSaveApprovalGo();
+  });
 }
 function _pitSaveApprovalGo(){
   const c = state.cards.find(x => x.id === _editingCardId);
@@ -220,9 +225,12 @@ window.pitSaveApproval = pitSaveApproval;
    =================================================================== */
 function pitSaveCard(){
   if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
-  /* 🔴 v1.56.1 中身が空なら1回聞く */
-  if (_pitCardIsBlankNow()){ _pitAskBlankSave('保存する').then(function(ok){ if (ok) _pitSaveCardGo(); }); return; }
-  _pitSaveCardGo();
+  /* 🚦 v1.76.0 赤が空なら止める／黄だけなら1回聞く */
+  _pitCardGuard('保存', function(){
+    /* 🔴 v1.56.1 中身が空なら1回聞く */
+    if (_pitCardIsBlankNow()){ _pitAskBlankSave('保存する').then(function(ok){ if (ok) _pitSaveCardGo(); }); return; }
+    _pitSaveCardGo();
+  });
 }
 function _pitSaveCardGo(){
   const c = state.cards.find(x => x.id === _editingCardId);
@@ -264,17 +272,24 @@ function pitSaveAndPrint(){
   if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
   const c = state.cards.find(x => x.id === _editingCardId);
   const id = c ? c.id : _editingCardId;
-  /* 🔴 v1.56.1 押した瞬間に手応えを返す＝本番は描き直しに時間がかかり「効いていない」と見える */
-  if (window.pitToast) pitToast('表紙を印刷しています…');
   /* 🔴 v1.56.1 **中身が空なら、表紙だけ刷って予約は作らない。**
-     2026-08-06 の本番で、この道から空の予約が6枚できた（フローが「予約作成→表紙を印刷して保存」だけ）。
-     ⚠ 空の表紙を刷りたい、という使い方はそのまま通す＝余計な確認は出さない。
-     ⚠ 下書きは下書きのまま残す（「表紙印刷のみ」と同じ扱い）＝続きから入力できる。 */
+     ⚠ v1.76.0 の関門より**前**に置く＝「空の表紙を刷りたい」使い方は今までどおり通す。 */
   if (_pitCardIsBlankNow()){
     if (id && window.pitPrintCover) pitPrintCover(id);
     if (window.pitToast) pitToast('まだ何も入っていないので、表紙だけ刷りました（予約は作っていません）');
     return;
   }
+  /* 🚦 v1.76.0 赤が空なら止める／黄だけなら1回聞く */
+  _pitCardGuard('印刷して保存', function(){ _pitSaveAndPrintGo(c, id); });
+}
+function _pitSaveAndPrintGo(c, id){
+  /* 🔴 v1.56.1 押した瞬間に手応えを返す＝本番は描き直しに時間がかかり「効いていない」と見える */
+  if (window.pitToast) pitToast('表紙を印刷しています…');
+  /* 🔴 v1.56.1 **中身が空なら、表紙だけ刷って予約は作らない。**
+     2026-08-06 の本番で、この道から空の予約が6枚できた（フローが「予約作成→表紙を印刷して保存」だけ）。
+     ⚠ 空の表紙を刷りたい、という使い方はそのまま通す＝余計な確認は出さない。
+     ⚠ 下書きは下書きのまま残す（「表紙印刷のみ」と同じ扱い）＝続きから入力できる。
+     ⚠ v1.76.0 でこの判定は関門の**手前**へ移した（上を参照）。 */
   if (c && c._draft) delete c._draft;   /* v1.17.0：ここで初めて確定＝保存される */
   if (window.pitClearDraftKeep) pitClearDraftKeep();
   if (c && window.logFlow) logFlow(c, '表紙を印刷して保存');
@@ -347,14 +362,17 @@ window.pitPrintCoverOnly = pitPrintCoverOnly;
 function pitSaveInWork(alsoPrint){
   if (!_pitSaveOnce()) return;                        /* 🔴 v1.56.1 二度押しを飲み込む */
   pitSaveMenuClose();
+  /* 🚦 v1.76.0 赤が空なら止める／黄だけなら1回聞く */
+  _pitCardGuard(alsoPrint ? '入庫中に印刷して保存' : '入庫中に保存', function(){ _pitSaveInWorkGo(alsoPrint); });
+}
+function _pitSaveInWorkGo(alsoPrint){
   const c = state.cards.find(x => x.id === _editingCardId);
   if (!c) return;
 
   if (!c.boardId){
     const msg = '先に「国産車」か「輸入車」を選んでください。';
     const detail = 'タスクボードは 1課（国産）と 2課（輸入）に分かれているので、どちらに置くかが決まりません。';
-    if (window.UI && UI.alert) UI.alert(msg, { title: 'どちらの課か決まっていません', detail: detail });
-    else if (window.pitToast) pitToast(msg);
+    pitAlert('どちらの課か決まっていません', { detail: msg + '\n' + detail, ok: '入力に戻る' });
     return;
   }
 
@@ -503,7 +521,8 @@ function renderCardForm(c){
   /* 5行目：入庫日｜入庫時刻(1BOX＋ショートカット)｜予約受付日（変わらず） */
   h += '<div class="cf-row">';
   h += field('入庫日', dateIn(c, 'reserveDate'));
-  h += '<div class="cf-field" style="flex:1"><div class="cf-label">入庫時刻</div>' + timeField(c) + '</div>';
+  /* 🟡 v1.76.0 入庫時刻は「入れたほうがいい（黄）」。枠を付ける目印で包む（中身は timeField のまま）。 */
+  h += '<div class="cf-field" style="flex:1"><div class="cf-label">入庫時刻</div><div data-key="reserveTime">' + timeField(c) + '</div></div>';
   h += field('予約受付日', dateIn(c, 'bookedAt'));
   h += '</div>';
   h += secEnd();
@@ -684,8 +703,10 @@ function nameBoxInput(c){
     + '<input type="text" class="cf-nb-seg" data-name="mei" value="' + _pe(c.mei || '') + '" placeholder="名" autocomplete="off">'
     + '</div>';
 }
+/* 🔴 v1.76.0（ゆうた指定）**カナは必須（赤）** になったので、赤枠を付ける目印を足す。
+   ⚠ 漢字（customer）は「入れたほうがいい（黄）」に変わった。 */
 function kanaBoxInput(c){
-  return '<div class="cf-namebox">'
+  return '<div class="cf-namebox" data-key="kana">'
     + '<input type="text" class="cf-nb-seg" data-name="seiKana" value="' + _pe(c.seiKana || '') + '" placeholder="セイ" autocomplete="off">'
     + '<span class="cf-nb-sep"></span>'
     + '<input type="text" class="cf-nb-seg" data-name="meiKana" value="' + _pe(c.meiKana || '') + '" placeholder="メイ" autocomplete="off">'
@@ -1289,45 +1310,117 @@ window.cfsLgToday = function () {
 /* 未入力の項目に赤枠(.cf-miss)を付け直す共通処理。未入力ラベルの配列を返す（トーストは出さない）。
    再描画ごと・入力ごとに呼ぶ＝埋めた項目はその場で赤が外れ、未入力だけ残る。 */
 function _cardMarkMisses(c, root){
-  if (!root) return [];
+  if (!root) return { red: [], yellow: [], all: [] };
+
+  /* ===================================================================
+     🔴 赤（必須）＝これが空だと**保存できない**（ゆうた指定 v1.76.0）
+     🟡 黄（推奨）＝空でも保存できるが、**1回だけ聞く**（「入れなくてもいいが、入るのでは？」）
+     -------------------------------------------------------------------
+     ◎ゆうた指定（2026-08-10）
+       ・漢字の名前＝黄／**カナ＝赤**
+       ・初回／リピーター＝赤
+       ・入庫日＝赤
+       ・入庫時間＝黄
+       ・作業内容＝黄
+       ・**TEL は赤のまま。国産／輸入・メーカー・車種は黄に落とす**
+       ・受付タイプ（預かりなど）＝赤。**赤が埋まっていなければ保存禁止＋どこがダメか伝える**
+     ⚠ 代車を「必要」にした時の3項目と、車検の諸費用は**今までどおり赤**（指定に無いので変えない）。
+     🔴 この表がこの画面の唯一の物差し。**保存の関門（_pitCardGuard）も入力チェックもここを見る。**
+     =================================================================== */
   const need = [
-    /* 🔴 v1.25.0 新規のお客様は電話だけで漢字が分からないことがある。
-       その時は**カナだけ**入れれば通す（漢字が空でもカナが入っていればOK）。両方空なら今までどおり赤。 */
-    ['customer',    'お客様名',        !!((c.customer || '').trim() || (c.kana || '').trim())],
-    ['tel',         'TEL',             !!(c.tel || '').trim()],
-    ['boardId',     '国産車／輸入車',  c.boardId === 'default' || c.boardId === 'import'],
-    ['maker',       'メーカー',        !!(c.maker || '').trim()],
-    ['car',         '車種（グレード）', !!(c.car || '').trim()],
-    ['reserveDate', '入庫日',          !!c.reserveDate],
-    ['workType',    '作業タイプ',      !!c.workType || !!((c.workAddons||[]).length)],
-    ['dropType',    '受付タイプ',      !!c.dropType],
+    /* --- 🔴 赤（必須） --- */
+    ['kana',        'カナ',            !!(c.kana || '').trim(),                                 'red'],
+    ['repeat',      '初回／リピーター', !!(c.repeat || '').trim(),                               'red'],
+    ['tel',         'TEL',             !!(c.tel || '').trim(),                                  'red'],
+    ['reserveDate', '入庫日',          !!c.reserveDate,                                         'red'],
+    ['dropType',    '受付タイプ',      !!c.dropType,                                            'red'],
+    ['workType',    '作業タイプ',      !!c.workType || !!((c.workAddons||[]).length),           'red'],
+    /* --- 🟡 黄（入れたほうがいい） --- */
+    ['customer',    'お客様名（漢字）', !!(c.customer || '').trim(),                             'yellow'],
+    ['boardId',     '国産車／輸入車',  c.boardId === 'default' || c.boardId === 'import',       'yellow'],
+    ['maker',       'メーカー',        !!(c.maker || '').trim(),                                'yellow'],
+    ['car',         '車種（グレード）', !!(c.car || '').trim(),                                  'yellow'],
+    ['reserveTime', '入庫時刻',        !!(c.reserveTime || '').trim(),                          'yellow'],
+    ['menu',        '作業内容',        !!(c.menu || '').trim(),                                 'yellow'],
   ];
   if (c.needLoaner){
-    need.push(['loanerId',   '使用代車', !!c.loanerId]);
-    need.push(['loanerFrom', '貸出から', !!c.loanerFrom]);
-    need.push(['loanerTo',   '貸出まで', !!c.loanerTo]);
+    need.push(['loanerId',   '使用代車', !!c.loanerId,   'red']);
+    need.push(['loanerFrom', '貸出から', !!c.loanerFrom, 'red']);
+    need.push(['loanerTo',   '貸出まで', !!c.loanerTo,   'red']);
   }
   /* 🔴 v1.40.0（ゆうた指定）**車検の時だけ諸費用も必須**。
-     ⚠ 車検以外は今までどおり任意（入れなくても赤くならない）。
-     ⚠ 0 は「0円と決めた」ことがあるので通す＝空っぽ（未入力）だけを赤にする。 */
+     ⚠ 車検以外は今までどおり任意（入れなくても色は付かない）。
+     ⚠ 0 は「0円と決めた」ことがあるので通す＝空っぽ（未入力）だけを見る。 */
   const _wts = (Array.isArray(c.workTypes) && c.workTypes.length) ? c.workTypes : (c.workType ? [c.workType] : []);
   if (_wts.indexOf('shaken') >= 0){
-    need.push(['feeAmount', '諸費用（車検）', !(c.feeAmount == null || c.feeAmount === '')]);
+    need.push(['feeAmount', '諸費用（車検）', !(c.feeAmount == null || c.feeAmount === ''), 'red']);
   }
-  // 代車を「不要」にした時・車検を外した時など、対象外になったキーの赤は消す
+  // 代車を「不要」にした時・車検を外した時など、対象外になったキーの色は消す
   const activeKeys = need.map(n => n[0]);
   ['loanerId', 'loanerFrom', 'loanerTo', 'feeAmount'].forEach(function (k){
-    if (activeKeys.indexOf(k) < 0){ const el = root.querySelector('[data-key="' + k + '"]'); if (el) el.classList.remove('cf-miss'); }
+    if (activeKeys.indexOf(k) < 0){
+      const el = root.querySelector('[data-key="' + k + '"]');
+      if (el) { el.classList.remove('cf-miss'); el.classList.remove('cf-warn'); }
+    }
   });
-  const misses = [];
+  const red = [], yellow = [];
   need.forEach(function (n) {
-    const el = root.querySelector('[data-key="' + n[0] + '"]');
-    // 未入力→赤を付ける／入力済→外す。toggle(force)なので既に赤の項目は再アニメしない（入力中のチラつき防止）
-    if (el) el.classList.toggle('cf-miss', !n[2]);
-    if (!n[2]) misses.push(n[1]);
+    const el   = root.querySelector('[data-key="' + n[0] + '"]');
+    const isRed = (n[3] !== 'yellow');
+    // 未入力→枠を付ける／入力済→外す。toggle(force)なので既に付いている項目は再アニメしない（入力中のチラつき防止）
+    if (el){
+      el.classList.toggle('cf-miss', isRed  && !n[2]);   /* 赤 */
+      el.classList.toggle('cf-warn', !isRed && !n[2]);   /* 黄 */
+    }
+    if (!n[2]) (isRed ? red : yellow).push(n[1]);
   });
-  return misses;
+  return { red: red, yellow: yellow, all: red.concat(yellow) };
 }
+
+/* ===================================================================
+   🚦 v1.76.0（ゆうた指定）保存の前の関門
+   -------------------------------------------------------------------
+   ・🔴 赤が1つでも空 … **保存できない。**どこがダメかを名前で伝えて、その欄へ運ぶ
+   ・🟡 黄だけが空　　 … **1回だけ聞いて通す**（「入れなくてもいいが、入るのでは？」）
+   ・どちらも無い　　　… そのまま保存
+   🔴 **止めるのは「すべての保存」**（仮予約・承認に回す・入庫中に保存 も含む＝ゆうた指定）。
+   ⚠ 赤で止めた時は `_pitLastSaveAt` を戻す＝**すぐ押し直せる**ようにする
+      （二度押しの見張りに引っかかって「反応しない」と感じさせない）。
+   =================================================================== */
+function _pitCardGuard(actionLabel, next){
+  const c = state.cards.find(x => x.id === _editingCardId);
+  const body = document.getElementById(_cardBodyId || 'md-body');
+  if (!c || !body) { next(); return; }
+  const r = _cardMarkMisses(c, body);
+  _cardCheckOn = (r.all.length > 0);   /* 以降の再描画・入力でも枠を保つ */
+
+  const goTo = function (sel) {
+    const el = body.querySelector(sel);
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+
+  if (r.red.length){
+    _pitLastSaveAt = 0;                /* 直してすぐ押し直せるように戻す */
+    pitAlert('保存できません。足りない項目があります', {
+      detail: '赤い枠のところを入れてから、もう一度保存してください。\n\n・' + r.red.join('\n・'),
+      ok: '入力に戻る'
+    }).then(function(){ goTo('.cf-miss'); });
+    return;
+  }
+  if (r.yellow.length){
+    pitAsk('このまま' + (actionLabel || '保存') + 'しますか？', {
+      detail: '次の項目が空です（あとから入れられます）。\n\n・' + r.yellow.join('\n・'),
+      ok: 'このまま' + (actionLabel || '保存') + 'する', cancel: '入力に戻る'
+    }).then(function (yes) {
+      if (yes) { next(); return; }
+      _pitLastSaveAt = 0;
+      goTo('.cf-warn');
+    });
+    return;
+  }
+  next();
+}
+
 /* 再描画後に赤枠を貼り直す（チェックON中のみ）。bindCardFormEvents から呼ぶ。 */
 function _cardReapplyCheck(root){
   if (!_cardCheckOn) return;
@@ -1340,14 +1433,18 @@ window.pitCardCheck = function () {
   if (!c) return;
   const body = document.getElementById(_cardBodyId || 'md-body');
   if (!body) return;
-  const misses = _cardMarkMisses(c, body);
-  _cardCheckOn = misses.length > 0;   // 以降の再描画・入力でも未入力だけ赤を保つ
-  if (!misses.length){
+  const r = _cardMarkMisses(c, body);
+  _cardCheckOn = r.all.length > 0;   // 以降の再描画・入力でも未入力だけ色を保つ
+  if (!r.all.length){
     if (window.pitToast) pitToast('入力OK！漏れはありません');
     return;
   }
-  if (window.pitToast) pitToast('未入力 '+ misses.length + '件：'+ misses.join('・'));
-  const first = body.querySelector('.cf-miss');
+  /* 🔴 v1.76.0 赤（無いと保存できない）と黄（入れたほうがいい）を分けて伝える。 */
+  const parts = [];
+  if (r.red.length)    parts.push('赤 ' + r.red.length + '件（保存できません）：' + r.red.join('・'));
+  if (r.yellow.length) parts.push('黄 ' + r.yellow.length + '件（入れたほうがいい）：' + r.yellow.join('・'));
+  if (window.pitToast) pitToast(parts.join('　／　'));
+  const first = body.querySelector('.cf-miss') || body.querySelector('.cf-warn');
   if (first) first.scrollIntoView({ block: 'center', behavior: 'smooth' });
 };
 
@@ -1690,7 +1787,8 @@ function _plateDigits(s, max){
 function telInput(c){
   const p = String(c.tel || '').split('-');
   const v1 = _pe(p[0] || ''), v2 = _pe(p[1] || ''), v3 = _pe(p.slice(2).join('') || '');
-  let h = '<div class="cf-tel">';
+  /* 🔴 v1.76.0 TEL は必須（赤）。赤枠を付ける目印をこのBOXに置く。 */
+  let h = '<div class="cf-tel" data-key="tel">';
   h += '<input type="text" class="cf-input cf-tel-main" data-tel-main readonly value="' + _pe(c.tel || '') + '" placeholder="クリックして入力" autocomplete="off">';
   h += '<div class="cf-tel-guide"><div class="cf-tel-row">';
   h += '<input type="text" class="cf-input cf-tel-1" data-tel="1" value="' + v1 + '" inputmode="numeric" maxlength="5" placeholder="090">';

@@ -46,7 +46,12 @@ eq('カナでも姓だけ',  N.pitCustSurname({ customer:'',         kana:'コ�
 eq('法人はフル＋略記', N.pitCustSurname({ customer:'小林モータース株式会社' }), '小林モータース㈱');
 eq('カナの法人もフル', N.pitCustSurname({ customer:'', kana:'コバヤシモータースカブシキガイシャ' }), 'コバヤシモータースカブシキガイシャ');
 
-console.log('\n■ 入力チェック：漢字が空でもカナが入っていればお客様名はOK');
+/* 🔴 v1.76.0（ゆうた指定）で色分けが変わった。
+   　・**カナ＝赤**（無いと保存できない）／**漢字の名前＝黄**（入れたほうがいい）
+   　・_cardMarkMisses が返すのは配列ではなく **{ red, yellow, all }**
+   ⚠ この試験は「表示名は漢字→カナ」という v1.25.0 の話が壊れていないかを見る所。
+   　 色分けそのものの見張りは test_card_check.mjs が本体。 */
+console.log('\n■ 入力チェック：カナは赤（必須）／漢字の名前は黄（入れたほうがいい）');
 const cdSrc = read('card-detail.js');
 {
   const i = cdSrc.indexOf('function _cardMarkMisses(c, root){');
@@ -55,30 +60,40 @@ const cdSrc = read('card-detail.js');
   var MISS_FN = cdSrc.slice(i, j);
 }
 const markMisses = new Function(MISS_FN + '\nreturn _cardMarkMisses;')();
-/* root は「赤枠を付ける相手が1つも見つからない入れ物」で足りる（返ってくる未入力ラベルだけ見る） */
+/* root は「枠を付ける相手が1つも見つからない入れ物」で足りる（返ってくるラベルだけ見る） */
 const fakeRoot = { querySelector: () => null };
-const base = { tel:'090-0000-0000', boardId:'default', maker:'トヨタ', car:'アクア',
-               reserveDate:'2026-08-10', workType:'oil', dropType:'wait' };
-const miss = c => markMisses(c, fakeRoot);
+/* 赤も黄も全部埋まっている状態を土台にする＝見たい項目だけを空にして比べられる */
+const base = { customer:'小林 勇太', kana:'コバヤシ ユウタ', repeat:'repeater',
+               tel:'090-0000-0000', boardId:'default', maker:'トヨタ', car:'アクア',
+               reserveDate:'2026-08-10', reserveTime:'10:00', menu:'オイル交換',
+               workType:'oil', dropType:'wait' };
+const red = c => markMisses(c, fakeRoot).red;
+const yel = c => markMisses(c, fakeRoot).yellow;
 
-eq('漢字あり＝未入力なし',        miss({ ...base, customer:'小林 勇太', kana:'コバヤシ ユウタ' }), []);
-eq('カナだけ＝未入力なし',        miss({ ...base, customer:'',         kana:'コバヤシ ユウタ' }), []);
-eq('カナだけ（姓のみ）でもOK',    miss({ ...base, customer:'',         kana:'コバヤシ' }), []);
-eq('両方空＝お客様名が未入力',    miss({ ...base, customer:'',         kana:'' }), ['お客様名']);
-eq('両方空白だけ＝未入力',        miss({ ...base, customer:'  ',       kana:'　' }), ['お客様名']);
-eq('他の未入力は今までどおり出る',miss({ ...base, customer:'', kana:'コバヤシ', tel:'', car:'' }), ['TEL','車種（グレード）']);
+eq('全部入り＝赤なし',            red({ ...base }), []);
+eq('全部入り＝黄もなし',          yel({ ...base }), []);
+eq('漢字が空でも赤にはならない',  red({ ...base, customer:'' }), []);
+eq('漢字が空＝黄に出る',          yel({ ...base, customer:'' }), ['お客様名（漢字）']);
+eq('漢字が空白だけでも黄',        yel({ ...base, customer:'  ' }), ['お客様名（漢字）']);
+eq('🔴 カナが空＝赤に出る',       red({ ...base, kana:'' }), ['カナ']);
+eq('カナが空白だけでも赤',        red({ ...base, kana:'　' }), ['カナ']);
+eq('両方空＝カナだけ赤・漢字は黄',red({ ...base, customer:'', kana:'' }), ['カナ']);
+eq('TEL は赤のまま',              red({ ...base, tel:'' }), ['TEL']);
+eq('車種は黄に落ちた',            yel({ ...base, car:'' }), ['車種（グレード）']);
+eq('赤が複数なら並ぶ',            red({ ...base, kana:'', tel:'' }), ['カナ','TEL']);
+eq('all は赤＋黄をまとめたもの',  markMisses({ ...base, kana:'', car:'' }, fakeRoot).all, ['カナ','車種（グレード）']);
 
-console.log('\n■ 車検のときだけ「諸費用」も必須（v1.40.0・ゆうた指定）');
+console.log('\n■ 車検のときだけ「諸費用」も必須（v1.40.0・ゆうた指定／今も赤）');
 {
-  const shaken = { ...base, customer:'小林 勇太', workType:'shaken', workTypes:['shaken'] };
-  const oil    = { ...base, customer:'小林 勇太', workType:'oil',    workTypes:['oil'] };
-  eq('車検で諸費用が空＝未入力に出る',      miss({ ...shaken, feeAmount:null }), ['諸費用（車検）']);
-  eq('車検で諸費用が入っていればOK',        miss({ ...shaken, feeAmount:30000 }), []);
-  eq('0円と決めた時も通す',                 miss({ ...shaken, feeAmount:0 }), []);
-  eq('空文字も未入力あつかい',              miss({ ...shaken, feeAmount:'' }), ['諸費用（車検）']);
-  eq('🔴 車検以外は今までどおり任意',       miss({ ...oil, feeAmount:null }), []);
-  eq('車検を含む複数選択でも対象',          miss({ ...base, customer:'小林 勇太', workTypes:['oil','shaken'], feeAmount:null }), ['諸費用（車検）']);
-  eq('ほかの未入力と一緒に並ぶ',            miss({ ...shaken, feeAmount:null, tel:'' }), ['TEL','諸費用（車検）']);
+  const shaken = { ...base, workType:'shaken', workTypes:['shaken'] };
+  const oil    = { ...base, workType:'oil',    workTypes:['oil'] };
+  eq('車検で諸費用が空＝赤に出る',          red({ ...shaken, feeAmount:null }), ['諸費用（車検）']);
+  eq('車検で諸費用が入っていればOK',        red({ ...shaken, feeAmount:30000 }), []);
+  eq('0円と決めた時も通す',                 red({ ...shaken, feeAmount:0 }), []);
+  eq('空文字も未入力あつかい',              red({ ...shaken, feeAmount:'' }), ['諸費用（車検）']);
+  eq('🔴 車検以外は今までどおり任意',       red({ ...oil, feeAmount:null }), []);
+  eq('車検を含む複数選択でも対象',          red({ ...base, workTypes:['oil','shaken'], feeAmount:null }), ['諸費用（車検）']);
+  eq('ほかの赤と一緒に並ぶ',                red({ ...shaken, feeAmount:null, tel:'' }), ['TEL','諸費用（車検）']);
 }
 
 console.log('\n■ 表示している画面が、ちゃんと共通の表示名を通しているか');

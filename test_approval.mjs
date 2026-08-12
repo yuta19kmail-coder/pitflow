@@ -73,13 +73,23 @@ console.log('\n── 🆕 その他保存の「承認に回して保存」 ─�
     return items.length > 1 && items[0].classList.contains('vh-mi-appr');
   }));
 
-  /* 実際に新規予約から保存してみる（空のまま保存の確認は1回出る） */
+  /* 実際に新規予約から保存してみる。
+     ⚠ v1.76.0 から**赤（必須）が空だと保存できない**ので、先に埋めてから押す。 */
   await p.evaluate(() => { state.cards = []; });
   await p.evaluate(() => openNewReserve());
-  await p.waitForTimeout(500);
+  await p.waitForTimeout(600);
+  await p.evaluate(() => {
+    const c = state.cards[state.cards.length - 1];
+    c.customer = '承認 太郎'; c.sei = '承認'; c.mei = '太郎';
+    c.kana = 'ショウニン タロウ'; c.seiKana = 'ショウニン'; c.meiKana = 'タロウ';
+    c.repeat = (state.repeatTypes && state.repeatTypes[0] ? state.repeatTypes[0].id : 'new');
+    c.tel = '090-1111-2222'; c.boardId = 'default'; c.maker = 'トヨタ'; c.car = 'プリウス';
+    c.reserveTime = '9:00'; c.menu = 'オイル交換'; c.dropType = 'drop'; c.workType = 'general';
+    c.needLoaner = false;
+  });
   await p.evaluate(() => pitSaveApproval());
-  await p.waitForTimeout(300);
-  /* 中身が空なので「空のまま作る」を1回押す */
+  await p.waitForTimeout(400);
+  /* 念のため（黄が残っていれば1回聞かれる） */
   if (await p.locator('#uid-ok:visible').count()){ await p.click('#uid-ok'); await p.waitForTimeout(400); }
   const c = await p.evaluate(() => state.cards[state.cards.length - 1] || null);
   ok('カードが承認待ちで保存される', !!c && c.approvalPending === true, c && { ap: c.approvalPending });
