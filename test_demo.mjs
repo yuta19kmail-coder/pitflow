@@ -240,6 +240,54 @@ console.log('\n── ③-3 2回目からは案内を出さない ──');
 }
 
 /* ================================================================
+   ④-2 🔴 前のデモ版を触ったことがある人にも、新しい中身が届く
+   -------------------------------------------------------------------
+   ⚠ 2026-08-12 に実際にハマった。ゆうた報告＝「**カードがさし変ってないような？**」
+      起動時は「保存済みがあればそれを採用」なので、**一度でも開いた人は前のサンプルのまま**
+      になり、名前を架空に変えても一生出てこなかった。
+   🔴 直し＝デモ版は**専用の保存キー**（pitflow_demo_v◯）を使う。
+      中身を変えたら**数字を上げる**＝全員が作り直される。
+   🔴 ここが落ちたら「直したのに現場では変わっていない」が起きる。最優先で直すこと。
+   ================================================================ */
+console.log('\n── ④-2 🔴 前に開いたことがある人にも新しい中身が届く ──');
+{
+  const { p, errs } = await open('?demo=1&demoui=1&nonews=1', { stayOnLogin: true });
+  /* 「前のデモ版を触ったことがある人」を作る＝古いキーに実名っぽい保存を仕込む */
+  await p.evaluate(() => {
+    localStorage.setItem('pitflow_data_v12', JSON.stringify({
+      cards: [{ id:'old1', customer:'佐藤 大輔', maker:'トヨタ', car:'アクア',
+                plate:'野田 500 あ 1234', tel:'090-1234-5678', status:'reserved', reserveDate:'2026-08-12' }],
+      customers: [{ id:'cu_sold', name:'鈴木 翔太', kana:'スズキショウタ', vehicles: [] }],
+      loaners: [], loanerAssigns: [], companyCars: [], fleetEvents: [], boardNotes: []
+    }));
+  });
+  await p.close();
+
+  const { p: p2, errs: e2 } = await open('?demo=1&demoui=1&nonews=1');
+  const st = await p2.evaluate(() => ({
+    keys: Object.keys(localStorage).filter(k => /^pitflow_(data|demo)_v/.test(k)),
+    old : state.cards.some(c => /佐藤|鈴木|トヨタ|アクア/.test((c.customer||'') + (c.maker||'') + (c.car||''))),
+    n   : state.cards.length
+  }));
+  ok('🔴 前の中身（佐藤さん・アクア）が出てこない', st.old === false, st);
+  ok('🔴 デモ専用のキーを使っている', st.keys.indexOf('pitflow_demo_v2') >= 0, st.keys);
+  ok('🔴 使わなくなった古いキーは片付けている（端末の保存が溢れない）',
+     st.keys.indexOf('pitflow_data_v12') < 0, st.keys);
+  ok('新しいサンプルがちゃんと入っている', st.n > 50, st.n);
+
+  /* もう一度開いても、架空のまま残る（毎回作り直して重くならない） */
+  await p2.reload();
+  await p2.waitForTimeout(900);
+  await p2.evaluate(() => { const g = document.getElementById('pl-google'); if (g) g.click(); });
+  await p2.waitForFunction(() => document.body.classList.contains('pit-authed'), null, { timeout: 15000 });
+  await p2.waitForTimeout(1500);
+  ok('🔴 開き直しても架空のまま',
+     await p2.evaluate(() => !state.cards.some(c => /佐藤|鈴木|トヨタ|アクア/.test((c.customer||'') + (c.maker||'') + (c.car||'')))));
+  ok('JSエラー0', e2.length === 0, e2.slice(0, 3));
+  await p2.close();
+}
+
+/* ================================================================
    ⑤ 🔴 作りの見張り（次の人が写しを作らないように）
    ================================================================ */
 console.log('\n── ⑤ 🔴 作りの見張り（デモ版の中身を散らかさない） ──');
@@ -287,6 +335,12 @@ console.log('\n── ⑤ 🔴 作りの見張り（デモ版の中身を散ら�
   const sf = fs.readFileSync('js/sample-fleet.js', 'utf8');
   ok('🔴 カードを作る手順も1本だけ',
      (sf.match(/function baseCard/g) || []).length === 1);
+
+  /* 🔴 デモ版は専用の保存キー＝中身を変えたら数字を上げる、が守られているか */
+  const db = fs.readFileSync('js/db-pit.js', 'utf8');
+  ok('🔴 デモ版は専用の保存キーを使う', /pitflow_demo_v\d+/.test(db), (db.match(/pitflow_demo_v\d+/) || [])[0]);
+  ok('🔴 判定は pitIsDemo を借りている', /pitIsDemo/.test(db));
+  ok('🔴 開発用サンプルのキーは残っている（試験55本がこっちを使う）', /pitflow_data_v\d+/.test(db));
 
   /* 🔴 お知らせのリンク＝アプリを閉じてしまわないこと */
   const np = fs.readFileSync('js/news-pit.js', 'utf8');

@@ -1,0 +1,230 @@
+/* PitFlow v1.80.0 ── 代車の「空いているか」の物差し1本（loaner-free.js）のテスト
+   -------------------------------------------------------------------
+   ◎ここで守りたいこと（2026-08-12 の棚卸しで見つかった穴）
+     🔴 ① **引退した代車を「空き」に数えない**
+     🔴 ② **代車自身の車検・点検（車両管理の予定）でも塞がる**
+     🔴 ③ **緊急車両を最短入庫日に混ぜない**
+     🔴 ④ **ぶつかりの決まりは1つ**（当日かぶり＝返却日＝次の開始日 は OK）
+     ①②③ はどれも「代車ありで入庫できる日が**実際より早く出る**」＝
+     **お客様に約束したのに代車が無い**、につながる筋。いちばん重い。
+     🔴 ⑤ 二重貸しが**画面で分かる**（前は主役の1枚しか描かず気づけなかった）
+     🔴 ⑥ 未確定の下書きを**失わない・勝手に確定させない**
+
+   ◎考え方
+     本体をサンプルモードで丸ごと開き、**本物の関数**を呼んで確かめる。
+   ◎使い方（PitFlow のフォルダで）
+     python -m http.server 8977      ← 別ウィンドウ
+     node test_loaner_free.mjs                                             */
+import { chromium } from 'playwright';
+import fs from 'fs';
+
+const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+            '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
+let pass = 0, fail = 0;
+const ok = (n, c, x = '') => { if (c) { pass++; console.log('  ✅ ' + n); }
+  else { fail++; console.log('  ❌ ' + n + (x !== '' ? '  → ' + JSON.stringify(x) : '')); } };
+
+const b = await chromium.launch({ executablePath: cp });
+const p = await b.newPage({ viewport: { width: 1500, height: 950 } });
+const errs = []; p.on('pageerror', e => errs.push(String(e)));
+p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
+await p.goto('http://127.0.0.1:8977/index.html?demo=1&nonews=1');
+await p.waitForTimeout(1000);
+await p.evaluate(() => { const g = document.getElementById('pl-google'); if (g) g.click(); });
+await p.waitForFunction(() => document.body.classList.contains('pit-authed'), null, { timeout: 20000 });
+await p.waitForTimeout(1400);
+
+/* 試験用のまっさらな土台を作る（代車3台・貸出なし・予定なし） */
+const reset = () => p.evaluate(() => {
+  window.__bak = window.__bak || {
+    loaners: JSON.parse(JSON.stringify(state.loaners)),
+    assigns: JSON.parse(JSON.stringify(state.loanerAssigns || [])),
+    events : JSON.parse(JSON.stringify(state.fleetEvents || []))
+  };
+  state.loaners = [
+    { id:'T1', name:'代車1', model:'テストA', number:1, category:'kei' },
+    { id:'T2', name:'代車2', model:'テストB', number:2, category:'kei' },
+    { id:'T3', name:'代車3', model:'テストC', number:3, category:'kei' }
+  ];
+  state.loanerAssigns = [];
+  state.fleetEvents = [];
+});
+
+console.log('\n── ① 🔴 引退した代車を「空き」に数えない ──');
+{
+  await reset();
+  ok('ふつうは空いている', await p.evaluate(() => pitLoanerFreeRun('2030-01-10', 3)) === true);
+  ok('🔴 全部引退させたら空きなし',
+     await p.evaluate(() => { state.loaners.forEach(l => l.retired = true); return pitLoanerFreeRun('2030-01-10', 3); }) === false);
+  ok('🔴 1台だけ残せば、その1台で空く',
+     await p.evaluate(() => { state.loaners[1].retired = false; return pitLoanerFreeRun('2030-01-10', 3); }) === true);
+  ok('引退した代車は「貸せる一覧」に出てこない',
+     await p.evaluate(() => pitLoanerUsableList().map(l => l.id).join(',')) === 'T2');
+  ok('pitLoanerUsable も同じ答え',
+     await p.evaluate(() => [pitLoanerUsable(state.loaners[0]), pitLoanerUsable(state.loaners[1])].join(',')) === 'false,true');
+}
+
+console.log('\n── ② 🔴 代車自身の車検・点検でも塞がる ──');
+{
+  await reset();
+  await p.evaluate(() => {
+    state.fleetEvents = state.loaners.map(l => ({ id:'e'+l.id, vehicleId:l.id, type:'shakenIn',
+      label:'車検入庫', fromDate:'2030-01-05', toDate:'2030-01-15' }));
+  });
+  ok('🔴 全部が車検入庫中なら空きなし', await p.evaluate(() => pitLoanerFreeRun('2030-01-10', 1)) === false);
+  ok('車検の外の日なら空いている',      await p.evaluate(() => pitLoanerFreeRun('2030-01-20', 3)) === true);
+  ok('🔴 車検の期間にまたがると空かない', await p.evaluate(() => pitLoanerFreeRun('2030-01-14', 3)) === false);
+  ok('ふさがっている理由が「代車自身の予定」と分かる',
+     await p.evaluate(() => { const w = pitLoanerBusyWhy(state.loaners[0], '2030-01-10'); return w && w.kind; }) === 'event');
+  ok('1台だけ予定を外せば、その1台で空く',
+     await p.evaluate(() => { state.fleetEvents = state.fleetEvents.filter(e => e.vehicleId !== 'T3'); return pitLoanerFreeRun('2030-01-10', 3); }) === true);
+}
+
+console.log('\n── ③ 🔴 緊急車両は最短入庫日に混ぜない ──');
+{
+  await reset();
+  ok('🔴 緊急車両しか無ければ「代車あり」にならない',
+     await p.evaluate(() => { state.loaners.forEach(l => l.emergency = true); return pitLoanerFreeRun('2030-01-10', 3); }) === false);
+  ok('わざと数えたい時だけ数えられる（withEmergency）',
+     await p.evaluate(() => pitLoanerFreeRun('2030-01-10', 3, { withEmergency: true })) === true);
+  ok('緊急車両は「貸せる一覧」に出てこない',
+     await p.evaluate(() => pitLoanerUsableList().length) === 0);
+}
+
+console.log('\n── ④ 🔴 ぶつかりの決まりは1つ（当日かぶりはOK） ──');
+{
+  ok('🔴 返却日＝次の貸出開始日は「ぶつかり」にしない',
+     await p.evaluate(() => pitLoanerOverlap('2026-08-10','2026-08-14','2026-08-14','2026-08-20')) === false);
+  ok('本当に重なっていれば「ぶつかり」',
+     await p.evaluate(() => pitLoanerOverlap('2026-08-10','2026-08-14','2026-08-13','2026-08-20')) === true);
+  ok('丸ごと中に入っていても「ぶつかり」',
+     await p.evaluate(() => pitLoanerOverlap('2026-08-10','2026-08-20','2026-08-12','2026-08-13')) === true);
+  ok('離れていれば「ぶつかり」ではない',
+     await p.evaluate(() => pitLoanerOverlap('2026-08-10','2026-08-14','2026-08-16','2026-08-20')) === false);
+  /* 🔴 入口が違っても答えが同じか＝以前はここが食い違っていた */
+  await reset();
+  await p.evaluate(() => { state.loanerAssigns = [
+    { id:'a1', loanerId:'T1', cardId:null, fromDate:'2026-08-10', toDate:'2026-08-14', manual:true } ]; });
+  ok('🔴 貸出フォームから見ても、当日かぶりは怒られない',
+     await p.evaluate(() => pitLoanerConflicts('T1', '2026-08-14', '2026-08-20').length) === 0);
+  ok('本当に重なる時はちゃんと出る',
+     await p.evaluate(() => pitLoanerConflicts('T1', '2026-08-13', '2026-08-20').length) === 1);
+  ok('自分自身は数えない',
+     await p.evaluate(() => pitLoanerConflicts('T1', '2026-08-10', '2026-08-14', { ignoreAssignId:'a1' }).length) === 0);
+}
+
+console.log('\n── ②-2 貸出でも塞がる（当たり前だが物差しが同じか） ──');
+{
+  await reset();
+  await p.evaluate(() => { state.loanerAssigns = state.loaners.map(l => (
+    { id:'a'+l.id, loanerId:l.id, cardId:null, fromDate:'2030-01-05', toDate:'2030-01-15', manual:true })); });
+  ok('全部貸出中なら空きなし', await p.evaluate(() => pitLoanerFreeRun('2030-01-10', 1)) === false);
+  ok('🔴 返却日の当日も「埋まり」',   await p.evaluate(() => pitLoanerBusyOn(state.loaners[0], '2030-01-15')) === true);
+  ok('返却日の翌日は「空き」',        await p.evaluate(() => pitLoanerBusyOn(state.loaners[0], '2030-01-16')) === false);
+  ok('ふさがっている理由が「貸出」と分かる',
+     await p.evaluate(() => { const w = pitLoanerBusyWhy(state.loaners[0], '2030-01-10'); return w && w.kind; }) === 'assign');
+  ok('その日空いている代車の一覧が取れる',
+     await p.evaluate(() => pitLoanerFreeOn('2030-01-16').length) === 3);
+}
+
+console.log('\n── ⑤ 🔴 二重貸しが画面で分かる ──');
+{
+  await p.evaluate(() => {
+    state.loaners = JSON.parse(JSON.stringify(window.__bak.loaners));
+    state.loanerAssigns = JSON.parse(JSON.stringify(window.__bak.assigns));
+    state.fleetEvents = JSON.parse(JSON.stringify(window.__bak.events));
+  });
+  await p.evaluate(() => { if (window.showView) showView('loaner'); });
+  await p.waitForTimeout(1200);
+  const before = await p.evaluate(() => document.querySelectorAll('.lo-dupmark').length);
+  const info = await p.evaluate(() => {
+    const a = state.loanerAssigns.find(x => x.loanerId && x.fromDate && x.toDate);
+    state.loanerAssigns.push({ id:'dupTest', loanerId:a.loanerId, cardId:null, customer:'重なり試験',
+      purpose:'試験', fromDate:a.fromDate, toDate:a.toDate, manual:true });
+    renderLoaner();
+    const days = Math.round((new Date(a.toDate) - new Date(a.fromDate)) / 86400000) + 1;
+    return { days: days };
+  });
+  await p.waitForTimeout(700);
+  const after = await p.evaluate(() => document.querySelectorAll('.lo-dupmark').length);
+  ok('🔴 二重貸しの日に印が出る', after > before, { before, after, days: info.days });
+  ok('印は赤で目立つ（枠も付く）',
+     await p.evaluate(() => document.querySelectorAll('.lo-cell.lo-dup').length) > 0);
+  ok('印に件数が出る',
+     await p.evaluate(() => { const m = document.querySelector('.lo-dupmark'); return m && +m.textContent >= 2; }));
+  /* 押すと「何と重なっているか」を教える */
+  await p.evaluate(() => { const m = document.querySelector('.lo-dupmark'); if (m) m.click(); });
+  await p.waitForTimeout(600);
+  const dlg = await p.evaluate(() => { const e = document.getElementById('uid-ov'); return (e && e.classList.contains('open')) ? e.innerText : ''; });
+  ok('押すと重なっている相手を教える', /重なっています/.test(dlg), dlg.slice(0, 50));
+  ok('🔴 勝手に直さない（どちらを動かすかは人が決める）', /ずらす|替えて/.test(dlg), dlg.slice(0, 120));
+  await p.evaluate(() => { const o = document.getElementById('uid-ok'); if (o) o.click(); });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { state.loanerAssigns = state.loanerAssigns.filter(x => x.id !== 'dupTest'); renderLoaner(); });
+  await p.waitForTimeout(500);
+}
+
+console.log('\n── ⑥ 🔴 下書きを失わない・勝手に確定させない ──');
+{
+  /* 下書きを作る（札を1件ずらす） */
+  const made = await p.evaluate(() => {
+    /* ⚠ このサンプルの貸出は cardId が無いもの（手動貸出）もある。下書きはどちらでも同じに効く。 */
+    const a = (state.loanerAssigns || [])[0];
+    if (!a) return null;
+    loMoveAssignTo(a.id, a.loanerId, '2027-03-01');   /* 未来へ動かす＝下書きに入る */
+    return a.id;
+  });
+  await p.waitForTimeout(600);
+  ok('下書きの控えが端末に残る',
+     await p.evaluate(() => !!localStorage.getItem('pitflow_loaner_draft_v1')), made);
+  ok('下書きバーが出る', await p.evaluate(() => {
+    const b = document.getElementById('lo-draft-bar'); return !!b && b.innerHTML.length > 0; }));
+
+  /* 別の画面へ移ろうとすると、聞かれる */
+  await p.evaluate(() => showView('dashboard'));
+  await p.waitForTimeout(700);
+  const leave = await p.evaluate(() => {
+    const e = document.getElementById('uid-ov');
+    return { open: !!(e && e.classList.contains('open')), text: e ? e.innerText : '', view: state.currentView };
+  });
+  ok('🔴 未確定のまま黙って離れさせない', leave.open === true, leave);
+  ok('何件残っているか伝える', /下書きが\s*\d+\s*件/.test(leave.text.replace(/\n/g, ' ')), leave.text.slice(0, 60));
+  ok('🔴 まだ代車カレンダーに居る', leave.view === 'loaner', leave.view);
+  ok('「反映する／破棄する」から選べる', /反映する/.test(leave.text) && /破棄する/.test(leave.text), leave.text);
+
+  /* 「破棄する」を選ぶ＝元に戻って移動できる */
+  await p.evaluate(() => { const n = document.getElementById('uid-no'); if (n) n.click(); });
+  await p.waitForTimeout(900);
+  ok('🔴 破棄すると元に戻る',
+     await p.evaluate(() => !state.loanerAssigns.some(a => a.fromDate === '2027-03-01')));
+  ok('🔴 控えも片付く',
+     await p.evaluate(() => !localStorage.getItem('pitflow_loaner_draft_v1')));
+  ok('選んだあとはちゃんと移動できる',
+     await p.evaluate(() => state.currentView) === 'dashboard', await p.evaluate(() => state.currentView));
+}
+
+console.log('\n── 🧭 まわりが壊れていないか ──');
+{
+  for (const v of ['loaner', 'dashboard', 'availcal', 'reserve', 'fleet', 'mydash']) {
+    await p.evaluate(x => { if (window.showView) showView(x); }, v);
+    await p.waitForTimeout(500);
+  }
+  ok('各ビューを開いてエラーなし', errs.length === 0, errs.slice(0, 3));
+  const src = fs.readFileSync('js/loaner-free.js', 'utf8');
+  ok('🔴 物差しは1本にまとまっている（公開4つ以上）',
+     ['pitLoanerUsable','pitLoanerBusyOn','pitLoanerFreeRun','pitLoanerOverlap']
+       .every(k => src.indexOf('w.' + k) >= 0));
+  const dash = fs.readFileSync('js/dashboard.js', 'utf8');
+  ok('🔴 ダッシュボードは自分で数え直していない',
+     /pitLoanerFreeRun/.test(dash) && !/a\.fromDate <= ds && a\.toDate >= ds/.test(dash), 'dashboard.js');
+  const md = fs.readFileSync('js/mydash.js', 'utf8');
+  ok('🔴 マイダッシュも自分で数え直していない',
+     /pitLoanerBusyOn/.test(md) && !/a\.fromDate <= ds && a\.toDate >= ds/.test(md), 'mydash.js');
+  const lo = fs.readFileSync('js/loaner.js', 'utf8');
+  ok('🔴 代車カレンダーの「ぶつかり」も物差しを借りている', /pitLoanerOverlap/.test(lo) && /pitLoanerConflicts/.test(lo));
+  ok('🔴 独自の重なり判定（_loOverlaps）は残っていない', !/function _loOverlaps/.test(lo));
+}
+
+await b.close();
+console.log(`\n===== ${pass} OK / ${fail} NG =====`);
+process.exit(fail ? 1 : 0);
