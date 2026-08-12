@@ -284,6 +284,74 @@ console.log('\n── ⑦ 🔴 車を返したら、代車も返ってきたこ�
                            state.loanerAssigns = state.loanerAssigns.filter(a => a.cardId !== 'RETTEST'); });
 }
 
+/* ================================================================
+   ⑧ 🔴 実績（返車済み）のカードが、代車の返却とリンクしているか（v1.82.0）
+   -------------------------------------------------------------------
+   🗣 ゆうた「そもそも予約というか実績情報が持ってる代車情報とリンクしてる？
+      実績になってても代車の返却とリンクしてないよな？」
+   ⚠ そのとおりだった。**代車カレンダーは灰色（返却済）なのに、
+      カード・ホバー・予約カードの代車バッジは「超過◯日」と赤く出ていた。**
+      ＝「返ってきたか」を持っているのは貸出なのに、画面は**カードの日付だけ**を引き算していた。
+   🔴 ただし **車は返したのに代車が戻っていない**時は、ちゃんと赤く「超過」と出すこと（知らせるべき事故）。
+   ================================================================ */
+console.log('\n── ⑧ 🔴 実績のカードと代車の返却がつながっているか ──');
+{
+  const ymdN = n => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+  const mk = (opt) => p.evaluate(o => {
+    state.cards = state.cards.filter(c => c.id !== 'LINKTEST');
+    state.loanerAssigns = state.loanerAssigns.filter(a => a.cardId !== 'LINKTEST');
+    const lo = state.loaners.find(l => !l.retired && !l.emergency);
+    state.cards.push({ id:'LINKTEST', status:'returned', boardId:'default', customer:'実績テスト', kana:'ジッセキ',
+      car:'テストA', tel:'000-0000-0000', reserveDate:o.from, returnDate:o.ret, returnDateFinal:o.ret, completedAt:o.ret,
+      dropType:'drop', workType:'oil', amountFinal:30000,
+      needLoaner:true, loanerId:lo.id, loanerFrom:o.from, loanerTo:o.to, log:[],
+      loanerReturned: o.stillOut ? false : undefined });
+    pitSyncLoanerAssigns();
+    const c = state.cards.find(x => x.id === 'LINKTEST');
+    const a = state.loanerAssigns.find(x => x.cardId === 'LINKTEST');
+    const R = pitLoanerRemainOf(c);
+    return { assignReturned: !!(a && a.returned), R: R };
+  }, opt);
+
+  /* ふつう＝車を返した＝代車も戻っている */
+  let r = await mk({ from: ymdN(-10), ret: ymdN(-5), to: ymdN(-5) });
+  ok('実績のカードの貸出が返却済みになっている', r.assignReturned === true, r);
+  ok('🔴 「返ってきた」と答える',           r.R.back === true, r.R);
+  ok('🔴 残り日数のカウントをやめる',       r.R.rem === null, r.R);
+  ok('🔴 色は落ち着いた灰色（back）',       r.R.level === 'back', r.R);
+  ok('返した日を持っている',                r.R.at === ymdN(-5), r.R);
+
+  /* 画面に出る文字（カード詳細） */
+  await p.evaluate(() => { if (window.openDetail) openDetail('LINKTEST'); });
+  await p.waitForTimeout(1000);
+  const box = await p.evaluate(() => { const e = document.querySelector('.cv-lo');
+    return e ? { t: e.innerText.replace(/\s+/g,' ').trim(), cls: e.className } : null; });
+  ok('🔴 カードに「返却済」と出る',      !!box && /返却済/.test(box.t), box);
+  ok('🔴 「超過」とは出ない',            !!box && !/超過/.test(box.t), box);
+  ok('🔴 赤（dead）ではない',            !!box && !/cv-lev-dead/.test(box.cls), box);
+  ok('返した日も出る',                   !!box && /に返却/.test(box.t), box);
+  await p.evaluate(() => { if (window.closeDetail) closeDetail(); });
+  await p.waitForTimeout(500);
+
+  /* 🔴 イレギュラー＝車は返したのに代車が戻っていない → これは赤く知らせる */
+  r = await mk({ from: ymdN(-10), ret: ymdN(-5), to: ymdN(-2), stillOut: true });
+  ok('🔴 代車が戻っていない実績は「返却済」にしない', r.R.back === false, r.R);
+  ok('🔴 超過として赤く出す（知らせるべき事故）',     r.R.level === 'dead', r.R);
+  ok('超過の日数が出る',                              r.R.rem === -2, r.R);
+
+  /* 作りの見張り＝画面で日付を引き算していないか */
+  const cv = fs.readFileSync('js/card-view.js', 'utf8');
+  const ch = fs.readFileSync('js/card-hover.js', 'utf8');
+  const rv = fs.readFileSync('js/reserve.js', 'utf8');
+  ok('🔴 カード詳細は物差しに聞いている',      /pitLoanerRemainOf/.test(cv));
+  ok('🔴 ホバー情報カードも物差しに聞いている', /pitLoanerRemainOf/.test(ch));
+  ok('🔴 予約カードのバッジも物差しに聞いている', /pitLoanerRemainOf/.test(rv));
+
+  await p.evaluate(() => { state.cards = state.cards.filter(c => c.id !== 'LINKTEST');
+                           state.loanerAssigns = state.loanerAssigns.filter(a => a.cardId !== 'LINKTEST'); });
+}
+
 console.log('\n── 🧭 まわりが壊れていないか ──');
 {
   for (const v of ['loaner', 'dashboard', 'availcal', 'reserve', 'fleet', 'mydash']) {
