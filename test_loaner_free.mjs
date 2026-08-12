@@ -203,6 +203,87 @@ console.log('\n── ⑥ 🔴 下書きを失わない・勝手に確定させ�
      await p.evaluate(() => state.currentView) === 'dashboard', await p.evaluate(() => state.currentView));
 }
 
+/* ================================================================
+   ⑦ 🔴 車を返したら、代車も返ってきたことにする（v1.81.0・ゆうた指定）
+   -------------------------------------------------------------------
+   🗣「ほとんどの場合、預かる時に貸し出して、返車するときに戻ってくる。
+      代車カレンダー上の返却確定は、**まれなイレギュラー**のために使う」
+   ⚠ 以前は「返却確定」を押した時だけ灰色になったので、
+      **車を引き渡して代車も戻っているのに、代車カレンダーはずっと貸出中に見えていた。**
+   ================================================================ */
+console.log('\n── ⑦ 🔴 車を返したら、代車も返ってきたことにする ──');
+{
+  const ymdN = n => { const d = new Date(); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+  const make = () => p.evaluate(days => {
+    state.cards = state.cards.filter(c => c.id !== 'RETTEST');
+    const used = {}; state.loanerAssigns.forEach(a => used[a.loanerId] = 1);
+    const lo = state.loaners.find(l => !l.retired && !l.emergency && !used[l.id])
+            || state.loaners.find(l => !l.retired && !l.emergency);
+    state.loanerAssigns = state.loanerAssigns.filter(a => a.loanerId !== lo.id);   /* この代車だけを見る */
+    state.fleetEvents = state.fleetEvents.filter(e => e.vehicleId !== lo.id);
+    state.cards.push({ id:'RETTEST', status:'check', boardId:'default', customer:'返車テスト', kana:'ヘンシャ',
+      car:'テストA', tel:'000-0000-0000', reserveDate:days.from, returnDate:days.today, dropType:'drop', workType:'oil',
+      needLoaner:true, loanerId:lo.id, loanerFrom:days.from, loanerTo:days.to, log:[] });
+    pitSyncLoanerAssigns();
+    const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST');
+    return { lo: lo.id, returned: !!a.returned, to: a.toDate };
+  }, { from: ymdN(-3), today: ymdN(0), to: ymdN(4) });
+
+  let st = await make();
+  ok('貸出中はまだ返却済みではない', st.returned === false, st);
+  ok('予定どおりの期間で入る', st.to === ymdN(4), st);
+
+  /* 当日ビューの「返車済みにする」と同じ道 */
+  await p.evaluate(() => pitTodayReturn('RETTEST'));
+  await p.evaluate(() => { showView('loaner'); });
+  await p.waitForTimeout(900);
+  const after = await p.evaluate(() => {
+    const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST');
+    const cells = [...document.querySelectorAll('.lo-cell[data-lo="' + a.loanerId + '"]')];
+    return { returned: !!a.returned, at: a.returnedAt, to: a.toDate, auto: !!a.autoReturned, was: a.toDateBefore,
+             grey: cells.filter(c => c.classList.contains('lo-returned')).map(c => c.dataset.ld),
+             busy: cells.filter(c => c.classList.contains('lo-bk')).map(c => c.dataset.ld) };
+  });
+  ok('🔴 返却済みになる（押さなくても）', after.returned === true, after);
+  ok('🔴 返却日＝車を引き渡した日',       after.at === ymdN(0), after);
+  ok('🔴 札が灰色になる',                 after.grey.length > 0, after.grey);
+  ok('🔴 灰色は貸出の期間ぶん',           after.grey.join(',') === [ymdN(-3),ymdN(-2),ymdN(-1),ymdN(0)].join(','), after.grey);
+  ok('🔴 早く返ったぶん枠が空く',         after.busy.join(',') === after.grey.join(','), after.busy);
+  ok('元の予定を覚えている（取消で戻すため）', after.was === ymdN(4), after);
+  ok('自動で付けた印がある（手で押したものと見分ける）', after.auto === true, after);
+  ok('その代車が、返した翌日から空く',
+     await p.evaluate(d => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST');
+       const lo = state.loaners.find(l => l.id === a.loanerId); return !pitLoanerBusyOn(lo, d); }, ymdN(2)) === true);
+
+  /* 🔴 イレギュラー＝手で押した方が必ず勝つ */
+  await p.evaluate(() => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST'); loUnreturn(a.id); });
+  await p.waitForTimeout(400);
+  const undone = await p.evaluate(() => {
+    const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST');
+    return { returned: !!a.returned, to: a.toDate, auto: !!a.autoReturned };
+  });
+  ok('🔴 返却取消で戻せる',           undone.returned === false, undone);
+  ok('🔴 縮めた期間も元に戻る',       undone.to === ymdN(4), undone);
+  await p.evaluate(() => pitSyncLoanerAssigns());
+  ok('🔴 取り消したら、勝手に返却済みへ戻さない',
+     await p.evaluate(() => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST'); return !a.returned; }) === true);
+
+  /* 手で先に返却確定していたら、そちらが正 */
+  st = await make();
+  await p.evaluate(d => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST');
+    a.returned = true; a.returnedAt = d; a.toDate = d; }, ymdN(-1));
+  await p.evaluate(() => pitTodayReturn('RETTEST'));
+  await p.evaluate(() => pitSyncLoanerAssigns());
+  ok('🔴 先に手で確定した返却日は上書きしない',
+     await p.evaluate(() => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST'); return a.returnedAt; }) === ymdN(-1));
+  ok('🔴 自動の印も付けない（人が押したものが正）',
+     await p.evaluate(() => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST'); return !a.autoReturned; }) === true);
+
+  await p.evaluate(() => { state.cards = state.cards.filter(c => c.id !== 'RETTEST');
+                           state.loanerAssigns = state.loanerAssigns.filter(a => a.cardId !== 'RETTEST'); });
+}
+
 console.log('\n── 🧭 まわりが壊れていないか ──');
 {
   for (const v of ['loaner', 'dashboard', 'availcal', 'reserve', 'fleet', 'mydash']) {
