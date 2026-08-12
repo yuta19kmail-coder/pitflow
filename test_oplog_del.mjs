@@ -159,7 +159,8 @@ try {
   await p.evaluate(() => { window.fb.currentMember = { name: 'ゆうた', master: true }; });
   await seed(p);
   ok('4行ぶんのチェックBOXが出た', (await boxes(p)) === 4);
-  ok('案内が出た', await p.evaluate(() => document.getElementById('oplog-body').innerHTML.indexOf('あなた（マスター）にだけ') >= 0));
+  /* ⚠ ゆうた指示で「あなただけに出ています」の説明文は出さない。増えていないか見張る。 */
+  ok('よけいな説明文が出ていない', await p.evaluate(() => document.getElementById('oplog-body').innerHTML.indexOf('マスター') < 0));
   ok('選ぶ前はボタンが押せない', (await btn(p)).on === false, await btn(p));
   ok('「選択なし」と出ている', (await selN(p)) === '選択なし', await selN(p));
 
