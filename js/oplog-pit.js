@@ -13,28 +13,31 @@
      pitLog('予約を作成', { cardId:c.id, label:'山田 様 / タント' })
      ・ログを残すこと自体で操作を止めない。失敗しても黙って捨てる（画面の邪魔をしない）。
 
-   ◎🔴 v1.84.0 「1件だけ消す」（マスター限定・ゆうた依頼 2026-08-12）
-     各行の右はしに ゴミ箱 を出す。押した**その1件だけ**が消える。
-     ⚠ **全消しは作っていない**（ゆうた決定）。CarFlow には全消しがあるが、こちらは付けない。
+   ◎🔴 v1.84.0 「選んでまとめて消す」（マスター限定・ゆうた依頼 2026-08-12）
+     各行の**右はしにチェックBOX**。選んでから［選んだ ◯件 を消す］で**まとめて**消える。
+     ⚠ 全消し（ぜんぶ消すボタン）は作っていない。**必ず自分で選んでから消す。**
 
      ・出る人＝`pitIsMaster()`（auth-pit.js）が true の人だけ。本番はマスター（ゆうた）1人。
        練習用サイト（サンプル／デモ版）は**この端末の中だけの記録**なので全員に出る。
      ・Firestore のルールも `pitAuditLogs` の delete＝`_isMaster()` で締めてある
        （`CarFlow\carflow\firestore.rules`）。**画面側だけ広げてもサーバーが拒否する**＝
        「押せるのに消えないボタン」になるので、権限を変えたい時は必ず両方直すこと。
-     ・消したこと自体は「操作ログを1件消去」として**ログに残る**。
-       残すのは**消した行の時刻だけ**（中身は残さない）＝
+     ・消したことは「操作ログを◯件消去」として**ログに残る**（件数だけ。中身は残さない）＝
        「ログは黙って書き換えられない」という約束を保ちつつ、消したかった中身は復活させない。
+     ・🔴 **絞り込みを変えたら、選んでいたものは解除する。**
+       見えていない行が選ばれたまま消えるのが、この画面でいちばん怖い事故なので。
    ======================================== */
 (function () {
   'use strict';
 
   var LS_KEY = 'pitflow_oplog_v1';
   var LIMIT = 1000;
+  var CHUNK = 400;        // まとめて消す時の1回ぶん（Firestore のバッチ上限500より少なめ）
   var _cache = null;      // 画面表示用（直近ぶん）
   var _q = '';
   var _seq = 0;           // 行を見分ける番号（画面の中だけ。保存データには入れない）
-  var _busyKey = '';      // いま消している最中の行（連打よけ）
+  var _sel = {};          // 選ばれている行（_k → true）
+  var _busy = false;      // 消している最中（二度押しよけ）
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -58,6 +61,9 @@
          || list.find(function (x) { return x.front; }) || list[0];
     return (s && s.name) || '—';
   }
+  function isCloudLive() {
+    return !!(window.PIT_CLOUD && window.fb && window.fb.ready && window.fb.currentUser);
+  }
 
   /* 🔴 v1.84.0 消せる人か。**判定はここ1か所**（画面のあちこちで書き直さない）。 */
   function canDelete() {
@@ -73,6 +79,11 @@
     for (var i = 0; i < _cache.length; i++) if (_cache[i]._k === k) return i;
     return -1;
   }
+  /* 画面から消えた行の選択を捨てる（読み直したあとなど） */
+  function pruneSel() {
+    Object.keys(_sel).forEach(function (k) { if (indexOfKey(k) < 0) delete _sel[k]; });
+  }
+  function selKeys() { return Object.keys(_sel).filter(function (k) { return indexOfKey(k) >= 0; }); }
 
   /* ---- 1件残す ---- */
   window.pitLog = function (action, opt) {
@@ -88,7 +99,7 @@
       kind: opt.kind || ''
     };
 
-    if (window.PIT_CLOUD && window.fb && window.fb.ready && window.fb.currentUser) {
+    if (isCloudLive()) {
       var doc = {
         time: window.fb.serverTimestamp(),
         timeStr: entry.timeStr,
@@ -101,7 +112,7 @@
       };
       window.fb.company().collection('pitAuditLogs').add(doc)
         /* 🔴 v1.84.0 いま作った行が「どのドキュメントか」を控える。
-           これが無いと、**書いた直後の行だけ ゴミ箱 で消せない**（消し先が分からない）。 */
+           これが無いと、**書いた直後の行だけ選んでも消せない**（消し先が分からない）。 */
         .then(function (ref) { if (ref && ref.id) entry._id = ref.id; })
         .catch(function (e) { console.warn('[oplog] 記録に失敗（操作は続きます）', e); });
       if (_cache) { _cache.unshift(entry); if (state.currentView === 'oplog') renderOplog(); }
@@ -121,7 +132,7 @@
 
   /* ---- 読み込み ---- */
   function load() {
-    if (window.PIT_CLOUD && window.fb && window.fb.ready && window.fb.currentUser) {
+    if (isCloudLive()) {
       return window.fb.company().collection('pitAuditLogs')
         .orderBy('time', 'desc').limit(LIMIT).get()
         .then(function (snap) {
@@ -129,7 +140,7 @@
           snap.forEach(function (d) {
             var o = d.data() || {};
             out.push({
-              _id: d.id,                    /* v1.84.0 消し先（マスターの ゴミ箱 で使う） */
+              _id: d.id,                    /* v1.84.0 消し先（まとめて消す時に使う） */
               at: (o.time && o.time.toMillis) ? o.time.toMillis() : 0,
               timeStr: o.timeStr || '', userName: o.userName || '—',
               action: o.action || '', label: o.label || '', cardId: o.cardId || '', kind: o.kind || ''
@@ -164,6 +175,14 @@
   }
 
   /* ---- 画面 ---- */
+  function visibleList() {
+    var q = _q.trim().toLowerCase();
+    return (_cache || []).filter(function (e) {
+      if (!q) return true;
+      return (e.userName + ' ' + e.action + ' ' + e.label).toLowerCase().indexOf(q) >= 0;
+    });
+  }
+
   function renderOplog() {
     var box = document.getElementById('oplog-body');
     if (!box) return;
@@ -174,13 +193,11 @@
       return;
     }
     stamp(_cache);
+    pruneSel();
 
     var del = canDelete();
     var q = _q.trim().toLowerCase();
-    var list = _cache.filter(function (e) {
-      if (!q) return true;
-      return (e.userName + ' ' + e.action + ' ' + e.label).toLowerCase().indexOf(q) >= 0;
-    });
+    var list = visibleList();
 
     var h = '';
     h += '<div class="op-bar">'
@@ -193,13 +210,23 @@
     if (!window.PIT_CLOUD) {
       h += '<div class="op-note"><i data-ic=info data-ics=15></i> いまはこの端末の中だけの記録です（直近500件）。本番では全員ぶんが共有されます。</div>';
     }
-    /* 🔴 v1.84.0 なぜ自分にだけゴミ箱が出ているのかを、その場で分かるようにしておく。 */
+    /* 🔴 なぜ自分にだけチェックBOXが出ているのかを、その場で分かるようにしておく。
+       ⚠ .op-note は横並び（flex）。<b> を裸で置くと**1文字ずつ縦に折れる**ので、
+          文章はかならず <span> ひとつにまとめて入れること（スマホ幅で実際に折れた）。 */
     if (del) {
-      /* ⚠ .op-note は横並び（flex）。<b> を裸で置くと**1文字ずつ縦に折れる**ので、
-         文章はかならず <span> ひとつにまとめて入れること（スマホ幅で実際に折れた）。 */
-      h += '<div class="op-note"><i data-ic=trash data-ics=15></i>'
-         + '<span>各行の <b>ゴミ箱</b> は、あなた（マスター）にだけ出ています。'
-         + '押した1件だけを消せます（消したことは記録に残ります）。</span></div>';
+      h += '<div class="op-note"><i data-ic=check data-ics=15></i>'
+         + '<span>右はしの <b>チェックBOX</b> は、あなた（マスター）にだけ出ています。'
+         + '選んでから［選んだ行を消す］でまとめて消せます（消したことは記録に残ります）。</span></div>';
+    }
+
+    if (del && list.length) {
+      h += '<div class="op-selbar">'
+         + '<label class="op-all"><input type="checkbox" id="op-ckall" onchange="pitOplogPickAll(this.checked)">'
+         + '<span>表示中のぜんぶを選ぶ</span></label>'
+         + '<span class="op-seln" id="op-seln">選択なし</span>'
+         + '<button class="op-delsel" id="op-delsel" type="button" disabled onclick="pitOplogDeleteSelected()">'
+         + '<i data-ic=trash data-ics=15></i><span class="op-delsel-lb">選んだ行を消す</span></button>'
+         + '</div>';
     }
 
     if (!list.length) {
@@ -207,7 +234,7 @@
     } else {
       h += '<div class="op-list">';
       list.forEach(function (e) {
-        h += '<div class="op-row' + (del ? ' op-can-del' : '') + '">'
+        h += '<div class="op-row' + (del ? ' op-can-del' : '') + (_sel[e._k] ? ' op-picked' : '') + '" data-k="' + esc(e._k) + '">'
           + '<span class="op-time">' + esc(e.timeStr) + '</span>'
           + '<span class="op-user">' + esc(e.userName) + '</span>'
           + '<span class="op-act">' + esc(e.action) + '</span>'
@@ -215,8 +242,9 @@
               ? '<a href="javascript:void(0)" onclick="pitOpenCardDetail(\'' + esc(e.cardId) + '\')">' + esc(e.label) + '</a>'
               : esc(e.label)) + '</span>'
           + (del
-              ? '<button class="op-del" type="button" title="この1件を消す" aria-label="この1件を消す"'
-                + ' onclick="pitOplogDelete(\'' + esc(e._k) + '\')"><i data-ic=trash data-ics=14></i></button>'
+              ? '<label class="op-ck" title="この行を選ぶ"><input type="checkbox" data-k="' + esc(e._k) + '"'
+                + (_sel[e._k] ? ' checked' : '') + ' aria-label="この行を選ぶ"'
+                + ' onchange="pitOplogPick(\'' + esc(e._k) + '\', this.checked)"></label>'
               : '')
           + '</div>';
       });
@@ -225,10 +253,14 @@
 
     box.innerHTML = h;
     if (window.icoBoot) icoBoot(box);
+    if (del) refreshSelBar();
   }
   window.renderOplog = renderOplog;
 
   window.pitOplogSearch = function (v) {
+    /* 🔴 絞り込みを変えたら選択は解除する。
+       ⚠ 見えていない行が選ばれたまま［選んだ行を消す］を押される事故を防ぐため。 */
+    if ((v || '') !== _q) _sel = {};
     _q = v || '';
     renderOplog();
     var i = document.getElementById('op-q');
@@ -236,30 +268,76 @@
   };
   window.pitOplogReload = function () {
     _cache = null;
+    _sel = {};
     renderOplog();
   };
 
   /* ========================================
-     🔴 v1.84.0 1件だけ消す（マスター限定）
-     ⚠ 「聞く → 消す」の順。答えは**後から**返る（ask-pit.js は非同期）ので、
-        続きは必ず .then の中に書くこと。その場で分岐しない。
+     🔴 v1.84.0 選んで、まとめて消す（マスター限定）
      ======================================== */
+
+  /* 選んだ数だけを塗り替える。**一覧は描き直さない**
+     （チェックのたびに描き直すと、スクロール位置と絞り込みの入力が飛ぶ） */
+  function refreshSelBar() {
+    var n = selKeys().length;
+    var lb = document.getElementById('op-seln');
+    var bt = document.getElementById('op-delsel');
+    var all = document.getElementById('op-ckall');
+    if (lb) lb.textContent = n ? ('選択中 ' + n + ' 件') : '選択なし';
+    if (bt) {
+      bt.disabled = (n === 0) || _busy;
+      /* ⚠ ボタンに textContent で書くとゴミ箱アイコンの<svg>ごと消える。
+         文字は中の .op-delsel-lb だけ差し替える（ログイン画面で同じ罠を踏んでいる＝v1.18.1）。 */
+      var sp = bt.querySelector('.op-delsel-lb');
+      if (sp) sp.textContent = _busy ? '消しています…' : (n ? ('選んだ ' + n + ' 件を消す') : '選んだ行を消す');
+    }
+    if (all) {
+      var vis = visibleList();
+      var picked = vis.filter(function (e) { return _sel[e._k]; }).length;
+      all.checked = (picked > 0 && picked === vis.length);
+      all.indeterminate = (picked > 0 && picked < vis.length);
+    }
+  }
+
+  window.pitOplogPick = function (k, on) {
+    if (!canDelete()) return;
+    if (on) _sel[k] = true; else delete _sel[k];
+    var row = document.querySelector('.op-row[data-k="' + k + '"]');
+    if (row) row.classList.toggle('op-picked', !!on);
+    refreshSelBar();
+  };
+
+  window.pitOplogPickAll = function (on) {
+    if (!canDelete()) return;
+    /* 見えている行だけが対象（絞り込み中なら、絞り込んだぶんだけ） */
+    visibleList().forEach(function (e) { if (on) _sel[e._k] = true; else delete _sel[e._k]; });
+    [].forEach.call(document.querySelectorAll('.op-ck input'), function (c) {
+      c.checked = !!on;
+      var row = c.closest ? c.closest('.op-row') : null;
+      if (row) row.classList.toggle('op-picked', !!on);
+    });
+    refreshSelBar();
+  };
+
   function toast(msg) {
     if (window.pitToast) { try { pitToast(msg); return; } catch (e) {} }
     if (window.showToast) { try { showToast(msg); } catch (e) {} }
   }
 
-  window.pitOplogDelete = function (k) {
-    if (!canDelete()) return;
-    if (_busyKey) return;                       /* 連打よけ */
-    var i = indexOfKey(k);
-    if (i < 0) return;
-    var e = _cache[i];
+  window.pitOplogDeleteSelected = function () {
+    if (!canDelete() || _busy) return;
+    var keys = selKeys();
+    if (!keys.length) return;
 
-    var line = [e.timeStr, e.userName, e.action, e.label].filter(Boolean).join(' ／ ');
+    var items = keys.map(function (k) { return _cache[indexOfKey(k)]; });
+    var head = items.slice(0, 3).map(function (e) {
+      return '・' + [e.timeStr, e.userName, e.action].filter(Boolean).join(' ');
+    }).join('\n');
+    var more = items.length > 3 ? ('\nほか ' + (items.length - 3) + ' 件') : '';
+
     var ask = window.pitAsk
-      ? pitAsk('この1件を消しますか？', {
-          detail: line + '\n\n消した記録は戻せません。' +
+      ? pitAsk('選んだ ' + items.length + ' 件を消しますか？', {
+          detail: head + more + '\n\n消した記録は戻せません。' +
                   (window.PIT_CLOUD ? '全員の画面からも消えます。' : 'この端末の中だけの記録です。'),
           danger: true, ok: '消す', cancel: 'やめる'
         })
@@ -267,40 +345,69 @@
 
     ask.then(function (ok) {
       if (!ok) return;
-      /* 聞いている間に行が動いている（新しいログが増えた／更新した）かもしれないので取り直す */
-      var j = indexOfKey(k);
-      if (j < 0) { toast('その行はもうありません'); return; }
-      var t = _cache[j];
+      /* 聞いている間に行が動いている（新しいログが増えた／読み直した）かもしれないので取り直す */
+      var live = selKeys();
+      if (!live.length) { toast('選んだ行はもうありません'); return; }
 
-      if (window.PIT_CLOUD && window.fb && window.fb.ready && window.fb.currentUser) {
-        if (!t._id) { toast('いま書いたばかりの行です。［最新に更新］を押してからお試しください'); return; }
-        _busyKey = k;
-        window.fb.company().collection('pitAuditLogs').doc(t._id).delete()
-          .then(function () { _busyKey = ''; done(k, t); })
-          .catch(function (err) {
-            _busyKey = '';
-            console.error('[oplog] 1件消去に失敗', err);
-            toast('消せませんでした（権限か通信の問題です）');
-          });
+      if (isCloudLive()) {
+        var withId = [], noId = 0;
+        live.forEach(function (k) {
+          var t = _cache[indexOfKey(k)];
+          if (t && t._id) withId.push({ k: k, id: t._id }); else noId++;
+        });
+        if (!withId.length) {
+          toast('いま書いたばかりの行です。［最新に更新］を押してからお試しください');
+          return;
+        }
+        _busy = true;
+        refreshSelBar();
+        deleteChunks(withId).then(function () {
+          _busy = false;
+          finish(withId.map(function (x) { return x.k; }),
+                 noId ? ('／' + noId + '件は［最新に更新］のあとで消せます') : '');
+        }).catch(function (err) {
+          _busy = false;
+          refreshSelBar();
+          console.error('[oplog] まとめて消去に失敗', err);
+          toast('消せませんでした（権限か通信の問題です）');
+        });
         return;
       }
 
       /* サンプル／デモ版：この端末の中だけ */
-      done(k, t);
+      finish(live, '');
     });
   };
 
+  /* クラウドは 400件ずつ束ねて消す（Firestore のバッチ上限は500） */
+  function deleteChunks(rows) {
+    var col = window.fb.company().collection('pitAuditLogs');
+    var groups = [];
+    for (var i = 0; i < rows.length; i += CHUNK) groups.push(rows.slice(i, i + CHUNK));
+    return groups.reduce(function (p, g) {
+      return p.then(function () {
+        var batch = window.fb.db.batch();
+        g.forEach(function (x) { batch.delete(col.doc(x.id)); });
+        return batch.commit();
+      });
+    }, Promise.resolve());
+  }
+
   /* 消えたあとの後始末（画面から抜く → 消したことを記録する） */
-  function done(k, t) {
-    var j = indexOfKey(k);
-    if (j >= 0) _cache.splice(j, 1);
+  function finish(keys, extra) {
+    var n = 0;
+    keys.forEach(function (k) {
+      var j = indexOfKey(k);
+      if (j >= 0) { _cache.splice(j, 1); n++; }
+      delete _sel[k];
+    });
     /* ⚠ 順番が大事。サンプルは**先に端末へ書き戻す**こと。
        あとの pitLog が localStorage を読み直して上書きするので、
        ここで書き戻す前にログを足すと**消したはずの行が復活する**。 */
-    if (!(window.PIT_CLOUD && window.fb && window.fb.ready && window.fb.currentUser)) saveLocal();
+    if (!isCloudLive()) saveLocal();
     renderOplog();
-    /* ⚠ 残すのは**消した行の時刻だけ**。中身（誰が何を）は残さない＝消したかったものを復活させない。 */
-    try { if (window.pitLog) pitLog('操作ログを1件消去', { label: (t.timeStr || '') + ' の1件', kind: 'oplog' }); } catch (e) {}
-    toast('1件消しました');
+    /* ⚠ 残すのは**件数だけ**。中身（誰が何を）は残さない＝消したかったものを復活させない。 */
+    try { if (window.pitLog) pitLog('操作ログを' + n + '件消去', { label: n + '件', kind: 'oplog' }); } catch (e) {}
+    toast(n + '件消しました' + (extra || ''));
   }
 })();
