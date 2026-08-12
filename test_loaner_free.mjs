@@ -298,6 +298,7 @@ console.log('\n── ⑧ 🔴 実績のカードと代車の返却がつなが�
 {
   const ymdN = n => { const d = new Date(); d.setDate(d.getDate() + n);
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+  const ymdMD = n => { const d = new Date(); d.setDate(d.getDate() + n); return (d.getMonth()+1) + '/' + d.getDate(); };
   const mk = (opt) => p.evaluate(o => {
     state.cards = state.cards.filter(c => c.id !== 'LINKTEST');
     state.loanerAssigns = state.loanerAssigns.filter(a => a.cardId !== 'LINKTEST');
@@ -330,7 +331,9 @@ console.log('\n── ⑧ 🔴 実績のカードと代車の返却がつなが�
   ok('🔴 カードに「返却済」と出る',      !!box && /返却済/.test(box.t), box);
   ok('🔴 「超過」とは出ない',            !!box && !/超過/.test(box.t), box);
   ok('🔴 赤（dead）ではない',            !!box && !/cv-lev-dead/.test(box.cls), box);
-  ok('返した日も出る',                   !!box && /に返却/.test(box.t), box);
+  /* 🔴 v1.83.0（ゆうた指定）終わった貸出は「〇/〇〜〇/〇」＝借りていた期間で出す */
+  ok('🔴 借りていた期間が「〇/〇〜〇/〇」で出る',
+     !!box && new RegExp(ymdMD(-10) + '〜' + ymdMD(-5)).test(box.t), box);
   await p.evaluate(() => { if (window.closeDetail) closeDetail(); });
   await p.waitForTimeout(500);
 
@@ -347,6 +350,15 @@ console.log('\n── ⑧ 🔴 実績のカードと代車の返却がつなが�
   ok('🔴 カード詳細は物差しに聞いている',      /pitLoanerRemainOf/.test(cv));
   ok('🔴 ホバー情報カードも物差しに聞いている', /pitLoanerRemainOf/.test(ch));
   ok('🔴 予約カードのバッジも物差しに聞いている', /pitLoanerRemainOf/.test(rv));
+
+  /* 🔴 v1.83.0 期間の書き方も1本（画面ごとに '/'+'〜' を組み立てない） */
+  const per = await p.evaluate(() => { const c = state.cards.find(x => x.id === 'LINKTEST'); return pitLoanerPeriodOf(c); });
+  ok('🔴 期間の物差しがある（pitLoanerPeriodOf）', !!per && typeof per.text === 'string', per);
+  ok('🔴 実際に貸した期間を返す（縮んだ後の期間）',
+     !!per && per.from === ymdN(-10) && per.to === ymdN(-2), per);
+  const cu = fs.readFileSync('js/customers.js', 'utf8');
+  ok('🔴 お客様の来店履歴も期間の物差しを借りている', /pitLoanerPeriodOf/.test(cu));
+  ok('🔴 代車カレンダーのホバーも物差しを借りている', /pitLoanerMD/.test(fs.readFileSync('js/loaner.js','utf8')));
 
   await p.evaluate(() => { state.cards = state.cards.filter(c => c.id !== 'LINKTEST');
                            state.loanerAssigns = state.loanerAssigns.filter(a => a.cardId !== 'LINKTEST'); });
