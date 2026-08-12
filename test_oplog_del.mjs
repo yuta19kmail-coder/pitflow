@@ -9,7 +9,7 @@
      ① マスター以外にはチェックBOXが出ない（「管理」でも出ない）
      ② 選ばないと消せない（ボタンが押せない）
      ③ 選んだぶんだけ消える。選んでいない行は無事
-     ④ 消したことは記録に残るが、**中身は残さない**（件数だけ）
+     ④ 🔴 消したことは**記録に残さない**（ゆうた指示。消せるのは本人だけなので追う相手がいない）
      ⑤ 画面にボタンが無くても、直接呼べば消える…ようにはしない（権限ガード）
      ⑥ サーバーに拒否されたら、画面からも消さない
      ⑦ 🔴 **絞り込みを変えたら選択は解除**（見えていない行が巻き添えで消える事故を防ぐ）
@@ -195,10 +195,9 @@ try {
   ok('クラウドからも本当に消えた',
      !(await docs(p)).includes(before[0]) && !(await docs(p)).includes(before[2]), await docs(p));
   ok('1回の通信でまとめて消した', (await p.evaluate(() => window.__commits)) === 1);
-  ok('消したことが記録に残った', (await docs(p)).includes('操作ログを2件消去'), await docs(p));
-  ok('消した中身は記録に残していない',
-     !(await p.evaluate(() => Object.keys(window.__docs).some(k =>
-        /操作ログを\d+件消去/.test(window.__docs[k].action) && /タント|山田|N-BOX/.test(window.__docs[k].label || '')))));
+  /* 🔴 ゆうた指示：消したこと自体は記録に残さない */
+  ok('「消去しました」の記録が増えていない', !(await docs(p)).some(a => /消去/.test(a)), await docs(p));
+  ok('残りはちょうど2件', (await docs(p)).length === 2, await docs(p));
   ok('選択は空に戻った', (await selN(p)) === '選択なし', await selN(p));
   ok('「2件消しました」と知らせた', (await toasts(p)).some(t => t.indexOf('2件消しました') >= 0), await toasts(p));
 
@@ -252,11 +251,10 @@ try {
   ok('端末の控えからも消えた',
      await p.evaluate(a => { const s = JSON.parse(localStorage.getItem('pitflow_oplog_v1') || '[]');
                              return !s.some(x => x.action === a[0]) && !s.some(x => x.action === a[1]); }, [b2[0], b2[1]]));
-  ok('消去の記録は端末に残っている',
-     await p.evaluate(() => JSON.parse(localStorage.getItem('pitflow_oplog_v1') || '[]').some(x => x.action === '操作ログを2件消去')));
+  ok('端末にも消去の記録は残っていない',
+     await p.evaluate(() => !JSON.parse(localStorage.getItem('pitflow_oplog_v1') || '[]').some(x => /消去/.test(x.action))));
 
-  /* 🔴 いちばん踏みやすい罠：消したあとに足す「消去の記録」が、
-     消す前の控え（localStorage）を読み直して書き戻すと、消した行が生き返る。 */
+  /* 🔴 開き直して本当に消えているか（端末への書き戻しが効いているか） */
   await p.close();
   p = await openPage(true);
   await p.evaluate(() => { window.pitOplogReload(); });
