@@ -116,8 +116,8 @@
       return '<i style="height:' + pct + '%;' + (over ? 'background:var(--red,#ef4444);opacity:.9' : '') + '" title="' + v + '"></i>';
     }).join('') + '</div>';
   }
-  function openFoot(view, label) {
-    return '<div class="md-open md-int" onclick="event.stopPropagation();mydGo(\'' + view + '\')">↳ 「' + esc(label) + '」を開く</div>';
+  function openFoot(view, label, range) {
+    return '<div class="md-open md-int" onclick="event.stopPropagation();mydGo(\'' + view + '\'' + (range ? ",'" + range + "'" : '') + ')">↳ 「' + esc(label) + '」を開く</div>';
   }
   function calStrip(n) {
     var cols = window._dashCalCols ? _dashCalCols(0, n, C.today, C.tStr) : '';
@@ -253,11 +253,43 @@
     return C.cards.filter(function (c) { return !c._draft && c.reserveDate === C.tStr && c.status !== 'scrap'; })
       .sort(function (a, b) { return pitTimeMin(a.reserveTime) - pitTimeMin(b.reserveTime); });   /* v1.33.0 */
   }
+  /* =========================================================
+     🔴 v1.86.0 未定欄をBOX化（ゆうた依頼 2026-08-12）
+     ---------------------------------------------------------
+     返車の未定欄＝完TEL待ち／返車日未定／返車時間未定／入金待ち
+     予約の未定欄＝承認待ち／仮予約／未定（入庫日決まらず）／未入庫
+     ⚠ **条件をここに書き写さない。** 画面（undetermined.js）と同じ物差しを呼ぶ。
+        ・返車の振り分け＝`pitReturnPlace`（return-slot.js）**1本**。
+          「returnStage が…かつ returnDate が…」と書き写すと、
+          ホバー入力・返車ポップアップ・未定一覧・ここ の4か所が食い違う（v1.60.0 の教訓）。
+        ・予約側は undetermined.js の renderReserveTbd と**同じ式**にしてある。
+          あちらを直したらここも直すこと（式が2か所ある＝将来まとめたい宿題）。
+     ========================================================= */
+  function retPlace(c) { return window.pitReturnPlace ? pitReturnPlace(c) : null; }
+  function pickRetPlace(p) { return C.cards.filter(function (c) { return retPlace(c) === p; }); }
+  /* 予約の未定欄（undetermined.js renderReserveTbd と同じ条件） */
+  function pickApproval() {
+    return C.cards.filter(function (c) {
+      return c.approvalPending && !c.archived && c.status !== 'returned' && c.status !== 'cancelled' && c.status !== 'scrap';
+    });
+  }
+  function pickTentative() { return C.cards.filter(function (c) { return c.status === 'reserved' && c.tentative && !c.approvalPending; }); }
+  function pickIntakeTbd() { return C.cards.filter(function (c) { return c.status === 'reserved' && c.intakeTbd && !c.tentative; }); }
+  function pickNoShow() { return C.cards.filter(function (c) { return c.status === 'cancelled' && !c.archived; }); }
+
   function pickReturnOut() { return C.cards.filter(function (c) { return mdRetDate(c) === C.tStr; }); }
-  function pickTelWait() { return C.cards.filter(function (c) { return c.returnStage === 'callWait' && c.status !== 'returned' && c.status !== 'scrap'; }); }
+  /* ⚠ v1.86.0 ここは以前 `returnStage === 'callWait'` を**書き写していた**。
+     未定ビューは `pitReturnPlace` で振り分けているので、条件が育つとズレる。物差しを1本に寄せた。 */
+  function pickTelWait() { return pickRetPlace('callWait'); }
   function pickReturnWait() {
     return C.cards.filter(function (c) { return c.returnStage === 'returnWait' && c.status !== 'returned' && c.status !== 'scrap'; })
       .sort(function (a, b) { return (a.returnDate || '9999').localeCompare(b.returnDate || '9999'); });
+  }
+  function pickRetDateTbd() { return pickRetPlace('dateTbd'); }
+  function pickRetTimeTbd() {
+    return pickRetPlace('timeTbd').sort(function (a, b) {
+      return String(a.returnDateFinal || a.returnDate || '9999').localeCompare(String(b.returnDateFinal || b.returnDate || '9999'));
+    });
   }
   function pickPay() { return C.cards.filter(function (c) { return c.status === 'returned' && c.paymentSeparate && !c.paymentDate; }); }
   function longHoldDays() { return (state.settings && state.settings.longHoldDays) || 7; }
@@ -430,7 +462,7 @@
         if (!list.length) return empty('完TEL待ちはありません');
         return '<div class="md-list">' + list.slice(0, sz === 'l' ? 12 : 6).map(function (c) { return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), (teamOf(c) === 'import' ? '輸入' : '国産'), 'tag'); }).join('') + '</div>' + (sz === 'l' ? openFoot('return', '返車') : '');
       },
-      more: function () { return openFoot('return', '返車'); }
+      more: function () { return openFoot('return', '返車の未定', 'tbd'); }
     },
 
     returnwait: {
@@ -470,6 +502,122 @@
           '<div class="md-list" style="margin-top:8px">' + list.slice(0, sz === 'l' ? 10 : 4).map(function (c) { return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)) + (c.returnDate ? '（' + (window.fmtMD ? fmtMD(c.returnDate) : c.returnDate) + '返）' : ''), yen(amt(c)), 'amt'); }).join('') + '</div>' + (sz === 'l' ? openFoot('return', '返車') : '');
       },
       more: function () { return openFoot('return', '返車'); }
+    },
+
+    /* ===== 返車の未定欄（v1.86.0）＝ 返車ビューの「未定」タブと同じ4つ =====
+       完TEL待ち（telwait）と入金待ち（pay）は前からあるので、足したのは日未定・時間未定の2つ。 */
+    retDateTbd: {
+      title: '返車日未定', icon: '📅', jump: 'return', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      list: function (sz) {
+        var list = pickRetDateTbd();
+        return lnum(list.length, '件', '完TEL済・日にち待ち') +
+          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + wtChip(c) + cpN(c.amountFinal != null ? yen(c.amountFinal) : '', 'amt')); },
+            '返車日未定はありません', '件');
+      },
+      body: function (sz) {
+        var list = pickRetDateTbd();
+        if (sz === 's') return kpi(list.length, '件', '完TEL済・日にち待ち', list.length ? 'o' : 'g');
+        if (!list.length) return empty('返車日未定はありません');
+        return '<div class="md-list">' + list.slice(0, sz === 's' ? 5 : 12).map(function (c) {
+          return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), c.amountFinal != null ? yen(c.amountFinal) : '金額まだ', 'tag');
+        }).join('') + '</div>' + (sz === 'l' ? openFoot('return', '返車の未定', 'tbd') : '');
+      },
+      more: function () { return openFoot('return', '返車の未定', 'tbd'); }
+    },
+
+    retTimeTbd: {
+      title: '返車時間未定', icon: '🕒', jump: 'return', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      list: function (sz) {
+        var list = pickRetTimeTbd();
+        return lnum(list.length, '件', '日にち決定・時間待ち') +
+          chipsOf(list, sz, function (c) { var d = c.returnDateFinal || c.returnDate; return cp(c.id, cpT(fmd(d)) + cpWho(c) + wtChip(c), d === C.tStr); },
+            '返車時間未定はありません', '件');
+      },
+      body: function (sz) {
+        var list = pickRetTimeTbd();
+        if (sz === 's') return kpi(list.length, '件', '日にち決定・時間待ち', list.length ? 'o' : 'g');
+        if (!list.length) return empty('返車時間未定はありません');
+        return '<div class="md-list">' + list.slice(0, sz === 's' ? 5 : 12).map(function (c) {
+          return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), esc(fmd(c.returnDateFinal || c.returnDate) || '—'), 'tag');
+        }).join('') + '</div>' + (sz === 'l' ? openFoot('return', '返車の未定', 'tbd') : '');
+      },
+      more: function () { return openFoot('return', '返車の未定', 'tbd'); }
+    },
+
+    /* ===== 予約の未定欄（v1.86.0）＝ 予約ビューの「未定」タブと同じ4つ ===== */
+    approval: {
+      title: '承認待ち', icon: '✅', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      list: function (sz) {
+        var list = pickApproval();
+        return lnum(list.length, '台', '承認がまだ（枠は埋まっている）') +
+          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.reserveDate)) + cpWho(c) + wtChip(c), true); },
+            '承認待ちはありません');
+      },
+      body: function (sz) {
+        var list = pickApproval();
+        if (sz === 's') return kpi(list.length, '台', '承認がまだ', list.length ? 'r' : 'g');
+        if (!list.length) return empty('承認待ちはありません');
+        return '<div class="md-list">' + list.slice(0, 12).map(function (c) {
+          return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), esc(fmd(c.reserveDate) || '日未定'), 'tag rd');
+        }).join('') + '</div>' + (sz === 'l' ? openFoot('reserve', '予約の未定', 'tbd') : '');
+      },
+      more: function () { return '<div class="md-tiny">承認待ちでも<b>入庫カレンダー・代車の枠は埋まっています</b>。開いて表紙を印刷すると通常の予約になります。</div>' + openFoot('reserve', '予約の未定', 'tbd'); }
+    },
+
+    tentative: {
+      title: '仮予約', icon: '✏️', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      list: function (sz) {
+        var list = pickTentative();
+        return lnum(list.length, '台', '仮おさえ') +
+          chipsOf(list, sz, function (c) { return cp(c.id, cpT(fmd(c.reserveDate) || '日未定') + cpWho(c) + wtChip(c)); },
+            '仮予約はありません');
+      },
+      body: function (sz) {
+        var list = pickTentative();
+        if (sz === 's') return kpi(list.length, '台', '仮おさえ', list.length ? 'o' : 'g');
+        if (!list.length) return empty('仮予約はありません');
+        return '<div class="md-list">' + list.slice(0, 12).map(function (c) {
+          return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), esc(fmd(c.reserveDate) || '日未定'), 'tag');
+        }).join('') + '</div>' + (sz === 'l' ? openFoot('reserve', '予約の未定', 'tbd') : '');
+      },
+      more: function () { return openFoot('reserve', '予約の未定', 'tbd'); }
+    },
+
+    intakeTbd: {
+      title: '入庫日未定', icon: '🅿️', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      list: function (sz) {
+        var list = pickIntakeTbd();
+        return lnum(list.length, '台', 'パーツ待ち・入庫日決まらず') +
+          chipsOf(list, sz, function (c) { return cp(c.id, cpWho(c) + wtChip(c)); }, '入庫日未定はありません');
+      },
+      body: function (sz) {
+        var list = pickIntakeTbd();
+        if (sz === 's') return kpi(list.length, '台', '入庫日が決まらず', list.length ? 'o' : 'g');
+        if (!list.length) return empty('入庫日未定はありません');
+        return '<div class="md-list">' + list.slice(0, 12).map(function (c) { return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), wtChip(c)); }).join('') + '</div>' + (sz === 'l' ? openFoot('reserve', '予約の未定', 'tbd') : '');
+      },
+      more: function () { return openFoot('reserve', '予約の未定', 'tbd'); }
+    },
+
+    noShow: {
+      title: '未入庫', icon: '🚫', jump: 'reserve', sizes: ['s', 'm', 'l', 'xl'], dv: 'list',
+      list: function (sz) {
+        var list = pickNoShow();
+        return lnum(list.length, '台', '来店なし・キャンセル') +
+          chipsOf(list, sz, function (c) {
+            var d = daysAgo(c.cancelledAt);
+            return cp(c.id, cpWho(c) + cpN(c.cancelledAt ? fmd(c.cancelledAt) + '取消' + (d != null ? '・あと' + Math.max(0, 30 - d) + '日' : '') : ''));
+          }, '未入庫はありません');
+      },
+      body: function (sz) {
+        var list = pickNoShow();
+        if (sz === 's') return kpi(list.length, '台', '来店なし・キャンセル', list.length ? 'o' : 'g');
+        if (!list.length) return empty('未入庫はありません');
+        return '<div class="md-list">' + list.slice(0, 12).map(function (c) {
+          return rowCard(c.id, esc(nm(c)) + ' ' + esc(carOf(c)), esc(c.cancelledAt ? fmd(c.cancelledAt) + ' 取消' : ''), 'tag');
+        }).join('') + '</div>' + (sz === 'l' ? openFoot('reserve', '予約の未定', 'tbd') : '');
+      },
+      more: function () { return '<div class="md-tiny">1ヶ月（30日）たつと自動でキャンセル・アーカイブされます。</div>' + openFoot('reserve', '予約の未定', 'tbd'); }
     },
 
     maintMonth: {
@@ -813,9 +961,16 @@
     '代車特化型': function () { return [{ e: 'loaner', s: 'xl' }, { e: 'earliest', s: 'l' }, { e: 'park', s: 's' }, { e: 'hold', s: 's' }, { e: 'sc', s: 's', view: 'loaner', label: '代車カレンダー', icon: '🚙' }, { e: 'sc', s: 's', view: 'availcal', label: '空きカレンダー', icon: '🗓️' }, { e: 'sc', s: 's', view: 'fleet', label: '車両管理', icon: '🚐' }]; },
     '受付用': function () { return [{ e: 'intake', s: 'm' }, { e: 'returnout', s: 'm' }, { e: 'telwait', s: 's' }, { e: 'returnwait', s: 's' }, { e: 'pay', s: 's' }, { e: 'earliest', s: 'l' }, { e: 'p_resstaff', s: 'm', p: 'me' }, { e: 'sc', s: 's', view: 'reserve', range: '2month', label: '予約(2ヶ月)', icon: '📅' }, { e: 'sc', s: 's', view: 'return', range: 'tbd', label: '返車(未定)', icon: '📤' }]; },
     '整備士用': function () { return [{ e: 'p_task', s: 'l', p: 'me' }, { e: 'longhold', s: 'm' }, { e: 'maintWeek', s: 'm' }, { e: 'shakenPlan', s: 'm' }, { e: 'course', s: 'm' }, { e: 'sc', s: 's', view: 'course1', label: '1課', icon: '1️⃣' }, { e: 'sc', s: 's', view: 'course2', label: '2課', icon: '2️⃣' }, { e: 'sc', s: 's', view: 'work', label: 'Pitリスト', icon: '🏭' }]; },
-    'フロント用': function () { return [{ e: 'p_reserve', s: 'm', p: 'me' }, { e: 'p_return', s: 'm', p: 'me' }, { e: 'p_task', s: 'm', p: 'me' }, { e: 'telwait', s: 's' }, { e: 'returnwait', s: 's' }, { e: 'sales', s: 's' }, { e: 'p_resstaff', s: 'm', p: 'me' }]; }
+    'フロント用': function () { return [{ e: 'p_reserve', s: 'm', p: 'me' }, { e: 'p_return', s: 'm', p: 'me' }, { e: 'p_task', s: 'm', p: 'me' }, { e: 'telwait', s: 's' }, { e: 'returnwait', s: 's' }, { e: 'sales', s: 's' }, { e: 'p_resstaff', s: 'm', p: 'me' }]; },
+    /* 🆕 v1.86.0 未定の取りこぼしを見る用（ゆうた依頼）。返車の未定4つ＋予約の未定4つ。 */
+    '未定チェック用': function () {
+      return [{ e: 'approval', s: 'm' }, { e: 'tentative', s: 'm' }, { e: 'intakeTbd', s: 'm' }, { e: 'noShow', s: 'm' },
+              { e: 'telwait', s: 'm' }, { e: 'retDateTbd', s: 'm' }, { e: 'retTimeTbd', s: 'm' }, { e: 'pay', s: 'm' },
+              { e: 'sc', s: 's', view: 'reserve', range: 'tbd', label: '予約(未定)', icon: '📅' },
+              { e: 'sc', s: 's', view: 'return', range: 'tbd', label: '返車(未定)', icon: '📤' }];
+    }
   };
-  var TEMPLATE_NAMES = ['全体用', '代車特化型', '受付用', '整備士用', 'フロント用'];
+  var TEMPLATE_NAMES = ['全体用', '代車特化型', '受付用', '整備士用', 'フロント用', '未定チェック用'];
 
   function md() {
     if (!state.settings) state.settings = {};
