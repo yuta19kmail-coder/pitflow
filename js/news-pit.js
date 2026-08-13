@@ -558,7 +558,13 @@ window.PIT_NEWS = [
 (function () {
   'use strict';
 
+  /* 練習用サイト（この端末だけ）の置き場。本番は下の LS_MINE（人ごと）を使う。 */
   var LS_READ = 'pitflow_news_read_v1';
+  /* 🔴 v1.88.0 本番でも「この端末の控え」を必ず残す（人ごと）。
+     ⚠ これが今回の直しの肝。クラウドが読めない／書けない時に、
+        控えが無いと**確認済みが空っぽ扱い**になり、同じお知らせがまた出る。 */
+  function LS_MINE(uid) { return 'pitflow_news_read_v1:' + uid; }
+
   /* 🔴 ログイン直後に一度に出すポップアップの上限。
      ⚠ CarFlow は未読を全部つなげて出すが、PitFlow は入れ替え時点で未読が16件ある。
         16連続でモーダルが出ると、現場は中身を読まずに閉じるだけになる。
@@ -566,11 +572,19 @@ window.PIT_NEWS = [
         次にログインした時は、続きの3件が出る。 */
   var POPUP_MAX = 3;
 
-  var _read = null;      // 既読の id の入れ物
+  var _read = null;      // 既読の id の入れ物（分からない間は null）
   /* 🔴 v1.68.1 いま抱えている既読が「どこの・誰のぶんか」の印。
      ⚠ これが無いと、**ログインが済む前**に読んだ「この端末の控え（＝からっぽ）」を
         本物として抱えたまま二度と読み直さない。＝毎回ぜんぶ未読に戻る。 */
   var _readKey = null;
+  /* 🔴 v1.88.0 いまの既読が「信用できるか」。
+     クラウドをちゃんと読めた時だけ true。読めていない時に新着の窓を出すと、
+     **確認済みのお知らせをもう一度出してしまう**（ゆうた報告の症状そのもの）。 */
+  var _trusted = false;
+  var _loading = null;   // 走っている読み込み（同じものを2本走らせない）
+  var _pend = [];        // まだクラウドに送れていない分（送れるまで持ち続ける）
+  var _retryT = 0, _retryN = 0;
+  var _inboxTried = false;   /* 受信箱の描き直しを1回だけにする印 */
 
   function LIST() { return (window.PIT_NEWS || []).slice(); }
 
@@ -580,6 +594,7 @@ window.PIT_NEWS = [
     });
   }
   function cloud() { return window.PIT_CLOUD && window.fb && window.fb.ready && window.fb.currentUser; }
+  function myUid() { return cloud() ? window.fb.currentUser.uid : null; }
 
   /* 版くらべ（"1.67.0" > "1.65.1"）。小さいほど古い。 */
   function verNum(v) {
@@ -587,6 +602,25 @@ window.PIT_NEWS = [
     return (p[0] || 0) * 10000 + (p[1] || 0) * 100 + (p[2] || 0);
   }
   function verCmp(a, b) { return verNum(a) - verNum(b); }
+
+  /* ---- 端末の控え（人ごと） ----
+     🔴 確認を押したら、通信より先に**必ずここへ書く**。
+        クラウドは落ちることがあるが、ここは落ちない。 */
+  function lsGet(k) { try { var a = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function lsPut(k, arr) { try { localStorage.setItem(k, JSON.stringify(arr || [])); } catch (e) {} }
+  function lsAdd(ids) {
+    var uid = myUid();
+    var k = uid ? LS_MINE(uid) : (window.PIT_CLOUD ? null : LS_READ);
+    if (!k) return;                       /* ログイン待ちの間は誰のぶんか決まらない＝控えない */
+    var a = lsGet(k), ch = false;
+    (ids || []).forEach(function (id) { if (a.indexOf(id) < 0) { a.push(id); ch = true; } });
+    if (ch) lsPut(k, a);
+  }
+  function uni(a, b) {
+    var out = (a || []).slice();
+    (b || []).forEach(function (id) { if (out.indexOf(id) < 0) out.push(id); });
+    return out;
+  }
 
   /* ---- 既読 ----
      🔴 v1.68.1 既読の置き場は3通りある。取り違えると「確認したのにまた出る」になる。
@@ -600,59 +634,91 @@ window.PIT_NEWS = [
   }
   function loadRead() {
     var key = readKey();
-    if (_read && _readKey === key && key !== 'wait') return Promise.resolve(_read);
+    if (_read && _readKey === key && key !== 'wait' && _trusted) return Promise.resolve(_read);
+    if (_loading && _loading.key === key) return _loading.p;   /* 同じ読み込みを2本走らせない */
 
     if (key === 'wait') {
       /* ログインの返事を待っている最中。ここで控えを読むと、
          そのあとクラウドを一度も見ないまま「ぜんぶ未読」で固まる。 */
       if (!_read) { _read = []; _readKey = 'wait'; }
+      _trusted = false;
       return Promise.resolve(_read);
     }
 
     if (key === 'local') {
-      try { _read = JSON.parse(localStorage.getItem(LS_READ) || '[]'); } catch (e) { _read = []; }
-      _readKey = 'local';
+      _read = lsGet(LS_READ); _readKey = 'local'; _trusted = true;
       return Promise.resolve(_read);
     }
 
-    var keep = (_read || []).slice();   // 読み込みの最中に押された「確認」を落とさない
-    return window.fb.company().collection('userPrefs').doc(window.fb.currentUser.uid).get()
+    var uid = window.fb.currentUser.uid;
+    var mine = lsGet(LS_MINE(uid));                 /* この端末で確認したぶん（絶対に落ちない控え） */
+    var keep = uni(mine, uni(_read || [], _pend));  /* 読み込みの最中に押された「確認」も落とさない */
+    var p = window.fb.company().collection('userPrefs').doc(uid).get()
       .then(function (d) {
         var arr = ((d.exists && (d.data() || {}).pitNewsRead) || []).slice();
-        keep.forEach(function (id) { if (arr.indexOf(id) < 0) arr.push(id); });
-        _read = arr; _readKey = key;
+        var merged = uni(arr, keep);
+        _read = merged; _readKey = key; _trusted = true; _inboxTried = false;
+        _loading = null; _retryN = 0;
+        /* 控えにあってクラウドに無いぶん＝前に送れていなかった分。ここで送り直す（自己修復）。 */
+        var miss = keep.filter(function (id) { return arr.indexOf(id) < 0; });
+        if (miss.length) pushCloud(miss);
+        lsPut(LS_MINE(uid), merged);
         return _read;
       })
       .catch(function (e) {
         console.warn('[news] 既読の読み込みに失敗', e);
-        _read = keep;
-        _readKey = null;              // 印は付けない＝次に呼ばれた時にもう一度読みに行く
+        /* 🔴 読めなかった時は「端末の控え」で我慢する＝**確認済みは二度と出さない**。
+           ただし信用できない印を付けて、あとでもう一度読みに行く。 */
+        _read = keep; _readKey = null; _trusted = false;
+        _loading = null;
+        retryLater();
         return _read;
       });
+    _loading = { key: key, p: p };
+    return p;
   }
-  /* 既読を残す。
-     🔴 クラウドへは **足したぶんだけ**（arrayUnion）送る。
-        一覧を丸ごと上書きすると、読み込みに失敗していた時に
-        **クラウドに入っている既読を消してしまう**（v1.68.0 の事故）。 */
+  /* 読み込みに失敗したら、間を空けてもう一度取りに行く（5秒→15秒→45秒） */
+  function retryLater() {
+    if (_retryN >= 3) return;
+    var wait = [5000, 15000, 45000][_retryN++] || 45000;
+    clearTimeout(_retryT);
+    _retryT = setTimeout(function () { loadRead().then(paintBadge); }, wait);
+  }
+
+  /* クラウドへ足したぶんだけ送る。
+     🔴 一覧を丸ごと上書きしない（v1.68.0 の事故）。
+     🔴 v1.88.0 送れなかったら _pend に残し、次の読み込みで送り直す。 */
+  function pushCloud(ids) {
+    if (!ids || !ids.length) return;
+    if (!cloud()) { ids.forEach(function (id) { if (_pend.indexOf(id) < 0) _pend.push(id); }); return; }
+    var FV = window.fb.FieldValue;
+    var payload = (FV && FV.arrayUnion)
+      ? { pitNewsRead: FV.arrayUnion.apply(null, ids) }
+      : { pitNewsRead: uni(lsGet(LS_MINE(window.fb.currentUser.uid)), ids) };
+    window.fb.company().collection('userPrefs').doc(window.fb.currentUser.uid)
+      .set(payload, { merge: true })
+      .then(function () {
+        _pend = _pend.filter(function (id) { return ids.indexOf(id) < 0; });
+      })
+      .catch(function (e) {
+        console.warn('[news] 既読の記録に失敗（端末には残っています）', e);
+        ids.forEach(function (id) { if (_pend.indexOf(id) < 0) _pend.push(id); });
+        setTimeout(function () { pushCloud(_pend.slice()); }, 8000);
+      });
+  }
+  /* 既読を残す。まず端末（落ちない）→ そのあとクラウド。 */
   function saveRead(add) {
-    if (cloud()) {
-      var ids = (add && add.length) ? add : (_read || []);
-      if (!ids.length) return;
-      var FV = window.fb.FieldValue;
-      var payload = (FV && FV.arrayUnion)
-        ? { pitNewsRead: FV.arrayUnion.apply(null, ids) }
-        : { pitNewsRead: (_read || []).slice() };
-      window.fb.company().collection('userPrefs').doc(window.fb.currentUser.uid)
-        .set(payload, { merge: true })
-        .catch(function (e) { console.warn('[news] 既読の記録に失敗', e); });
-    } else {
-      try { localStorage.setItem(LS_READ, JSON.stringify(_read || [])); } catch (e) {}
-    }
+    var ids = (add && add.length) ? add : (_read || []);
+    if (!ids.length) return;
+    lsAdd(ids);
+    if (window.PIT_CLOUD) pushCloud(ids);
   }
   /* 人が入れ替わった時に忘れる（ログアウト時に auth-pit.js が呼ぶ）。
-     ⚠ 忘れないと、次に入った人に前の人の既読が引き継がれてポップアップが出ない。 */
+     ⚠ 忘れるのは**画面が抱えている分だけ**。端末の控えは人ごと（uid別）なので、
+        次に入った人には効かない＝混ざらない。 */
   window.pitNewsForget = function () {
-    _read = null; _readKey = null;
+    _read = null; _readKey = null; _trusted = false;
+    _loading = null; _pend = []; _retryN = 0; _inboxTried = false; clearTimeout(_retryT);
     window._nwPopShown = false;
     window._nwQueue = null; window._nwQueueIdx = 0;
     paintBadge();
@@ -669,7 +735,7 @@ window.PIT_NEWS = [
   }
   window.pitNewsReadAll = function () {
     var all = LIST().map(function (a) { return a.id; });
-    _read = all.slice();
+    _read = uni(_read || [], all);
     saveRead(all); paintBadge(); renderNews();
   };
 
@@ -687,7 +753,9 @@ window.PIT_NEWS = [
   function paintBadge() {
     var item = document.querySelector('.si-item[data-view="news"]');
     if (!item) return;
-    var n = (_read === null) ? 0 : unread().length;
+    /* 🔴 v1.88.0 既読がまだ分からない間（ログイン待ち・読み込み前）は丸を出さない。
+       ⚠ ここで出すと、入った瞬間に「27」と出てから減る＝毎回ぜんぶ未読に見える。 */
+    var n = (_read === null || (window.PIT_CLOUD && !_trusted)) ? 0 : unread().length;
     var b = item.querySelector('.si-newsbadge');
     if (!n) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement('span'); b.className = 'si-newsbadge'; item.appendChild(b); }
@@ -699,7 +767,10 @@ window.PIT_NEWS = [
   function renderNews() {
     var box = document.getElementById('news-body');
     if (!box) return;
-    if (_read === null) {
+    /* 🔴 v1.88.0 まだ既読が読めていない時も、もう一度取りに行ってから描く。
+       ⚠ 読めていないまま描くと、確認済みのお知らせが未読の顔で並ぶ。 */
+    if (_read === null || (window.PIT_CLOUD && !_trusted && !_inboxTried)) {
+      _inboxTried = true;                 /* ⚠ 一度だけ。戻さないと読めない時に無限に描き直す */
       box.innerHTML = '<div class="nw-loading">読み込んでいます…</div>';
       loadRead().then(function () { renderNews(); });
       return;
@@ -817,6 +888,16 @@ window.PIT_NEWS = [
           （お知らせそのものを試す test_news.mjs だけは、この印を付けずに開く） */
     try { if (/[?&]nonews=1/.test(location.search)) return; } catch (e) {}
     loadRead().then(function () {
+      /* 🔴 v1.88.0 既読が読めていない時は**絶対に出さない**。
+         ⚠ ここを出してしまうと、確認済みのお知らせをもう一度出すことになる
+            ＝「確認したのにまた出る」（ゆうた報告）の正体。
+            読めるようになるまで、少し待ってからもう一度試す。 */
+      if (window.PIT_CLOUD && !_trusted) {
+        if ((window._nwPopWait = (window._nwPopWait || 0) + 1) <= 4) {
+          setTimeout(window.pitNewsMaybePopup, 4000);
+        }
+        return;
+      }
       var u = unreadOldFirst();
       if (!u.length) return;
       window._nwPopShown = true;
