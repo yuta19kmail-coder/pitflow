@@ -442,7 +442,11 @@ console.log('\n── 🔴 v1.56.1 中身が空のまま予約を作らない（
   await p.waitForTimeout(200);
   const svAfter = await p.evaluate(() => { const d = state.cards.find(x => x.id === 'cS1'); return { draft: !!(d && d._draft) }; });
   ok('🔴 空で「保存する」を押すと止めて教える', !!sv.told && /保存できません/.test(sv.told.t), sv);
-  ok('🔴 どこが足りないか名前で伝える', !!sv.told && /カナ/.test(sv.told.d) && /TEL/.test(sv.told.d), sv);
+  /* ⚠ v1.89.0 で TEL は黄（空でも保存できる）へ格下げ＝赤の一覧には出ない。
+     赤に残っているもので「名前で伝えているか」を見る。 */
+  ok('🔴 どこが足りないか名前で伝える',
+     !!sv.told && /カナ/.test(sv.told.d) && /受付タイプ/.test(sv.told.d), sv);
+  ok('🔴 v1.89.0 TEL は赤の一覧に出ない', !!sv.told && sv.told.d.indexOf('TEL') < 0, sv.told);
   ok('🔴 予約にならない（下書きのまま）', svAfter.draft === true, svAfter);
 
   const src = fs.readFileSync('js/blank-cards.js', 'utf8');

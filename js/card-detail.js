@@ -1330,7 +1330,10 @@ function _cardMarkMisses(c, root){
        ・入庫日＝赤
        ・入庫時間＝黄
        ・作業内容＝黄
-       ・**TEL は赤のまま。国産／輸入・メーカー・車種は黄に落とす**
+       ・**国産／輸入・メーカー・車種は黄に落とす**
+       ・🔴 **TEL は 2026-08-13 に黄へ格下げ（v1.89.0・ゆうた指定）**。
+         ＝電話番号が分からなくても予約は取れる。空なら1回だけ聞いて通す。
+         ⚠ 元は赤（v1.76.0）。**戻す時はゆうたに確認してから。**
        ・受付タイプ（預かりなど）＝赤。**赤が埋まっていなければ保存禁止＋どこがダメか伝える**
      ⚠ 代車を「必要」にした時の3項目と、車検の諸費用は**今までどおり赤**（指定に無いので変えない）。
      🔴 この表がこの画面の唯一の物差し。**保存の関門（_pitCardGuard）も入力チェックもここを見る。**
@@ -1339,12 +1342,12 @@ function _cardMarkMisses(c, root){
     /* --- 🔴 赤（必須） --- */
     ['kana',        'カナ',            !!(c.kana || '').trim(),                                 'red'],
     ['repeat',      '初回／リピーター', !!(c.repeat || '').trim(),                               'red'],
-    ['tel',         'TEL',             !!(c.tel || '').trim(),                                  'red'],
     ['reserveDate', '入庫日',          !!c.reserveDate,                                         'red'],
     ['dropType',    '受付タイプ',      !!c.dropType,                                            'red'],
     ['workType',    '作業タイプ',      !!c.workType || !!((c.workAddons||[]).length),           'red'],
     /* --- 🟡 黄（入れたほうがいい） --- */
     ['customer',    'お客様名（漢字）', !!(c.customer || '').trim(),                             'yellow'],
+    ['tel',         'TEL',             !!(c.tel || '').trim(),                                  'yellow'],
     ['boardId',     '国産車／輸入車',  c.boardId === 'default' || c.boardId === 'import',       'yellow'],
     ['maker',       'メーカー',        !!(c.maker || '').trim(),                                'yellow'],
     ['car',         '車種（グレード）', !!(c.car || '').trim(),                                  'yellow'],
@@ -1795,7 +1798,8 @@ function _plateDigits(s, max){
 function telInput(c){
   const p = String(c.tel || '').split('-');
   const v1 = _pe(p[0] || ''), v2 = _pe(p[1] || ''), v3 = _pe(p.slice(2).join('') || '');
-  /* 🔴 v1.76.0 TEL は必須（赤）。赤枠を付ける目印をこのBOXに置く。 */
+  /* 🟡 v1.89.0 TEL は黄（入れたほうがいい）。枠を付ける目印をこのBOXに置く。
+     ⚠ v1.76.0〜v1.88.0 は赤（必須）だった。振り分けの正は `_cardMarkMisses` の表。 */
   let h = '<div class="cf-tel" data-key="tel">';
   h += '<input type="text" class="cf-input cf-tel-main" data-tel-main readonly value="' + _pe(c.tel || '') + '" placeholder="クリックして入力" autocomplete="off">';
   h += '<div class="cf-tel-guide"><div class="cf-tel-row">';

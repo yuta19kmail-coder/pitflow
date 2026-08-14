@@ -78,9 +78,11 @@ eq('漢字が空白だけでも黄',        yel({ ...base, customer:'  ' }), ['�
 eq('🔴 カナが空＝赤に出る',       red({ ...base, kana:'' }), ['カナ']);
 eq('カナが空白だけでも赤',        red({ ...base, kana:'　' }), ['カナ']);
 eq('両方空＝カナだけ赤・漢字は黄',red({ ...base, customer:'', kana:'' }), ['カナ']);
-eq('TEL は赤のまま',              red({ ...base, tel:'' }), ['TEL']);
+/* 🔴 v1.89.0（ゆうた指定）TEL は赤 → 黄へ格下げ。空でも保存できる。 */
+eq('🔴 TEL は赤ではない',          red({ ...base, tel:'' }), []);
+eq('🔴 TEL は黄に出る',            yel({ ...base, tel:'' }), ['TEL']);
 eq('車種は黄に落ちた',            yel({ ...base, car:'' }), ['車種（グレード）']);
-eq('赤が複数なら並ぶ',            red({ ...base, kana:'', tel:'' }), ['カナ','TEL']);
+eq('赤が複数なら並ぶ',            red({ ...base, kana:'', dropType:'' }), ['カナ','受付タイプ']);
 eq('all は赤＋黄をまとめたもの',  markMisses({ ...base, kana:'', car:'' }, fakeRoot).all, ['カナ','車種（グレード）']);
 
 console.log('\n■ 車検のときだけ「諸費用」も必須（v1.40.0・ゆうた指定／今も赤）');
@@ -93,7 +95,7 @@ console.log('\n■ 車検のときだけ「諸費用」も必須（v1.40.0・ゆ
   eq('空文字も未入力あつかい',              red({ ...shaken, feeAmount:'' }), ['諸費用（車検）']);
   eq('🔴 車検以外は今までどおり任意',       red({ ...oil, feeAmount:null }), []);
   eq('車検を含む複数選択でも対象',          red({ ...base, workTypes:['oil','shaken'], feeAmount:null }), ['諸費用（車検）']);
-  eq('ほかの赤と一緒に並ぶ',                red({ ...shaken, feeAmount:null, tel:'' }), ['TEL','諸費用（車検）']);
+  eq('ほかの赤と一緒に並ぶ',                red({ ...shaken, feeAmount:null, kana:'' }), ['カナ','諸費用（車検）']);
 }
 
 console.log('\n■ 表示している画面が、ちゃんと共通の表示名を通しているか');

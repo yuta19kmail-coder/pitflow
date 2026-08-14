@@ -5,7 +5,9 @@
      ・漢字名前は黄色で **カナは赤枠** ／ **初回リピーター 赤** ／ **入庫日 赤**
      ・**入庫時間 黄色** ／ **作業内容 黄色**
      ・**赤枠が埋まっていない場合はエラーで保存禁止。どこがダメか伝えて、再入力を促す**
-     ・（追加で確認）**TEL は赤のまま／国産・輸入・メーカー・車種は黄色へ**
+     ・（追加で確認）**国産・輸入・メーカー・車種は黄色へ**
+     🔴 **2026-08-13（v1.89.0・ゆうた指定）＝TEL を赤から黄へ格下げ。**
+        電話番号が分からなくても予約は取れる。ここが逆戻りしていないかも見張る。
      ・（追加で確認）**止めるのはすべての保存**（仮予約・承認に回す・入庫中に保存 も含む）
      ・（追加で確認）**黄だけなら1回だけ聞いて通す**
    ◎ここで見張ること
@@ -58,13 +60,14 @@ console.log('\n── 🎨 空のカードで入力チェックを押す ──'
   const red = await keys('cf-miss'), yellow = await keys('cf-warn');
 
   /* 🔴 ゆうた指定の振り分け（入庫日は開いた時に今日が入るので、ここでは出ない＝別で確かめる） */
-  ['kana', 'repeat', 'tel', 'dropType', 'workType'].forEach(k => {
+  ['kana', 'repeat', 'dropType', 'workType'].forEach(k => {
     ok('🔴 赤：' + k, red.indexOf(k) >= 0, { red, yellow });
   });
-  ['customer', 'boardId', 'maker', 'car', 'reserveTime', 'menu'].forEach(k => {
+  ['customer', 'tel', 'boardId', 'maker', 'car', 'reserveTime', 'menu'].forEach(k => {
     ok('🟡 黄：' + k, yellow.indexOf(k) >= 0, { red, yellow });
   });
   ok('🔴 漢字の名前（customer）は赤ではない', red.indexOf('customer') < 0, red);
+  ok('🔴 v1.89.0 TEL は赤ではない（黄へ格下げ）', red.indexOf('tel') < 0, red);
   ok('🔴 国産／輸入・メーカー・車種は赤ではない',
      red.indexOf('boardId') < 0 && red.indexOf('maker') < 0 && red.indexOf('car') < 0, red);
   ok('赤と黄が同じ欄に同時に付いていない', red.every(k => yellow.indexOf(k) < 0), { red, yellow });
@@ -143,8 +146,9 @@ console.log('\n── 🗣 止めた時に、どこがダメかを名前で伝�
   await p.evaluate(() => pitSaveCard());
   await p.waitForTimeout(500);
   const t = await dlgText();
-  ok('カナ・初回／リピーター・TEL・受付タイプ・作業タイプ が名前で出る',
-     ['カナ', '初回／リピーター', 'TEL', '受付タイプ', '作業タイプ'].every(w => t.indexOf(w) >= 0), t);
+  ok('カナ・初回／リピーター・受付タイプ・作業タイプ が名前で出る',
+     ['カナ', '初回／リピーター', '受付タイプ', '作業タイプ'].every(w => t.indexOf(w) >= 0), t);
+  ok('🔴 v1.89.0 TEL は「保存できません」の側に出ない', t.indexOf('TEL') < 0, t);
   ok('「赤い枠のところを入れてから」と促している', /赤い枠/.test(t), t);
   ok('ボタンは「入力に戻る」', /入力に戻る/.test(t), t);
   ok('🔴 ブラウザ純正のポップアップではない', native.length === 0, native);
@@ -163,16 +167,16 @@ console.log('\n── 🟡 赤を全部埋めたら、黄だけになって「1�
     const c = state.cards[state.cards.length - 1];
     c.kana = 'テスト タロウ'; c.seiKana = 'テスト'; c.meiKana = 'タロウ';
     c.repeat = (state.repeatTypes && state.repeatTypes[0] ? state.repeatTypes[0].id : 'new');
-    c.tel = '090-1111-2222';
     c.dropType = 'drop';
     c.workType = 'general';
-    /* 黄はわざと空のまま（customer / boardId / maker / car / reserveTime / menu） */
+    /* 黄はわざと空のまま（customer / tel / boardId / maker / car / reserveTime / menu） */
   });
   await p.evaluate(() => pitSaveCard());
   await p.waitForTimeout(500);
   const t = await dlgText();
   ok('🟡 1回だけ聞く（止めない）', await dlgOpen() === 1 && /このまま/.test(t), t);
   ok('空の項目を名前で出す', /お客様名（漢字）|メーカー|車種|入庫時刻|作業内容/.test(t), t);
+  ok('🔴 v1.89.0 TEL が空でも、聞かれるだけで止まらない', /このまま/.test(t) && t.indexOf('TEL') >= 0, t);
   ok('ボタンは「このまま保存する」と「入力に戻る」', /このまま保存する/.test(t) && /入力に戻る/.test(t), t);
 
   /* 入力に戻る＝保存しない */
