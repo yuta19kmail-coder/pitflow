@@ -370,6 +370,34 @@ function _estTeamMap(root, team){
 /* カード→team（国産=default / 輸入=import） */
 function pitTeamKey(c){ return (c && c.boardId === 'import') ? 'import' : 'default'; }
 window.pitTeamKey = pitTeamKey;
+
+/* ===================================================================
+   🏷 課（1課／2課）＝ v1.92.0（ゆうた指摘 2026-08-13）
+   -------------------------------------------------------------------
+   🗣「表紙印刷の部分で、恐らく 1課・2課 が車か何かに引っ張られてる。
+      **実際の予約画面のボタンに沿ってデータが入るようにしてほしい**」
+
+   🔴 **課は「予約画面で押したボタン（c.division）」だけを見る。**
+   ⚠ 直す前は、表紙もホバー情報カードも
+        `c.division==='div2' || c.boardId==='import' ? '2課' : '1課'`
+      と書いてあり、**課のボタンを外していると、国産／輸入（＝車）から 1課／2課 を作っていた**。
+      ＝画面のボタンは何も選ばれていないのに、紙には「1課」と刷られる。これが報告の正体。
+   ⚠ 表示名も `'1課'` と**直に書いてあった**。課の名前は `state.divisions` で決まるので、
+      名前を変えたり3つ目を足したりすると紙だけ食い違う。**必ずこの表から引く。**
+   🔴 **国産／輸入を押した時に課も自動で入る**のは今までどおり（card-detail.js）。
+      それは「ボタンに値が入る」＝ここで見ている c.division が埋まる、ということ。
+      **逆算（車→課）をやめただけで、自動入力はやめていない。**
+   =================================================================== */
+function pitDivisionId(c){ return (c && c.division) ? String(c.division) : ''; }
+function pitDivisionLabel(c){
+  const id = pitDivisionId(c);
+  if (!id) return '';                       /* ボタンが押されていない＝空。車から作らない */
+  const list = (window.state && Array.isArray(state.divisions)) ? state.divisions : [];
+  const d = list.find(x => x && x.id === id);
+  return d ? String(d.label || '') : '';    /* 表にない課＝出さない（勝手に1課にしない） */
+}
+window.pitDivisionId = pitDivisionId;
+window.pitDivisionLabel = pitDivisionLabel;
 /* estHold/estAmount を team別ネストに正規化（旧フラット保存の移行・import欠けの補完） */
 function pitNormalizeEst(){
   const s = state.settings; if (!s) return;
