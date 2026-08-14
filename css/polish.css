@@ -1180,6 +1180,16 @@
 .cfs-day.past{ background:transparent; border-color:transparent; color:var(--text3); opacity:.35; cursor:default; }
 .cfs-day.noclick{ cursor:default; }
 
+/* 🔴 v1.90.0（ゆうた指摘）短縮営業（午前休み・午後休み・早締め）の日の目印。
+   ⚠ ○△満 の枠色・台数表示には**一切さわらない**＝空きの読み方は今までどおり。
+      「いつもと時間が違う」だけを、右上の小さなオレンジの ◐ で足す。 */
+.cfs-day.cfs-short{ box-shadow:inset 0 0 0 1px rgba(245,158,11,.55); }
+.cfs-mk-short{
+  position:absolute; top:1px; right:3px;
+  font-size:10px; line-height:1; font-weight:800; color:#f59e0b; pointer-events:none;
+}
+.cfs-hint-short{ color:#f59e0b; font-weight:700; }
+
 /* 📥📤 当日アクションシート（v0.30.0） */
 .ta-sheet{ width:min(92vw,360px); background:var(--bg2); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.5); }
 .ta-head{ font-size:14px; line-height:1.5; padding:4px 4px 12px; border-bottom:1px solid var(--border); margin-bottom:12px; }
@@ -1796,6 +1806,41 @@ th.cfs-lg-d{ z-index:3; }
   background:rgba(148,163,184,.16);color:var(--text2);
 }
 .cal-chip.closed{ background:rgba(239,68,68,.14); color:#ef4444; }
+
+/* 🔴 v1.90.0（ゆうた指定 2026-08-13）**短縮営業を灰色から外した。**
+   休み＝赤／**短縮（午前休み・午後休み・早締め）＝オレンジ**／特別営業＝緑。
+   ⚠ 灰色だと赤い「定休」の隣で読み飛ばされる＝いつもの時間だと思って予約を入れてしまう。
+   🔴 色を決める物差しは PitCal.tone(ds) 1本。画面ごとに if を書かないこと。 */
+.cal-note.short{ color:#f59e0b; }
+.cal-note.open { color:#1db97a; }
+.cal-chip.short{ background:rgba(245,158,11,.16); color:#f59e0b; }
+.cal-chip.open { background:rgba(29,185,122,.15); color:#1db97a; }
+
+/* 月カレンダーのマスは、短縮の日もうっすら色を敷く（一覧で「この週は何かある」と分かる）。
+   ⚠ 週ビューは**塗らない＝札だけ**（ゆうた指定）。日ごとの列が細く、塗ると予約が読みにくいため。 */
+.reserve-month-cell.calshort{ background:rgba(245,158,11,.05); }
+/* 月ビュー（縦の一覧＝rml）。休みは今までどおり、短縮はオレンジの札＋行をうっすら。 */
+.rml-row.calshort{ background:rgba(245,158,11,.045); }
+.rml-hol.rml-cal.closed{ color:#ef4444 !important; font-weight:700; }
+.rml-hol.rml-cal.short { color:#f59e0b !important; font-weight:700; }
+.rml-hol.rml-cal.open  { color:#1db97a !important; font-weight:700; }
+
+/* ===== 🕐 当日ビューの営業日の帯（v1.90.0）=====
+   🔴 入庫と返車で分けず、**2列ぶちぬきで横1本**（ゆうた指定）＝その日の店の話であって、
+      入庫か返車かは関係ないため。 */
+.today-calbar{
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  padding:8px 13px;margin:0 0 10px;border-radius:9px;
+  font-size:12px;font-weight:800;letter-spacing:.02em;
+}
+.today-calbar .sm{ font-weight:600;color:var(--text2);font-size:11.5px; }
+.today-calbar.closed{ background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.4); color:#ef4444; }
+.today-calbar.short { background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.4); color:#f59e0b; }
+.today-calbar.open  { background:rgba(29,185,122,.11); border:1px solid rgba(29,185,122,.4); color:#1db97a; }
+/* 休みの日は列の後ろにうっすら色を敷く。⚠ 予約そのものは薄くしない
+   （お客様と約束している車が読みにくくなるほうが事故になる）。 */
+.today-cols.is-closed{ background:rgba(239,68,68,.045); border-radius:10px; }
+
 .rml-hol.cal-soft,.lo-closed-tag.cal-soft{ color:var(--text3) !important; font-weight:600; }
 .drc-h.closed{ color:#ef4444; font-weight:600; }
 

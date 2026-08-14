@@ -92,6 +92,11 @@ function renderToday(){
   const outLeft = returnTotal - returnDone;
   const outMoved = returnDone;
 
+  /* その日の営業（休み／午前休み・午後休み・早締め／特別営業）。届いていなければ空。 */
+  const calNote = (window.PitCal && PitCal.label) ? PitCal.label(dayStr) : '';
+  const calTone = (window.PitCal && PitCal.tone)  ? PitCal.tone(dayStr)  : '';
+  const calHrs  = (window.PitCal && PitCal.hoursText) ? PitCal.hoursText(dayStr) : '';
+
   let html = '';
 
   // ===== ヘッダー（日付＋入庫返車カウント＋残） =====
@@ -100,6 +105,11 @@ function renderToday(){
   html += '<span class="big">' + (day.getMonth()+1) + '月 ' + day.getDate() + '日</span>';
   html += '<span class="dow">(' + dow + ')</span>';
   html += (isToday ? '<span class="today-badge">今日</span>' : '<span class="today-badge next">翌日</span>');
+  /* 🔴 v1.90.0（ゆうた指摘 2026-08-13）**当日ビューは営業日カレンダーを一切見ていなかった。**
+     休みの日も、午前休み・早締めの日も、この画面には何ひとつ出ていなかった。
+     🔴 判定も色も PitCal 1本（休み=赤／短縮=オレンジ／特別営業=緑）。ここで曜日を数えない。 */
+  if (calNote) html += '<span class="cal-note ' + calTone + '" style="margin-left:4px">'
+                     + '<i data-ic=' + (calTone === 'closed' ? 'ban' : 'clock') + ' data-ics=14></i> ' + _todEsc(calNote) + '</span>';
   html += '</div>';
 
   html += '<div class="today-counts">';
@@ -127,7 +137,21 @@ function renderToday(){
     ? _todMergeAlign(intakeRows, returnRows)
     : { left: _todPlain(intakeRows, false), right: _todPlain(returnRows, true) };
 
-  html += '<div class="today-cols' + (window._todayFull ? ' full' : '') + '">';
+  /* 🔴 v1.90.0 営業日の帯。**入庫と返車で分けず、2列ぶちぬきで横1本**（ゆうた指定）
+     ＝その日の店の話であって、入庫か返車かは関係ないため。 */
+  if (calTone === 'closed'){
+    html += '<div class="today-calbar closed"><i data-ic=ban data-ics=15></i> 本日は休業日です'
+          + '<span class="sm">' + _todEsc(calNote) + '</span></div>';
+  } else if (calTone === 'short'){
+    html += '<div class="today-calbar short"><i data-ic=clock data-ics=15></i> ' + _todEsc(calNote)
+          + (calHrs ? '<span class="sm">受付 ' + calHrs + '</span>' : '') + '</div>';
+  } else if (calTone === 'open'){
+    html += '<div class="today-calbar open"><i data-ic=check data-ics=15></i> ' + _todEsc(calNote)
+          + (calHrs ? '<span class="sm">受付 ' + calHrs + '</span>' : '') + '</div>';
+  }
+
+  html += '<div class="today-cols' + (window._todayFull ? ' full' : '')
+        + (calTone === 'closed' ? ' is-closed' : '') + '">';
   html += '<div class="today-col">';
   html += '<div class="today-col-head intake"><span class="ic"><i data-ic=download data-ics=16></i></span>入庫 <span class="cnt">' + intake.length + '</span></div>';
   html += '<div class="today-col-body">' + (_todHasAny(merged.left) ? merged.left : '<div class="today-empty">入庫予定なし</div>') + '</div>';

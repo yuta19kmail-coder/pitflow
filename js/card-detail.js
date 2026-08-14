@@ -1112,19 +1112,38 @@ function _cfsCalHtml(c, team, tStr, ro){
         else { cls = ' ok'; mark = '○'; }
       }
     }
+    /* 🔴 v1.90.0（ゆうた指摘 2026-08-13）**短縮営業（午前休み・午後休み・早締め）が
+       ふつうの日と全く同じに見えていた。**ここは「休みか、そうでないか」の2択しか見ていなかった。
+       ・右上に小さなオレンジの ◐ を出す（○△満 の台数表示は今までどおり触らない）
+       ・ホバー（title）に「何時から何時まで・空き何台」を出す＝ふつうの日にも出す
+       🔴 色と判定は PitCal.tone / PitCal.hoursText 1本。ここで営業時間を計算しない。 */
+    const calTone = (window.PitCal && PitCal.tone) ? PitCal.tone(ds) : '';
+    const calNote = (window.PitCal && PitCal.label) ? PitCal.label(ds) : '';
+    const calHrs  = (window.PitCal && PitCal.hoursText) ? PitCal.hoursText(ds) : '';
+    const shortMk = (calTone === 'short') ? '<span class="cfs-mk-short" aria-hidden="true">◐</span>' : '';
+    /* ホバーの中身（改行は &#10;）。「いつもと時間が違う」がここで必ず読める。 */
+    let tip = (ym.m + 1) + '/' + dd + '（' + '日月火水木金土'[d.getDay()] + '）';
+    if (hol) tip += '　' + hol;
+    if (calTone === 'closed')      tip += '&#10;🚫 ' + (calNote || '定休') + '（この日は開いていません）';
+    else if (calTone === 'short')  tip += '&#10;🕐 ' + calNote + (calHrs ? '&#10;受付 ' + calHrs : '');
+    else if (calTone === 'open')   tip += '&#10;✅ ' + calNote + (calHrs ? '&#10;受付 ' + calHrs : '');
+    else if (calHrs)               tip += '　' + calHrs;
+    if (num) tip += '&#10;空き ' + num + ' 台';
+
     const dayClick = ro ? '' : ' onclick="cfPickDate(\'' + ds + '\',\'' + team + '\')"';
     const avSel = (ro && window._availPick === ds) ? ' av-sel' : '';   // 空きカレンダービュー：選択日のハイライト
     /* 🔴 v1.74.1（ゆうた報告「表示に変なバグ」）**クラスの前の半角スペースが抜けていた。**
        `cfs-day ok` ＋ `sel` が `cfs-day oksel` になり、
        ①選んだ日が緑に光らない ②今日の点線枠が出ない ③**○/△/満/休 の色まで消える**（ok が別名になるため）。
        ⚠ 見た目だけの話に見えるが、「どの日を選んだのか分からない」＝入れ間違いのもと。 */
-    h += '<div class="cfs-day'+ cls + (!ro && c.reserveDate === ds ? ' sel': '') + (ds === tStr ? ' today': '') + avSel + '" data-ds="'+ ds + '" data-team="'+ team + '"'+ dayClick + ' title="'+ (ym.m + 1) + '/'+ dd + (hol ? '・'+ hol : '') + (num ? '：'+ num + '台': '') + '">'
-       + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
+    h += '<div class="cfs-day'+ cls + (calTone === 'short' ? ' cfs-short': '') + (!ro && c.reserveDate === ds ? ' sel': '') + (ds === tStr ? ' today': '') + avSel + '" data-ds="'+ ds + '" data-team="'+ team + '"'+ dayClick + ' title="'+ tip + '">'
+       + shortMk + holBadge + '<i>' + dd + '</i>' + (num ? '<span>' + num + '</span>' : '<span></span>') + '<b class="cfs-mk">' + mark + '</b></div>';
   }
   h += '</div>';
   h += '<div class="cfs-hint">' + (ro
         ? '数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了'
-        : '数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）') + '</div>';
+        : '数字＝埋まり/枠　○空きあり ／ △残りわずか ／ 満＝受付終了（タップすると確認が出ます・最終判断は人）')
+     + '<br><b class="cfs-hint-short">◐＝いつもと時間が違う日（乗せると出ます）</b></div>';
   h += '</div>';
   return h;
 }
