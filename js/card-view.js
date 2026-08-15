@@ -799,18 +799,20 @@
     if (rv) rv.innerHTML = reserveTab(_c);
   };
 
+  /* 🔧 作業チェック（v1.100.0・ゆうた指定で中身を入れ替えた）
+     🔴 **項目は state.js の `PIT_MAINT_CHECKS` 1本。ここに書き写さないこと。**
+        予約を編集の画面（card-tabs.js）も**同じ表**を見る＝2つの画面で食い違わない。
+     🔴 **保存は合言葉（key）。番号で持たない**（項目を足すと過去のチェックがずれるため）。
+     ⚠ 作業タイプでは中身を変えない（車検でも一般整備でも同じ7つ）。 */
   function maintTab(c){
-    const wt = workType(c);
-    const items = (wt && wt.id==='shaken')
-      ? ['受付・問診','24ヶ月点検','下回り点検','整備・調整','検査ライン','完成検査・洗車']
-      : ['受付・問診','点検','整備・調整','完成検査・洗車'];
-    const done = (c.maint && c.maint.checks) || {};
-    let n=0; const h2 = items.map(function(it,i){
-      const on = !!done[i]; if(on) n++;
-      return '<div class="cv-chk'+(on?' on':'')+'" onclick="cvMaint('+i+',this)"><span class="cv-box">'+(on?'✓':'')+'</span>'+esc(it)+'</div>';
+    const items = window.PIT_MAINT_CHECKS || [];
+    const n = window.pitMaintDoneCount ? pitMaintDoneCount(c) : 0;
+    const h2 = items.map(function(it){
+      const on = window.pitMaintChecked ? pitMaintChecked(c, it.key) : false;
+      return '<div class="cv-chk'+(on?' on':'')+'" onclick="cvMaint(\''+it.key+'\',this)"><span class="cv-box">'+(on?'✓':'')+'</span>'+esc(it.label)+'</div>';
     }).join('');
     return mechSectionHtml(c)
-      + '<div class="cv-sec"><div class="cv-sect"><i data-ic=wrench data-ics=16></i> 作業チェック（'+esc(wt?wt.label:'作業')+'）</div>'
+      + '<div class="cv-sec"><div class="cv-sect"><i data-ic=wrench data-ics=16></i> 作業チェック</div>'
       + '<div class="cv-prog">'+n+' / '+items.length+' 完了</div><div class="cv-checks">'+h2+'</div></div>';
   }
 
@@ -1349,7 +1351,16 @@
     const prog = wrap.querySelector('.cv-prog'); if(prog) prog.textContent = done+' / '+total+' 完了';
     save();
   }
-  window.cvMaint = function(i,el){ toggleCheck('maint', i, el); };
+  /* 🔴 v1.100.0 作業チェックは**合言葉（key）**で持つ。書き込みは state.js の pitMaintToggle 1本を通す。 */
+  window.cvMaint = function(key, el){
+    if(!_c) return;
+    const on = window.pitMaintToggle ? pitMaintToggle(_c, key) : false;
+    el.classList.toggle('on', on); el.querySelector('.cv-box').textContent = on ? '✓' : '';
+    const wrap = el.closest('.cv-sec'); const total = wrap.querySelectorAll('.cv-chk').length;
+    const done = wrap.querySelectorAll('.cv-chk.on').length;
+    const prog = wrap.querySelector('.cv-prog'); if(prog) prog.textContent = done+' / '+total+' 完了';
+    save();
+  };
   window.cvOffice = function(i,el){ toggleCheck('office', i, el); };
 
   // ===== ⋮オプション・付箋・削除 =====
