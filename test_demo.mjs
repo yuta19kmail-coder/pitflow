@@ -150,11 +150,13 @@ console.log('\n── ② デモ版だとひと目で分かる ──');
   await p.close();
 }
 
-/* 🔴 順番＝初対面に「ここは練習用です」を先に読ませる。
-   ⚠ お知らせのポップアップ（news-pit.js）はログイン 900ms 後に出る。
-      重なると下の窓が押せない／案内が埋もれる。**押さえて、閉じたら出す。**
+/* 🔴 v1.102.2（ゆうた指定）**デモ版ではお知らせを最初から全部既読にする。**
+   🗣「デモ版だけお知らせは強制的に全部既読にしてもらっていい？
+       いちいち開くたびにニュースが出てきてうざい」
+   ＝デモ版は何度も開き直すものなので、毎回ポップアップが出ると邪魔。
+   ⚠ **受信箱では今までどおり全部読める**（記録に書いているわけではなく「読んだことにする」だけ）。
    ⚠ この節だけ `?nonews=1` を付けない＝本物のデモ版と同じ条件で見る。 */
-console.log('\n── ③-2 🔴 案内が先、お知らせのポップアップは後 ──');
+console.log('\n── ③-2 🔴 デモ版はお知らせを出さない（全部既読） ──');
 {
   const { p, errs } = await open('?demo=1&demoui=1');
   const s1 = await p.evaluate(() => {
@@ -167,13 +169,42 @@ console.log('\n── ③-2 🔴 案内が先、お知らせのポップアッ�
   ok('🔴 お知らせのポップアップは重なっていない', s1.nw === false, s1);
 
   await p.evaluate(() => { const o = document.getElementById('uid-ok'); if (o) o.click(); });
-  await p.waitForTimeout(1500);
+  await p.waitForTimeout(2000);
   const s2 = await p.evaluate(() => {
     const u = document.getElementById('uid-ov'), n = document.getElementById('nw-pop');
-    return { uid: !!(u && u.classList.contains('open')), nw: !!(n && n.classList.contains('open')) };
+    const dot = document.querySelector('.nw-dot, #nw-badge, .tb-newsdot');
+    return { uid: !!(u && u.classList.contains('open')), nw: !!(n && n.classList.contains('open')),
+             dotShown: !!(dot && dot.offsetParent !== null),
+             unread: (window.PIT_NEWS || []).filter(a => !(window.pitIsDemo && pitIsDemo())).length };
   });
   ok('「はじめる」で案内が閉じる', s2.uid === false, s2);
-  ok('🔴 そのあとお知らせが出る（消してしまわない）', s2.nw === true, s2);
+  ok('🔴 案内を閉じてもお知らせは出てこない（全部既読）', s2.nw === false, s2);
+  ok('🔴 未読の丸も出ない', s2.dotShown === false, s2);
+
+  /* 受信箱を開けば、中身は今までどおり全部読める */
+  const s3 = await p.evaluate(() => {
+    if (window.pitNewsOpen) pitNewsOpen();
+    else if (window.renderNews) renderNews();
+    const items = document.querySelectorAll('.nw-item');
+    const unreadItems = document.querySelectorAll('.nw-item.is-unread');
+    return { n: items.length, unread: unreadItems.length, total: (window.PIT_NEWS || []).length };
+  });
+  ok('🔴 受信箱では今までどおり全部読める', s3.n === s3.total && s3.total > 0, s3);
+  ok('🔴 どれも未読になっていない', s3.unread === 0, s3);
+  ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
+  await p.close();
+}
+
+console.log('\n── ③-3 🔴 本番（デモ版でない）は今までどおりお知らせが出る ──');
+{
+  const { p, errs } = await open('?demo=1');   /* ⚠ demoui=1 を付けない＝デモ版の旗は立たない */
+  await p.waitForTimeout(2000);
+  const s = await p.evaluate(() => {
+    const n = document.getElementById('nw-pop');
+    return { demo: !!(window.pitIsDemo && pitIsDemo()), nw: !!(n && n.classList.contains('open')) };
+  });
+  ok('デモ版の旗は立っていない', s.demo === false, s);
+  ok('🔴 お知らせは今までどおり出る（本番が汚れていない）', s.nw === true, s);
   ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
   await p.close();
 }
