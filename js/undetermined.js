@@ -51,7 +51,10 @@ function renderReserveTbd(){
                                             && c.status !== 'returned' && c.status !== 'cancelled' && c.status !== 'scrap');
   const tentative = state.cards.filter(c => c.status === 'reserved' && c.tentative && !c.approvalPending);
   const intakeTbd = state.cards.filter(c => c.status === 'reserved' && c.intakeTbd && !c.tentative);
-  const noShow    = state.cards.filter(c => c.status === 'cancelled' && !c.archived);
+  /* 🔴 v1.101.0 未入庫＝**来なかっただけ**の車。
+     ⚠ 人が押した「予約キャンセル」（`cancelled:true`）は、押した時点でアーカイブして
+        お客様の来店履歴へ移すので、ここには並べない（＝もう待たないから）。 */
+  const noShow    = state.cards.filter(c => c.status === 'cancelled' && !c.archived && !c.cancelled);
 
   const card = c => (typeof cardHtml === 'function') ? cardHtml(c, { compact: true }) : '';
   const item = (c, act) => '<div class="rtbd-item">' + card(c) + (act || '') + '</div>';
@@ -76,9 +79,10 @@ function renderReserveTbd(){
     intakeTbd.length ? intakeTbd.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndSetIntake(\'' + c.id + '\')"><i data-ic=calendar data-ics=16></i> 入庫日を入れる</button>')).join('') : empty,
     'カードの<i data-ic=calendar data-ics=16></i>で入庫日を入れると予約カレンダーへ移ります。');
 
-  h += col('<i data-ic=ban data-ics=16></i> 未入庫 <small>（来店なし・キャンセル）</small>', noShow.length,
+  h += col('<i data-ic=ban data-ics=16></i> 未入庫 <small>（来店なし）</small>', noShow.length,
     noShow.length ? noShow.map(c => item(c, '<button class="rtbd-act" onclick="event.stopPropagation();pitUndRestore(\'' + c.id + '\')">↩ 予約に戻す</button>')).join('') : empty,
-    '※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でキャンセル・アーカイブされます。');
+    '<b>入庫日を過ぎても入庫済みにならなかった予約は、ここへ自動で入ります</b>（仮予約と承認待ちは動きません）。'
+    + '連絡が来たら「↩ 予約に戻す」。※ 1ヶ月（' + UNDET_ARCHIVE_DAYS + '日）たつと自動でアーカイブされます。');
 
   h += '</div>';
   wrap.innerHTML = h;
@@ -201,7 +205,11 @@ window.pitUndRestore = function(id){
   if (!c) return;
   c.status = 'reserved';
   c.cancelled = false; c.cancelledAt = null; c.archived = false;
+  /* 🔴 v1.101.0 自動で付いた未入庫の印と、キャンセルの理由も一緒に外す（戻したのに残っていると嘘になる） */
+  c.noShow = false; delete c.noShowAt; delete c.cancelReason; delete c.cancelledBy;
   if (!c.reserveDate) c.intakeTbd = true;   // 日付が無ければ未定へ
+  /* ⚠ 入庫日が過ぎたままだと、次に画面を描いた瞬間また未入庫へ落ちる。日付未定にして人に入れてもらう。 */
+  else if (window.pitIntakeOverdue && pitIntakeOverdue(c)){ c.reserveDate = ''; c.intakeTbd = true; }
   if (window.logFlow) logFlow(c, '未入庫から予約に復帰');
   if (window.PitDB) PitDB.save();
   renderReserveTbd();

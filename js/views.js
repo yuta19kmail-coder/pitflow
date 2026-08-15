@@ -18,6 +18,12 @@ function showView(viewId){
      ⚠ 使うのは「同じ画面の描き直しか？」の判定だけ。画面の出し分けには使わないこと。 */
   window._pitPrevView = state.currentView || '';
   state.currentView = viewId;
+  /* 🔴 v1.101.0（ゆうた指定）**当日を過ぎたものを、描く前に正しい箱へ落とす。**
+     ・入庫日を過ぎた本予約 → 予約・未定の「未入庫」
+     ・返車予定日を過ぎてまだ返していない車 → 日付を空にして「返車日未定」
+     ⚠ 中身は overdue-pit.js の1本。ここで条件を書き写さないこと。
+     ⚠ 変わったものが無ければ保存しない作りなので、毎回呼んでよい。 */
+  if (window.pitAutoOverdue) { try { pitAutoOverdue(); } catch(e){} }
   // 付箋の表示先を既定（ダッシュボード）へ戻す。マイダッシュボードは renderMyDash 内で自分の器へ切替。
   window.PIT_BN_TARGET = 'board-notes-area';
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));

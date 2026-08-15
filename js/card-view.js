@@ -918,13 +918,24 @@
      🔴 **入庫済みの車に「仮予約にする」は出さない**（ゆうた指定）。もう来ている車を仮に戻す意味がない。 */
   function optMenuHtml(c){
     const isResv = (c && c.status === 'reserved');
-    const gone   = (c && (c.status === 'returned' || c.status === 'scrap'));
+    const gone   = (c && (c.status === 'returned' || c.status === 'scrap' || c.status === 'cancelled'));
     let h = '';
     if (isResv){
+      /* 🔴 v1.101.0（ゆうた指定）**まだ入庫していない車のメニュー**＝
+         仮予約にする／承認予約にする／入庫中にする／予約キャンセルにする／消去する
+         ⚠ 仮予約と承認待ちは**同時に立てない**（v1.74.0 の決めごと）ので、
+            片方を立てるともう片方は下りる。だから並べて出しても矛盾しない。
+         ⚠ すでに承認待ちの車には「承認予約にする」を出さない
+            （承認する入口は、カード詳細のいちばん上の承認バー1か所だけ）。 */
       h += (c.tentative
         ? '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">✓ 本予約に確定する</button>'
-        : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()"><i data-ic=pencil data-ics=16></i> 仮予約にする</button>')
-        + '<div class="cv-optdiv"></div>';
+        : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()"><i data-ic=pencil data-ics=16></i> 仮予約にする</button>');
+      if (!(window.pitApprovalPending && pitApprovalPending(c))){
+        h += '<button class="cv-opti cv-apopt" onclick="cvToApproval()"><i data-ic=shield data-ics=16></i> 承認予約にする</button>';
+      }
+      h += '<button class="cv-opti" onclick="cvCheckIn()"><i data-ic=download data-ics=16></i> 入庫中にする</button>'
+        +  '<button class="cv-opti" onclick="cvAskCancelResv()"><i data-ic=ban data-ics=16></i> 予約キャンセルにする…</button>'
+        +  '<div class="cv-optdiv"></div>';
     } else if (!gone){
       h += '<button class="cv-opti" onclick="cvAskBackToReserve()"><i data-ic=undo data-ics=16></i> 予約に戻す…</button>'
         +  '<button class="cv-opti" onclick="cvAskNoSale()"><i data-ic=box data-ics=16></i> 売上なしでアーカイブする…</button>'
@@ -948,6 +959,10 @@
       + (c.tentative?'<span class="cv-karibadge">仮予約</span>':'')
       /* 🔴 v1.99.0 売上なしでアーカイブした車＝ひと目で分かるように札を出す（金額は請求していない） */
       + ((window.pitCardNoSale && pitCardNoSale(c))?'<span class="cv-nosalebadge">売上なし</span>':'')
+      /* 🔴 v1.101.0 キャンセル・未入庫はひと目で分かるように（どちらも盤面から外れている） */
+      + (c.status==='cancelled' ? (c.cancelled
+            ? '<span class="cv-cancelbadge">予約キャンセル</span>'
+            : '<span class="cv-nosalebadge">未入庫</span>') : '')
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
       + '<button class="cv-iconbtn" title="表紙を印刷" onclick="pitPrintCover(\''+c.id+'\')"><i data-ic=printer data-ics=16></i></button>'
@@ -1416,6 +1431,80 @@
     if (window.UI && UI.confirm) return UI.confirm(msg, { title: title, detail: det, ok: okTxt, cancel: 'やめる' });
     return Promise.resolve(false);   /* ⚠ ブラウザ純正の confirm は使わない（v1.75.0 の決めごと） */
   }
+
+  /* ---- ⓪-1 承認予約にする（v1.101.0）------------------------------
+     🔴 承認制度の中身は approval-pit.js（v1.74.0）。ここは**印を立てるだけ**。
+     ⚠ 仮予約とは同時に立てない決まりなので、立てる時に仮予約は下ろす。 */
+  window.cvToApproval = function(){
+    if (!_c) return; closeAllPop();
+    const c = _c;
+    _cvAsk('承認予約にする', 'この予約を承認待ちにしますか？\n' + _cvLabel(c),
+           ['・入庫カレンダーと代車の枠は、ふつうの予約と同じように埋まります',
+            '・予約ビューの「未定 → 承認待ち」BOXに並びます',
+            '・カードを開いて内容を確認し、承認すると印が取れます',
+            '・仮予約にはなりません（仮予約とは別物です）'].join('\n'), '承認予約にする')
+      .then(function(yes){
+        if (!yes) return;
+        c.approvalPending = true;
+        c.tentative = false;              /* 🔴 仮と承は同時に立てない（v1.74.0） */
+        if (window.logFlow) logFlow(c, '承認予約にした（承認待ちへ）');
+        if (window.pitLog) pitLog('承認予約にした', { cardId: c.id, kind: 'approval', label: _cvLabel(c) });
+        save(); cvRefreshBg();
+        if (window.pitToast) pitToast('承認待ちにしました');
+        renderCardView(c, 'md-body-modal');
+      });
+  };
+
+  /* ---- ⓪-2 入庫中にする（v1.101.0）--------------------------------
+     🔴 中身は today.js の `pitTodayCheckIn` 1本を呼ぶだけ。
+        ＝承認待ちのときに1回聞く関門（v1.74.0）も、そのまま同じように通る。
+        **ここに入庫の処理を書き写さないこと。** */
+  window.cvCheckIn = function(){
+    if (!_c) return; closeAllPop();
+    const id = _c.id;
+    if (window.pitTodayCheckIn) pitTodayCheckIn(id);
+    if (window.closeDetail) closeDetail();
+  };
+
+  /* ---- ⓪-3 予約キャンセルにする（v1.101.0）------------------------
+     🗣 ゆうた「予約キャンセル。これは**顧客情報の来店履歴にキャンセルの旨を記載し、
+                アーカイブとして残す**」
+
+     🔴 **自動で入る「未入庫」とは別物。**（ゆうた確定）
+        ・未入庫（overdue-pit.js）＝来なかっただけ。1ヶ月で自動アーカイブ。来店履歴には出さない
+        ・予約キャンセル（ここ）＝**人が決めたもの**。すぐアーカイブし、**来店履歴に「キャンセル」で残す**
+     🔴 **実績・売上には一切乗らない**（そもそも `status='cancelled'` は売上の区分に入らない）。
+     🔴 理由を1行だけ聞く（ゆうた確定）。**任意**＝空でも進める。来店履歴とフローに残る。 */
+  window.cvAskCancelResv = function(){
+    if (!_c) return; closeAllPop();
+    const c = _c;
+    const ask = (window.pitAskText)
+      ? pitAskText('キャンセルの理由（任意・1行）', '', { ok: '予約をキャンセルする', title: '予約キャンセル', placeholder: '例）日程変更／よそでやることになった' })
+      : Promise.resolve('');
+    ask.then(function(reason){
+      if (reason === null || reason === undefined) return;   /* ✕ で閉じた＝やめる */
+      cvCancelResv(String(reason || '').trim());
+    });
+  };
+  window.cvCancelResv = function(reason){
+    const c = _c; if (!c) return;
+    const today = isoToday();
+    c.status       = 'cancelled';
+    c.cancelled    = true;          /* 🔴 人が決めたキャンセル。自動の未入庫（noShow）とは別 */
+    c.noShow       = false;
+    c.cancelledAt  = today;
+    c.cancelReason = String(reason || '');
+    c.cancelledBy  = (window.pitFlowMe ? pitFlowMe() : '');
+    c.archived     = true;          /* すぐアーカイブ＝未入庫BOXには並べない（もう待たない） */
+    c.tentative = false; c.approvalPending = false;
+    c.bayId = null; c.baySlot = null;
+    if (window.logFlow) logFlow(c, '予約をキャンセルした' + (c.cancelReason ? '（' + c.cancelReason + '）' : ''));
+    if (window.pitLog) pitLog('予約をキャンセルした', { cardId: c.id, kind: 'delete',
+      label: _cvLabel(c) + (c.cancelReason ? ' / ' + c.cancelReason : '') });
+    save(); cvRefreshBg();
+    if (window.pitToast) pitToast('予約をキャンセルしました（来店履歴に残ります）');
+    if (window.closeDetail) closeDetail();
+  };
 
   /* ---- ① 予約に戻す ----------------------------------------------
      🗣 ゆうた「予約に戻すはそのまま、**入庫実績自体をキャンセル**にし、**予約カレンダー状態に戻す**」

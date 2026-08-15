@@ -2061,3 +2061,10 @@ th.cfs-lg-d{ z-index:3; }
   border-radius:10px; padding:10px 12px; margin:0 0 12px; font-size:12.5px; line-height:1.7; color:var(--text2); }
 .cv-nosalenote b{ color:var(--text); }
 [data-theme="light"] .cv-nosalenote{ background:rgba(100,116,139,.09); color:#475569; }
+
+/* ========== v1.101.0 予約キャンセル／承認予約 ==========
+   🔴 キャンセルは赤系。**未入庫（来なかっただけ）とは色でも分ける**＝未入庫は灰色（.cv-nosalebadge を流用）。 */
+.cv-cancelbadge{ font-size:11px; font-weight:800; color:#f87171; background:rgba(248,113,113,.14);
+  border:1px solid rgba(248,113,113,.45); border-radius:7px; padding:2px 8px; }
+[data-theme="light"] .cv-cancelbadge{ color:#b91c1c; background:rgba(185,28,28,.09); border-color:rgba(185,28,28,.30); }
+.cv-opti.cv-apopt{ color:#378ADD; font-weight:700; }
