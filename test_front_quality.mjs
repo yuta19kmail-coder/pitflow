@@ -228,12 +228,19 @@ console.log('\n── ⚡ クイック受注：入れた値がどう入るか �
     const el = document.getElementById('pp-amt');
     el.value = '8,800';
     PitPhasePopup.close(true);
+    /* ⚠ v1.97.0〜 作業完了へ入る時、点検・整備の担当者がどちらも空なら**金額のあとに**もう1枚出る。
+       止めはしないので「このまま進める」で今までどおり動く。ここではその1枚を通してから確かめる。 */
+    const mg = document.getElementById('mg-backdrop');
+    const mgShown = !!mg && mg.classList.contains('show');
+    if (mgShown) PitMechGuard.close(1);
     const c = state.cards.find(x => x.id === 'QK');
+    c.__mgShown = mgShown;
     return { order: c.amountOrder, quote: c.amountQuote, final: c.amountFinal,
              plan: c.returnDatePlan, returnDate: c.returnDate, returnDateFinal: c.returnDateFinal,
-             status: c.status, committed: window._qkCommitted(),
+             status: c.status, committed: window._qkCommitted(), mgShown: c.__mgShown,
              flow: (c.log || []).map(e => e.label || (e.type + ':' + e.to)) };
   });
+  ok('🔴 担当者が空なので、金額のあとにもう1枚出る（v1.97.0）', after.mgShown === true, after);
   ok('移動が確定する', after.committed === true && after.status === 'workDone', after);
   ok('🔴 受注金額が入る', after.order === 8800, after);
   ok('🔴 見積金額も同じ額で入る（見積＝受注の扱い）', after.quote === 8800, after);

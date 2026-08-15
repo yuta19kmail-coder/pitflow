@@ -222,7 +222,10 @@ console.log('\n── ⑦ 🔴 車を返したら、代車も返ってきたこ�
             || state.loaners.find(l => !l.retired && !l.emergency);
     state.loanerAssigns = state.loanerAssigns.filter(a => a.loanerId !== lo.id);   /* この代車だけを見る */
     state.fleetEvents = state.fleetEvents.filter(e => e.vehicleId !== lo.id);
-    state.cards.push({ id:'RETTEST', status:'check', boardId:'default', customer:'返車テスト', kana:'ヘンシャ',
+    /* ⚠ v1.97.0〜 当日ビューの「返車済みにする」は**完TELを通った車だけ**（returnStage が付いた車だけ）。
+       預かりの車はもともと完TELを通ってしか返車の一覧に出ないので、ここもその形にそろえる。 */
+    state.cards.push({ id:'RETTEST', status:'workDone', returnStage:'returnWait', boardId:'default',
+      customer:'返車テスト', kana:'ヘンシャ',
       car:'テストA', tel:'000-0000-0000', reserveDate:days.from, returnDate:days.today, dropType:'drop', workType:'oil',
       needLoaner:true, loanerId:lo.id, loanerFrom:days.from, loanerTo:days.to, log:[] });
     pitSyncLoanerAssigns();

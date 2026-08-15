@@ -503,6 +503,13 @@
     if (c.status === 'returned'){
       const fa = c.amountFinal;
       const faStr = (fa!=null&&fa!=='') ? Number(fa).toLocaleString() : '';
+      /* 🔴 v1.99.0 売上なしでアーカイブした車＝金額の欄より先に、数えていないことを言い切る */
+      if (window.pitCardNoSale && pitCardNoSale(c)){
+        h += '<div class="cv-nosalenote"><b>売上なしでアーカイブ済み</b>'
+          + (c.noSaleAt ? '（' + esc(c.noSaleAt) + (c.noSaleBy ? ' ' + esc(c.noSaleBy) : '') + '）' : '')
+          + '<br>来店履歴には残りますが、<b>実績・売上・台数には数えていません</b>。'
+          + '下の金額は途中まで入れていた額で、どこにも数えていません。</div>';
+      }
       h += '<div class="cv-fixrow cv-fixlocked"><div class="cv-frt">確定売上金額（請求額） <span class="cv-locktag"><i data-ic=lock data-ics=16></i> 確定</span> <button type="button" class="cv-unlockbtn" onclick="cvUnlockFinal()"><i data-ic=pencil data-ics=16></i> 編集</button></div><div class="cv-frb">'
         + '<span class="cv-fixval" id="cv-finlock">'+(faStr?('¥'+faStr):'—')+'</span>'
         + '<span class="cv-unlockwrap" id="cv-finedit" style="display:none">'
@@ -894,6 +901,37 @@
       + '<div class="cv-prog">'+n+' / '+items.length+' 完了</div><div class="cv-checks">'+h2+'</div></div>';
   }
 
+  /* ===== ⋮メニューの中身（v1.99.0・ゆうた指定で整理した） =====
+     ◎前まで＝「仮予約にする」＋「フェーズ移動」4つ＋「削除する…」
+     ◎これから
+       ・**入庫済み以降**（＝タスクボードに乗っている車）＝
+          **予約に戻す ／ 売上なしでアーカイブする ／ 消去する** の3つだけ
+       ・**まだ入庫していない予約**＝今までどおり「仮予約にする／本予約に確定する」＋消去する
+       ・**もう片付いた車**（実績・売上なし・廃車）＝消去するだけ
+
+     🔴 **フェーズ移動は廃止した。** 工程はドラッグか ◀▶ で動かす。
+        ここから直接飛ばすと、**金額を聞く画面（v1.62.0）と担当者の注意（v1.97.0）を素通り**してしまい、
+        「作業完了に入れたのに担当者が空のまま」「実績なのに金額が入っていない」が起きる。
+        ＝**関門を回り込める抜け道を、わざわざ残しておく理由がない。**
+     🔴 **入庫済みの車に「仮予約にする」は出さない**（ゆうた指定）。もう来ている車を仮に戻す意味がない。 */
+  function optMenuHtml(c){
+    const isResv = (c && c.status === 'reserved');
+    const gone   = (c && (c.status === 'returned' || c.status === 'scrap'));
+    let h = '';
+    if (isResv){
+      h += (c.tentative
+        ? '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">✓ 本予約に確定する</button>'
+        : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()"><i data-ic=pencil data-ics=16></i> 仮予約にする</button>')
+        + '<div class="cv-optdiv"></div>';
+    } else if (!gone){
+      h += '<button class="cv-opti" onclick="cvAskBackToReserve()"><i data-ic=undo data-ics=16></i> 予約に戻す…</button>'
+        +  '<button class="cv-opti" onclick="cvAskNoSale()"><i data-ic=box data-ics=16></i> 売上なしでアーカイブする…</button>'
+        +  '<div class="cv-optdiv"></div>';
+    }
+    h += '<button class="cv-opti cv-danger" onclick="cvAskDelete()"><i data-ic=trash data-ics=16></i> 消去する…</button>';
+    return h;
+  }
+
   // ===== トップ（resNo/status/⋮/🗒️/✕） =====
   function topHtml(c){
     const dt = c.reserveDate ? ('入庫 '+fmtMD(c.reserveDate)+(c.reserveTime?' '+c.reserveTime:'')) : '';
@@ -906,21 +944,14 @@
          「承認待」と「仮予約」。⚠ 仮予約側のペンのアイコンもここで外した（並びをそろえるため）。 */
       + (c.approvalPending?'<span class="cv-apprbadge">承認待</span>':'')
       + (c.tentative?'<span class="cv-karibadge">仮予約</span>':'')
+      /* 🔴 v1.99.0 売上なしでアーカイブした車＝ひと目で分かるように札を出す（金額は請求していない） */
+      + ((window.pitCardNoSale && pitCardNoSale(c))?'<span class="cv-nosalebadge">売上なし</span>':'')
       + (dt?'<span class="cv-intake">'+dt+'</span>':'')
       + '<div class="cv-acts">'
       + '<button class="cv-iconbtn" title="表紙を印刷" onclick="pitPrintCover(\''+c.id+'\')"><i data-ic=printer data-ics=16></i></button>'
       + '<button class="cv-iconbtn" title="この車両に付箋を発行" onclick="cvToggleFusen(event)"><i data-ic=sticky data-ics=16></i></button>'
       + '<div class="cv-optwrap"><button class="cv-iconbtn" title="オプション" onclick="cvToggleOpt(event)">⋮</button>'
-      + '<div class="cv-optmenu" id="cv-optmenu">'
-      + (c.tentative
-          ? '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()">✓ 本予約に確定する</button>'
-          : '<button class="cv-opti cv-kariopt" onclick="cvToggleTentative()"><i data-ic=pencil data-ics=16></i> 仮予約にする</button>')
-      + '<div class="cv-optdiv"></div><div class="cv-opth">フェーズ移動</div>'
-      + '<button class="cv-opti" onclick="cvMovePhase(\'estim\')">→ 見積もり中に移動</button>'
-      + '<button class="cv-opti" onclick="cvMovePhase(\'work\')">→ 作業中に移動</button>'
-      + '<button class="cv-opti" onclick="cvMovePhase(\'workDone\')">→ 完了にする</button>'
-      + '<button class="cv-opti" onclick="cvMovePhase(\'returned\')">→ 返車・実績化</button>'
-      + '<div class="cv-optdiv"></div><button class="cv-opti cv-danger" onclick="cvAskDelete()"><i data-ic=trash data-ics=16></i> 削除する…</button></div></div>'
+      + '<div class="cv-optmenu" id="cv-optmenu">' + optMenuHtml(c) + '</div></div>'
       + '<button class="cv-iconbtn" title="閉じる" onclick="closeDetail()"><i data-ic=close data-ics=16></i></button>'
       + '</div></div>';
     return h;
@@ -1361,6 +1392,101 @@
     renderCardView(_c, 'md-body-modal');
   };
 
+  /* ===================================================================
+     🔴 v1.99.0（ゆうた指定・2026-08-15）⋮メニューの2つの新しい操作
+     =================================================================== */
+
+  function _cvLabel(c){
+    return (c.resNo ? '[' + c.resNo + '] ' : '')
+         + (((window.pitCustName ? pitCustName(c) : c.customer) || '') ? (((window.pitCustName ? pitCustName(c) : c.customer) || '') + ' 様') : '')
+         + (c.car ? ' / ' + c.car : '');
+  }
+  function _cvAsk(title, msg, det, okTxt){
+    if (window.UI && UI.confirm) return UI.confirm(msg, { title: title, detail: det, ok: okTxt, cancel: 'やめる' });
+    return Promise.resolve(false);   /* ⚠ ブラウザ純正の confirm は使わない（v1.75.0 の決めごと） */
+  }
+
+  /* ---- ① 予約に戻す ----------------------------------------------
+     🗣 ゆうた「予約に戻すはそのまま、**入庫実績自体をキャンセル**にし、**予約カレンダー状態に戻す**」
+
+     🔴 取り消すのは**入庫してから付いたものだけ**
+        ＝工程・完TEL・返車の予定／確定返車日・実績カウント日・確定売上・PIT枠・試運転。
+     🔴 **残すもの**＝作業内容・フロー（進捗ログ）・担当者・お客様と車の情報。**本当にあったことだから消さない。**
+     🔴 **代車の貸出はそのまま残す**（ゆうた指定）。先に代車だけ出しているケースがあるので勝手に取り消さない。
+     ⚠ 実績になった車（返車済み）にはこのボタンを出していない＝**実績を後から予約へ戻す道は作らない。** */
+  window.cvAskBackToReserve = function(){
+    if (!_c) return; closeAllPop();
+    const c = _c;
+    const det = ['・入庫してから付いた記録を取り消します（工程・完TEL・返車の予定・確定売上）',
+                 '・作業内容・フロー（進捗ログ）・担当者はそのまま残ります',
+                 (c.needLoaner ? '・代車の貸出はそのまま残ります（取り消すなら代車カレンダーから）' : '')]
+                .filter(Boolean).join('\n');
+    _cvAsk('予約に戻す', 'この入庫を取り消して、予約に戻しますか？\n' + _cvLabel(c), det, '予約に戻す')
+      .then(function(yes){ if (yes) cvBackToReserve(); });
+  };
+  window.cvBackToReserve = function(){
+    const c = _c; if (!c) return;
+    c.status = 'reserved';
+    c.returnStage    = null;
+    c.returnDate     = '';   c.returnTime = '';
+    c.returnDateFinal = null; c.returnTbd = false;
+    c.completedAt    = '';   c.completeCallAt = null;
+    c.amountFinal    = null;                      /* 確定売上＝返した時に決まるもの。入庫を取り消したら無い */
+    c.bayId = null; c.baySlot = null; c.testDrive = false;
+    c.noSale = false; delete c.noSaleAt; delete c.noSaleBy;
+    if (c.coverCall && typeof c.coverCall === 'object') c.coverCall.done = false;
+    if (window.logFlow) logFlow(c, '入庫を取り消して予約に戻した');
+    if (window.pitLog) pitLog('入庫を取り消して予約に戻した', { cardId: c.id, kind: 'phase', label: _cvLabel(c) });
+    save(); cvRefreshBg();
+    if (window.pitToast) pitToast('予約に戻しました');
+    if (window.closeDetail) closeDetail();
+  };
+
+  /* ---- ② 売上なしでアーカイブする --------------------------------
+     🗣 ゆうた「最終的に売り上げ0円で返車したとか、そういう車両が必ず存在する。
+                クリックした時点でフローやその時の内容は通常通りアーカイブする。
+                **来店履歴にも残すイメージ。でも実績には反映させずに、
+                あくまで来店しただけの扱いで、次回以降に内容を把握できるようにしたい**」
+
+     🔴 **実績カウント日（completedAt）は入れない。** 実績カレンダー・月次の実績・売上・
+        メカの配分は全部この日付で拾っているので、**日付が無い＝どこにも数えられない**。
+        さらに `noSale` の印で sales-count.js が塞いでいる＝**二重の守り**。
+     🔴 **来店履歴には出す**（customers.js が `pitCardNoSale` を見ている）。日付は**来た日＝入庫日**。
+     🔴 **金額は書き換えない。** 途中まで入っていた見積・受注の額は**本当に見積もった額**なので消さない。
+        どこにも数えられないので残っていて害は無い。画面には「売上なし」の札で言い切る。
+     ⚠ 車はもう手元に無いので `status='returned'`＝盤面・当日ビュー・返車の一覧から外れる。
+        ただし **完TELを通ったことにはしない**（`returnStage` は触らない）＝通っていないのが事実。 */
+  window.cvAskNoSale = function(){
+    if (!_c) return; closeAllPop();
+    const c = _c;
+    const det = ['・フロー（進捗ログ）・作業内容・担当者は、いつもどおり残ります',
+                 '・お客様の来店履歴には「売上なし」で残ります',
+                 '🔴 実績カレンダー・売上・台数には一切入りません',
+                 '・戻したい時は、この画面の ⋮ →「予約に戻す」で入庫の状態に戻せます'].join('\n');
+    _cvAsk('売上なしでアーカイブする', '売上なしで片付けますか？\n' + _cvLabel(c), det, '売上なしでアーカイブ')
+      .then(function(yes){ if (yes) cvNoSaleArchive(); });
+  };
+  window.cvNoSaleArchive = function(){
+    const c = _c; if (!c) return;
+    const today = isoToday();
+    c.noSale   = true;
+    c.noSaleAt = today;
+    c.noSaleBy = (window.pitFlowMe ? pitFlowMe() : '');
+    c.status   = 'returned';        /* 車はもう手元にない＝盤面・当日・返車の一覧から外れる */
+    c.completedAt = '';             /* 🔴 実績カウント日は入れない（＝実績・売上に乗る道が無い） */
+    c.returnDateFinal = c.returnDateFinal || c.returnDate || today;
+    if (!c.returnDate) c.returnDate = c.returnDateFinal;
+    c.returnTbd = false;
+    c.bayId = null; c.baySlot = null; c.testDrive = false;
+    if (window.logFlow) logFlow(c, '売上なしでアーカイブした');
+    if (window.pitLog) pitLog('売上なしでアーカイブした', { cardId: c.id, kind: 'out', label: _cvLabel(c) });
+    save(); cvRefreshBg();
+    if (window.pitToast) pitToast('売上なしでアーカイブしました（実績・売上には入りません）');
+    if (window.closeDetail) closeDetail();
+  };
+
+  /* ⚠ v1.99.0 で ⋮メニューから「フェーズ移動」を外した（金額と担当者の関門を素通りできてしまうため）。
+     この関数自体は、古い画面や外から呼ばれても落ちないように残してある。**新しく呼ばないこと。** */
   window.cvMovePhase = function(status){
     if(!_c) return; _c.status = status;
     if(!Array.isArray(_c.log)) _c.log=[];

@@ -433,6 +433,8 @@ function pitUnitPrice(team){
     const d = new Date(); d.setDate(d.getDate() - 92);
     const since = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     const done = (state.cards || []).filter(function(c){
+      /* 🔴 v1.99.0 売上なしでアーカイブした車は平均単価の材料にしない（金額が残っていても実績ではない） */
+      if (window.pitCardNoSale && pitCardNoSale(c)) return false;
       return c.boardId === team && c.status === 'returned' && c.returnDate && c.returnDate >= since && c.amountFinal > 0;
     });
     if (done.length >= 10){

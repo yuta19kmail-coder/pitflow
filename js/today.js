@@ -68,6 +68,9 @@ function renderToday(){
   const dow = '日月火水木金土'[day.getDay()];
   const isToday = (window._todayOffset || 0) === 0;
 
+  /* 🔴 v1.99.0 「売上なしでアーカイブ」した車は返車済みの台数に数えない（物差し＝sales-count.js の pitCardNoSale）。
+     ＝当日ビューの「返車 ◯／◯台」が、売上0で片付けた車のぶんだけ増えてしまうのを防ぐ。 */
+  const _noSale = c => !!(window.pitCardNoSale && pitCardNoSale(c));
   // 入庫リスト＝まだ来ていない予約（status=reserved）。入庫済みにするとタスクへ移りここから消える
   const intake = state.cards
     .filter(c => c.reserveDate === dayStr && c.status === 'reserved')
@@ -82,11 +85,11 @@ function renderToday(){
     .sort((a,b) => _rmin(a) - _rmin(b));
 
   // 入庫：今日の予約総数（返車済み含む）を固定表示。残＝まだ来ていない（status=reserved）
-  const intakeTotal = state.cards.filter(c => c.reserveDate === dayStr && c.status !== 'scrap').length;
+  const intakeTotal = state.cards.filter(c => c.reserveDate === dayStr && c.status !== 'scrap' && !_noSale(c)).length;
   const inLeft  = state.cards.filter(c => c.reserveDate === dayStr && c.status === 'reserved').length;
   const inMoved = intakeTotal - inLeft;   // すでに入った台数（1台でも動けば残を表示）
   // 返車：今日の返車総数を固定。残＝まだ返してない
-  const _retDone = c => c.status === 'returned' && (c.completedAt === dayStr || c.returnDate === dayStr);
+  const _retDone = c => !_noSale(c) && c.status === 'returned' && (c.completedAt === dayStr || c.returnDate === dayStr);
   const returnDone  = state.cards.filter(_retDone).length;
   const returnTotal = returns.length + returnDone;
   const outLeft = returnTotal - returnDone;

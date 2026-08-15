@@ -22,7 +22,8 @@
 .cv-iconbtn{ font-size:15px; width:34px; height:30px; border-radius:8px; border:1px solid var(--border); background:var(--bg3); color:var(--text); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
 .cv-iconbtn:hover{ background:var(--bg4); }
 .cv-optwrap{ position:relative; }
-.cv-optmenu{ display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:208px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.5); padding:6px; z-index:80; }
+/* 🔴 v1.99.0 「売上なしでアーカイブする…」が2行に折り返さない幅にした（項目名が読みにくくなるため） */
+.cv-optmenu{ display:none; position:absolute; right:0; top:calc(100% + 6px); min-width:256px; background:var(--bg2); border:1px solid var(--border2); border-radius:10px; box-shadow:0 12px 30px rgba(0,0,0,.5); padding:6px; z-index:80; }
 .cv-optmenu.show{ display:block; }
 .cv-opth{ font-size:10px; font-weight:800; color:var(--text3); padding:5px 8px 4px; }
 .cv-opti{ display:block; width:100%; text-align:left; font-size:12.5px; font-weight:700; color:var(--text); background:transparent; border:none; border-radius:7px; padding:8px 9px; cursor:pointer; }
