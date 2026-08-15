@@ -230,23 +230,36 @@
     const back   = !!(R && R.back);
     const dueISO = (R && R.due) || c.loanerTo || c.returnDateFinal || c.returnDate || '';
     const rem    = R ? R.rem : (dueISO ? daysBetween(isoToday(), dueISO) : null);
-    const lvKey  = R ? R.level : (window.loanerLevel ? loanerLevel(rem).key : 'amber');
+    /* 🔴 v1.93.0（ゆうた指摘 2026-08-13）**まだ入庫していない予約は、日数を数えない。**
+       🗣「予約詳細で代車が**貸し出し開始したカウント**になってる。**入庫済みになってからカウント**して」
+       ⚠ 直す前は、車がまだ来ていない予約でも今日と返却予定日を引き算していたので、
+          **カレンダー上で貸出期間に入った時点から「あと◯日」が減り始め、過ぎれば赤く「超過」**になった。
+          ＝お客様はまだ来ていないのに、返してもらっていないように見える。
+       🔴 数えはじめは **入庫済み（status が reserved でなくなった時）**。それまでは「入庫待ち」。
+       ⚠ 返却済み（back）だけは、予約のままでも「返却済」と言い切る（先に代車だけ戻った時） */
+    const waiting = !back && (c.status === 'reserved');
+    const lvKey  = waiting ? 'none'
+                 : (R ? R.level : (window.loanerLevel ? loanerLevel(rem).key : 'amber'));
     /* 返ってきていれば日数のカウントはやめて「返却済」と言い切る */
     const remTxt = back ? '返却済'
+                 : waiting ? '入庫待ち'
                  : (rem==null) ? '—'
                  : (rem<0 ? '超過'+(-rem)+'日' : 'あと'+rem+'日');
-    const pct = back ? 100 : (rem==null) ? 50 : Math.max(8, Math.min(95, 100 - rem*8));
+    const pct = back ? 100 : waiting ? 0 : (rem==null) ? 50 : Math.max(8, Math.min(95, 100 - rem*8));
     let extras = '';
     if (c.loanerFixed) extras += '<span class="cv-loxchip cv-fix">車種固定</span>';
     const lmemo = (c.loanerMemo||'');
     if (lmemo) extras += '<span class="cv-loxmemo">'+esc(lmemo)+'</span>';
     /* ⚠ **車は返したのに代車が戻っていない**時は、ちゃんと赤く「超過」と出す＝知らせるべき事故。 */
-    const lead = back ? '代車' : '代車 返却まで';
+    const lead = back ? '代車' : waiting ? '代車 貸出予定' : '代車 返却まで';
     /* 🔴 v1.83.0（ゆうた指定）**終わった貸出は「〇/〇〜〇/〇」で出す。**
        ＝「あと何日」ではなく「いつからいつまで借りていたか」が知りたい情報になる。 */
     const per = window.pitLoanerPeriodOf ? pitLoanerPeriodOf(c) : null;
+    /* 入庫前は「いつからいつまで貸す予定か」を出す（残り日数の代わり） */
     const dueTxt = back ? ((per && per.text) ? per.text : (dueISO ? (fmtMD(dueISO)+' に返却') : '返却済'))
-                        : (dueISO ? ('〜 '+fmtMD(dueISO)) : '期限未設定');
+                 : waiting ? ((per && per.text) ? (per.text + ' の予定')
+                            : (dueISO ? ('〜 '+fmtMD(dueISO)+' の予定') : '期間未定'))
+                 : (dueISO ? ('〜 '+fmtMD(dueISO)) : '期限未設定');
     return '<div class="cv-lo cv-lev-'+lvKey+'">'
       + '<div class="cv-lomain"><div class="cv-loleft"><div class="cv-lorem">'+lead+'</div><div class="cv-lodays">'+remTxt+'</div></div>'
       + '<div class="cv-loright"><div class="cv-lodue">'+dueTxt+'</div><div class="cv-lowhich">'+esc(which)+'</div>'

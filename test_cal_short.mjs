@@ -58,8 +58,20 @@ const days = await p.evaluate(() => {
   cal.days[d1] = { c: 1, l: 'お盆休み' };        // 休業
   cal.days[d2] = { h: 'end', e: '15:00' };       // 早締め
   cal.days[d3] = { o: 1, l: '特別営業' };        // 特別営業
+
+  /* 🔴 週ビューを見るぶんは「今日と同じ週の中」に置く。
+     ⚠ 翌日・翌々日は、今日が土曜だと**次の週に行ってしまう**（日〜土で切っているため）。
+        走らせる曜日によって落ちたり通ったりする試験になるので、週内の枠から選び直す。 */
+  const sun = new Date(t); sun.setDate(sun.getDate() - t.getDay());
+  const slot = n => { const d = new Date(sun); d.setDate(d.getDate() + n); return ymd(d); };
+  const free = [0, 1, 2, 3, 4, 5, 6].filter(i => i !== t.getDay());
+  const wClosed = slot(free[0]);                 // 週内の休業日
+  const wShort  = slot(free[1]);                 // 週内の早締め
+  if (!cal.days[wClosed]) cal.days[wClosed] = { c: 1, l: 'お盆休み' };
+  if (!cal.days[wShort])  cal.days[wShort]  = { h: 'end', e: '15:00' };
+
   window.__PitCalTest(cal);
-  return { d0, d1, d2, d3, d4 };
+  return { d0, d1, d2, d3, d4, wClosed, wShort };
 }).catch(() => null);
 
 /* テスト用の差し込み口が無ければ、内部を直接差し替える */
@@ -154,7 +166,8 @@ console.log('\n── 🗓 予約カレンダー（当日／週／月） ──'
     return {
       shortChip: short ? (short.querySelector('.cal-chip') || {}).className || '' : 'なし',
       shortHead: short ? short.className : 'なし',
-      closedHead: closed ? closed.className : 'なし'
+      closedHead: closed ? closed.className : 'なし',
+      heads: heads.length, wClosed: d.wClosed, wShort: d.wShort
     };
   }, days);
   ok('週ビュー：短縮の札がオレンジ', /short/.test(wk.shortChip), wk);
