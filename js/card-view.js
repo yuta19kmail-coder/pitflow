@@ -824,58 +824,25 @@
      ・保持＝`c.inspectors[]` / `c.mechanics[]`（名前の配列・重複OK）＋ `inspectorIds` / `mechanicIds`。
        **持ち方は今までと同じ**。入れ方の見た目だけ変えた（過去のカードもそのまま読める）。
      ・配分計算は mech-summary.js の `pitMechAlloc` 1本。ここで計算しない。 */
-  const MECH_MAX = 10;
-  /* 点検・整備の担当候補＝メンバー画面で「メカ」にチェックした人。
-     まだ誰もチェックしていない時は、今までどおり全員を出す（空にして困らないように）。v1.4.0 */
-  function mechOpts(){
-    var all = (state.staff||[]);
-    var mech = all.filter(function(s){ return s.mech; });
-    return (mech.length ? mech : all).map(function(s){ return s.name; }).filter(Boolean);
-  }
-  /* 名前の配列 → { 名前: 回数 } と、出てきた順 */
-  function mechCount(arr){
-    var cnt = {}, order = [];
-    (Array.isArray(arr)?arr:[]).forEach(function(n){
-      if (!n) return;
-      if (!(n in cnt)){ cnt[n] = 0; order.push(n); }
-      cnt[n]++;
-    });
-    return { cnt: cnt, order: order };
-  }
+  /* 🔴 v1.97.0 担当者のチップは **js/mech-pick.js の1か所** に出した。
+     作業完了に入れた時の注意ポップアップでも**まったく同じもの**を使うため。
+     ⚠ ここに書き写さないこと（2か所にあると必ず片方だけ直って食い違う）。 */
+  const MECH_MAX = (window.PitMechPick ? PitMechPick.MAX : 10);
+  function mechOpts(){ return window.PitMechPick ? PitMechPick.options() : []; }
   function mechPicker(c, role, title, icon){
-    const arr = Array.isArray(c[role]) ? c[role] : [];
-    const co = mechCount(arr);
-    /* すでに入っている人が候補に無くても（退職・名簿外）チップに残す＝消えない */
-    const opts = mechOpts().slice();
-    co.order.forEach(function(n){ if (opts.indexOf(n) < 0) opts.push(n); });
-    const kind = (role === 'inspectors') ? 'i' : 'm';
-    let h = '<div class="cf-mech-block cf-mech-'+kind+'">'
-          + '<div class="cf-label">'+icon+' '+title+'<em class="cf-mech-cnt">'+(arr.length ? arr.length+'枠' : 'なし')+'</em></div>'
-          + '<div class="cf-mech-chips">';
-    opts.forEach(function(n){
-      const k = co.cnt[n] || 0;
-      const full = (arr.length >= MECH_MAX && !k);
-      h += '<button type="button" class="cf-mchip'+(k?' on':'')+(full?' full':'')+'"'
-        + (full ? ' disabled title="これ以上は増やせません（最大'+MECH_MAX+'枠）"' : ' onclick="cvMechTap(\''+role+'\',\''+esc(n)+'\')"')
-        + '>'+esc(n)+(k>1?'<i class="cf-mchip-x">×'+k+'</i>':'')
-        + (k?'<span class="cf-mchip-off" title="外す" onclick="event.stopPropagation();cvMechOff(\''+role+'\',\''+esc(n)+'\')">✕</span>':'')
-        + '</button>';
-    });
-    h += '</div></div>';
-    return h;
+    return window.PitMechPick ? PitMechPick.blockHtml(c, role, title, icon, 'cv') : '';
   }
   function mechSectionHtml(c){
     let h = '<div class="cv-sec"><div class="cv-sect"><i data-ic=user data-ics=16></i> 作業担当（点検・整備）</div>';
-    h += mechPicker(c, 'inspectors', '点検担当者', '<i data-ic=search data-ics=16></i>');
-    h += mechPicker(c, 'mechanics',  '整備担当者', '<i data-ic=wrench data-ics=16></i>');
-    h += '<div class="cf-mech-note">タップで追加／もう一度タップで <b>×2・×3…</b>（その人の取り分が増えます）／<b>✕</b> で外す。'
-       + '整備担当が居なければ点検担当が全部、点検担当が居なければ点検料ぶんも整備担当へ回ります。</div>';
-    /* 🔴 配分（％）はライブ。返車前でも出す。 */
-    h += '<div class="cf-mech-preview" id="cv-mech-live">' + (window.pitMechAllocText ? pitMechAllocText(c) : '') + '</div>';
+    /* 🔴 チップ・説明・配分バー（ライブ）は部品1本（mech-pick.js）から。 */
+    h += (window.PitMechPick ? PitMechPick.html(c, 'cv', { liveId: 'cv-mech-live' }) : '');
     h += '</div>';
     return h;
   }
   function _mechRerender(){ const el = document.getElementById('cv-p-maint'); if (el && _c) el.innerHTML = maintTab(_c); }
+  /* 🔴 v1.97.0 チップを押された時、ここへ返ってくる（保存して整備タブを描き直す）。
+     押した時の中身そのものは mech-pick.js が持っている。 */
+  if (window.PitMechPick) PitMechPick.on('cv', function(){ save(); _mechRerender(); });
   /* v1.8.0：名前と同じ並びで「メンバーの番号」も持つ（inspectorIds / mechanicIds）。
      改名しても実績が別人に割れないようにするため。番号が取れない人は '' が入る。 */
   function _idKey(role){ return role === 'inspectors' ? 'inspectorIds' : 'mechanicIds'; }

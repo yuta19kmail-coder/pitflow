@@ -206,13 +206,24 @@ window.pitTodayTap = function(id, isReturn){
   const doneFn    = isReturn ? 'pitTodayReturn' : 'pitTodayCheckIn';
   const cancelLabel = isReturn ? '<i data-ic=ban data-ics=16></i> 返車キャンセル' : '<i data-ic=ban data-ics=16></i> キャンセル（来店なし）';
   const cancelSub   = isReturn ? '返車予定を外して「返車・未定」へ戻す' : '「未入庫」へ（1ヶ月後に自動アーカイブ）';
+  /* 🔴 v1.97.0（ゆうた指定）**完TELを通っていない車は「返車済みにする」を押せない。**
+     ◎なぜ
+       待ち・当日返しの車は、盤面を通らなくても返車の一覧に出る（今までどおり・これはOK）。
+       だがそのまま返車済みにできてしまうと、**確定売上も担当者も入らないまま実績に固まる**。
+     ◎押せるようになる時
+       盤面で 完TEL済／完TEL依頼 へ入れた時（＝returnStage が付いた時）。
+       ⚠ 判断はこの1つだけ。預かりの車はもともと完TELを通ってしか一覧に出ないので、今までどおり押せる。 */
+  const canDone = !isReturn || !!c.returnStage;
+  const doneWhy = '<span class="ta-why">まだ完TELを通っていません。タスクボードで完TEL済／完TEL依頼へ入れてください</span>';
   back.innerHTML =
     '<div class="ta-sheet">' +
       '<div class="ta-head"><b>' + ((window.pitCustName?pitCustName(c):c.customer) || '（未入力）') + ' 様</b>　' +
         (c.maker ? c.maker + ' ' : '') + (c.car || '') + (c.plate ? '<span class="ta-plate">' + c.plate + '</span>' : '') +
         '<div class="ta-sub">' + team + (wt ? '・' + wt.label : '') + (isReturn ? '・返車' : '・入庫') + '</div>' +
       '</div>' +
-      '<button class="ta-btn primary" onclick="' + doneFn + '(\'' + id + '\')"><b>' + doneLabel + '</b><span>' + doneSub + '</span></button>' +
+      '<button class="ta-btn primary' + (canDone ? '' : ' is-off') + '"' +
+        (canDone ? ' onclick="' + doneFn + '(\'' + id + '\')"' : ' disabled') +
+        '><b>' + doneLabel + '</b><span>' + doneSub + '</span>' + (canDone ? '' : doneWhy) + '</button>' +
       '<button class="ta-btn" onclick="pitTodayEditDt(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b><i data-ic=clock data-ics=16></i> 日時変更</b><span>' + (isReturn ? '返車' : '入庫') + 'の日付・時間だけ変更</span></button>' +
       '<button class="ta-btn" onclick="pitTodayDetail(\'' + id + '\')"><b><i data-ic=clipboard data-ics=16></i> 詳細を見る</b><span>カードを開いて確認・編集</span></button>' +
       '<button class="ta-btn danger" onclick="pitTodayCancel(\'' + id + '\',' + (isReturn ? 'true' : 'false') + ')"><b>' + cancelLabel + '</b><span>' + cancelSub + '</span></button>' +
@@ -330,6 +341,12 @@ function _pitTodayCheckInGo(c){
 window.pitTodayReturn = function(id){
   const c = state.cards.find(x => x.id === id);
   if (!c) return;
+  /* 🔴 v1.97.0 完TELを通っていない車は、ここでも固めない（ボタンを消しただけにしない）。
+     ⚠ 判断はアクションシートと同じ1つ＝returnStage が付いているか。 */
+  if (!c.returnStage){
+    if (window.pitToast) pitToast('まだ完TELを通っていません。タスクボードで完TEL済／完TEL依頼へ入れてください');
+    return;
+  }
   const t = ymd(new Date());
   c.status = 'returned';
   c.returnDate = c.returnDate || t;

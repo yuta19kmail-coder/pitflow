@@ -196,7 +196,9 @@ console.log('\n── 📞 完TEL済で返車予定日が過去 → 聞いてか
   ok('🔴 売上が固まる（入力した確定金額）', res.amountFinal === 78000, res);
   ok('完TEL済の印が付く', res.call === true, res);
   ok('PIT枠から外れる', !res.bay, res);
-  ok('フローに残る', res.logs.some(x => /そのまま実績へ/.test(x) && x.indexOf(PAST) >= 0), res.logs);
+  /* ⚠ v1.97.0 実績化の道が2つ（過去日／待ち・当日の1枚目）になったので、書き込みも言い方も1本にまとめた。
+     見るのは**「実績化」と書いてあることと、その日付が入っていること**。 */
+  ok('フローに残る', res.logs.some(x => /実績化/.test(x) && x.indexOf(PAST) >= 0), res.logs);
   ok('ポップアップは閉じる', res.open === false, res);
 
   /* 🔴 返車カレンダーに出てこない（返車ビューの絞り込みと同じ条件で確かめる） */
@@ -269,7 +271,10 @@ console.log('\n── ソースの見張り ──');
   const cv = fs.readFileSync('js/card-view.js', 'utf8');
   ok('過去日の判定は「今日より前」だけ', /dChk < todayISO\(\)/.test(rp));
   ok('🔴 実績化は当日ビューと同じ形（status/completedAt/amountFinal）',
-     /c\.status = 'returned';/.test(rp) && /c\.completedAt = d;/.test(rp) && /c\.amountFinal =/.test(rp));
+     /c\.status = 'returned';/.test(rp) && /c\.completedAt = rd;/.test(rp) && /c\.amountFinal =/.test(rp));
+  /* 🔴 v1.97.0 実績化の入口は2つあるが、**書き込みは1か所だけ**（形が分かれると必ず食い違う） */
+  ok('🔴 実績化の書き込みが1か所に集まっている', (rp.match(/c\.status = 'returned';/g) || []).length === 1,
+     (rp.match(/c\.status = 'returned';/g) || []).length);
   ok('実績日を直せるかの物差しは pitIsAdmin', /pitIsAdmin\(\)/.test(cv) && /function canEditResultDate/.test(cv));
   ok('実績日を変えたら返車日も動かしている', /_c\.completedAt = v;[\s\S]{0,200}_c\.returnDate = v;/.test(cv));
 
