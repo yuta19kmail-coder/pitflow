@@ -410,9 +410,25 @@ function renderLoaner(){
   _loDedupeAssigns();         // 同一予約の二重割当を掃除（日数調整が重複扱いされる不具合の元）
   _loProcessReplacements();   // 入替日を過ぎた予定を確定
   _loProcessEmergency();      // 返車済みの緊急車両は列を消す（履歴は残す）
+  /* 🔴 v1.95.0（ゆうた報告 2026-08-15）**スクロールが一回ガクッと戻る。**
+     ⚠ 正体＝**背後の描き直し**。誰かが予約を直す・クラウドから届く・MHSのカレンダーが来る…
+        そのたびに `showView(state.currentView)` が呼ばれ、ここが**毎回いちばん上（今日）まで巻き戻して**いた。
+        （`_loStart` を今日−14日に戻して描き直し → `loScrollToday()` で今日へアンカー）
+     🔴 **新しく開いた時だけ今日へ寄せる。同じ画面の描き直しなら、見ていた場所に戻す。**
+        描き直しでは**日付の範囲（_loStart / _loCount）も変えない**＝過去へ遡って見ていた分が消えない。 */
+  const _wrap0 = document.getElementById('loaner-scroll');
+  const _fresh = (window._pitPrevView !== 'loaner') || !_wrap0 || !_wrap0.querySelector('.lo-date');
+  const _keep  = _fresh ? null
+               : { top: _wrap0.scrollTop, left: _wrap0.scrollLeft, start: _loStart, count: _loCount };
+
   const today = new Date(); today.setHours(0,0,0,0);
-  _loStart = addDays(today, -14);   // 過去を多めに描画＝当日アンカー後に過去継ぎ足しが暴発しない＋前5日を確実に表示
-  loRebuild(56);
+  if (_fresh){
+    _loStart = addDays(today, -14);   // 過去を多めに描画＝当日アンカー後に過去継ぎ足しが暴発しない＋前5日を確実に表示
+    loRebuild(56);
+  } else {
+    _loStart = _keep.start;
+    loRebuild(Math.max(56, _keep.count));   // 見ていた範囲をそのまま作り直す
+  }
 
   const wrap = document.getElementById('loaner-scroll');
   if (wrap && !_loBound){
@@ -423,7 +439,13 @@ function renderLoaner(){
     });
   }
   if (!_loDnd){ _loDnd = true; loBindDnd(grid); }
-  requestAnimationFrame(function(){ loScrollToday(); setTimeout(loScrollToday, 60); });   // レイアウト確定後に確実にアンカー
+  if (_fresh){
+    requestAnimationFrame(function(){ loScrollToday(); setTimeout(loScrollToday, 60); });   // レイアウト確定後に確実にアンカー
+  } else if (wrap && _keep){
+    /* 描き直し＝見ていた場所へ黙って戻す。⚠ アニメーションさせない（また動いたように見える） */
+    wrap.scrollTop = _keep.top; wrap.scrollLeft = _keep.left;
+    requestAnimationFrame(function(){ wrap.scrollTop = _keep.top; wrap.scrollLeft = _keep.left; });
+  }
 }
 
 /* 代車の詳細ホバーは「常時・どのビューでも」効くようグローバルに1回だけ紐付け。

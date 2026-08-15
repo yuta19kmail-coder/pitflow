@@ -11,6 +11,12 @@ function showView(viewId){
      ⚠ 聞くのは1回だけ。答えが返ってから改めて showView をやり直す（写しを作らない）。 */
   if (state.currentView === 'loaner' && viewId !== 'loaner'
       && window.pitLoanerAskLeave && pitLoanerAskLeave(viewId)) return;
+  /* 🔴 v1.95.0 **切り替える前のビュー**を覚えておく。
+     ⚠ 画面のどこかが変わるたびに `showView(state.currentView)` で背後を描き直す作りなので、
+        描き直し側からは「新しく開いたのか／同じ画面を描き直しただけなのか」が分からない。
+        分からないと、代車カレンダーのように**スクロール位置を持っている画面が毎回いちばん上に戻る**。
+     ⚠ 使うのは「同じ画面の描き直しか？」の判定だけ。画面の出し分けには使わないこと。 */
+  window._pitPrevView = state.currentView || '';
   state.currentView = viewId;
   // 付箋の表示先を既定（ダッシュボード）へ戻す。マイダッシュボードは renderMyDash 内で自分の器へ切替。
   window.PIT_BN_TARGET = 'board-notes-area';
