@@ -396,8 +396,19 @@ function pitDivisionLabel(c){
   const d = list.find(x => x && x.id === id);
   return d ? String(d.label || '') : '';    /* 表にない課＝出さない（勝手に1課にしない） */
 }
+/* 🔴 v1.98.0 課の**色**も同じ表から引く（既定は 1課＝緑・2課＝ピンク）。
+   ⚠ 色を画面に直に書かないこと。設定で色を変えたら、出ている所がそろって変わるように。
+   ⚠ 表に無い課・ボタンが空のときは空文字（＝呼んだ側で出さない判断ができる）。 */
+function pitDivisionColor(c){
+  const id = pitDivisionId(c);
+  if (!id) return '';
+  const list = (window.state && Array.isArray(state.divisions)) ? state.divisions : [];
+  const d = list.find(x => x && x.id === id);
+  return (d && d.color) ? String(d.color) : '';
+}
 window.pitDivisionId = pitDivisionId;
 window.pitDivisionLabel = pitDivisionLabel;
+window.pitDivisionColor = pitDivisionColor;
 /* estHold/estAmount を team別ネストに正規化（旧フラット保存の移行・import欠けの補完） */
 function pitNormalizeEst(){
   const s = state.settings; if (!s) return;

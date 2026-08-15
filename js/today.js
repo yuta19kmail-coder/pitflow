@@ -449,13 +449,25 @@ function todayRow(c, isReturn, inBreak){
   // フロント担当（縦書きバッジ・1課=緑/2課=ピンク）
   const isImp = c.boardId === 'import';
   const frontName = (window.pitSurname ? pitSurname((c.frontStaff || '').trim()) : (c.frontStaff || '').trim());
+  /* 🔴 v1.98.0（ゆうた指定）**人が入っていない時は、代わりに課を出す。空欄にしない。**
+     ◎なぜ
+       時間の横のバッジが真っ白だと「誰の車か手がかりが何も無い」ので、
+       せめて **どっちの課の車か** は分かるようにする。
+     ⚠ 課は **c.division（予約画面のボタン）だけ**で決まる。国産／輸入からは逆算しない（v1.92.0の決めごと）。
+     ⚠ 名前も色も **state.divisions の1本**から引く（既定＝1課は緑・2課はピンク）。ここに直に書かない。
+     ⚠ 課のボタンも空なら、今までどおり空欄のまま（無いものを作らない）。 */
+  const divLabel = frontName ? '' : (window.pitDivisionLabel ? pitDivisionLabel(c) : '');
+  /* ⚠ 色が入っていない課だった時の保険は**既定の緑**。ここでも車（国産／輸入）から色を作らない。 */
+  const divColor = divLabel ? ((window.pitDivisionColor ? pitDivisionColor(c) : '') || '#1db97a') : '';
 
   let h = '';
   h += '<div class="today-row' + (c.urgent ? ' is-urgent' : '') + (inBreak ? ' in-break' : '') + '" onclick="pitTodayTap(\'' + c.id + '\',' + (isReturn ? 'true' : 'false') + ')" style="--team:' + teamColor + '">';
   h += '<div class="tr-time">' + time + '</div>';
-  // 担当フロント縦書きバッジ
+  // 担当フロント縦書きバッジ（人が無ければ課）
   if (frontName){
     h += '<div class="tr-front" style="background:' + (isImp ? '#ec4899' : '#1db97a') + '">' + frontName + '</div>';
+  } else if (divLabel){
+    h += '<div class="tr-front is-div" style="background:' + _todEsc(divColor) + '" title="担当者はまだ決まっていません（' + _todEsc(divLabel) + '）">' + _todEsc(divLabel) + '</div>';
   } else {
     h += '<div class="tr-front empty"></div>';
   }
