@@ -637,9 +637,13 @@
 .lo-cell.sat > .lo-daybg{ background-color:rgba(55,138,221,.13); }
 .lo-cell.sun > .lo-daybg,
 .lo-cell.lo-holiday > .lo-daybg{ background-color:rgba(239,68,68,.12); }
+/* ⚠ v1.94.1（ゆうた指摘）**シマウマみたいな縞模様になっていた。**
+   線を細く（5px→2.5px）・間を広く（6px→9.5px）・薄く（.30→.10）した＝
+   「塗ってある」ではなく「うっすら網が掛かっている」に見える濃さ。
+   🔴 これ以上濃くしないこと。代車の札と茎が読みにくくなる。 */
 .lo-cell.lo-closed > .lo-daybg{
   background-image:repeating-linear-gradient(45deg,
-    rgba(148,163,184,.30) 0 5px, rgba(148,163,184,0) 5px 11px);
+    rgba(148,163,184,.10) 0 2.5px, rgba(148,163,184,0) 2.5px 12px);
 }
 /* 日付列は敷き紙の上に文字を出す（包んだ .lo-dtxt を持ち上げる） */
 .lo-date > .lo-dtxt{ position:relative; z-index:1; display:block; }
