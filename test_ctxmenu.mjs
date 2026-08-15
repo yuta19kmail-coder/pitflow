@@ -104,20 +104,36 @@ console.log('\n── ③ カードのメニュー（状態で出し分け） �
 await rc('[data-card-id="c1"]'); m=await menu();
 console.log('   予約中:',JSON.stringify(m.items.map(x=>x.t)));
 ok('予約中：入庫済みにする が出る', m.items.some(x=>x.t==='入庫済みにする'));
-ok('予約中：返車済みにする は出ない', !m.items.some(x=>x.t==='返車済みにする'));
-ok('予約中：工程を変える は出ない（まだ盤面に無い）', !m.items.some(x=>x.t==='工程を変える'));
 ok('詳細を開く／別タブ／表紙を印刷 がある', ['詳細を開く','別タブで開く','表紙を印刷'].every(t=>m.items.some(x=>x.t===t)));
 ok('コピー が子メニュー', m.items.some(x=>x.t==='コピー'&&x.sub));
 
 await rc('[data-card-id="c2"]'); m=await menu();
 console.log('   作業中:',JSON.stringify(m.items.map(x=>x.t)));
-ok('作業中：返車済みにする が出る', m.items.some(x=>x.t==='返車済みにする'));
 ok('作業中：入庫済みにする は出ない', !m.items.some(x=>x.t==='入庫済みにする'));
-ok('作業中：工程を変える が出る', m.items.some(x=>x.t==='工程を変える'&&x.sub));
-ok('急ぎON中は「急ぎを外す」', m.items.some(x=>x.t==='急ぎを外す'));
 
 await rc('[data-card-id="c3"]'); m=await menu();
-ok('返車済み：入庫済み/返車済み とも出ない', !m.items.some(x=>/入庫済みにする|返車済みにする/.test(x.t)), m.items.map(x=>x.t));
+ok('返車済み：入庫済みにする は出ない', !m.items.some(x=>x.t==='入庫済みにする'), m.items.map(x=>x.t));
+
+/* 🔴 v1.96.0（ゆうた指定）右クリックから外した3つ。どの状態のカードでも二度と出さない。
+   ・返車済みにする … 実績（確定売上）に固まる、取り返しのつきにくい操作
+   ・工程を変える   … カードをドラッグする、が本来のやり方
+   ・急ぎにする     … カードの詳細から付け外しする                       */
+console.log('\n── ③-2 🔴 右クリックから外した3つ（どのカードでも出ない） ──');
+for (const [id,name] of [['c1','予約中'],['c2','作業中'],['c3','返車済み']]){
+  await rc(`[data-card-id="${id}"]`); m=await menu();
+  const ng=m.items.filter(x=>/返車済みにする|工程を変える|急ぎ/.test(x.t)).map(x=>x.t);
+  ok(`${name}：返車済みにする／工程を変える／急ぎ が出ない`, ng.length===0, {出た:ng, 全部:m.items.map(x=>x.t)});
+  const dbl=await p.evaluate(()=>{
+    const kids=Array.from(document.getElementById('pit-ctx').children);
+    return kids.some((el,i)=>i>0&&el.classList.contains('pcx-sep')&&kids[i-1].classList.contains('pcx-sep'));
+  });
+  ok(`${name}：区切り線が二本並んでいない`, dbl===false, dbl);
+}
+{
+  const src=fs.readFileSync('js/ctxmenu-pit.js','utf8');
+  ok('🔴 元のコードごと消えている（コメント以外に残っていない）',
+     !/label:\s*'返車済みにする'/.test(src) && !/label:\s*'工程を変える'/.test(src) && !/'急ぎにする'/.test(src), '');
+}
 
 console.log('\n── ④ 実際に押す ──');
 await rc('[data-card-id="c1"]'); await clickItem('詳細を開く'); await p.waitForTimeout(60);
@@ -131,18 +147,8 @@ await rc('[data-card-id="c1"]'); await clickItem('入庫済みにする'); await
 let acts=await p.evaluate(()=>window.__acts);
 ok('入庫済み→pitTodayCheckIn＋画面の描き直し', acts.includes('checkIn:c1')&&acts.some(a=>a.startsWith('showView')), acts);
 
-console.log('\n── ⑤ 工程を変える（子メニュー） ──');
-await rc('[data-card-id="c2"]');
-await p.evaluate(()=>{ const b=Array.from(document.querySelectorAll('#pit-ctx .pcx-i')).find(x=>x.querySelector('b').textContent==='工程を変える'); b.dispatchEvent(new MouseEvent('mouseover',{bubbles:true})); });
-await p.waitForTimeout(90);
-const sub=await p.evaluate(()=>{ const s=document.getElementById('pit-ctx-sub'); return s?Array.from(s.querySelectorAll('.pcx-i')).map(x=>({t:x.querySelector('b').textContent,off:x.classList.contains('is-off')})):null; });
-console.log('   ',JSON.stringify(sub));
-ok('子メニューが開く', !!sub&&sub.length>=5);
-ok('廃車（side列）は出ない', !sub.some(x=>x.t==='廃車'), sub&&sub.map(x=>x.t));
-ok('いまの工程（見積り中）は選べない', (sub.find(x=>x.t==='見積り中')||{}).off===true, sub);
-await clickSub('作業待ち'); await p.waitForTimeout(90);
-ok('選ぶと status が変わる', await p.evaluate(()=>state.cards.find(x=>x.id==='c2').status)==='work');
-ok('操作ログが残る', (await p.evaluate(()=>window.__acts)).some(a=>/log:工程を変更/.test(a)));
+/* ⑤「工程を変える」の子メニューの試験は v1.96.0 で役目を終えた（メニューごと外したため）。
+   子メニューの仕組み自体は下の「コピー」で見張っている。 */
 
 console.log('\n── ⑥ コピー ──');
 await rc('[data-card-id="c1"]');
