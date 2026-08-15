@@ -243,6 +243,102 @@ console.log('\n── 📦 未入庫（自動）は来店履歴に出さない �
   await p.evaluate(() => { if (window.custCloseModal) custCloseModal(); });
 }
 
+console.log('\n── ↩ 未入庫の「予約に戻す」＝入庫日を選ばせる（v1.101.1） ──');
+const seedNoShow = () => p.evaluate(() => {
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const day = n => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + n); return ymd(d); };
+  state.cards = [{ id: 'B1', resNo: 'Y00001', customer: '戻し 太郎', car: 'ノート', plate: '品川 300 あ 1',
+    boardId: 'default', workType: 'general', dropType: 'drop',
+    status: 'cancelled', noShow: true, noShowAt: day(-5), cancelledAt: day(-5), reserveDate: day(-5), log: [] }];
+  showView('reserve');
+  pitUndRestore('B1');
+  const sheet = document.querySelector('#pit-und-restore .ta-sheet');
+  return {
+    today: day(0), past: day(-5),
+    open: !!(document.getElementById('pit-und-restore') || {}).classList
+          && document.getElementById('pit-und-restore').classList.contains('show'),
+    html: sheet ? sheet.innerHTML : '(窓が出ない)',
+    dateVal: (document.getElementById('und-rs-date') || {}).value || '',
+    dateMin: (document.getElementById('und-rs-date') || {}).min || '',
+    stillNoShow: state.cards[0].status === 'cancelled'
+  };
+});
+{
+  const r = await seedNoShow();
+  ok('🔴 押しただけでは戻らない（窓が出る）', r.open === true && r.stillNoShow === true, r.open);
+  ok('🔴 「今日の入庫予定にする」がある', /今日（.+）の入庫予定にする/.test(r.html), '');
+  ok('🔴 日付を選ぶピッカーがある', /type="date"/.test(r.html), '');
+  ok('🔴 「この日の入庫予定にする」がある', /この日の入庫予定にする/.test(r.html), '');
+  ok('🔴 過ぎた日は選ばせない（min＝今日）', r.dateMin === r.today, r);
+  ok('ピッカーの初期値は今日', r.dateVal === r.today, r);
+  ok('元の入庫予定も見せる', /元の入庫予定/.test(r.html), '');
+  ok('やめる がある', /やめる/.test(r.html), '');
+}
+{
+  /* ① 今日にする */
+  await seedNoShow();
+  const r = await p.evaluate(() => {
+    document.querySelector('#pit-und-restore .ta-btn.primary').click();
+    const c = state.cards[0];
+    const pad = n => (n < 10 ? '0' : '') + n;
+    const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    return { st: c.status, rd: c.reserveDate, tbd: !!c.intakeTbd, noShow: !!c.noShow,
+             today: ymd(new Date()), moved: pitAutoOverdue(),
+             open: document.getElementById('pit-und-restore').classList.contains('show'),
+             logLast: (function (e) { return (e && (e.label || e.text)) || ''; })((c.log || [])[(c.log || []).length - 1]) };
+  });
+  ok('🔴 今日の予約に戻る', r.st === 'reserved' && r.rd === r.today, r);
+  ok('🔴 未定にはしない（日付が決まっているので）', r.tbd === false, r);
+  ok('🔴 自動で付いた未入庫の印は外れる', r.noShow === false, r);
+  ok('🔴 もう一度自動移動しても未入庫に落ちない', r.moved === 0 && r.st === 'reserved', r);
+  ok('窓は閉じる', r.open === false, r.open);
+  ok('入庫日つきでフローに残る', /予約に復帰/.test(r.logLast) && /\d{4}-\d{2}-\d{2}/.test(r.logLast), r.logLast);
+}
+{
+  /* ② 日付を選ぶ */
+  await seedNoShow();
+  const r = await p.evaluate(() => {
+    const pad = n => (n < 10 ? '0' : '') + n;
+    const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + 6);
+    const want = ymd(d);
+    document.getElementById('und-rs-date').value = want;
+    [].find.call(document.querySelectorAll('#pit-und-restore .ta-btn'), b => /この日の入庫予定にする/.test(b.textContent)).click();
+    const c = state.cards[0];
+    return { want, st: c.status, rd: c.reserveDate, tbd: !!c.intakeTbd };
+  });
+  ok('🔴 選んだ日の予約に戻る', r.st === 'reserved' && r.rd === r.want && r.tbd === false, r);
+}
+{
+  /* ③ 過ぎた日は通さない（堂々巡りになるので） */
+  await seedNoShow();
+  const r = await p.evaluate(() => {
+    const pad = n => (n < 10 ? '0' : '') + n;
+    const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - 2);
+    document.getElementById('und-rs-date').value = ymd(d);
+    [].find.call(document.querySelectorAll('#pit-und-restore .ta-btn'), b => /この日の入庫予定にする/.test(b.textContent)).click();
+    const c = state.cards[0];
+    return { st: c.status, open: document.getElementById('pit-und-restore').classList.contains('show') };
+  });
+  ok('🔴 過ぎた日を入れても実行しない', r.st === 'cancelled', r);
+  ok('窓は開いたまま（選び直せる）', r.open === true, r);
+  await p.evaluate(() => pitUndRestoreClose());
+}
+{
+  /* ④ やめる＝何も変えない */
+  await seedNoShow();
+  const r = await p.evaluate(() => {
+    document.querySelector('#pit-und-restore .ta-cancel').click();
+    const c = state.cards[0];
+    return { st: c.status, noShow: !!c.noShow,
+             open: document.getElementById('pit-und-restore').classList.contains('show') };
+  });
+  ok('🔴 やめたら未入庫のまま', r.st === 'cancelled' && r.noShow === true, r);
+  ok('窓は閉じる', r.open === false, r.open);
+}
+
 console.log('\n── 🧭 まわりが壊れていないか ──');
 {
   const od = fs.readFileSync('js/overdue-pit.js', 'utf8');
