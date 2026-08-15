@@ -11,7 +11,8 @@
 
    ◎ここで見張ること
      🔴 探し方の物差しは search.js の1本（`pitSearchNorm` / `pitSearchWords`）を借りる
-     🔴 上限は30件。**超えたら「◯件あります（上位30件）」と正直に出す**
+     🔴 v1.102.1（ゆうた指定）**顧客は上限なし＝全件出す。**（マスター検索の顧客欄も同じ）
+        ⚠ カード（入庫予約・過去入庫）は今までどおり上位30件
      🔴 名前で引けばその人の車が全部出る／2語で絞れる／全角でも当たる
      🔴 アーカイブした顧客・車両は今までどおり出さない（v1.49.0）
 
@@ -97,15 +98,15 @@ const master = q => p.evaluate(qq => {
 
 await setup();
 
-console.log('\n── 📋 件数の打ち切り ──');
+console.log('\n── 📋 件数の打ち切りをやめた（v1.102.1） ──');
 {
   const r = await recall('山田');
-  ok('🔴 10件で止まらない（上限は30件）', r.n === 25, r.n);
+  ok('🔴 10件で止まらない', r.n === 25, r.n);
   ok('マスター検索の顧客ヒット数と数が合う', r.n === (await master('山田')), r.n);
   ok('30件までなら案内は出さない', r.more === '', r.more);
 }
 {
-  /* 40人にして、上限を超えた時の出かたを見る */
+  /* 40人にして、昔の上限（30）を超えても全部出るか見る */
   await p.evaluate(() => {
     for (let i = 26; i <= 40; i++) {
       state.customers.push({ id: 'cx' + i, name: '山田 次郎' + i, kana: 'ヤマダ ジロウ', updatedAt: Date.now(), contacts: [],
@@ -113,9 +114,27 @@ console.log('\n── 📋 件数の打ち切り ──');
     }
   });
   const r = await recall('山田');
-  ok('🔴 上限は30件', r.n === 30, r.n);
-  ok('🔴 黙って切らない（何件あるか出す）', /40件あります/.test(r.more) && /上位30件/.test(r.more), r.more);
+  ok('🔴 上限なし＝40件そのまま出る', r.n === 40, r.n);
+  ok('🔴 何件出ているかを添える', /40件/.test(r.more) && /全部出しています/.test(r.more), r.more);
   ok('絞り方も添える', /スペース/.test(r.more), r.more);
+  ok('🔴 「上位◯件」とは言わない（切っていないので）', !/上位/.test(r.more), r.more);
+}
+{
+  /* マスター検索の顧客欄も上限なし */
+  const r = await p.evaluate(() => {
+    /* ⚠ 結果の箱はダッシュボードの中にある。開いていない時のために用意してから縛る。 */
+    let box = document.getElementById('pit-search-results');
+    if (!box) { box = document.createElement('div'); box.id = 'pit-search-results'; document.body.appendChild(box); }
+    pitSearchBind('pit-search-wrap', 'pit-search-input', 'pit-search-results');
+    pitSearchInput('山田');
+    const heads = [].map.call(box.querySelectorAll('.psr-head'), e => e.textContent.trim());
+    /* 顧客の行は先頭に人のマーク（.psr-cust-tag）が付く */
+    return { rows: box.querySelectorAll('.psr-cust-tag').length, heads: heads };
+  });
+  const custHead = (r.heads || []).find(h => /顧客/.test(h)) || '';
+  ok('🔴 マスター検索の顧客も全件出る', r.rows === 40, r);
+  ok('🔴 「上位30件」と言わなくなった', !/上位/.test(custHead), custHead);
+  ok('件数と絞り方は出す', /40件/.test(custHead) && /スペース/.test(custHead), custHead);
 }
 
 console.log('\n── 🔎 スペース区切り（AND） ──');
@@ -161,6 +180,35 @@ console.log('\n── 📦 アーカイブは今までどおり出さない ─�
   ok('🔴 アーカイブした車のナンバー・車種でも出さない', r2.n === 0, r2);
 }
 
+console.log('\n── ⏱ 実データくらいの量でも使えるか（顧客6,500人） ──');
+{
+  const r = await p.evaluate(() => {
+    const cust = [];
+    const sei = ['佐藤','鈴木','高橋','田中','伊藤','渡辺','山本','中村','小林','加藤'];
+    const car = ['アクア','プリウス','ノート','フィット','ヴィッツ','セレナ','タント','ムーヴ'];
+    for (let i = 0; i < 6500; i++) {
+      cust.push({ id: 'p' + i, name: sei[i % 10] + ' ' + (i), kana: 'カナ' + i, updatedAt: i, contacts: [{ tel: '090-0000-' + i, primary: true }],
+        vehicles: [{ id: 'pv' + i, plate: '品川 300 あ ' + i, maker: 'トヨタ', car: car[i % 8] }] });
+    }
+    state.customers = cust;
+    const t0 = performance.now();
+    custSuggest('佐藤');                     /* 650人ヒット */
+    const t1 = performance.now();
+    custSuggest('佐藤 アクア');              /* 2語で絞る */
+    const t2 = performance.now();
+    const host = document.getElementById('md-body') || document.body;
+    const box = host.querySelector('#cf-recall-list');
+    const n2 = box.querySelectorAll('.cf-recall-item').length;
+    custSuggest('佐藤');
+    const n1 = box.querySelectorAll('.cf-recall-item').length;
+    return { wide: Math.round(t1 - t0), narrow: Math.round(t2 - t1), n1, n2 };
+  });
+  ok('🔴 650人ヒットしても全部出る', r.n1 === 650, r.n1);
+  ok('2語で絞れる', r.n2 > 0 && r.n2 < r.n1, r);
+  ok('🔴 打つたびに引っかからない（1文字ぶん 500ms 未満）', r.wide < 500, r.wide + 'ms');
+  console.log('     ⏱ 650人を出すのに ' + r.wide + 'ms ／ 2語で絞ると ' + r.narrow + 'ms');
+}
+
 console.log('\n── 🧭 物差しが1本か ──');
 {
   const sc = fs.readFileSync('js/search.js', 'utf8');
@@ -168,7 +216,10 @@ console.log('\n── 🧭 物差しが1本か ──');
   const cu = fs.readFileSync('js/customers.js', 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
   ok('🔴 呼び出し側はそれを借りている', /pitSearchWords\(qstr\)/.test(cu) && /pitSearchNorm/.test(cu), '');
-  ok('🔴 10件の打ち切りは残っていない', !/slice\(0,\s*10\)/.test(cu), '');
+  ok('🔴 打ち切りが残っていない（10件も30件も）', !/slice\(0,\s*(10|30)\)/.test(cu) && !/RECALL_MAX/.test(cu), '');
+  const sc2 = fs.readFileSync('js/search.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  ok('🔴 マスター検索の顧客も切っていない', !/custHits\.slice/.test(sc2), '');
+  ok('カードは今までどおり上位30件のまま', /list\.slice\(0, MAX\)/.test(sc2), '');
 
   await p.evaluate(() => { if (window.pitSampleData) pitSampleData(); });
   await p.waitForTimeout(400);
