@@ -51,15 +51,19 @@ console.log('\n── ① 中身と並び順（ゆうた指定のとおりか）
 eq('ボタンの並び', W.PIT_TIME_QUICK.map(t => t.label), WANT);
 eq('時間ものは5つ', W.PIT_TIME_QUICK.filter(t => !t.unknown).map(t => t.label), ['AM','PM','朝一','お昼','夕方']);
 eq('時刻不明は4つ', W.PIT_TIME_QUICK.filter(t => t.unknown).map(t => t.label), ['決まり次第','レッカー','鍵ポスト','未定']);
-/* 🔴 v1.70.0 AM の終わりは 12:00 ではなく 12:59（午前は12時台まで＝ゆうた指定） */
-eq('AM の時間', [W.pitTimeQuick('AM').from, W.pitTimeQuick('AM').to], ['09:00','12:59']);
+/* 🔴 v1.105.0（ゆうた変更 2026-08-16）AM の終わりは **11:59**。12時台には食い込ませない。
+   （v1.70.0 では 12:59 ＝「午前は12時台まで」だったが、12:00 台と重なるのでやめた） */
+eq('AM の時間', [W.pitTimeQuick('AM').from, W.pitTimeQuick('AM').to], ['09:00','11:59']);
 eq('PM の時間', [W.pitTimeQuick('PM').from, W.pitTimeQuick('PM').to], ['13:00','19:00']);
 eq('朝一の時間', [W.pitTimeQuick('朝一').from, W.pitTimeQuick('朝一').to], ['09:00','09:30']);
 eq('お昼の時間', [W.pitTimeQuick('お昼').from, W.pitTimeQuick('お昼').to], ['12:00','13:00']);
 eq('夕方の時間', [W.pitTimeQuick('夕方').from, W.pitTimeQuick('夕方').to], ['16:30','19:00']);
 
 console.log('\n── ② 並び順の物差し（🔴 v1.70.0＝いちばん遅くなり得る時刻） ──');
-eq('AM は 12時台のいちばん最後', Math.floor(W.pitTimeMin('AM')), 779);
+eq('AM は 11時台のいちばん最後（12:00 より前）', Math.floor(W.pitTimeMin('AM')), 719);
+yes('🔴 AM は 12:00 台のどの車よりも前', W.pitTimeMin('AM') < W.pitTimeMin('12:00')
+    && W.pitTimeMin('AM') < W.pitTimeMin('12:30') && W.pitTimeMin('AM') < W.pitTimeMin('12:59'));
+yes('AM は 11:59 の車より後ろ（11時台のさいご）', W.pitTimeMin('AM') > W.pitTimeMin('11:59'));
 eq('PM は 19:00',             Math.floor(W.pitTimeMin('PM')), 1140);
 eq('朝一は 9:30',             Math.floor(W.pitTimeMin('朝一')), 570);
 eq('お昼は 13:00',            Math.floor(W.pitTimeMin('お昼')), 780);
@@ -77,7 +81,7 @@ console.log('\n── ③ 実際に並べてみる ──');
      ['08:00','09:15','朝一','AM','お昼','16:00','夕方','PM','決まり次第','レッカー','鍵ポスト','未定','']);
 }
 {
-  /* 🔴 v1.70.0 終わりの時刻で決まる＝朝一（9:30）が先、AM（12時台の最後）が後ろ */
+  /* 🔴 終わりの時刻で決まる＝朝一（9:30）が先、AM（11時台の最後・v1.105.0）が後ろ */
   yes('朝一 と AM は 朝一 が先', W.pitTimeMin('朝一') < W.pitTimeMin('AM'),
       [W.pitTimeMin('AM'), W.pitTimeMin('朝一')]);
   yes('不明系はどれも、どんな時刻より後ろ', ['決まり次第','レッカー','鍵ポスト','未定']
