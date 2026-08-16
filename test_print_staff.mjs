@@ -13,12 +13,18 @@ import path from 'path';
 const dir = process.cwd();
 const read = f => fs.readFileSync(path.join(dir, 'js', f), 'utf8');
 const stateSrc = read('state.js');
+const shareSrc = read('pit-share.js');
 
-/* ---- state.js から名前まわりの関数だけ切り出す ---- */
-const i = stateSrc.indexOf('function pitSurname(name){');
-const j = stateSrc.indexOf('/* v0.85.0 受付タイプの表示ラベル');
-if (i < 0 || j < 0 || j < i) throw new Error('state.js から名前まわりの関数を切り出せません（構成が変わった？）');
-const CODE = stateSrc.slice(i, j);
+/* ---- 名前まわりの関数だけ切り出す ----
+   🔴 v1.103.0 **pitSurname は js/pit-share.js へ移した**（MHS も同じものを借りるため）。
+      印刷専用の pitStaffPrintName は state.js に残っているので、2つをつないで動かす。 */
+const si = shareSrc.indexOf('function pitSurname(name){');
+const sj = shareSrc.indexOf('w.pitCustSurname = pitCustSurname;');
+if (si < 0 || sj < 0 || sj < si) throw new Error('pit-share.js から名前まわりの関数を切り出せません（構成が変わった？）');
+const i = stateSrc.indexOf('function pitStaffPrintName(name){');
+const j = stateSrc.indexOf('window.pitStaffPrintName = pitStaffPrintName;');
+if (i < 0 || j < 0 || j < i) throw new Error('state.js から pitStaffPrintName を切り出せません（構成が変わった？）');
+const CODE = shareSrc.slice(si, sj) + '\n' + stateSrc.slice(i, j);
 
 /* ---- 名簿（本物と同じ形）----
    name     … 画面に出る名前（呼び名があれば呼び名／無ければ本名フル）
@@ -36,7 +42,7 @@ const STAFF = [
 const win = {
   pitStaffAny: n => STAFF.find(s => s.name === n || (s.aliases || []).indexOf(n) >= 0) || null
 };
-const N = new Function('window', 'pitStaffAny', CODE + '\nreturn { pitSurname, pitStaffPrintName };')(win, win.pitStaffAny);
+const N = new Function('window', 'w', 'pitStaffAny', CODE + '\nreturn { pitSurname, pitStaffPrintName };')(win, win, win.pitStaffAny);
 
 let ok = 0, ng = 0;
 function eq(label, got, want){
@@ -85,7 +91,7 @@ yes('退職者にも姓・呼び名が載っている（表紙に退職者が残
     (mem.match(/lastName:\s*String\(cm\.lastName/g) || []).length >= 2);
 yes('state.js が pitStaffPrintName を公開している', /window\.pitStaffPrintName\s*=/.test(stateSrc));
 yes('画面側の表示（pitSurname / pitCustSurname）は残っている＝印刷だけの話',
-    /window\.pitSurname\s*=/.test(stateSrc) && /window\.pitCustSurname\s*=/.test(stateSrc));
+    /w\.pitSurname\s*=/.test(shareSrc) && /w\.pitCustSurname\s*=/.test(shareSrc));
 
 console.log('\n===== ' + ok + ' OK / ' + ng + ' NG =====');
 process.exit(ng ? 1 : 0);

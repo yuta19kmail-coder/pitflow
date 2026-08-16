@@ -124,14 +124,17 @@ console.log('\n── ↔ 返車の列でも同じ ──');
 
 console.log('\n── 🧭 まわりが壊れていないか ──');
 {
-  const st = fs.readFileSync('js/state.js', 'utf8');
-  ok('🔴 課の色を引く物差しが1本ある', /function pitDivisionColor/.test(st) && /window\.pitDivisionColor/.test(st), '');
+  const st = fs.readFileSync('js/pit-share.js', 'utf8');   /* 🔴 v1.103.0 課の物差しは pit-share.js へ移した */
+  ok('🔴 課の色を引く物差しが1本ある', /function pitDivisionColor/.test(st) && /w\.pitDivisionColor/.test(st), '');
   const td = fs.readFileSync('js/today.js', 'utf8');
   ok('🔴 当日ビューが課の名前を直に書いていない', !/'1課'|"1課"/.test(td), '');
-  /* 🔴 課のバッジの色は pitDivisionColor から。**車（国産／輸入）から作らない**（v1.92.0の決めごと） */
-  const divLine = (td.match(/const divColor = [^\n]*/) || [''])[0];
-  ok('🔴 課の色は表から引いている', /pitDivisionColor\(c\)/.test(divLine), divLine);
+  /* 🔴 課のバッジの色は表から。**車（国産／輸入）から作らない**（v1.92.0の決めごと）
+     ⚠ v1.104.0 で名前が badgeColor になり、**人のバッジも同じ色**を使うようになった
+        （課が空ならグレー＝ゆうた指定 2026-08-16）。 */
+  const divLine = (td.match(/const badgeColor = [\s\S]*?;\n/) || [''])[0];
+  ok('🔴 課の色は表から引いている', /pitDivisionColorOr\(c\)|pitDivisionColor\(c\)/.test(divLine), divLine);
   ok('🔴 課の色を車から作っていない', !/isImp/.test(divLine), divLine);
+  ok('🔴 人のバッジも車から塗っていない', !/isImp \? '#ec4899'/.test(td));
 
   /* 見本データでも当日ビューがふつうに描けるか */
   await p.evaluate(() => { if (window.pitSampleData) pitSampleData(); });

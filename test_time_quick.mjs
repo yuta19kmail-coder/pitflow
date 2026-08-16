@@ -14,18 +14,20 @@ import path from 'path';
 const dir = process.cwd();
 const read = f => fs.readFileSync(path.join(dir, 'js', f), 'utf8');
 
-const stateSrc = read('state.js');
+/* 🔴 v1.103.0 時間の物差しは **js/pit-share.js** へ移した（MHS も同じものを借りるため）。 */
+const stateSrc = read('pit-share.js');
 const cdSrc = read('card-detail.js');
 
-/* ---- state.js から時間まわりだけ切り出す ---- */
+/* ---- pit-share.js から時間まわりだけ切り出す ---- */
 {
   const a = stateSrc.indexOf('var PIT_TIME_ALL = [');   /* v1.60.0 表の名前が PIT_TIME_ALL（1本の表）に変わった */
-  const b = stateSrc.indexOf('/* v0.85.0 受付タイプの表示ラベル');
-  if (a < 0 || b < 0 || b < a) throw new Error('state.js から時間の定義を切り出せません（構成が変わった？）');
-  var TIME_CODE = stateSrc.slice(a, b);
+  const END = 'w.pitTimeMin = pitTimeMin;';
+  const b = stateSrc.indexOf(END);
+  if (a < 0 || b < 0 || b < a) throw new Error('pit-share.js から時間の定義を切り出せません（構成が変わった？）');
+  var TIME_CODE = stateSrc.slice(a, b + END.length);
 }
 const W = {};
-new Function('window', TIME_CODE)(W);
+new Function('w', TIME_CODE)(W);
 
 /* ---- card-detail.js から時刻の読み取りだけ切り出す ---- */
 {
@@ -105,8 +107,8 @@ eq('0900-1000',  NORM._normTime('0900-1000'), '09:00-10:00');
 eq('9:00〜10:00', NORM._normTime('9:00〜10:00'), '09:00-10:00');
 
 console.log('\n── ⑥ 各画面が共通の物差しを通しているか（配線チェック） ──');
-yes('state.js が pitTimeMin を公開している', /window\.pitTimeMin\s*=/.test(stateSrc));
-yes('card-detail.js のショートカットは state.js の定義から作っている',
+yes('pit-share.js が pitTimeMin を公開している', /w\.pitTimeMin\s*=/.test(stateSrc));
+yes('card-detail.js のショートカットは pit-share.js の定義から作っている',
     /const TIME_QUICK = \(window\.PIT_TIME_QUICK \|\| \[\]\)\.map/.test(cdSrc));
 yes('card-detail.js の一覧が pitTimeMin を使っている', /const toMin = function \(s\)\{ return window\.pitTimeMin/.test(cdSrc));
 [['today.js','当日ビュー'], ['reserve.js','予約ビュー'], ['return.js','返車ビュー'], ['mydash.js','マイダッシュ']]

@@ -262,7 +262,7 @@ console.log('\n── ⑩ ソースの見張り（写しを作っていないか
   const hv = fs.readFileSync('js/card-hover.js', 'utf8');
   const rp = fs.readFileSync('js/return-popup.js', 'utf8');
   const cd = fs.readFileSync('js/card-detail.js', 'utf8');
-  const st = fs.readFileSync('js/state.js', 'utf8');
+  const st = fs.readFileSync('js/pit-share.js', 'utf8');   /* 🔴 v1.103.0 時間の表は pit-share.js へ移した */
 
   ok('行き先の物差しは return-slot.js の1本', /function pitReturnPlace\(c\)\{/.test(rs.replace(/\s/g, '').slice(0, 0) + rs) || /function pitReturnPlace/.test(rs));
   ok('🔴 未定ビューは自前で条件を書かず pitReturnPlace を使っている',
@@ -274,7 +274,7 @@ console.log('\n── ⑩ ソースの見張り（写しを作っていないか
      /pitTimeGuideHtml/.test(cd) && /pitTimeGuideHtml/.test(rp) && /pitTimeGuideHtml/.test(hv)
      && (rs.match(/cf-time-quick/g) || []).length >= 1
      && !/cf-time-guide/.test(cd) && !/cf-time-guide/.test(rp) && !/cf-time-guide/.test(hv));
-  ok('🔴 時間の言葉の表は state.js の PIT_TIME_ALL 1本', /var PIT_TIME_ALL = \[/.test(st)
+  ok('🔴 時間の言葉の表は pit-share.js の PIT_TIME_ALL 1本', /var PIT_TIME_ALL = \[/.test(st)
      && /PIT_TIME_QUICK = PIT_TIME_ALL\.filter/.test(st) && /PIT_RETURN_TIME_QUICK = PIT_TIME_ALL\.filter/.test(st));
   ok('ホバーの時間欄が画面を描き直している（今回のバグの再発止め）',
      /function commitMove/.test(hv) && /rerenderReturn\(\)/.test(hv));

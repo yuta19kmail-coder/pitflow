@@ -133,7 +133,9 @@ console.log('\n── ⑦ 二度と崩れないように（配線チェック）
   ok('並びを center にしている', /view-actions\{ align-items:center/.test(css));
   ok('明るいテーマの橙の上書きがある', /\[data-theme\^="light"\] \.kb-lineadd\{/.test(css));
   const idx = fs.readFileSync('index.html', 'utf8');
-  ok('polish.css の ?v= が上がっている', /css\/polish\.css\?v=1[89]\d/.test(idx));
+  /* ⚠ ?v= は版を重ねるたびに増えるので、上限を作らない（v1.79.0 の 189 以降なら合格） */
+  ok('polish.css の ?v= が上がっている（189 以降）',
+     (((idx.match(/css\/polish\.css\?v=(\d+)/) || [])[1] | 0) >= 189));
   /* ⚠ 版は上がっていくので数字は固定しない。3か所がそろっているかだけ見る。 */
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
   const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';

@@ -22,15 +22,16 @@ function eq(label, got, want){
 }
 function yes(label, cond){ eq(label, !!cond, true); }
 
-/* ---- state.js から表示名の関数だけ切り出す ---- */
-const stateSrc = read('state.js');
+/* ---- pit-share.js から表示名の関数だけ切り出す ----
+   🔴 v1.103.0 名前の物差しは **js/pit-share.js** へ移した（MHS も同じものを借りるため）。 */
+const stateSrc = read('pit-share.js');
 {
   const i = stateSrc.indexOf('function pitSurname(name){');
-  const j = stateSrc.indexOf('/* v0.85.0 受付タイプの表示ラベル');
-  if (i < 0 || j < 0 || j < i) throw new Error('state.js から pitSurname / pitCustName を切り出せません（構成が変わった？）');
+  const j = stateSrc.indexOf('w.pitCustSurname = pitCustSurname;');
+  if (i < 0 || j < 0 || j < i) throw new Error('pit-share.js から pitSurname / pitCustName を切り出せません（構成が変わった？）');
   var NAME_FNS = stateSrc.slice(i, j);
 }
-const N = new Function('window', NAME_FNS + '\nreturn { pitSurname, pitCustName, pitCustSurname };')({});
+const N = new Function('w', NAME_FNS + '\nreturn { pitSurname, pitCustName, pitCustSurname };')({});
 
 console.log('\n■ 表示名＝漢字があれば漢字／無ければカナ');
 eq('漢字あり',              N.pitCustName({ customer:'小林 勇太', kana:'コバヤシ ユウタ' }), '小林 勇太');
