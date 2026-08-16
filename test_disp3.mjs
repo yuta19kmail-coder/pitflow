@@ -128,8 +128,11 @@ console.log('\n── 🎨 当日ビューの色と時間の配線 ──');
   ok('🔴 3段は左詰め（1行の時と頭がそろう）', /\.tr-time\.is-range\{[^}]*text-align:left/.test(css));
   ok('真ん中寄せが残っていない', !/\.tr-time\.is-range\{[^}]*text-align:center/.test(css));
   const ix = fs.readFileSync('index.html', 'utf8');
-  ok('views.css の ?v= が上がっている（45 以降）',
-     (((ix.match(/css\/views\.css\?v=(\d+)/) || [])[1] | 0) >= 45));
+  /* 🔴 CSSを直したら ?v= も必ず上げる。上げないと**ブラウザが古いCSSを使い続ける**
+     （2026-08-16 実害：左詰めに直したのに ?v= が 45 のままで、PitFlow だけ真ん中寄せのままだった。
+      MHS は index.html にCSSを書いているので、そちらだけ直って見えて原因が分かりにくかった）。 */
+  ok('views.css の ?v= が上がっている（46 以降）',
+     (((ix.match(/css\/views\.css\?v=(\d+)/) || [])[1] | 0) >= 46));
   ok('pit-share.js の ?v= が上がっている（2 以降）',
      (((ix.match(/js\/pit-share\.js\?v=(\d+)/) || [])[1] | 0) >= 2));
 }
@@ -169,7 +172,7 @@ const row = card => p.evaluate(c => {
     lines: t ? Array.from(t.querySelectorAll('.tt-l')).map(x=>x.textContent) : [],
     timeW: t ? t.scrollWidth : 0, boxW: t ? t.clientWidth : 0,
     timeH: t ? t.scrollHeight : 0, rowH: t ? (t.closest('.today-row')||{}).clientHeight : 0,
-    fs: cs ? cs.fontSize : ''
+    fs: cs ? cs.fontSize : '', align: cs ? cs.textAlign : ''
   };
 }, card);
 
@@ -199,6 +202,8 @@ console.log('\n── 🖥 実画面：時間帯が3段になり、はみ出さ�
   const r = await row({ reserveTime:'09:00-10:00' });
   ok('🔴 3つに分かれている', JSON.stringify(r.lines) === JSON.stringify(['09:00','〜','10:00']), r.lines);
   ok('🔴 is-range が付く', /is-range/.test(r.timeCls), r.timeCls);
+  /* 🔴 **本物の画面で**左詰めになっているか（CSSの字面だけ見ていると ?v= の上げ忘れに気づけない） */
+  ok('🔴 実画面で左詰めになっている（1行の時と頭がそろう）', r.align === 'left', r.align);
   ok('🔴 横にはみ出していない（右が隠れない）', r.timeW <= r.boxW + 1, { w:r.timeW, box:r.boxW });
   ok('🔴 行の高さからもはみ出していない', r.timeH <= r.rowH, { h:r.timeH, row:r.rowH });
   const r2 = await row({ reserveTime:'10:00' });
