@@ -124,6 +124,9 @@ console.log('\n── 🎨 当日ビューの色と時間の配線 ──');
   const css = fs.readFileSync('css/views.css', 'utf8');
   ok('3段用のCSSがある（.tr-time.is-range）', /\.tr-time\.is-range\{/.test(css));
   ok('3段は1行ずつ縦に積む', /\.tr-time\.is-range \.tt-l\{ display:block/.test(css));
+  /* 🔴 v1.104.0（ゆうた指定）**左詰め**＝1行の時（10:00）と頭がそろう。真ん中寄せにしない */
+  ok('🔴 3段は左詰め（1行の時と頭がそろう）', /\.tr-time\.is-range\{[^}]*text-align:left/.test(css));
+  ok('真ん中寄せが残っていない', !/\.tr-time\.is-range\{[^}]*text-align:center/.test(css));
   const ix = fs.readFileSync('index.html', 'utf8');
   ok('views.css の ?v= が上がっている（45 以降）',
      (((ix.match(/css\/views\.css\?v=(\d+)/) || [])[1] | 0) >= 45));
