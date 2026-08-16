@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><title>戻るの検証</title></head><body>
+<div class="view active" id="view-dashboard">ダッシュボード</div>
+<div class="view" id="view-today">当日</div>
+<div class="view" id="view-loaner">代車カレンダー</div>
+<div class="view" id="view-admin">管理（権限が要る）</div>
+<script>
+window.blocked = false;   // 代車カレンダーの「下書きがあります」を再現
+window.isAdmin = false;   // 権限を再現
+window.log = [];
+function showView(v){
+  var cur=(document.querySelector('.view.active')||{}).id||'';
+  cur=cur.replace('view-','');
+  if(cur==='loaner' && v!=='loaner' && window.blocked){ log.push('とめた:'+v); return; }   // 離れさせない
+  if(v==='admin' && !window.isAdmin){ v='dashboard'; log.push('権限なし→dashboard'); }     // 追い返す
+  document.querySelectorAll('.view').forEach(function(e){e.classList.remove('active');});
+  var t=document.getElementById('view-'+v); if(t)t.classList.add('active');
+}
+</script>
+<script src="js/coreflow-nav.js"></script>
+<script>CoreflowNav.wire({ fn:'showView', home:'dashboard' });</script>
+</body></html>
