@@ -44,7 +44,7 @@ const badForm = ledger.map(r => r.code).filter(c => !/^PF-\d{4}$/.test(c));
 ok('🔴 番号の形が PF-＋4桁でそろっている', badForm.length === 0, badForm);
 
 /* コードの中で実際に使われている番号 */
-const files = fs.readdirSync('js').filter(f => f.endsWith('.js') && f !== 'errcode-pit.js');
+const files = fs.readdirSync('js').filter(f => f.endsWith('.js') && f !== 'errcode-pit.js' && f !== 'coreflow-errcode.js');
 const used = new Map();
 /* ⚠ 説明書き（コメント）の中の例を数えない。落としてから探す。 */
 const noComment = t => t.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
@@ -89,45 +89,52 @@ p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net
 await p.context().grantPermissions(['clipboard-read', 'clipboard-write']);
 await p.addInitScript(() => { try { localStorage.setItem('pitflow_sample_authed', '1'); } catch (e) {} });
 await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1&nonews=1`);
-await p.waitForFunction('window.state && window.pitErrChip && window.pitToast && window.pitAlert', null, { timeout: 25000 });
+await p.waitForFunction('window.state && window.CFErr && window.pitToast && window.pitAlert', null, { timeout: 25000 });
 await p.evaluate(() => { if (window.pitSampleLogin) pitSampleLogin(); });
 await p.waitForTimeout(800);
 
-ok('🔴 台帳がアプリからも読める', await p.evaluate(() => window.pitErrAll().length) === ledger.length);
-ok('番号から中身を引ける', await p.evaluate(() => { const i = pitErrInfo('PF-4002'); return !!(i && i.what && i.where && i.how); }));
-ok('知らない番号は null', await p.evaluate(() => pitErrInfo('PF-9999') === null));
+ok('🔴 台帳が共通部品に登録できている', await p.evaluate(() => CFErr.all().length) === ledger.length);
+ok('番号から中身を引ける', await p.evaluate(() => { const i = CFErr.info('PF-4002'); return !!(i && i.what && i.where && i.how); }));
+ok('知らない番号は null', await p.evaluate(() => CFErr.info('PF-9999') === null));
 
 /* トースト */
 await p.evaluate(() => pitToast('やめました', 'PF-4002'));
 await p.waitForTimeout(300);
 const t = await p.evaluate(() => {
   const el = document.getElementById('pit-toast');
-  const c = el && el.querySelector('.pit-ec');
-  return { text: el ? el.textContent : '', chip: c ? c.textContent : null, pe: c ? getComputedStyle(c).pointerEvents : null };
+  const c = el && el.querySelector('.cf-ec');
+  return { text: el ? el.textContent : '', chip: c ? c.textContent : null, pe: c ? getComputedStyle(c).pointerEvents : null,
+           col: el ? getComputedStyle(el).flexDirection : null, align: c ? getComputedStyle(c).alignSelf : null };
 });
-ok('🔴 トーストの末尾に番号が出る', t.chip === 'PF-4002', t);
+ok('🔴 トーストに error：番号 が出る（B案）', t.chip === 'error：PF-4002', t);
+  ok('🔴 番号は2行目・右端（B案）', t.col === 'column' && t.align === 'flex-end', t);
 ok('🔴 番号だけは押せる（トースト本体は素通り）', t.pe === 'auto', t.pe);
 
-await p.click('#pit-toast .pit-ec');
+await p.click('#pit-toast .cf-ec');
 await p.waitForTimeout(300);
 ok('🔴 押すと番号をコピーする', await p.evaluate(() => navigator.clipboard.readText()) === 'PF-4002');
 ok('「コピーしました」と出る', await p.evaluate(() => {
-  const h = document.getElementById('pit-ec-hint'); return !!(h && h.classList.contains('show') && /PF-4002/.test(h.textContent)); }));
+  const h = document.getElementById('cf-ec-hint'); return !!(h && h.classList.contains('show') && /PF-4002/.test(h.textContent)); }));
 
 /* 番号なしのトーストには札を出さない */
 await p.evaluate(() => { document.getElementById('pit-toast').classList.remove('show'); pitToast('保存しました'); });
 await p.waitForTimeout(250);
-ok('番号を渡さない時は札を出さない', await p.evaluate(() => !document.querySelector('#pit-toast .pit-ec')));
+ok('番号を渡さない時は札を出さない', await p.evaluate(() => !document.querySelector('#pit-toast .cf-ec')));
 
 /* 窓（注意） */
 await p.evaluate(() => { pitAlert('保存できません。足りない項目があります', { code: 'PF-1002', detail: 'テスト' }); });
 await p.waitForTimeout(350);
 const d = await p.evaluate(() => {
-  const c = document.querySelector('#uid-card .pit-ec');
-  return { open: !!document.getElementById('uid-ov').classList.contains('open'), chip: c ? c.textContent : null };
+  const c = document.querySelector('#uid-card .cf-ec');
+  return { open: !!document.getElementById('uid-ov').classList.contains('open'), chip: c ? c.textContent : null,
+           inRow: !!(c && c.parentElement && c.parentElement.classList.contains('uid-b')),
+           first: !!(c && c.parentElement && c.parentElement.firstElementChild === c),
+           leftOfBtn: (function(){ const b = document.querySelector('#uid-card .uid-b button');
+             return !!(c && b && c.getBoundingClientRect().right < b.getBoundingClientRect().left); })() };
 });
-ok('🔴 窓の中にも番号が出る', d.open && d.chip === 'PF-1002', d);
-await p.click('#uid-card .pit-ec');
+ok('🔴 窓のボタン行に error：番号 が出る（A案）', d.open && d.chip === 'error：PF-1002', d);
+ok('🔴 窓の番号はボタン行の左端（A案）', d.inRow && d.first && d.leftOfBtn, d);
+await p.click('#uid-card .cf-ec');
 await p.waitForTimeout(300);
 ok('窓の番号も押すとコピーできる', await p.evaluate(() => navigator.clipboard.readText()) === 'PF-1002');
 await p.evaluate(() => UI.close());
@@ -136,7 +143,7 @@ await p.waitForTimeout(200);
 /* 番号を渡さない窓は、今までどおり何も出さない */
 await p.evaluate(() => { pitAlert('ふつうのお知らせ'); });
 await p.waitForTimeout(300);
-ok('番号なしの窓は今までどおり', await p.evaluate(() => !document.querySelector('#uid-card .pit-ec')));
+ok('番号なしの窓は今までどおり', await p.evaluate(() => !document.querySelector('#uid-card .cf-ec')));
 await p.evaluate(() => UI.close());
 
 ok('JSエラーが出ていない', errs.length === 0, errs.slice(0, 3));
