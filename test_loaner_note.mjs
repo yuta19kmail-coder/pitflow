@@ -113,19 +113,47 @@ t('🔴 焼き付いた文字を「自動ぶん」と答えられる',
    box.pitTodayNoteIsAuto({ needLoaner: true, loanerId: 'L5', todayNote: '代車：ハスラー' }) === true
    && box.pitTodayNoteIsAuto({ needLoaner: true, loanerId: 'L5', todayNote: '部品待ち' }) === false);
 
+/* ══════════════════════════════════════════════════════════════════════════
+   🏷 v1.113.0（2026-08-17 ゆうた指定）ナンバーの場所に「初回顧客」「初回車両」
+   　 初回＝ナンバーが入らないので、その場所が空欄だった。そこに札を出す。
+   🔴 **「まだ選んでいない」を初回だと決めつけない**（v1.88.0 の決めごと）。
+   ══════════════════════════════════════════════════════════════════════════ */
+console.log('\n── ①-3 ナンバーの場所（初回顧客・初回車両）v1.113.0 ──');
+const P = c => box.pitTodayPlate(c);
+t('🔴 初回にチェック → 初回顧客',
+   P({ repeat:'first', plate:'' }).text === '初回顧客', P({ repeat:'first', plate:'' }));
+t('🔴 リピーター＋ナンバー無し → 初回車両',
+   P({ repeat:'repeater', plate:'' }).text === '初回車両', P({ repeat:'repeater', plate:'' }));
+t('リピーター＋ナンバー有り → ナンバーそのまま',
+   P({ repeat:'repeater', plate:'野田 501 ぬ 4152' }).text === '野田 501 ぬ 4152');
+t('🔴 まだ選んでいない＋ナンバー無し → 何も出さない（初回と決めつけない）',
+   P({ repeat:'', plate:'' }).text === '' && P({ plate:'' }).text === '', P({ plate:'' }));
+t('まだ選んでいない＋ナンバー有り → ナンバーそのまま',
+   P({ plate:'習志野 480 う 77-88' }).text === '習志野 480 う 77-88');
+t('初回でナンバーが入っていても初回顧客を優先（ゆうた指定）',
+   P({ repeat:'first', plate:'品川 300 あ 12-34' }).text === '初回顧客');
+t('空白だけのナンバーは「無し」扱い',
+   P({ repeat:'repeater', plate:'　 ' }).text === '初回車両');
+t('見分けの種類を返す（色分けに使う）',
+   P({ repeat:'first', plate:'' }).kind === 'first'
+   && P({ repeat:'repeater', plate:'' }).kind === 'firstcar'
+   && P({ repeat:'repeater', plate:'あ' }).kind === 'plate');
+
 console.log('\n── ② 写しを作っていないか（ソースの見張り）──────────');
 const today = fs.readFileSync('js/today.js', 'utf8');
 t('🔴 当日ビューは pitTodayNoteText を通している', /pitTodayNoteText\(/.test(today));
 t('🔴 当日ビューで「代車：」を組み立てていない',   !/代車：'\s*\+|'代車：'/.test(today), (today.match(/代車：[^\n]*/g) || []).slice(0, 2));
 t('🔴 入力欄の初期値も画面に出ている文字',         /inp\.value = _todNoteText\(c\)/.test(today));
 t('🔴 保存する前に物差しを通している（焼き付き止め）', /pitTodayNoteToSave\(inp\.value\)/.test(today));
+t('🔴 当日ビューは pitTodayPlate を通している',        /pitTodayPlate\(c\)/.test(today));
+t('🔴 当日ビューで「初回顧客」を組み立てていない',      !/'初回顧客'|初回顧客</.test(today));
 t('🔴 素の inp.value.trim() で保存していない',        !/todayNote = inp\.value\.trim\(\)/.test(today));
 const loaner = fs.readFileSync('js/loaner.js', 'utf8');
 t('🔴 loaner.js に pitLoanerModel の写しが残っていない', !/window\.pitLoanerModel\s*=/.test(loaner));
 t('pit-share.js が pitLoanerModel の本家になっている',   /w\.pitLoanerModel\s*=/.test(src));
 const idx = fs.readFileSync('index.html', 'utf8');
-t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=6/.test(idx));
-t('today.js の ?v= が上がっている',        /today\.js\?v=40/.test(idx));
+t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=7/.test(idx));
+t('today.js の ?v= が上がっている',        /today\.js\?v=41/.test(idx));
 t('loaner.js の ?v= が上がっている',       /loaner\.js\?v=71/.test(idx));
 
 console.log('\n── ③ MHS 側が同じ物差しを通しているか ──────────────');
@@ -145,6 +173,9 @@ if (!fs.existsSync(mhsPath)) {
      ['pitLoanerModel','pitLoanerOf','pitLoanerNote','pitTodayNoteText','pitTodayNoteIsAuto',
       'pitTodayNoteAutoLike','pitTodayNoteToSave'].every(k => mhs.includes("'" + k + "'")));
   t('🔴 MHS も保存する前に物差しを通している（焼き付き止め）', /pitTodayNoteToSave\(inp\.value\)/.test(mhs));
+  t('🔴 MHS も pitTodayPlate を通している',            /_pl=window\.pitTodayPlate\?pitTodayPlate\(c\)/.test(mhs));
+  t('🔴 MHS で「初回顧客」を組み立てていない',          !/'初回顧客'/.test(mhs));
+  t('🔴 借りる一覧に pitTodayPlate が入っている',       mhs.includes("'pitTodayPlate'"));
   t('読めなかった時の予備がある（メモだけは今までどおり動く）', /function pitTodayNoteFallback/.test(mhs));
 }
 
