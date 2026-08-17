@@ -82,17 +82,50 @@ t('🔴 「出しているか」を聞く所は1本（pitLoanerOf）',
 t('🔴 pitLoanerNote も needLoaner を通っている（素通りの道を作っていない）',
    box.pitLoanerNote({ needLoaner: false, loanerId: 'L5' }) === '');
 
+/* ══════════════════════════════════════════════════════════════════════════
+   🔴🔴 v1.112.2（2026-08-17 ゆうた「まだ治ってないな」／具体例 X76098）
+   ── **自動で出していた文字が、カードに本当に書き込まれてしまっていた。**
+      押して、何も打たずに閉じるだけで確定する作りなので、「代車：ハスラー」が焼き付く。
+      こうなると表示の直し（v1.112.1）では消えない。
+   🔴 ① 保存する前に空にする ／ ② すでに焼き付いたものは自動ぶんとして読み替える
+   🔴 **この9件は二度と落とさないこと。**
+   ══════════════════════════════════════════════════════════════════════════ */
+console.log('\n── ①-2 焼き付いた文字を残さない（v1.112.2）──────────');
+t('🔴 代車なしなのに焼き付いた文字＝出さない',
+   RAW({ needLoaner: false, loanerId: 'L5', todayNote: '代車：ハスラー' }) === '',
+   RAW({ needLoaner: false, loanerId: 'L5', todayNote: '代車：ハスラー' }));
+t('🔴 代車の記録すら無いのに焼き付いた文字＝出さない',
+   RAW({ todayNote: '代車：ハスラー' }) === '', RAW({ todayNote: '代車：ハスラー' }));
+t('🔴 車種未登録の焼き付き（代車9）も読み替える',
+   RAW({ todayNote: '代車9' }) === '', RAW({ todayNote: '代車9' }));
+t('🔴 代車を入れ替えたら、焼き付いた古い名前ではなく今の代車を出す',
+   RAW({ needLoaner: true, loanerId: 'L2', todayNote: '代車：ハスラー' }) === '代車：タント',
+   RAW({ needLoaner: true, loanerId: 'L2', todayNote: '代車：ハスラー' }));
+t('🔴 人が後ろに足した文字は触らない（完全一致だけ読み替える）',
+   RAW({ needLoaner: false, loanerId: 'L5', todayNote: '代車：ハスラー・遅れるかも' }) === '代車：ハスラー・遅れるかも');
+t('🔴 ふつうのメモは触らない', RAW({ todayNote: '部品待ち' }) === '部品待ち');
+t('🔴 押して閉じただけでは保存しない（自動ぶんそのまま→空）',
+   box.pitTodayNoteToSave('代車：ハスラー') === '' && box.pitTodayNoteToSave('代車9') === '');
+t('🔴 人が書いた文字はちゃんと保存する',
+   box.pitTodayNoteToSave('代車：ハスラー・遅れるかも') === '代車：ハスラー・遅れるかも'
+   && box.pitTodayNoteToSave('部品待ち') === '部品待ち');
+t('🔴 焼き付いた文字を「自動ぶん」と答えられる',
+   box.pitTodayNoteIsAuto({ needLoaner: true, loanerId: 'L5', todayNote: '代車：ハスラー' }) === true
+   && box.pitTodayNoteIsAuto({ needLoaner: true, loanerId: 'L5', todayNote: '部品待ち' }) === false);
+
 console.log('\n── ② 写しを作っていないか（ソースの見張り）──────────');
 const today = fs.readFileSync('js/today.js', 'utf8');
 t('🔴 当日ビューは pitTodayNoteText を通している', /pitTodayNoteText\(/.test(today));
 t('🔴 当日ビューで「代車：」を組み立てていない',   !/代車：'\s*\+|'代車：'/.test(today), (today.match(/代車：[^\n]*/g) || []).slice(0, 2));
 t('🔴 入力欄の初期値も画面に出ている文字',         /inp\.value = _todNoteText\(c\)/.test(today));
+t('🔴 保存する前に物差しを通している（焼き付き止め）', /pitTodayNoteToSave\(inp\.value\)/.test(today));
+t('🔴 素の inp.value.trim() で保存していない',        !/todayNote = inp\.value\.trim\(\)/.test(today));
 const loaner = fs.readFileSync('js/loaner.js', 'utf8');
 t('🔴 loaner.js に pitLoanerModel の写しが残っていない', !/window\.pitLoanerModel\s*=/.test(loaner));
 t('pit-share.js が pitLoanerModel の本家になっている',   /w\.pitLoanerModel\s*=/.test(src));
 const idx = fs.readFileSync('index.html', 'utf8');
-t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=5/.test(idx));
-t('today.js の ?v= が上がっている',        /today\.js\?v=39/.test(idx));
+t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=6/.test(idx));
+t('today.js の ?v= が上がっている',        /today\.js\?v=40/.test(idx));
 t('loaner.js の ?v= が上がっている',       /loaner\.js\?v=71/.test(idx));
 
 console.log('\n── ③ MHS 側が同じ物差しを通しているか ──────────────');
@@ -108,8 +141,10 @@ if (!fs.existsSync(mhsPath)) {
   t('🔴 MHS が差し込み口から代車マスタを渡している',   /loaners:\s*function\(\)\{\s*return PIT_LOANERS/.test(mhs));
   t('🔴 MHS 側も needLoaner の判断を自前で書いていない（物差し任せ）',
      !/needLoaner/.test(mhs.split('function pitNoteSpan')[0].split('function pitTodayNoteFallback')[1] || ''));
-  t('🔴 借りる一覧に新しい5つが入っている（古い PitFlow を掴んだら写しに戻れる）',
-     ['pitLoanerModel', 'pitLoanerOf', 'pitLoanerNote', 'pitTodayNoteText', 'pitTodayNoteIsAuto'].every(k => mhs.includes("'" + k + "'")));
+  t('🔴 借りる一覧に新しい7つが入っている（古い PitFlow を掴んだら写しに戻れる）',
+     ['pitLoanerModel','pitLoanerOf','pitLoanerNote','pitTodayNoteText','pitTodayNoteIsAuto',
+      'pitTodayNoteAutoLike','pitTodayNoteToSave'].every(k => mhs.includes("'" + k + "'")));
+  t('🔴 MHS も保存する前に物差しを通している（焼き付き止め）', /pitTodayNoteToSave\(inp\.value\)/.test(mhs));
   t('読めなかった時の予備がある（メモだけは今までどおり動く）', /function pitTodayNoteFallback/.test(mhs));
 }
 
