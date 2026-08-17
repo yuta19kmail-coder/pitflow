@@ -65,5 +65,32 @@ for (let i=0;i<10;i++) await p.evaluate(()=>showView('today'));   // 背後の�
 await p.goBack(); await p.waitForTimeout(120);
 t('10回描き直しても、戻る1回でダッシュボードへ', (await view())==='dashboard', await view());
 
+
+console.log('\n── ⑧ 🔴 再読み込みしても、見ていた画面のまま戻る（自動更新のため・2026-08-17）──');
+//   自動更新は location.reload() で入れ替える。その時いた画面に戻れないと
+//   「見ていたものが消えた」になる。**住所に画面名が入っているので戻れる**ことを実測する。
+await p.goto('about:blank');
+await p.goto(`${BASE}/_test_nav.html`);
+await p.evaluate(()=>showView('dashboard'));
+await p.evaluate(()=>showView('today'));
+await p.evaluate(()=>showView('loaner'));
+t('いま代車カレンダーにいる', (await view())==='loaner', await view());
+t('住所にも書いてある',       (await hash())==='#/loaner', await hash());
+await p.reload();                                   // ← 自動更新と同じこと
+await p.evaluate(()=>showView('dashboard'));        // アプリは起動時に既定の画面を開く
+t('🔴 再読み込み後も代車カレンダーのまま', (await view())==='loaner', await view());
+t('🔴 住所もそのまま',                     (await hash())==='#/loaner', await hash());
+await p.goBack(); await p.waitForTimeout(150);
+t('再読み込みのあとも「戻る」が効く（当日へ）', (await view())==='today', await view());
+
+console.log('\n── ⑨ 住所に画面が無い時は、既定の画面のまま（壊れない）──');
+await p.goto('about:blank');
+await p.goto(`${BASE}/_test_nav.html`);
+await p.evaluate(()=>showView('dashboard'));
+await p.reload();
+await p.evaluate(()=>showView('dashboard'));
+t('既定の画面が出る', (await view())==='dashboard', await view());
+t('住所も既定の画面', (await hash())==='#/dashboard', await hash());
+
 await b.close();
 console.log(`\n${ok} OK / ${ng} NG`); process.exit(ng?1:0);
