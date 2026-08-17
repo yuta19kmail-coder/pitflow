@@ -40,7 +40,8 @@ const box = { console };
 /* pit-share.js は (function(w){…})(window) の形。node では window を作って渡す */
 new Function('window', 'console', src)(box, console);
 box.PitShare.use({ loaners: () => LOANERS });
-const N = c => box.pitTodayNoteText(c);
+/* ⚠ 代車を出している車＝needLoaner が true。**id だけでは足りない**（下の②で見張る） */
+const N = c => box.pitTodayNoteText(Object.assign({ needLoaner: true }, c));
 
 t('空っぽなら代車名が出る',                 N({ loanerId: 'L5', todayNote: '' }) === '代車：ハスラー', N({ loanerId: 'L5', todayNote: '' }));
 t('書いてあればそれを出す',                 N({ loanerId: 'L5', todayNote: '部品待ち' }) === '部品待ち');
@@ -52,12 +53,34 @@ t('代車がまだ決まっていなければ出さない',   N({ loanerId: '', 
 t('消えた代車を指していても出さない',       N({ loanerId: 'Lxx', todayNote: '' }) === '');
 t('🔴 車種が未登録でも「代車：代車9」にしない', N({ loanerId: 'L9', todayNote: '' }) === '代車9', N({ loanerId: 'L9', todayNote: '' }));
 t('🔴 番号は付けない（ハスラー（5）にしない）', !/[（(]\s*5\s*[）)]/.test(N({ loanerId: 'L5', todayNote: '' })), N({ loanerId: 'L5', todayNote: '' }));
-t('「自動で出しているぶん」を答えられる',    box.pitTodayNoteIsAuto({ loanerId: 'L5', todayNote: '' }) === true
-                                          && box.pitTodayNoteIsAuto({ loanerId: 'L5', todayNote: 'あ' }) === false);
+t('「自動で出しているぶん」を答えられる',    box.pitTodayNoteIsAuto({ needLoaner:true, loanerId: 'L5', todayNote: '' }) === true
+                                          && box.pitTodayNoteIsAuto({ needLoaner:true, loanerId: 'L5', todayNote: 'あ' }) === false);
 t('代車マスタを渡さなければ何も出さない（借りる側が渡し忘れても壊れない）', (() => {
   const b2 = { console }; new Function('window', 'console', src)(b2, console);
-  return b2.pitTodayNoteText({ loanerId: 'L5', todayNote: '' }) === '';
+  return b2.pitTodayNoteText({ needLoaner: true, loanerId: 'L5', todayNote: '' }) === '';
 })());
+
+/* ══════════════════════════════════════════════════════════════════════════
+   🔴🔴 v1.112.1（2026-08-17 ゆうた報告）**「代車だしてない人に代車のメモが入ってる」**
+   ── 原因＝`loanerId` だけを見ていた。
+      「代車：必要 → 不要」に戻しても **`loanerId` は消えない**（貸出の取り消しは代車カレンダー側）。
+      アプリ全体は `needLoaner` で判断しているのに、ここだけ見ていなかった。
+   🔴 **この5件は二度と落とさないこと。落ちたら同じ苦情が現場から出る。**
+   ══════════════════════════════════════════════════════════════════════════ */
+const RAW = c => box.pitTodayNoteText(c);
+t('🔴 代車を出していない車には出さない（不要に戻したが id が残っている）',
+   RAW({ needLoaner: false, loanerId: 'L5', todayNote: '' }) === '',
+   RAW({ needLoaner: false, loanerId: 'L5', todayNote: '' }));
+t('🔴 needLoaner を持っていない古いカードにも出さない',
+   RAW({ loanerId: 'L5', todayNote: '' }) === '', RAW({ loanerId: 'L5', todayNote: '' }));
+t('🔴 出していない車でも、人が書いたメモは今までどおり出る',
+   RAW({ needLoaner: false, loanerId: 'L5', todayNote: '部品待ち' }) === '部品待ち');
+t('🔴 「出しているか」を聞く所は1本（pitLoanerOf）',
+   typeof box.pitLoanerOf === 'function'
+   && box.pitLoanerOf({ needLoaner: true,  loanerId: 'L5' }) === 'ハスラー'
+   && box.pitLoanerOf({ needLoaner: false, loanerId: 'L5' }) === '');
+t('🔴 pitLoanerNote も needLoaner を通っている（素通りの道を作っていない）',
+   box.pitLoanerNote({ needLoaner: false, loanerId: 'L5' }) === '');
 
 console.log('\n── ② 写しを作っていないか（ソースの見張り）──────────');
 const today = fs.readFileSync('js/today.js', 'utf8');
@@ -68,7 +91,7 @@ const loaner = fs.readFileSync('js/loaner.js', 'utf8');
 t('🔴 loaner.js に pitLoanerModel の写しが残っていない', !/window\.pitLoanerModel\s*=/.test(loaner));
 t('pit-share.js が pitLoanerModel の本家になっている',   /w\.pitLoanerModel\s*=/.test(src));
 const idx = fs.readFileSync('index.html', 'utf8');
-t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=4/.test(idx));
+t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=5/.test(idx));
 t('today.js の ?v= が上がっている',        /today\.js\?v=39/.test(idx));
 t('loaner.js の ?v= が上がっている',       /loaner\.js\?v=71/.test(idx));
 
@@ -83,8 +106,10 @@ if (!fs.existsSync(mhsPath)) {
   t('🔴 MHS の入力欄の初期値も画面に出ている文字',     /inp\.value=pitNoteText\(c\)/.test(mhs));
   t('🔴 MHS が代車マスタ（pitLoaners）を購読している', /collection\('pitLoaners'\)/.test(mhs));
   t('🔴 MHS が差し込み口から代車マスタを渡している',   /loaners:\s*function\(\)\{\s*return PIT_LOANERS/.test(mhs));
-  t('🔴 借りる一覧に新しい4つが入っている（古い PitFlow を掴んだら写しに戻れる）',
-     ['pitLoanerModel', 'pitLoanerNote', 'pitTodayNoteText', 'pitTodayNoteIsAuto'].every(k => mhs.includes("'" + k + "'")));
+  t('🔴 MHS 側も needLoaner の判断を自前で書いていない（物差し任せ）',
+     !/needLoaner/.test(mhs.split('function pitNoteSpan')[0].split('function pitTodayNoteFallback')[1] || ''));
+  t('🔴 借りる一覧に新しい5つが入っている（古い PitFlow を掴んだら写しに戻れる）',
+     ['pitLoanerModel', 'pitLoanerOf', 'pitLoanerNote', 'pitTodayNoteText', 'pitTodayNoteIsAuto'].every(k => mhs.includes("'" + k + "'")));
   t('読めなかった時の予備がある（メモだけは今までどおり動く）', /function pitTodayNoteFallback/.test(mhs));
 }
 
