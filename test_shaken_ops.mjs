@@ -335,6 +335,38 @@ ok('🔴 ブラウザ標準のドラッグの受け口を全部消した', clean
 ok('画面にも ondragover / ondrop が残っていない',  clean.attr === 0, clean);
 ok('draggable="true" のものが無い',                clean.draggable === 0, clean);
 
+/* ===== ⑫ v1.126.0 「済」のスタンプが1枚目でも切れない
+       （ゆうた「済みマークが決定のラベルの下に来ちゃってる。1台目に設置したカード」） ===== */
+const stamp = await p.evaluate(async () => {
+  const mk = (id, n) => ({ id, boardId:'default', status:'check', workTypes:['shaken'], customer:n, car:'車',
+    plate:'', coverCall:{done:false,at:'',staff:''}, inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[] } });
+  state.cards = [mk('S1','いち'), mk('S2','にい')];
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 250));
+  const iso = document.querySelector('.shk-decell[data-iso]').getAttribute('data-iso');
+  state.cards.forEach(c => { const s = c.inspSchedule;
+    s.decided = iso; s.decidedSlot = 'am'; s.result = 'done'; s.resultDate = iso; s.resultSlot = 'am'; });
+  renderShaken();
+  await new Promise(r => setTimeout(r, 250));
+  const chip = document.querySelector('.shk-decell .shk-chip.shk-done');
+  const sc = chip.closest('.shk-sc'), row = chip.closest('.shk-decrow');
+  const rc = chip.getBoundingClientRect(), rs = sc.getBoundingClientRect();
+  const after = getComputedStyle(chip, '::after');
+  return {
+    スタンプが出る: after.content.indexOf('済') >= 0,
+    はみ出す量: Math.round(rs.top - (rc.top - 7)),        /* 7px 上へ出る作り */
+    マスが切らない: getComputedStyle(sc).overflow === 'visible',
+    行が上に重なる: getComputedStyle(row).zIndex === '1' && getComputedStyle(row).position === 'relative',
+    にまい目もある: document.querySelectorAll('.shk-decell .shk-chip.shk-done').length === 2
+  };
+});
+console.log('\n■ 「済」のスタンプ（v1.126.0）');
+ok('済のスタンプが出る',                          stamp.スタンプが出る, stamp);
+ok('1枚目はマスの上にはみ出す（作りどおり）',      stamp.はみ出す量 > 0, stamp);
+ok('🔴 決定の行ははみ出しを切らない',              stamp.マスが切らない, stamp);
+ok('🔴 決定の行が「決定」の帯より上に重なる',      stamp.行が上に重なる, stamp);
+ok('2枚目のスタンプも今までどおり出る',            stamp.にまい目もある, stamp);
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
 
