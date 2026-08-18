@@ -162,6 +162,65 @@ const 古い = re.表示.split('　').find(t => /7\/1/.test(t)) || '';
 ok('🔴 古い記録は担当だけ（無いものを埋めない）',  /・佐藤$/.test(古い.trim()), 古い);
 ok('再検にしても陸運局とRは残す（入れ直させない）', !!re.残った.office && re.残った.round === 4, re.残った);
 
+/* ===== ⑦ v1.127.0 カード詳細はフルネーム／それ以外は通称＆苗字 ===== */
+const namae = await p.evaluate(async () => {
+  /* 名簿を差し替えて「本名・呼び名・姓」がある人を作る */
+  const real = { id:'m1', name:'ゆうた', realName:'小林 雄太', dispName:'ゆうた', lastName:'小林', aliases:['小林 雄太','ゆうた'] };
+  const noNick = { id:'m2', name:'山田 太郎', realName:'山田 太郎', dispName:'', lastName:'山田', aliases:['山田 太郎'] };
+  const prev = window.pitStaffAny;
+  window.pitStaffAny = (n) => {
+    const k = String(n||'').replace(/\s/g,'');
+    if (['小林雄太','ゆうた'].includes(k)) return real;
+    if (['山田太郎','山田'].includes(k)) return noNick;
+    return null;
+  };
+  const out = {
+    フル_呼び名あり: pitStaffFull('ゆうた'),
+    通称_呼び名あり: pitStaffCall('ゆうた'),
+    フル_呼び名なし: pitStaffFull('山田 太郎'),
+    通称_呼び名なし: pitStaffCall('山田 太郎'),
+    フル_名簿にない: pitStaffFull('外部 次郎'),
+    通称_名簿にない: pitStaffCall('外部 次郎'),
+    通称_自社:       pitStaffCall('小林モータース'),
+    紙も同じ物差し:  (window.pitStaffPrintName ? pitStaffPrintName('ゆうた') : '')
+  };
+  /* 済のカードをカード詳細で開く＝フルネームで出る */
+  state.cards = [{ id:'N1', boardId:'default', status:'check', workTypes:['shaken'],
+    customer:'名前', car:'車', plate:'', coverCall:{done:false,at:'',staff:''},
+    inspSchedule:{ mode:'manual', slots:{}, cutBefore:'',
+      history:[{date:'2026-07-01',slot:'am',result:'recheck',staff:'ゆうた'}],
+      result:'done', resultDate:'2026-08-18', resultSlot:'am', resultStaff:'ゆうた' } }];
+  showView('today'); try{ closeDetail(); }catch(e){}
+  openDetail('N1');
+  await new Promise(r => setTimeout(r, 600));
+  out.カード詳細 = (document.querySelector('.cv-shdone-main')||{}).textContent || '';
+  out.再検の行 = (document.querySelector('.cv-shrc')||{}).textContent || '';
+  /* 車検予定の画面＝通称＆苗字 */
+  try{ closeDetail(); }catch(e){}
+  await new Promise(r => setTimeout(r, 300));
+  state.cards[0].inspSchedule.result = ''; state.cards[0].inspSchedule.resultDate = '';
+  state.cards[0].inspSchedule.decided = '2026-08-18'; state.cards[0].inspSchedule.decidedSlot = 'am';
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 400));
+  const chip = document.querySelector('.shk-decell .shk-chip[data-card-id="N1"]');
+  out.車検予定のチップ = chip ? (chip.querySelector('.shk-mt.st')||{}).textContent || '' : '(チップなし)';
+  out.物差しの戻り = (pitShakenOnDate(state.cards, '2026-08-18')[0]||{}).staff || '';
+  window.pitStaffAny = prev;
+  return out;
+});
+console.log('\n■ 担当者の名前の出し方（v1.127.0）');
+ok('🔴 フルネーム＝本名が出る',                    namae.フル_呼び名あり === '小林 雄太', namae);
+ok('🔴 通称＆苗字＝呼び名があれば呼び名',          namae.通称_呼び名あり === 'ゆうた', namae);
+ok('呼び名が無ければ姓',                          namae.通称_呼び名なし === '山田', namae);
+ok('名簿にいない人はフルはそのまま',              namae.フル_名簿にない === '外部 次郎', namae);
+ok('名簿にいない人の通称＝苗字',                  namae.通称_名簿にない === '外部', namae);
+ok('自社は「コバモ」',                            namae.通称_自社 === 'コバモ', namae);
+ok('紙（表紙印刷）も同じ物差しを通る',            namae.紙も同じ物差し === 'ゆうた', namae);
+ok('🔴 カード詳細はフルネーム',                    /小林 雄太/.test(namae.カード詳細) && !/：ゆうた/.test(namae.カード詳細), namae.カード詳細);
+ok('🔴 再検の履歴もフルネーム',                    /小林 雄太/.test(namae.再検の行), namae.再検の行);
+ok('🔴 車検予定のチップは通称＆苗字',              namae.車検予定のチップ === 'ゆうた', namae);
+ok('🔴 MHS・LINEが使う物差しも通称＆苗字',         namae.物差しの戻り === 'ゆうた', namae);
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
 
