@@ -135,9 +135,13 @@ ok('陸運局が id で保存される',                    saved.保存.office 
 ok('陸運局の名前も控えとして残す',                saved.保存.officeName === saved.入れた.offName, saved);
 ok('R が数字で保存される',                        saved.保存.round === 3, saved);
 ok('窓が閉じる',                                  saved.窓が閉じた, saved);
+/* 🔴 v1.129.0 チップの陸運局は**地名だけ**（野田・習志野）。正式名はカード詳細とホバー。 */
+const 地名 = await p.evaluate((n) => pitLocShort(n), saved.入れた.offName);
 ok('決定チップの下に3つとも出る',
    saved.拡張 && saved.拡張.length === 3 && saved.拡張.includes(saved.入れた.staff)
-   && saved.拡張.includes(saved.入れた.offName) && saved.拡張.includes('3R'), saved.拡張);
+   && saved.拡張.includes(地名) && saved.拡張.includes('3R'), { 拡張: saved.拡張, 地名 });
+ok('🔴 チップの陸運局は地名だけ（正式名を出さない）',
+   saved.拡張.includes(地名) && !saved.拡張.includes(saved.入れた.offName), { 拡張: saved.拡張, 地名 });
 ok('フローに1行残る',                             /回送/.test(saved.フロー) && /3R/.test(saved.フロー), saved.フロー);
 
 /* ===== ④ MHS・LINE と同じ物差しから引ける ===== */
@@ -151,8 +155,11 @@ const share = await p.evaluate(() => {
 console.log('\n■ 物差しは1本（MHS・前日LINEの画像も同じ答えになる）');
 ok('その日の車検予定に担当が乗る',                !!share.staff, share);
 ok('その日の車検予定に陸運局が乗る',              !!share.office, share);
+ok('🔴 物差しが配るのは地名だけ（MHS・LINEも狭い枠）',
+   share.office === (await p.evaluate((n) => pitLocShort(n), share.byFn.office)), share);
 ok('その日の車検予定にRが乗る',                   share.round === 3, share);
-ok('直接引いても同じ答え',                        share.staff === share.byFn.staff && share.office === share.byFn.office, share);
+ok('直接引いても同じ答え（担当）',                 share.staff === share.byFn.staff, share);
+ok('正式名は pitShakenOffice で引ける',           /自動車検査登録事務所|運輸支局/.test(share.byFn.office), share);
 
 /* ===== ⑤ 空なら「未定」の印（ゆうた確定） ===== */
 const tbd = await p.evaluate(async () => {

@@ -367,6 +367,56 @@ ok('🔴 決定の行ははみ出しを切らない',              stamp.マス�
 ok('🔴 決定の行が「決定」の帯より上に重なる',      stamp.行が上に重なる, stamp);
 ok('2枚目のスタンプも今までどおり出る',            stamp.にまい目もある, stamp);
 
+/* ===== ⑬ v1.128.0 車検予定のホバーだけ「車検の詳細」を出す ===== */
+const hover = await p.evaluate(async () => {
+  state.cards = [{ id:'H1', boardId:'default', status:'check', workTypes:['shaken'], customer:'田中', car:'ハスラー',
+    plate:'野田 500 あ 12-34', reserveDate:'2026-08-17', coverCall:{done:false,at:'',staff:''},
+    inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[],
+      decided:'2026-08-18', decidedSlot:'am', resultStaff:'山田',
+      office:'sample_rik_noda', officeName:'野田自動車検査登録事務所', round:2 } }];
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 400));
+  const read = () => {
+    const el = document.querySelector('#pit-hovercard');
+    const sec = el ? el.querySelector('.ph-sec-shk') : null;
+    const stats = el ? el.querySelector('.ph-stats') : null;
+    return { ある: !!sec,
+      見出し: sec ? (sec.querySelector('.ph-sec-lb')||{}).textContent.trim() : '',
+      行: sec ? Array.from(sec.querySelectorAll('.ph-shk')).map(e => e.textContent.replace(/\s+/g,' ').trim()) : [],
+      基本情報の下: !!(sec && stats && (stats.compareDocumentPosition(sec) & Node.DOCUMENT_POSITION_FOLLOWING)) };
+  };
+  /* ホバーの中身は pitHoverShow（無ければマウス移動で出す）で組み立てられる */
+  const chip = document.querySelector('.shk-decell .shk-chip[data-card-id="H1"]');
+  const r = chip.getBoundingClientRect();
+  chip.dispatchEvent(new MouseEvent('mouseover', { clientX:r.x+8, clientY:r.y+8, bubbles:true }));
+  chip.dispatchEvent(new MouseEvent('mousemove', { clientX:r.x+8, clientY:r.y+8, bubbles:true }));
+  await new Promise(res => setTimeout(res, 900));
+  const 車検予定 = read();
+  /* 未定のときは「未定」と出る */
+  const s = state.cards[0].inspSchedule; s.resultStaff=''; s.office=''; s.officeName=''; s.round=0;
+  /* ⚠ 同じカードに乗せ直しても中身は作り直されない。**一度離れてから**乗せる（人と同じ動き） */
+  chip.dispatchEvent(new MouseEvent('mouseout', { bubbles:true, relatedTarget: document.body }));
+  document.body.dispatchEvent(new MouseEvent('mousemove', { clientX:5, clientY:5, bubbles:true }));
+  await new Promise(res => setTimeout(res, 600));
+  renderShaken();
+  await new Promise(res => setTimeout(res, 250));
+  const chip2 = document.querySelector('.shk-decell .shk-chip[data-card-id="H1"]');
+  const r2 = chip2.getBoundingClientRect();
+  chip2.dispatchEvent(new MouseEvent('mouseover', { clientX:r2.x+8, clientY:r2.y+8, bubbles:true }));
+  chip2.dispatchEvent(new MouseEvent('mousemove', { clientX:r2.x+8, clientY:r2.y+8, bubbles:true }));
+  await new Promise(res => setTimeout(res, 900));
+  const 未定のとき = read();
+  return { 車検予定, 未定のとき };
+});
+console.log('\n■ 車検予定のホバーの「車検の詳細」（v1.128.0）');
+ok('ホバーに「車検の詳細」が出る',                hover.車検予定.ある && hover.車検予定.見出し === '車検の詳細', hover.車検予定);
+ok('🔴 基本情報（3つのタイル）の下にある',        hover.車検予定.基本情報の下, hover.車検予定);
+ok('担当・陸運局・R の3行',                       hover.車検予定.行.length === 3, hover.車検予定.行);
+ok('担当が出る',                                  /担当（回送）山田/.test(hover.車検予定.行[0]||''), hover.車検予定.行);
+ok('陸運局が出る',                                /野田自動車検査登録事務所/.test(hover.車検予定.行[1]||''), hover.車検予定.行);
+ok('Rが出る',                                     /2R/.test(hover.車検予定.行[2]||''), hover.車検予定.行);
+ok('入っていなければ「未定」と出る',              (hover.未定のとき.行||[]).filter(t => /未定/.test(t)).length === 3, hover.未定のとき.行);
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
 

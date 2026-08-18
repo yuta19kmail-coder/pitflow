@@ -204,6 +204,9 @@ const namae = await p.evaluate(async () => {
   await new Promise(r => setTimeout(r, 400));
   const chip = document.querySelector('.shk-decell .shk-chip[data-card-id="N1"]');
   out.車検予定のチップ = chip ? (chip.querySelector('.shk-mt.st')||{}).textContent || '' : '(チップなし)';
+  /* 🔴 v1.129.0 陸運局＝広い画面は正式名／狭い枠は地名だけ */
+  out.地名 = { 野田: pitLocShort('野田自動車検査登録事務所'), 習志野: pitLocShort('習志野自動車検査登録事務所'),
+               千葉: pitLocShort('千葉運輸支局'), 変な名前: pitLocShort('なにか変な名前') };
   out.物差しの戻り = (pitShakenOnDate(state.cards, '2026-08-18')[0]||{}).staff || '';
   window.pitStaffAny = prev;
   return out;
@@ -220,6 +223,24 @@ ok('🔴 カード詳細はフルネーム',                    /小林 雄太/.
 ok('🔴 再検の履歴もフルネーム',                    /小林 雄太/.test(namae.再検の行), namae.再検の行);
 ok('🔴 車検予定のチップは通称＆苗字',              namae.車検予定のチップ === 'ゆうた', namae);
 ok('🔴 MHS・LINEが使う物差しも通称＆苗字',         namae.物差しの戻り === 'ゆうた', namae);
+console.log('\n■ 陸運局の省略（v1.129.0）');
+ok('🔴 野田自動車検査登録事務所 → 野田',           namae.地名.野田 === '野田', namae.地名);
+ok('🔴 習志野自動車検査登録事務所 → 習志野',       namae.地名.習志野 === '習志野', namae.地名);
+ok('千葉運輸支局 → 千葉',                          namae.地名.千葉 === '千葉', namae.地名);
+ok('知らない書き方はそのまま（空にしない）',      namae.地名.変な名前 === 'なにか変な名前', namae.地名);
+/* カード詳細の「済」まとめは**正式名のまま**（広い画面） */
+const офис = await p.evaluate(async () => {
+  state.cards = [{ id:'O1', boardId:'default', status:'check', workTypes:['shaken'], customer:'正式', car:'車',
+    plate:'', coverCall:{done:false,at:'',staff:''},
+    inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[],
+      result:'done', resultDate:'2026-08-18', resultSlot:'am', resultStaff:'山田',
+      office:'sample_rik_noda', officeName:'野田自動車検査登録事務所', round:2 } }];
+  showView('today'); try{ closeDetail(); }catch(e){}
+  openDetail('O1');
+  await new Promise(r => setTimeout(r, 600));
+  return (document.querySelector('.cv-shwhere')||{}).textContent || '';
+});
+ok('🔴 カード詳細の陸運局は正式名のまま',          /野田自動車検査登録事務所/.test(офис), офис);
 
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
