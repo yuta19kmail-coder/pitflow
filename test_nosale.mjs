@@ -410,7 +410,7 @@ console.log('\n── ↩ 実績を返車前に戻す（v1.138.0・案B） ─�
                    paymentSeparate: true, paymentDate: '2026-08-20' });
   await setAdmin(true);
   const r = await p.evaluate(() => {
-    window.cvBackToDelivery();
+    window.cvUnarchiveToDeliveryGo();
     const c = state.cards.find(x => x.id === 'cNS');
     return { st: c.status, rs: c.returnStage, done: c.completedAt || '',
              amt: c.amountFinal, rd: c.returnDate, rdf: c.returnDateFinal,
@@ -435,7 +435,7 @@ console.log('\n── ↩ 実績を返車前に戻す（v1.138.0・案B） ─�
                    returnDateFinal:'2026-08-10', amountFinal: 70000 });
   await setAdmin(true);
   const r = await p.evaluate(() => {
-    window.cvBackToDelivery();
+    window.cvUnarchiveToDeliveryGo();
     if (window.pitAutoOverdue) pitAutoOverdue();
     const c = state.cards.find(x => x.id === 'cNS');
     return { place: window.pitReturnPlace ? pitReturnPlace(c) : null, amt: c.amountFinal, rs: c.returnStage };
@@ -453,7 +453,7 @@ console.log('\n── ↩ 実績を返車前に戻す（v1.138.0・案B） ─�
   ok('🔴 管理者でない：🔒 管理のみ が付く', /アーカイブから戻す/.test(m) && /管理のみ/.test(m), m);
   ok('🔴 押す先が cvDenyRestore', /cvDenyRestore/.test(m), m);
   const r2 = await p.evaluate(() => {
-    window.cvBackToDelivery();
+    window.cvUnarchiveToDeliveryGo();
     const c = state.cards.find(x => x.id === 'cNS');
     return { st: c.status, done: c.completedAt || '' };
   });
@@ -476,10 +476,154 @@ console.log('\n── ↩ 実績を返車前に戻す（v1.138.0・案B） ─�
 {
   /* 戻す道が増えすぎていないか＝3本（予約へ／タスクボードへ／返車前へ） */
   const cv = fs.readFileSync('js/card-view.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  const n = (cv.match(/window\.cvBackTo\w+\s*=/g) || []).length;
-  ok('🔴 「戻す」は3本だけ（予約へ／タスクボードへ／返車前へ）', n === 3, (cv.match(/window\.cvBackTo\w+\s*=/g) || []));
+  /* 🔴 戻す道の数を見張る。名前で2family に分けてある＝
+     ・`cvBackTo*`      … **アーカイブ前**の戻し（予約へ／タスクボードへ）
+     ・`cvUnarchiveTo*` … **アーカイブから**の戻し（タスクボードへ／返車前へ。実行は Go 付き）
+     ⚠ 未入庫・予約キャンセルは undetermined.js の `pitUndRestore` を借りる（写しを作らない）。 */
+  const before = (cv.match(/window\.cvBackTo\w+\s*=/g) || []);
+  const unarch = (cv.match(/window\.cvUnarchiveTo\w+\s*=/g) || []);
+  ok('🔴 アーカイブ前の戻しは2本（予約へ／タスクボードへ）', before.length === 2, before);
+  ok('🔴 アーカイブからの戻しは4つの窓口（聞く2＋実行2）', unarch.length === 4, unarch);
   const ar = fs.readFileSync('js/archive-pit.js', 'utf8');
   ok('🔴 実績のアーカイブ判定も archive-pit.js の1本', /status === 'returned'/.test(ar), '');
+}
+
+/* ===================================================================
+   📦 v1.139.0（ゆうた確定・2026-08-18）残り4つ（⑤⑥⑦⑧）
+   -------------------------------------------------------------------
+   🗣「売上なしは予約じゃなくタスクボードに戻して。ほとんどないけど、
+      逆にあるとしたら入れ間違えただけだと思う」
+   🗣 未入庫・予約キャンセルもアーカイブ扱い／当日ビューのキャンセルにも noShow／
+      廃車はタスクボードの車と同じ3択
+   =================================================================== */
+console.log('\n── 📦 ⑤売上なしの戻し先はタスクボード（v1.139.0） ──');
+{
+  await openWith({ status: 'work' });
+  await p.evaluate(() => { window.cvNoSaleArchive(); openDetail('cNS'); });
+  await setAdmin(true);
+  const r = await p.evaluate(() => {
+    window.cvUnarchiveToBoardGo();
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { st: c.status, noSale: !!c.noSale, done: c.completedAt || '',
+             rs: c.returnStage || null, tier: window.pitSalesTier ? pitSalesTier(c) : null,
+             flow: (c.log || []).map(x => x.label || x.text || '').join(' / ') };
+  });
+  ok('🔴 タスクボードの「作業完了済」に戻る（予約ではない）', r.st === 'workDone', r);
+  ok('🔴 売上なしの印が外れる', r.noSale === false, r);
+  ok('🔴 実績カウント日は空のまま', r.done === '', r);
+  ok('🔴 完TELの印は付けない（通っていないので）', r.rs === null, r);
+  ok('売上の区分が戻る（対象外 → 確定）', r.tier === 'confirmed', r);
+  ok('フローに残る', /アーカイブから戻した（売上なし/.test(r.flow), r.flow);
+  await closeIt();
+}
+
+console.log('\n── 📦 ⑥⑦ 未入庫・予約キャンセルもアーカイブ扱い（v1.139.0） ──');
+{
+  /* ⑦ 予約キャンセル＝押した瞬間アーカイブ */
+  await openWith({ status: 'reserved' });
+  const r = await p.evaluate(() => {
+    window.cvCancelResv('日程変更');
+    openDetail('cNS');
+    const c = state.cards.find(x => x.id === 'cNS');
+    const b = document.querySelector('.cv-archbar');
+    const m = document.getElementById('cv-optmenu');
+    return { arch: !!(window.PitArchive && PitArchive.cardArchived(c)),
+             bar: b ? b.textContent.trim() : '', menu: m ? m.innerHTML : '' };
+  });
+  ok('🔴 予約キャンセルはアーカイブ済み', r.arch, r);
+  ok('🔴 帯は「アーカイブ済み（予約キャンセル）」', /アーカイブ済み（予約キャンセル）/.test(r.bar), r.bar);
+  ok('🔴 「アーカイブから戻す」が出る（前は消去だけだった）', /アーカイブから戻す/.test(r.menu), r.menu);
+  ok('消去する も出る', /消去する/.test(r.menu), '');
+  await closeIt();
+}
+{
+  /* ⑥ 未入庫＝30日たってアーカイブされたもの */
+  await openWith({ status: 'cancelled', noShow: true, cancelledAt: '2026-06-01', archived: true });
+  const r = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'cNS');
+    const b = document.querySelector('.cv-archbar');
+    const m = document.getElementById('cv-optmenu');
+    return { arch: !!(window.PitArchive && PitArchive.cardArchived(c)),
+             bar: b ? b.textContent.trim() : '', menu: m ? m.innerHTML : '' };
+  });
+  ok('🔴 アーカイブ済みの未入庫はアーカイブ扱い', r.arch, r);
+  ok('🔴 帯は「アーカイブ済み（未入庫）」', /アーカイブ済み（未入庫）/.test(r.bar), r.bar);
+  ok('🔴 「アーカイブから戻す」が出る', /アーカイブから戻す/.test(r.menu), r.menu);
+  await closeIt();
+}
+{
+  /* 30日たつ前の未入庫は**アーカイブ扱いにしない**＝今までどおりBOXから誰でも戻せる */
+  await openWith({ status: 'cancelled', noShow: true, cancelledAt: '2026-08-17' });
+  const r = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { arch: !!(window.PitArchive && PitArchive.cardArchived(c)), bar: !!document.querySelector('.cv-archbar') };
+  });
+  ok('🔴 30日たつ前の未入庫はアーカイブ扱いにしない', r.arch === false, r);
+  ok('帯も出さない', r.bar === false, r);
+  await closeIt();
+}
+{
+  /* 管理者でなければ、アーカイブ済みの未入庫は戻せない（BOX と ⋮ どちらの道でも止まる） */
+  await openWith({ status: 'cancelled', noShow: true, cancelledAt: '2026-06-01', archived: true });
+  await setAdmin(false);
+  const r = await p.evaluate(() => {
+    window.pitUndRestoreGo('cNS', '2026-12-01');
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { st: c.status, arch: !!c.archived };
+  });
+  ok('🔴 管理者でなければ、直接呼んでも戻らない', r.st === 'cancelled' && r.arch === true, r);
+  await p.evaluate(() => { if (window.UI && UI.close) UI.close(); });
+  await setAdmin(true);
+  const r2 = await p.evaluate(() => {
+    window.pitUndRestoreGo('cNS', '2026-12-01');
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { st: c.status, arch: !!c.archived, noShow: !!c.noShow, date: c.reserveDate };
+  });
+  ok('🔴 管理者なら予約に戻る（入庫日も入る）', r2.st === 'reserved' && r2.date === '2026-12-01', r2);
+  ok('アーカイブ・未入庫の印も外れる', r2.arch === false && r2.noShow === false, r2);
+  await closeIt();
+}
+
+console.log('\n── 🚫 ⑧ 廃車・乗替はタスクボードの車と同じ3択（v1.139.0） ──');
+{
+  const r = await openWith({ status: 'scrap' });
+  ok('🔴 「入庫を取り消して予約に戻す」が出る', /入庫を取り消して予約に戻す/.test(r.menu), r.menu);
+  ok('🔴 「売上なしでアーカイブする」が出る', /売上なしでアーカイブする/.test(r.menu), '');
+  ok('消去する も出る', /消去する/.test(r.menu), '');
+  ok('🔴 ちょうど3択（前は消去だけだった）', (r.menu.match(/<button/g) || []).length === 3, (r.menu.match(/<button/g) || []).length);
+  const arch = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { arch: !!(window.PitArchive && PitArchive.cardArchived(c)), bar: !!document.querySelector('.cv-archbar') };
+  });
+  ok('🔴 廃車はアーカイブ扱いにしない（まだ手元にある）', arch.arch === false && arch.bar === false, arch);
+  await closeIt();
+}
+
+console.log('\n── 🏷 キャンセルの印を2種類に整理（v1.139.0） ──');
+{
+  /* 当日ビューの「キャンセル（来店なし）」にも noShow を立てる＝自動と同じ箱・同じ印 */
+  await openWith({ status: 'reserved' });
+  const r = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'cNS');
+    /* pitTodayCancel は窓を出すので、窓を通してから見る */
+    window.pitTodayCancel('cNS', false);
+    return new Promise(function(res){ setTimeout(function(){
+      const ok = document.getElementById('uid-ok'); if (ok) ok.click();
+      setTimeout(function(){
+        res({ st: c.status, noShow: !!c.noShow, cancelled: !!c.cancelled, archived: !!c.archived,
+              inBox: !!(c.status === 'cancelled' && !c.archived && !c.cancelled) });
+      }, 150);
+    }, 150); });
+  });
+  ok('🔴 当日ビューのキャンセルにも noShow が立つ', r.noShow === true, r);
+  ok('🔴 人が決めた「予約キャンセル」とは混ぜない', r.cancelled === false, r);
+  ok('すぐアーカイブはしない（30日待つ）', r.archived === false, r);
+  ok('未入庫BOXに出る（誰でも戻せる）', r.inBox === true, r);
+  await closeIt();
+}
+{
+  const td = fs.readFileSync('js/today.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  ok('🔴 当日ビューのキャンセルは cancelled を立てない（別物）', !/c\.cancelled\s*=\s*true/.test(td), '');
 }
 
 console.log('\n── 🗑 消去は2枚聞く（v1.136.0） ──');
