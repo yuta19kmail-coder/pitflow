@@ -194,10 +194,14 @@ const r5 = await p.evaluate(() => {
   const kids = Array.from(host.children).map(e => e.className.split(' ')[0]);
   const chipOf = id => host.querySelector('.shk-uchip[data-card-id="' + id + '"]');
   const badges = id => Array.from(chipOf(id).querySelectorAll('.shk-ca')).map(e => e.textContent);
+  /* v1.121.0 車両注意は他のカードと同じ黄色（塗りアンバー）で出す＝クラスと実際の色を見る */
+  const cauOf = id => Array.from(chipOf(id).querySelectorAll('.shk-ca.cau')).map(e => ({
+    t: e.textContent, bg: getComputedStyle(e).backgroundColor, fg: getComputedStyle(e).color }));
   return { grp, kids, f1, f2, f3,
            dateText: (chipOf('G1-sat').querySelector('.shk-ures')||{}).textContent,
            tbdText: (chipOf('G0-tbd').querySelector('.shk-ures')||{}).textContent,
            b左: badges('G1-sat'), bMT: badges('G1-mid'), b全部: badges('G2-sat'), bなし: badges('G0-fri'),
+           cau左: cauOf('G1-sat'), cau全部: cauOf('G2-sat'), cauなし: cauOf('G0-fri'),
            far: !!chipOf('G3-far') };
 });
 
@@ -227,11 +231,16 @@ ok('来週の初日は必ず(土)',                        /\(土\)$/.test(r5.da
 ok('見出しの期間にも曜日が入る',                  /\([日月火水木金土]\)/.test(r5.grp.w1.range), r5.grp.w1.range);
 ok('入庫日未定はその旨を出す',                    r5.tbdText === '入庫日未定', r5.tbdText);
 
-console.log('\n■ 左・MT などのバッジ');
+console.log('\n■ 左・M/T などの車両注意バッジ（v1.121.0＝他のカードと同じ言い方と黄色）');
 ok('左ハンドルの車に「左」が出る',                JSON.stringify(r5.b左) === JSON.stringify(['左']), r5.b左);
-ok('MTの車に「MT」が出る',                        JSON.stringify(r5.bMT) === JSON.stringify(['MT']), r5.bMT);
-ok('左＋MT＋12点は3つとも出る',                   JSON.stringify(r5.b全部) === JSON.stringify(['左','MT','12点']), r5.b全部);
+ok('M/Tの車に「M/T」が出る（他のカードと同じ書き方）', JSON.stringify(r5.bMT) === JSON.stringify(['M/T']), r5.bMT);
+ok('🔴 左とM/Tが両方なら「左M/T」に合体する',      JSON.stringify(r5.b全部) === JSON.stringify(['左M/T','12点']), r5.b全部);
 ok('何も無い車にはバッジを出さない',              r5.bなし.length === 0, r5.bなし);
+ok('🔴 車両注意は塗りアンバー（#f59e0b）',         r5.cau左.length === 1 && r5.cau左[0].bg === 'rgb(245, 158, 11)', r5.cau左);
+ok('🔴 字は濃い色（#1c1300）＝耳の注意タブと同じ', r5.cau左[0] && r5.cau左[0].fg === 'rgb(28, 19, 0)', r5.cau左);
+ok('合体した「左M/T」も同じ黄色',                 r5.cau全部.length === 1 && r5.cau全部[0].t === '左M/T' && r5.cau全部[0].bg === 'rgb(245, 158, 11)', r5.cau全部);
+ok('12点は車両注意ではないので黄色にしない',      r5.cau全部.every(x => x.t !== '12点'), r5.cau全部);
+ok('注意が無い車には黄色のバッジを出さない',      r5.cauなし.length === 0, r5.cauなし);
 
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
