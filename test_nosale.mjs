@@ -249,6 +249,146 @@ console.log('\n── 🔁 売上なし → 予約に戻す で印が外れる �
   await closeIt();
 }
 
+/* ===================================================================
+   📦 v1.136.0（ゆうた確定・2026-08-18）アーカイブ済みの車
+   -------------------------------------------------------------------
+   🗣「アーカイブまで行った車は基本マスターとか管理者以外は触れない。
+      詳細を見たりは出来るが、金額をいじったり、消去したり、入庫中に戻したり などは出来ない」
+   🗣「アーカイブに統一しよう」「アーカイブから戻すは管理者ならOK」
+   🗣「消すは誰でもでいいが、ポップアップを2重で出す」
+   =================================================================== */
+console.log('\n── 📦 アーカイブ済みの ⋮（v1.136.0） ──');
+const opt = () => p.evaluate(() => {
+  const m = document.getElementById('cv-optmenu');
+  return m ? m.innerHTML : '(メニューが無い)';
+});
+const setAdmin = v => p.evaluate(v => {
+  if (!window.__origCanRestore) window.__origCanRestore = PitArchive.canRestore;
+  PitArchive.canRestore = function(){ return v; };
+  if (window.renderCardView) renderCardView(state.cards.find(x => x.id === 'cNS'), 'md-body-modal');
+}, v);
+{
+  await openWith({ status: 'work' });
+  await p.evaluate(() => { window.cvNoSaleArchive(); openDetail('cNS'); });
+  await setAdmin(true);
+  const m = await opt();
+  ok('🔴 管理者：「アーカイブから戻す」が出る', /アーカイブから戻す/.test(m), m);
+  ok('🔴 「予約に戻す」という言い方はもう使わない', !/>[^<]*予約に戻す/.test(m), m);
+  ok('「売上なしでアーカイブする」はもう出さない', !/売上なしでアーカイブする/.test(m), '');
+  ok('「消去する」は出る（誰でも押せる）', /消去する/.test(m), '');
+  ok('🔒 管理のみ の札は出ない（管理者なので）', !/管理のみ/.test(m), '');
+  const n = (m.match(/<button/g) || []).length;
+  ok('ボタンはちょうど2つ', n === 2, n);
+}
+{
+  await setAdmin(false);
+  const m = await opt();
+  ok('🔴 管理者でない：「アーカイブから戻す」に 🔒 管理のみ が付く', /アーカイブから戻す/.test(m) && /管理のみ/.test(m), m);
+  ok('🔴 押す先が cvDenyRestore（実行に行かない）', /cvDenyRestore/.test(m) && !/cvAskBackToReserve/.test(m), m);
+  ok('「消去する」は出たまま（誰でも押せる・ゆうた指定）', /消去する/.test(m), '');
+}
+{
+  /* 🔴 ボタンを消しただけにしない＝外から呼んでも止まる */
+  const r = await p.evaluate(() => {
+    const before = state.cards.find(x => x.id === 'cNS').status;
+    window.cvBackToReserve();                       /* 管理者でないのに直接呼ぶ */
+    const after = state.cards.find(x => x.id === 'cNS').status;
+    return { before, after, noSale: !!state.cards.find(x => x.id === 'cNS').noSale };
+  });
+  ok('🔴 管理者でなければ、直接呼んでも戻らない', r.after === r.before && r.noSale === true, r);
+  await p.evaluate(() => { if (window.UI && UI.close) UI.close(); const o = document.getElementById('uid-ov'); if (o) o.classList.remove('open'); });
+}
+{
+  /* 管理者に戻せば、ちゃんと戻る */
+  await setAdmin(true);
+  const r = await p.evaluate(() => {
+    window.cvBackToReserve();
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { st: c.status, noSale: !!c.noSale };
+  });
+  ok('🔴 管理者なら戻る（予約の状態へ・売上なしの印も外れる）', r.st === 'reserved' && r.noSale === false, r);
+  await closeIt();
+}
+{
+  /* 📦 帯＝いちばん上に、状態だけ */
+  await openWith({ status: 'work' });
+  const bar = await p.evaluate(() => {
+    window.cvNoSaleArchive(); openDetail('cNS');
+    const b = document.querySelector('.cv-archbar');
+    return { has: !!b, txt: b ? b.textContent.trim() : '', first: !!(b && b.parentElement && b.parentElement.firstElementChild === b) };
+  });
+  ok('🔴 アーカイブ済みの帯が出る', bar.has, bar);
+  ok('🔴 帯は「アーカイブ済み（売上なし）」', /アーカイブ済み（売上なし）/.test(bar.txt), bar.txt);
+  ok('🔴 帯に「見るだけ」などの説明を入れない（ゆうた指定）', !/見るだけ|管理者だけ/.test(bar.txt), bar.txt);
+  ok('同じことを2か所に書かない（中ほどの注記から見出しを外した）',
+     await p.evaluate(() => { const n = document.querySelector('.cv-nosalenote'); return !n || !/アーカイブ済み/.test(n.textContent); }), '');
+  await closeIt();
+}
+
+console.log('\n── 🗑 消去は2枚聞く（v1.136.0） ──');
+{
+  await openWith({ status: 'work' });
+  const step1 = await p.evaluate(() => {
+    window.cvAskDelete();
+    const ov = document.getElementById('uid-ov');
+    const del = document.getElementById('cv-delpop');
+    return { ov: !!(ov && ov.classList.contains('open')),
+             ttl: (document.querySelector('#uid-card h4') || {}).textContent || '',
+             det: (document.querySelector('#uid-card .uid-d') || {}).textContent || '',
+             okTxt: (document.getElementById('uid-ok') || {}).textContent || '',
+             delShown: !!(del && del.classList.contains('show')) };
+  });
+  ok('🔴 1枚目が出る', step1.ov, step1);
+  /* ⚠ UI.confirm(title, opt) は**第1引数が見出し**。_cvAsk が渡している opt.title は上書きされて出ない。
+     ＝ 見出しに出るのは本文のほう。ここではその実物を見張る。 */
+  ok('1枚目の見出しが「データごと無くなります／元に戻せません」', /データごと無くなります/.test(step1.ttl) && /元に戻せません/.test(step1.ttl), step1.ttl);
+  ok('🔴 戻せないことを言う', /元に戻せません/.test(step1.det) || /元に戻せません/.test(step1.ttl), step1);
+  ok('🔴 ふつうはアーカイブに落ち着くことを言う', /アーカイブ/.test(step1.det), step1.det);
+  ok('ボタンは「それでも消去する」', /それでも消去する/.test(step1.okTxt), step1.okTxt);
+  ok('🔴 この時点では2枚目（最終確認）はまだ出ていない', step1.delShown === false, step1);
+
+  const step2 = await p.evaluate(() => {
+    document.getElementById('uid-ok').click();
+    return new Promise(function(res){ setTimeout(function(){
+      const del = document.getElementById('cv-delpop');
+      res({ shown: !!(del && del.classList.contains('show')),
+            ttl: (document.querySelector('#cv-delpop .cv-dpt') || {}).textContent || '',
+            note: (document.querySelector('#cv-delpop .cv-dpnote') || {}).textContent || '',
+            btn: (document.querySelector('#cv-delpop .cv-dpdel') || {}).textContent || '',
+            ng: (document.querySelector('#cv-delpop .cv-ng') || {}).textContent || '',
+            n: state.cards.length });
+    }, 120); });
+  });
+  ok('🔴 押すと2枚目が出る', step2.shown, step2);
+  ok('2枚目の見出しが「本当に消去しますか？」', /本当に消去しますか/.test(step2.ttl), step2.ttl);
+  ok('2枚目でも「元に戻せません」と言う', /元に戻せません/.test(step2.note), step2.note);
+  ok('ボタンは「消去する」（「削除」は使わない）', step2.btn.trim() === '消去する' && step2.ng.trim() === 'やめる', step2);
+  ok('🔴 2枚目を出しただけでは、まだ1枚も消えていない', step2.n === 1, step2.n);
+
+  const gone = await p.evaluate(() => { window.cvDeleteCard(); return state.cards.length; });
+  ok('2枚目で押して初めて消える', gone === 0, gone);
+}
+{
+  /* 実績を持った車は、2枚目で何が消えるかを名指しする */
+  await openWith({ status: 'returned', completedAt: '2026-08-10', amountFinal: 88000, returnDate: '2026-08-10' });
+  const d = await p.evaluate(() => {
+    const el = document.getElementById('cv-delpop');
+    return { note: el ? el.textContent : '', hard: !!(el && el.classList.contains('cv-delpop-hard')) };
+  });
+  ok('🔴 実績・確定売上・来店履歴から消えると書く', /実績/.test(d.note) && /確定売上/.test(d.note) && /来店履歴/.test(d.note), d.note);
+  ok('見た目も分ける（同じ窓に見せない）', d.hard === true, d);
+  await closeIt();
+}
+{
+  /* 言葉の統一＝画面に「削除」を残さない */
+  const cv = fs.readFileSync('js/card-view.js', 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');   /* コメントを外してから調べる */
+  ok('🔴 画面の文字に「削除」を使っていない', !/削除/.test(cv), (cv.match(/.{0,40}削除.{0,20}/) || [''])[0]);
+  const ar = fs.readFileSync('js/archive-pit.js', 'utf8');
+  ok('🔴 アーカイブ判定は archive-pit.js の1本', /cardArchived/.test(ar) && /PitArchive/.test(ar), '');
+  ok('🔴 戻せない時の断り文は顧客・車両と同じ1本', /戻せるのは管理者だけです/.test(ar), '');
+}
+
 console.log('\n── 🧭 物差しが1本か・まわりが壊れていないか ──');
 {
   const sc = fs.readFileSync('js/sales-count.js', 'utf8');
