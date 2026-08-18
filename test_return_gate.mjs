@@ -173,6 +173,83 @@ ok('🔴 返車ビューには出てこない',                    real.返車�
 ok('🔴 returnStage は空のまま',                      !real.returnStage, real);
 ok('日付は保存されている',                           real.returnDate === T.tomo, real);
 
+/* ===================================================================
+   ↩ v1.137.0（ゆうた確定・2026-08-18）完TELを通った車の ⋮ ＝3択
+   -------------------------------------------------------------------
+   🗣「予約に戻すはなしで。盤面もタスクボードの名称で。
+      なのでタスクボードに戻す と売上なしアーカイブ、消去 の3択で」
+   ◎なぜ
+     入る道はドラッグ1つなのに、出る道が「予約まで全部戻す」しかなかった。
+     押すと工程・完TEL・返車の予定・確定売上・実績日・PIT枠がまとめて消える＝重すぎる。
+   =================================================================== */
+console.log('\n■ ⋮ 完TELを通った車は3択（v1.137.0）');
+{
+  const put = over => p.evaluate(o => {
+    const ymd = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    state.cards = [Object.assign({
+      id:'RG1', resNo:'R-RG1', customer:'関門 太郎', car:'ノート', boardId:'default', division:'div1',
+      workType:'general', dropType:'drop', status:'workDone', reserveDate: ymd(new Date()),
+      returnStage:'returnWait', returnDate: ymd(new Date()), returnTime:'16:00',
+      amountFinal: 55000, bayId:null, log:[]
+    }, o || {})];
+    openDetail('RG1');
+    const m = document.getElementById('cv-optmenu');
+    return m ? m.innerHTML : '';
+  }, over);
+  const closeIt = () => p.evaluate(() => { if (window.closeDetail) closeDetail(); });
+
+  const m = await put();
+  ok('🔴 「タスクボードに戻す」が出る', /タスクボードに戻す/.test(m), m);
+  ok('🔴 「入庫を取り消して予約に戻す」は出さない', !/予約に戻す/.test(m), m);
+  ok('「売上なしでアーカイブする」は出る', /売上なしでアーカイブする/.test(m), '');
+  ok('「消去する」は出る', /消去する/.test(m), '');
+  ok('🔴 ちょうど3択', (m.match(/<button/g) || []).length === 3, (m.match(/<button/g) || []).length);
+  await closeIt();
+
+  /* まだタスクボードにいる車は、今までどおり「入庫を取り消して予約に戻す」 */
+  const m2 = await put({ returnStage: null, returnDate: '', returnTime: '' });
+  ok('タスクボードの車は「入庫を取り消して予約に戻す」のまま', /入庫を取り消して予約に戻す/.test(m2), m2);
+  ok('タスクボードの車に「タスクボードに戻す」は出さない', !/タスクボードに戻す/.test(m2), '');
+  await closeIt();
+
+  /* 実際に戻す＝returnStage だけ消える */
+  await put();
+  const r = await p.evaluate(() => {
+    window.cvBackToBoard();
+    const c = state.cards.find(x => x.id === 'RG1');
+    return { rs: c.returnStage, st: c.status, date: c.returnDate, time: c.returnTime,
+             amt: c.amountFinal, tier: window.pitSalesTier ? pitSalesTier(c) : null,
+             place: window.pitReturnPlace ? pitReturnPlace(c) : null,
+             flow: (c.log || []).map(x => x.label || x.text || '').join(' / ') };
+  });
+  ok('🔴 完TELの印だけ消える', !r.rs, r);
+  ok('🔴 工程は「作業完了済」のまま（タスクボードへ戻る）', r.st === 'workDone', r);
+  ok('🔴 返車の予定日・時間は残す（入れ直しにさせない）', r.date && r.time === '16:00', r);
+  ok('🔴 確定金額も残す', r.amt === 55000, r);
+  ok('🔴 売上の区分は動かない（どちらも「確定」）', r.tier === 'confirmed', r);
+  ok('🔴 返車の一覧からは外れる', r.place === null, r);
+  ok('フローに残る', /完TELを取り消して/.test(r.flow), r.flow);
+  await closeIt();
+
+  /* 完TELを通っていない車では、呼んでも何もしない */
+  await put({ returnStage: null });
+  const r2 = await p.evaluate(() => {
+    const before = JSON.stringify(state.cards[0]);
+    window.cvBackToBoard();
+    return before === JSON.stringify(state.cards[0]);
+  });
+  ok('🔴 完TELを通っていない車では何もしない', r2 === true, '');
+  await closeIt();
+
+  /* returnStage を消す道が増えすぎていないか（いまは2本＝予約に戻す／タスクボードに戻す） */
+  const cv = fs.readFileSync('js/card-view.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  /* ⚠ `c.returnStage = ''` は「空なら空にそろえる」正規化なので数えない。消しているのは null のほう。 */
+  const n = (cv.match(/returnStage\s*=\s*null/g) || []).length;
+  ok('🔴 returnStage を消す道は2本だけ（予約に戻す／タスクボードに戻す）', n === 2, n);
+  const rs = fs.readFileSync('js/return-slot.js', 'utf8');
+  ok('🔴 「返車済みの取り消し」という無い機能の記述が残っていない', !/「返車済みの取り消し」で完TEL待ちに戻せなくなる/.test(rs), '');
+}
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
 

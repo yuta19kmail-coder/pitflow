@@ -238,7 +238,7 @@ console.log('\n── ⑦ 🔴 車を返したら、代車も返ってきたこ�
   ok('予定どおりの期間で入る', st.to === ymdN(4), st);
 
   /* 当日ビューの「返車済みにする」と同じ道 */
-  await p.evaluate(() => pitTodayReturn('RETTEST'));
+  await p.evaluate(() => _pitTodayReturnGo(state.cards.find(x => x.id === 'RETTEST')));   /* v1.137.0 窓は today の試験で見る。ここは代車の話なので固める処理を直に呼ぶ */
   await p.evaluate(() => { showView('loaner'); });
   await p.waitForTimeout(900);
   const after = await p.evaluate(() => {
@@ -276,7 +276,7 @@ console.log('\n── ⑦ 🔴 車を返したら、代車も返ってきたこ�
   st = await make();
   await p.evaluate(d => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST');
     a.returned = true; a.returnedAt = d; a.toDate = d; }, ymdN(-1));
-  await p.evaluate(() => pitTodayReturn('RETTEST'));
+  await p.evaluate(() => _pitTodayReturnGo(state.cards.find(x => x.id === 'RETTEST')));   /* v1.137.0 窓は today の試験で見る。ここは代車の話なので固める処理を直に呼ぶ */
   await p.evaluate(() => pitSyncLoanerAssigns());
   ok('🔴 先に手で確定した返却日は上書きしない',
      await p.evaluate(() => { const a = state.loanerAssigns.find(x => x.cardId === 'RETTEST'); return a.returnedAt; }) === ymdN(-1));

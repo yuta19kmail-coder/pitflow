@@ -111,7 +111,19 @@ console.log('\n── 🔓 完TELを通った車は今までどおり押せる �
   const s = await sheet();
   ok('🔴 完TEL済なら押せる', s.off === false && s.disabled === false, s);
   ok('理由書きは出ない', s.why === '', s.why);
+  /* 🔴 v1.137.0 押すと**先に確認の窓**が出る（実績＝アーカイブに入るので）。窓を通してから固まる。 */
   await p.evaluate(() => pitTodayReturn('cDF'));
+  await p.waitForTimeout(200);
+  const askTxt = await p.evaluate(() => {
+    const ov = document.getElementById('uid-ov');
+    return (ov && ov.classList.contains('open')) ? (document.getElementById('uid-card') || {}).textContent || '' : '';
+  });
+  ok('🔴 押したらまず確認の窓が出る', /実績（確定売上）に固めますか/.test(askTxt), askTxt.slice(0, 80));
+  ok('🔴 窓に確定売上の金額が出る', /確定売上\s*¥/.test(askTxt), askTxt.slice(0, 120));
+  ok('🔴 アーカイブで管理者だけが戻せることを言う', /アーカイブ/.test(askTxt) && /管理者だけ/.test(askTxt), '');
+  ok('🔴 窓が出ただけでは、まだ固まっていない',
+     await p.evaluate(() => state.cards.find(x => x.id === 'cDF').status) !== 'returned', '');
+  await p.evaluate(() => document.getElementById('uid-ok').click());
   await p.waitForTimeout(250);
   const c = await readCard();
   ok('🔴 押したら実績（返車済み）になる', c.status === 'returned' && !!c.completedAt, c);
