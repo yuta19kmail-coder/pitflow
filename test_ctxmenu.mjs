@@ -37,7 +37,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:sans-serif;padd
 <script>
 window.ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 window.__acts=[]; window.__toasts=[]; window.__opened=[]; window.__copied=[];
-window.state={ currentView:'task',
+window.state={ currentView:'task', settings:{},
   cards:[
     {id:'c1',status:'reserved',boardId:'default',customer:'田中 太郎',car:'ノート',maker:'日産',plate:'品川 300 あ 12-34',tel:'090-1111-2222'},
     {id:'c2',status:'estim',boardId:'import',customer:'鈴木 次郎',car:'320i',urgent:true},
@@ -68,6 +68,7 @@ window.open=(u)=>{ window.__opened.push(u); return null; };
 Object.defineProperty(navigator,'clipboard',{configurable:true,value:{ writeText:t=>{ window.__copied.push(t); return Promise.resolve(); } }});
 window.__reset=()=>{ window.__acts=[]; window.__toasts=[]; window.__opened=[]; window.__copied=[]; };
 <\/script>
+<script src="js/board-line.js"><\/script>
 <script src="js/ctxmenu-pit.js"><\/script>
 <script>window.__ready=1;<\/script>`;
   fs.writeFileSync(path.join(dir,'test-ctx.html'), page);
@@ -174,6 +175,44 @@ ok('予約カレンダーの日', !!m&&m.items.some(x=>x.t==='この日で新規
 await clickItem('この日で新規予約'); await p.waitForTimeout(80);
 ok('その日で新規予約が開く', await p.evaluate(()=>{ const d=state.cards.filter(x=>x._draft); return d.length&&d[d.length-1].reserveDate==='2026-08-10'; }));
 await rc('.cfs-day[data-ds="2026-08-11"]'); m=await menu(); ok('空き状況の日', !!m&&m.items.some(x=>x.t==='この日の予約カレンダーへ'));
+
+/* ===================================================================
+   ⑦-2 🔴 v1.133.0（ゆうた指摘）「この下にラインを入れる」はタスク看板だけ
+   -------------------------------------------------------------------
+   🗣「右クリメニューも『ラインを引く』とかタスクビューでしか使えないのとかでてるよ」
+   区切りラインは**タスク看板の列の中にしか無い**。当日ビューや検索結果で押しても
+   線はその画面に出ない＝何も起きていないように見える。だからメニューに出さない。
+   =================================================================== */
+console.log('\n── ⑦-2 区切りラインはタスク看板だけ ──');
+const setView = v => p.evaluate(v => { state.currentView = v; }, v);
+const hasLine = async sel => { await rc(sel); const mm = await menu(); return !!(mm && mm.items.some(x=>x.t==='この下にラインを入れる')); };
+
+await setView('task');
+ok('看板（統合）＋作業中カード：出る', await hasLine('[data-card-id="c2"]'));
+await setView('course1');
+ok('看板（1課）：出る', await hasLine('[data-card-id="c2"]'));
+await setView('course2');
+ok('看板（2課）：出る', await hasLine('[data-card-id="c2"]'));
+
+for (const v of ['today','return','reserve','loaner','parking','floor','result','search','dashboard','customers','availcal','shakencal']){
+  await setView(v);
+  ok(`${v} ビュー：出ない`, (await hasLine('[data-card-id="c2"]'))===false);
+}
+
+await setView('task');
+/* ⚠ c1 は ④で「入庫済みにする」を押しているので status が check になっている。予約中に戻してから見る。 */
+await p.evaluate(()=>{ state.cards.find(x=>x.id==='c1').status='reserved'; });
+ok('看板でも予約中のカードには出ない', (await hasLine('[data-card-id="c1"]'))===false);
+ok('看板でも返車済みのカードには出ない', (await hasLine('[data-card-id="c3"]'))===false);
+await p.evaluate(()=>{ state.cards.find(x=>x.id==='c2').returnStage='callWait'; });
+ok('完TELを通った車には出ない（盤面から外れている）', (await hasLine('[data-card-id="c2"]'))===false);
+await p.evaluate(()=>{ delete state.cards.find(x=>x.id==='c2').returnStage; });
+
+{
+  const src=fs.readFileSync('js/ctxmenu-pit.js','utf8');
+  ok('🔴 出す条件が ctxmenu 側に書き戻されていない（board-line.js の1本）',
+     !/PitBoardLine[\s\S]{0,120}status/.test(src) && /PitBoardLine\.ctxItem/.test(src), '');
+}
 
 console.log('\n── ⑧ 閉じ方 ──');
 await rc('[data-card-id="c1"]'); await p.keyboard.press('Escape'); await p.waitForTimeout(60);
