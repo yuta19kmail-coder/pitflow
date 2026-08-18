@@ -226,6 +226,50 @@ console.log('\n■ ドラッグ中の自動スクロール（v1.123.0）');
 ok('🔴 上の端まで運ぶと自分でスクロールする',      auto.during < auto.before, auto);
 ok('🔴 指を離したらスクロールが止まる',            auto.afterUp === auto.afterUp2, auto);
 
+/* ===== ⑨ v1.124.0 決定の行が画面の外にあっても、掴めば出てきて光る
+       （ゆうた「つまめるけど 決定の所がアクティブにならない感じ」） ===== */
+const reach = await p.evaluate(async () => {
+  const mk = (id) => ({ id, boardId:'default', status:'check', workTypes:['shaken'], customer:id, car:'車',
+    plate:'', coverCall:{done:false,at:'',staff:''}, inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[] } });
+  state.cards = [...Array(10)].map((_, i) => mk('R' + i));
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 250));
+  const iso = document.querySelector('.shk-decell[data-iso]').getAttribute('data-iso');
+  state.cards.forEach(c => { c.inspSchedule.slots = {}; c.inspSchedule.slots[iso] = ['am']; });
+  renderShaken();
+  await new Promise(r => setTimeout(r, 250));
+  const sc = document.querySelector('.view.active');
+  sc.scrollTop = sc.scrollHeight;                       /* 下まで送る＝決定の行は画面の上に隠れる */
+  await new Promise(r => setTimeout(r, 150));
+  const cell = () => document.querySelector('.shk-decell[data-iso="'+iso+'"][data-slot="am"]').getBoundingClientRect();
+  const 掴む前 = Math.round(cell().top);
+  const bar = document.querySelector('.shk-gcar[data-card-id="R9"] .shk-bar');
+  const rb = bar.getBoundingClientRect();
+  const at = (t, x, y) => document.dispatchEvent(new PointerEvent(t, { clientX:x, clientY:y, bubbles:true, pointerType:'mouse', button:0 }));
+  bar.dispatchEvent(new PointerEvent('pointerdown', { clientX:rb.x+6, clientY:rb.y+6, bubbles:true, pointerType:'mouse', button:0 }));
+  at('pointermove', rb.x + 40, rb.y + 6);               /* 掴んだ（動かし始めた） */
+  await new Promise(r => setTimeout(r, 120));
+  const 掴んだ後 = Math.round(cell().top);
+  const scTop = Math.round(sc.getBoundingClientRect().top);
+  /* そのまま決定の枠の真ん中へ運ぶ */
+  const rc = cell();
+  at('pointermove', rb.x + 40, rc.top + rc.height/2);
+  await new Promise(r => setTimeout(r, 120));
+  const 光った = !!document.querySelector('.shk-decell.drop');
+  at('pointerup', rb.x + 40, rc.top + rc.height/2);
+  await new Promise(r => setTimeout(r, 350));
+  if (document.querySelector('#shk-pop.show')) shkClosePop();
+  return { 掴む前, 掴んだ後, scTop, 光った, 決まった: !!state.cards.find(c => c.id === 'R9').inspSchedule.decided,
+           端からの距離: 掴んだ後 - scTop };
+});
+console.log('\n■ 決定の行が画面の外でも届くか（v1.124.0）');
+ok('掴む前は決定の行が画面の上に隠れている',      reach.掴む前 < reach.scTop, reach);
+ok('🔴 掴んだ瞬間に決定の行が画面に出てくる',     reach.掴んだ後 > reach.scTop, reach);
+ok('🔴 端の帯（40px）より下に出す＝自動スクロールに逃げられない',
+   reach.端からの距離 >= 50, reach);
+ok('🔴 決定の枠が光る',                           reach.光った, reach);
+ok('🔴 そのまま離すと決定になる',                 reach.決まった, reach);
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
 
