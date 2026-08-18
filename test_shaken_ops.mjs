@@ -26,7 +26,7 @@ let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log('  ✅ ' + n); } else { fail++; console.log('  ❌ ' + n + (x !== '' ? '  → ' + JSON.stringify(x) : '')); } };
 
 const b = await chromium.launch({ executablePath: cp });
-const p = await b.newPage({ viewport: { width: 1700, height: 1000 } });
+const p = await b.newPage({ viewport: { width: 1366, height: 768 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
@@ -143,6 +143,88 @@ ok('候補の帯が指さし',                            cur.帯 === 'pointer',
 ok('決定チップが指さし',                          cur.チップ === 'pointer', cur);
 ok('🔴 パーの手（grab/grabbing）を使っていない',  !/cursor\s*:\s*grab/.test(css));
 ok('🔴 cell など特殊カーソルを使っていない',      !/cursor\s*:\s*(cell|crosshair|move)\b/.test(css));
+
+/* ===== ⑥ v1.123.0 決定チップは**必ず1行**（縦に伸びると下の行が画面外へ押し出される） ===== */
+const meta = await p.evaluate(async () => {
+  const mk = (id) => ({ id, boardId:'default', status:'check', workTypes:['shaken'], customer:id, car:'車',
+    plate:'', coverCall:{done:false,at:'',staff:''}, inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[] } });
+  state.cards = [...Array(6)].map((_, i) => mk('H' + i));
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 250));
+  const iso = document.querySelector('.shk-decell[data-iso]').getAttribute('data-iso');
+  /* 1台目＝全部未定／2台目＝長い陸運局名つき */
+  state.cards[0].inspSchedule.decided = iso; state.cards[0].inspSchedule.decidedSlot = 'am';
+  Object.assign(state.cards[1].inspSchedule, { decided: iso, decidedSlot:'am',
+    resultStaff:'山田', office:'sample_rik_noda', officeName:'野田自動車検査登録事務所', round:2 });
+  renderShaken();
+  await new Promise(r => setTimeout(r, 200));
+  const rows = (id) => {
+    const m = document.querySelector('.shk-chip[data-card-id="'+id+'"] .shk-meta');
+    if (!m) return null;
+    const ys = new Set(Array.from(m.children).map(e => Math.round(e.getBoundingClientRect().top)));
+    return { 段数: ys.size, 高さ: Math.round(m.getBoundingClientRect().height),
+             中身: Array.from(m.children).map(e => e.textContent),
+             チップ高: Math.round(document.querySelector('.shk-chip[data-card-id="'+id+'"]').getBoundingClientRect().height) };
+  };
+  return { 未定: rows('H0'), 入り: rows('H1') };
+});
+console.log('\n■ 決定チップは1行に収まるか（v1.123.0）');
+ok('🔴 全部未定でも1段に収まる',                  meta.未定 && meta.未定.段数 === 1, meta.未定);
+ok('未定は1枚にまとめる（3枚並べない）',          meta.未定 && meta.未定.中身.length === 1 && /^未定 /.test(meta.未定.中身[0]), meta.未定);
+ok('🔴 中身が入っていても1段',                    meta.入り && meta.入り.段数 === 1, meta.入り);
+ok('長い陸運局名でもチップが太らない（60px以下）', meta.入り && meta.入り.チップ高 <= 60, meta.入り);
+ok('R・担当・陸運局の順で出る',                   meta.入り && /^2R$/.test(meta.入り.中身[0]) && meta.入り.中身[1] === '山田', meta.入り);
+
+/* ===== ⑦ 6台あっても、いちばん下の行が画面の中に残る（今回の不具合そのもの） ===== */
+const fit = await p.evaluate(async () => {
+  const iso = document.querySelector('.shk-decell[data-iso]').getAttribute('data-iso');
+  state.cards.forEach(c => { c.inspSchedule.decided = iso; c.inspSchedule.decidedSlot = 'am'; });
+  /* 1台だけ候補に戻して、ガントに行を作る */
+  const last = state.cards[state.cards.length - 1];
+  last.inspSchedule.decided = ''; last.inspSchedule.decidedSlot = '';
+  last.inspSchedule.slots = {}; last.inspSchedule.slots[iso] = ['am'];
+  renderShaken();
+  await new Promise(r => setTimeout(r, 200));
+  const bar = document.querySelector('.shk-gcar[data-card-id="'+last.id+'"] .shk-bar');
+  const r = bar.getBoundingClientRect();
+  return { y: Math.round(r.y), 画面の高さ: window.innerHeight, 見えている: r.y > 0 && r.bottom < window.innerHeight };
+});
+console.log('\n■ 台数が増えても下の行が画面に残るか');
+ok('🔴 5台決定していても、残りの行が画面の中にある', fit.見えている, fit);
+
+/* ===== ⑧ ドラッグ中に端まで来たら自動でスクロールする ===== */
+const auto = await p.evaluate(async () => {
+  const mk = (id) => ({ id, boardId:'default', status:'check', workTypes:['shaken'], customer:id, car:'車',
+    plate:'', coverCall:{done:false,at:'',staff:''}, inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[] } });
+  state.cards = [...Array(14)].map((_, i) => mk('S' + i));
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 250));
+  const iso = document.querySelector('.shk-decell[data-iso]').getAttribute('data-iso');
+  state.cards.forEach(c => { c.inspSchedule.slots = {}; c.inspSchedule.slots[iso] = ['am']; });
+  renderShaken();
+  await new Promise(r => setTimeout(r, 250));
+  const sc = document.querySelector('.view.active');
+  sc.scrollTop = sc.scrollHeight;                       /* いちばん下まで送る */
+  await new Promise(r => setTimeout(r, 150));
+  const before = Math.round(sc.scrollTop);
+  const bar = document.querySelector('.shk-gcar[data-card-id="S13"] .shk-bar');
+  const rb = bar.getBoundingClientRect();
+  const at = (t, x, y) => document.dispatchEvent(new PointerEvent(t, { clientX:x, clientY:y, bubbles:true, pointerType:'mouse', button:0 }));
+  bar.dispatchEvent(new PointerEvent('pointerdown', { clientX:rb.x+4, clientY:rb.y+4, bubbles:true, pointerType:'mouse', button:0 }));
+  at('pointermove', rb.x + 40, rb.y + 4);
+  at('pointermove', rb.x + 40, 20);                      /* 画面のいちばん上へ持っていく */
+  await new Promise(r => setTimeout(r, 500));            /* 自動スクロールが走る */
+  const during = Math.round(sc.scrollTop);
+  at('pointerup', rb.x + 40, 20);
+  await new Promise(r => setTimeout(r, 400));
+  const afterUp = Math.round(sc.scrollTop);
+  await new Promise(r => setTimeout(r, 400));
+  const afterUp2 = Math.round(sc.scrollTop);
+  return { before, during, afterUp, afterUp2 };
+});
+console.log('\n■ ドラッグ中の自動スクロール（v1.123.0）');
+ok('🔴 上の端まで運ぶと自分でスクロールする',      auto.during < auto.before, auto);
+ok('🔴 指を離したらスクロールが止まる',            auto.afterUp === auto.afterUp2, auto);
 
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));

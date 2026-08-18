@@ -170,8 +170,9 @@ const tbd = await p.evaluate(async () => {
   return { marks, doneTbd: done };
 });
 console.log('\n■ 空なら「未定」の印');
-ok('回送・陸運局・R の3つとも「未定」が出る',     tbd.marks.length === 3, tbd.marks);
-ok('文言が「回送 未定／陸運局 未定／R未定」',      JSON.stringify(tbd.marks) === JSON.stringify(['回送 未定','陸運局 未定','R未定']), tbd.marks);
+/* 🔴 v1.123.0 未定は**1枚にまとめる**（3枚並べるとチップが縦に伸びて、下の行が画面外へ押し出される） */
+ok('未定の印は1枚にまとめる',                     tbd.marks.length === 1, tbd.marks);
+ok('足りないものが名指しで出る（R・回送・陸運局）', tbd.marks[0] === '未定 R・回送・陸運局', tbd.marks);
 ok('🔴 済んだ車には「未定」を出さない',           tbd.doneTbd === 0, tbd);
 
 /* ===== ⑥ 日を動かしただけの時は窓を出さない／中身は消えない ===== */
