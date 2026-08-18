@@ -92,12 +92,18 @@ console.log('\n── ⋮ まだ入庫していない予約＝仮予約の切替
   await closeIt();
 }
 
-console.log('\n── ⋮ もう片付いた車＝消去するだけ ──');
+/* 🔴 v1.138.0（ゆうた確定）実績もアーカイブ済みに入れた。
+   ・ふつうの人＝🔒 管理のみ の札＋消去する
+   ・管理者　　＝アーカイブから戻す（→返車前）／消去する
+   ⚠ v1.99.0〜v1.137.0 は「消去するだけ」だった＝戻す道が無く、消す道だけ誰でも開いていた。 */
+console.log('\n── ⋮ 実績（返車済み）＝アーカイブ済み（v1.138.0） ──');
 {
-  const r = await openWith({ status: 'returned', completedAt: '2026-08-10', returnDate: '2026-08-10' });
+  const r = await openWith({ status: 'returned', completedAt: '2026-08-10', returnDate: '2026-08-10', amountFinal: 88000 });
   ok('🔴 実績の車に「予約に戻す」は出さない', !/予約に戻す/.test(r.menu), '');
   ok('🔴 実績の車に「売上なしでアーカイブ」は出さない', !/売上なしでアーカイブ/.test(r.menu), '');
-  ok('消去する だけ残る', /消去する/.test(r.menu) && (r.menu.match(/<button/g) || []).length === 1, r.menu);
+  ok('🔴 「アーカイブから戻す」が出る（管理者）', /アーカイブから戻す/.test(r.menu), r.menu);
+  ok('消去する も残る', /消去する/.test(r.menu), '');
+  ok('ボタンはちょうど2つ', (r.menu.match(/<button/g) || []).length === 2, r.menu);
   await closeIt();
 }
 
@@ -323,6 +329,157 @@ const setAdmin = v => p.evaluate(v => {
   ok('同じことを2か所に書かない（中ほどの注記から見出しを外した）',
      await p.evaluate(() => { const n = document.querySelector('.cv-nosalenote'); return !n || !/アーカイブ済み/.test(n.textContent); }), '');
   await closeIt();
+}
+
+/* ===================================================================
+   💴 v1.138.0（ゆうた確定・2026-08-18）実績カードの金額・日付は管理だけ
+   -------------------------------------------------------------------
+   🗣「金額をいじったり、消去したり、入庫中に戻したり などは出来ないイメージ」
+   ◎なにが起きていた
+     実績カウント日と確定返車日には権限の確認が入っていたのに、
+     **確定売上金額と、表紙の ✏編集（概算・見積・受注・予定返車日）だけ抜けていた。**
+     ＝「🔒 確定」の札を出しておきながら、隣の「✏️ 編集」は誰でも押せた。
+   =================================================================== */
+console.log('\n── 💴 実績カードの金額は管理だけ（v1.138.0） ──');
+{
+  const openRet = () => openWith({ status:'returned', completedAt:'2026-08-10', returnDate:'2026-08-10',
+                                   returnDateFinal:'2026-08-10', amountFinal: 88000, amountOrder: 80000 });
+  const body = () => p.evaluate(() => (document.getElementById('md-body-modal') || {}).innerHTML || '');
+
+  await openRet(); await setAdmin(true);
+  let h = await body();
+  ok('管理者：確定売上に「✏️ 編集」が出る', /cvUnlockFinal/.test(h), '');
+  ok('管理者：表紙の ✏編集 も出る', /cvChainEdit/.test(h), '');
+  await closeIt();
+
+  /* ⚠ サンプルモードは `canEditResultDate` が「練習用は全部さわれる」で必ず true を返す。
+     本番と同じ形（クラウド接続＋管理でない）を作ってから見る。使い終わったら必ず戻す。 */
+  const setCloudAdmin = v => p.evaluate(v => {
+    if (window.__origIsAdmin === undefined) window.__origIsAdmin = window.pitIsAdmin;
+    window.PIT_CLOUD = true;
+    window.pitIsAdmin = function(){ return v; };
+    if (window.renderCardView) renderCardView(state.cards.find(x => x.id === 'cNS'), 'md-body-modal');
+  }, v);
+  const clearCloud = () => p.evaluate(() => {
+    window.PIT_CLOUD = false;
+    if (window.__origIsAdmin !== undefined) window.pitIsAdmin = window.__origIsAdmin;
+  });
+
+  await openRet(); await setAdmin(false); await setCloudAdmin(false);
+  h = await body();
+  ok('🔴 管理者でない：確定売上の「編集」を出さない', !/cvUnlockFinal/.test(h), '');
+  ok('🔴 管理者でない：「🔒 管理のみ」の札を出す', /管理のみ/.test(h), '');
+  ok('🔴 管理者でない：入力欄そのものを出さない', !/cv-amt-final/.test(h), '');
+  ok('🔴 管理者でない：表紙の ✏編集 も出さない', !/cvChainEdit/.test(h), '');
+
+  /* ボタンを消しただけにしない＝呼んでも書き換わらない */
+  const r = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'cNS');
+    const before = c.amountFinal;
+    window.cvUnlockFinal();
+    window.cvChainEdit('money');
+    c._probe = 1; delete c._probe;
+    return { before, after: c.amountFinal, opened: !!document.getElementById('cv-amt-final') };
+  });
+  ok('🔴 呼んでも入力欄が開かない', r.opened === false, r);
+  ok('🔴 金額は変わらない', r.after === r.before, r);
+  await p.evaluate(() => { if (window.UI && UI.close) UI.close(); });
+  await closeIt();
+
+  /* 実績になる前は今までどおり全員が触れる（管理でなくても） */
+  await openWith({ status: 'work', amountOrder: 50000 });
+  await setCloudAdmin(false);
+  h = await body();
+  ok('🔴 実績になる前は、管理者でなくても表紙の ✏編集 が出る', /cvChainEdit/.test(h), '');
+  await clearCloud();
+  await closeIt();
+  await setAdmin(true);
+}
+
+/* ===================================================================
+   ↩ v1.138.0 実績を「返車前（完TEL済）」に戻す（案B）
+   =================================================================== */
+console.log('\n── ↩ 実績を返車前に戻す（v1.138.0・案B） ──');
+{
+  /* ⚠ 返車日が**過ぎている**車を戻すと、`pitAutoOverdue` が「返車日未定」へ落とす（それが正しい動き）。
+     ここは「返車カレンダーに戻る」を見たいので、**今日の日付**で作る。過ぎた日のぶんは下で別に見る。 */
+  const TODAY = await p.evaluate(() => { const d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); });
+  await openWith({ status:'returned', completedAt:TODAY, returnDate:TODAY,
+                   returnDateFinal:TODAY, amountFinal: 88000, returnTime:'16:00',
+                   paymentSeparate: true, paymentDate: '2026-08-20' });
+  await setAdmin(true);
+  const r = await p.evaluate(() => {
+    window.cvBackToDelivery();
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { st: c.status, rs: c.returnStage, done: c.completedAt || '',
+             amt: c.amountFinal, rd: c.returnDate, rdf: c.returnDateFinal,
+             pay: c.paymentDate || '', paySep: !!c.paymentSeparate,
+             tier: window.pitSalesTier ? pitSalesTier(c) : null,
+             place: window.pitReturnPlace ? pitReturnPlace(c) : null,
+             flow: (c.log || []).map(x => x.label || x.text || '').join(' / ') };
+  });
+  ok('🔴 実績カウント日が消える（実績から外れる）', r.done === '', r);
+  ok('🔴 完TEL済に戻る（返車カレンダーへ）', r.st === 'workDone' && r.rs === 'returnWait', r);
+  ok('🔴 確定売上は残す（入れ直しにさせない）', r.amt === 88000, r);
+  ok('🔴 返車日も残す', r.rd === TODAY && r.rdf === TODAY, r);
+  ok('🔴 入金日・売掛の印もそのまま（ゆうた指定）', r.pay === '2026-08-20' && r.paySep === true, r);
+  ok('🔴 売上の区分が実績から外れる（actual → confirmed）', r.tier === 'confirmed', r);
+  ok('🔴 返車カレンダーに戻っている', r.place === 'calendar', r);
+  ok('フローに残る', /アーカイブから戻した/.test(r.flow), r.flow);
+  await closeIt();
+}
+{
+  /* 返車日が過ぎている実績を戻したら「返車日未定」へ（自動）＝取り残さない */
+  await openWith({ status:'returned', completedAt:'2026-08-10', returnDate:'2026-08-10',
+                   returnDateFinal:'2026-08-10', amountFinal: 70000 });
+  await setAdmin(true);
+  const r = await p.evaluate(() => {
+    window.cvBackToDelivery();
+    if (window.pitAutoOverdue) pitAutoOverdue();
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { place: window.pitReturnPlace ? pitReturnPlace(c) : null, amt: c.amountFinal, rs: c.returnStage };
+  });
+  ok('過ぎた日の実績を戻すと「返車日未定」に出る（消えない）', r.place === 'dateTbd', r);
+  ok('その時も確定売上は残る', r.amt === 70000, r);
+  ok('完TEL済の印は付いたまま', r.rs === 'returnWait', r);
+  await closeIt();
+}
+{
+  /* 管理者でなければ、押しても呼んでも戻らない */
+  await openWith({ status:'returned', completedAt:'2026-08-10', returnDate:'2026-08-10', amountFinal: 88000 });
+  await setAdmin(false);
+  const m = await p.evaluate(() => (document.getElementById('cv-optmenu') || {}).innerHTML || '');
+  ok('🔴 管理者でない：🔒 管理のみ が付く', /アーカイブから戻す/.test(m) && /管理のみ/.test(m), m);
+  ok('🔴 押す先が cvDenyRestore', /cvDenyRestore/.test(m), m);
+  const r2 = await p.evaluate(() => {
+    window.cvBackToDelivery();
+    const c = state.cards.find(x => x.id === 'cNS');
+    return { st: c.status, done: c.completedAt || '' };
+  });
+  ok('🔴 直接呼んでも戻らない', r2.st === 'returned' && r2.done === '2026-08-10', r2);
+  await p.evaluate(() => { if (window.UI && UI.close) UI.close(); });
+  await closeIt();
+  await setAdmin(true);
+}
+{
+  /* 帯＝実績は「アーカイブ済み（実績）」 */
+  await openWith({ status:'returned', completedAt:'2026-08-10', returnDate:'2026-08-10', amountFinal: 88000 });
+  const bar = await p.evaluate(() => {
+    const b = document.querySelector('.cv-archbar');
+    return b ? b.textContent.trim() : '';
+  });
+  ok('🔴 帯は「アーカイブ済み（実績）」', /アーカイブ済み（実績）/.test(bar), bar);
+  ok('帯に実績日が出る', /2026-08-10/.test(bar), bar);
+  await closeIt();
+}
+{
+  /* 戻す道が増えすぎていないか＝3本（予約へ／タスクボードへ／返車前へ） */
+  const cv = fs.readFileSync('js/card-view.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const n = (cv.match(/window\.cvBackTo\w+\s*=/g) || []).length;
+  ok('🔴 「戻す」は3本だけ（予約へ／タスクボードへ／返車前へ）', n === 3, (cv.match(/window\.cvBackTo\w+\s*=/g) || []));
+  const ar = fs.readFileSync('js/archive-pit.js', 'utf8');
+  ok('🔴 実績のアーカイブ判定も archive-pit.js の1本', /status === 'returned'/.test(ar), '');
 }
 
 console.log('\n── 🗑 消去は2枚聞く（v1.136.0） ──');
