@@ -252,6 +252,95 @@ console.log('\n── 💾 保存の形 ──');
   }));
 }
 
+/* ===================================================================
+   🔴 v1.134.0（ゆうた確定・2026-08-18）承認待ちの ⋮
+   -------------------------------------------------------------------
+   ◎なにが起きていた
+     `cvToggleTentative` は tentative を裏返すだけで approvalPending を触っていない。
+     逆向き（承認予約にする）は tentative=false にしてあるので**片方だけ対策されていた**。
+     ＝承認待ちの車で「仮予約にする」を押すと「承認待」と「仮予約」が**2つ立つ**。
+   ◎これから
+     ・承認待ちの間は「仮予約にする／本予約に確定する」も「承認予約にする」も出さない
+     ・代わりに「↩ 承認に回すのをやめる」を出す＝**入口に出口をそろえる**
+     ・押すと approvalPending だけ下りて**ふつうの本予約**。仮予約にはしない（仮は2手目）
+   =================================================================== */
+console.log('\n── 🔀 承認待ちの ⋮（v1.134.0） ──');
+const optOf = id => p.evaluate(i => {
+  openDetail(i);
+  const m = document.getElementById('cv-optmenu');
+  return m ? m.innerHTML : '(メニューが無い)';
+}, id);
+const closeIt2 = () => p.evaluate(() => { if (window.closeDetail) closeDetail(); });
+{
+  await seed(); await p.waitForTimeout(200);
+  const m = await optOf('AP1');
+  ok('🔴 承認待ちに「仮予約にする」を出さない', !/仮予約にする/.test(m), m);
+  ok('🔴 承認待ちに「本予約に確定する」も出さない', !/本予約に確定する/.test(m), '');
+  ok('承認待ちに「承認予約にする」は出さない（今までどおり）', !/承認予約にする/.test(m), '');
+  ok('🔴 代わりに「承認に回すのをやめる」が出る', /承認に回すのをやめる/.test(m), m);
+  ok('入庫中にする／予約キャンセル／消去する は今までどおり',
+     /入庫中にする/.test(m) && /予約キャンセルにする/.test(m) && /消去する/.test(m), '');
+  await closeIt2();
+}
+{
+  /* 承認待ちでない予約は、今までどおり仮予約と承認予約が並ぶ */
+  await seed({ approvalPending:false }); await p.waitForTimeout(200);
+  const m = await optOf('AP1');
+  ok('ふつうの本予約：仮予約にする が出る', /仮予約にする/.test(m), m);
+  ok('ふつうの本予約：承認予約にする が出る', /承認予約にする/.test(m), '');
+  ok('ふつうの本予約：承認に回すのをやめる は出ない', !/承認に回すのをやめる/.test(m), '');
+  await closeIt2();
+  const mk = await optOf('KA1');
+  ok('仮予約：✓本予約に確定する に変わる', /本予約に確定する/.test(mk) && !/仮予約にする/.test(mk), mk);
+  ok('仮予約：承認予約にする も出る', /承認予約にする/.test(mk), '');
+  await closeIt2();
+}
+{
+  /* 実際に「承認に回すのをやめる」を押した時 */
+  await seed(); await p.waitForTimeout(200);
+  const r = await p.evaluate(() => {
+    openDetail('AP1');
+    window.pitUnapproveCard('AP1');
+    const c = state.cards.find(x => x.id === 'AP1');
+    return { ap: !!c.approvalPending, t: !!c.tentative, st: c.status,
+             flow: (c.log || []).map(x => x.label || x.text || '').join(' / ') };
+  });
+  ok('🔴 承認待ちが下りる', r.ap === false, r);
+  ok('🔴 仮予約にはならない（本予約に戻すだけ）', r.t === false, r);
+  ok('🔴 工程・状態は動かさない', r.st === 'reserved', r);
+  ok('🔴 フローに「承認に回すのをやめた」と残る', /承認に回すのをやめた/.test(r.flow), r.flow);
+  ok('🔴 「承認した」とは書かない（あとから見分けられる）', !/承認した/.test(r.flow), r.flow);
+  await closeIt2();
+  /* 下りたあとは、仮予約にする が戻ってくる＝2手で仮おさえにできる */
+  const m2 = await optOf('AP1');
+  ok('🔴 下りたあとは「仮予約にする」が出る（2手で仮にできる）', /仮予約にする/.test(m2), m2);
+  await closeIt2();
+}
+{
+  /* 二度押し・承認待ちでない車に効かないこと */
+  await seed({ approvalPending:false }); await p.waitForTimeout(200);
+  const r = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'AP1');
+    c.tentative = true;
+    window.pitUnapproveCard('AP1');
+    return { t: !!c.tentative, flow: (c.log || []).map(x => x.label || x.text || '').join(' / ') };
+  });
+  ok('承認待ちでない車には何もしない（仮予約を巻き込まない）', r.t === true && !/承認に回すのをやめた/.test(r.flow), r);
+}
+{
+  /* 中身が1本か（承認する／やめる が並んでいて、写しが無いか） */
+  const ap = fs.readFileSync('js/approval-pit.js', 'utf8');
+  const cv = fs.readFileSync('js/card-view.js', 'utf8');
+  ok('🔴 印を下ろす処理は approval-pit.js の1本', /window\.pitUnapproveCard/.test(ap), '');
+  /* ⚠ card-view.js には cvCancelResv（予約キャンセル）でも approvalPending を下ろす所がある＝そこは別件。
+     見張るのは「⋮ の『承認に回すのをやめる』が、自分で印を下ろしていないか」の1点。 */
+  const _un = (cv.match(/window\.cvUnapproval\s*=\s*function[\s\S]*?\n  \};/) || [''])[0];
+  ok('🔴 ⋮ は approval-pit.js を呼ぶだけ（自分で印を下ろさない）',
+     /pitUnapproveCard/.test(_un) && !/approvalPending/.test(_un), _un.slice(0, 200));
+  ok('🔴 「承認した」と「やめた」でフローの言葉が違う',
+     /承認した/.test(ap) && /承認に回すのをやめた/.test(ap), '');
+}
+
 console.log('\n── 🧭 まわりが壊れていないか ──');
 {
   await p.evaluate(() => { state.cards = []; });
