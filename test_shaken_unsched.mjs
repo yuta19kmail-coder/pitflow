@@ -221,8 +221,9 @@ ok('メインの表が3つの箱より先にある',             r5.kids.indexOf
 ok('3つの箱は表の下（最後）',                     r5.kids[r5.kids.length-1] === 'shk-wait', r5.kids);
 
 console.log('\n■ 曜日つきの日付');
-ok('入庫日が「◯/◯(曜)入」の形',                  /^\d+\/\d+\([日月火水木金土]\)入$/.test(r5.dateText), r5.dateText);
-ok('来週の初日は必ず(土)',                        /\(土\)入$/.test(r5.dateText), r5.dateText);
+ok('入庫日が「◯/◯(曜)」の形',                    /^\d+\/\d+\([日月火水木金土]\)$/.test(r5.dateText), r5.dateText);
+ok('🔴「入」の字は付けない（ゆうた指定）',        !/入/.test(r5.dateText), r5.dateText);
+ok('来週の初日は必ず(土)',                        /\(土\)$/.test(r5.dateText), r5.dateText);
 ok('見出しの期間にも曜日が入る',                  /\([日月火水木金土]\)/.test(r5.grp.w1.range), r5.grp.w1.range);
 ok('入庫日未定はその旨を出す',                    r5.tbdText === '入庫日未定', r5.tbdText);
 
