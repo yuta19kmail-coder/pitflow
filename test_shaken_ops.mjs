@@ -270,6 +270,71 @@ ok('🔴 端の帯（40px）より下に出す＝自動スクロールに逃げ�
 ok('🔴 決定の枠が光る',                           reach.光った, reach);
 ok('🔴 そのまま離すと決定になる',                 reach.決まった, reach);
 
+/* ===== ⑩ v1.125.0 落とす枠は「その日の午前／午後の箱いっぱい」
+       （ゆうた「決定の行く車のカードに乗せないとだめだった」） ===== */
+const box = await p.evaluate(async () => {
+  const mk = (id) => ({ id, boardId:'default', status:'check', workTypes:['shaken'], customer:id, car:'車',
+    plate:'', coverCall:{done:false,at:'',staff:''}, inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[] } });
+  state.cards = [...Array(6)].map((_, i) => mk('B' + i));
+  window._shakenBase = null; showView('shakencal'); shkClosePop();
+  await new Promise(r => setTimeout(r, 250));
+  const cells = Array.from(document.querySelectorAll('.shk-decell[data-iso]'));
+  const isoA = cells[0].getAttribute('data-iso');
+  /* A日の午前に4台入れて行を背高にする。B0だけ候補にして残す */
+  for (let i = 1; i < 6; i++){ state.cards[i].inspSchedule.decided = isoA; state.cards[i].inspSchedule.decidedSlot = 'am'; }
+  state.cards[0].inspSchedule.slots = {}; state.cards[0].inspSchedule.slots[isoA] = ['am'];
+  renderShaken();
+  await new Promise(r => setTimeout(r, 250));
+  /* 空いている枠（同じ日の午後）を見る＝背の高い行の中で、中身は空 */
+  const empty = document.querySelector('.shk-decell[data-iso="'+isoA+'"][data-slot="pm"]');
+  const sc = empty.parentElement;                      /* .shk-sc（その日の午後の箱） */
+  const re = empty.getBoundingClientRect(), rs = sc.getBoundingClientRect();
+  return { 枠の高さ: Math.round(re.height), 箱の高さ: Math.round(rs.height),
+           いっぱい: Math.abs(re.height - rs.height) < 2, isoA,
+           下のほう: { x: re.x + re.width/2, y: re.bottom - 12 } };
+});
+console.log('\n■ 落とす枠は箱いっぱいか（v1.125.0）');
+ok('🔴 空の枠が、その日の午前／午後の箱いっぱいに広がる', box.いっぱい, box);
+ok('背の高い行でも枠が縮まない（100px以上）',      box.枠の高さ >= 100, box);
+
+/* その空き枠の**いちばん下**（カードが無いところ）へ落として決まるか */
+const dropLow = await p.evaluate(async ([isoA, x, y]) => {
+  const bar = document.querySelector('.shk-gcar[data-card-id="B0"] .shk-bar');
+  const rb = bar.getBoundingClientRect();
+  const at = (t, cx, cy) => document.dispatchEvent(new PointerEvent(t, { clientX:cx, clientY:cy, bubbles:true, pointerType:'mouse', button:0 }));
+  bar.dispatchEvent(new PointerEvent('pointerdown', { clientX:rb.x+6, clientY:rb.y+6, bubbles:true, pointerType:'mouse', button:0 }));
+  at('pointermove', rb.x + 40, rb.y + 6);
+  await new Promise(r => setTimeout(r, 120));
+  /* 掴んだ後に表が動いているので、枠を測り直して「いちばん下」へ */
+  const cell = document.querySelector('.shk-decell[data-iso="'+isoA+'"][data-slot="pm"]');
+  const rc = cell.getBoundingClientRect();
+  at('pointermove', rc.x + rc.width/2, rc.bottom - 12);
+  await new Promise(r => setTimeout(r, 120));
+  const 光った = !!document.querySelector('.shk-decell.drop');
+  const ゴースト浮いてる = (() => { const g = document.querySelector('.shk-ghostchip');
+    return g ? getComputedStyle(g).position === 'absolute' : false; })();
+  at('pointerup', rc.x + rc.width/2, rc.bottom - 12);
+  await new Promise(r => setTimeout(r, 350));
+  if (document.querySelector('#shk-pop.show')) shkClosePop();
+  const s = state.cards.find(c => c.id === 'B0').inspSchedule;
+  return { 光った, ゴースト浮いてる, decided: s.decided || '', slot: s.decidedSlot || '' };
+}, [box.isoA, box.下のほう.x, box.下のほう.y]);
+ok('🔴 カードの無いところ（枠の下のほう）でも光る', dropLow.光った, dropLow);
+ok('🔴 そこで離すと、その日の午後で決まる',        dropLow.decided === box.isoA && dropLow.slot === 'pm', dropLow);
+ok('ゴーストは浮かせて表を伸び縮みさせない',       dropLow.ゴースト浮いてる, dropLow);
+
+/* ===== ⑪ v1.125.0 ブラウザ標準のドラッグの受け口は残っていない ===== */
+const clean = await p.evaluate(() => ({
+  fn: ['shkDragStart','shkDragEnd','shkOver','shkLeave','shkDrop','shkGanttOver','shkGanttLeave','shkGanttDrop']
+        .filter(n => typeof window[n] === 'function'),
+  attr: document.querySelectorAll('#shakencal-body [ondragover],#shakencal-body [ondrop],#shakencal-body [ondragleave]').length,
+  draggable: document.querySelectorAll('#shakencal-body [draggable="true"]').length
+}));
+console.log('\n■ ドラッグの作りは1本だけ（v1.125.0）');
+ok('🔴 ブラウザ標準のドラッグの受け口を全部消した', clean.fn.length === 0, clean.fn);
+ok('画面にも ondragover / ondrop が残っていない',  clean.attr === 0, clean);
+ok('draggable="true" のものが無い',                clean.draggable === 0, clean);
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 3));
 
