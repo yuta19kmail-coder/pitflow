@@ -83,6 +83,20 @@ console.log('\n── 🟢🩷 担当者が空なら課を出す（今回の直�
   ok('🔴 2課が出る', r.text === '2課', r);
   ok('🔴 色はピンク', /236, 72, 153|ec4899/.test(r.bg), r.bg);
 }
+/* 🔴 v1.114.0（2026-08-18 ゆうた）**課のバッジを薄くしない。**
+   🗣「フロントが入ってない時の1,2課のバッジが今ちょっと薄い設定だが、
+   　　**他のピンクとグリーンと同じでいい**。**コバモのグレーはそのまま**」 */
+{
+  const w = await p.evaluate(() => {
+    const a = document.createElement('div'); a.className = 'tr-front';        document.body.appendChild(a);
+    const b = document.createElement('div'); b.className = 'tr-front is-div'; document.body.appendChild(b);
+    const A = getComputedStyle(a), B = getComputedStyle(b);
+    const r = { 人: A.opacity, 課: B.opacity, 人影: A.boxShadow, 課影: B.boxShadow };
+    a.remove(); b.remove(); return r;
+  });
+  ok('🔴 課のバッジは人の名前と同じ濃さ（薄くしない）', w.課 === '1' && w.課 === w.人, w);
+  ok('🔴 内側の白いフチも入れていない', w.課影 === w.人影, w);
+}
 {
   /* 車と課がちぐはぐでも、出るのは**課のボタンどおり**（v1.92.0の決めごと） */
   const r = await badge({ frontStaff: '', division: 'div2', boardId: 'default' });
