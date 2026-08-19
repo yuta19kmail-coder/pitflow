@@ -152,9 +152,12 @@ const loaner = fs.readFileSync('js/loaner.js', 'utf8');
 t('🔴 loaner.js に pitLoanerModel の写しが残っていない', !/window\.pitLoanerModel\s*=/.test(loaner));
 t('pit-share.js が pitLoanerModel の本家になっている',   /w\.pitLoanerModel\s*=/.test(src));
 const idx = fs.readFileSync('index.html', 'utf8');
-t('pit-share.js の ?v= が上がっている',   /pit-share\.js\?v=7/.test(idx));
-t('today.js の ?v= が上がっている',        /today\.js\?v=41/.test(idx));
-t('loaner.js の ?v= が上がっている',       /loaner\.js\?v=71/.test(idx));
+/* ⚠ 2026-08-19：ここは「その時の番号ぴったり」を見ていたので、**次に版を上げるたびに落ちて**いた。
+   　 見たいのは「上がっているか」なので、**その時以上か**で見る。 */
+const vOf = (name) => { const m = new RegExp(name.replace('.', '\\.') + '\\?v=(\\d+)').exec(idx); return m ? +m[1] : -1; };
+t('pit-share.js の ?v= が上がっている',   vOf('pit-share.js') >= 7,  vOf('pit-share.js'));
+t('today.js の ?v= が上がっている',        vOf('today.js')     >= 41, vOf('today.js'));
+t('loaner.js の ?v= が上がっている',       vOf('loaner.js')    >= 71, vOf('loaner.js'));
 
 console.log('\n── ③ MHS 側が同じ物差しを通しているか ──────────────');
 const mhsPath = path.join(MHS_DIR, 'index.html');
