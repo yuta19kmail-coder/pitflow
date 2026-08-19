@@ -112,6 +112,44 @@ await p.waitForTimeout(300);
 ok('工程を移したカードは移った先の列のいちばん下',
    JSON.stringify(await seq('work')) === JSON.stringify(['E','A']), await seq('work'));
 
+/* 🔴 v1.140.1（ゆうた指定）ドラッグで持ってきたら「落とした場所」に入る */
+console.log('\n───── ①-b 落とした場所に入る（v1.140.1）─────');
+await setup();
+/* E（作業中）を、点検待ちの「1枚目と2枚目のあいだ」の余白に落とす */
+await p.evaluate(([colSel]) => {
+  const body = document.querySelector(colSel);
+  const kids = Array.from(body.children).filter(el => el.hasAttribute('data-card-id'));
+  const r1 = kids[0].getBoundingClientRect(), r2 = kids[1].getBoundingClientRect();
+  const y = (r1.bottom + r2.top) / 2;
+  const src = document.querySelector('[data-card-id="E"]');
+  const dt = new DataTransfer();
+  src.dispatchEvent(new DragEvent('dragstart', { bubbles:true, cancelable:true, dataTransfer:dt }));
+  const opt = { bubbles:true, cancelable:true, dataTransfer:dt, clientX: r1.left + 10, clientY: y };
+  body.dispatchEvent(new DragEvent('dragover', opt));
+  body.dispatchEvent(new DragEvent('drop', opt));
+  src.dispatchEvent(new DragEvent('dragend', { bubbles:true, cancelable:true, dataTransfer:dt }));
+}, [COL('check')]);
+await p.waitForTimeout(400);
+ok('🔴 列の余白に落とすと、落とした場所に入る（A→E→B→C→D）',
+   JSON.stringify(await seq('check')) === JSON.stringify(['A','E','B','C','D']), await seq('check'));
+
+/* いちばん下の余白に落としたら、今までどおり末尾 */
+await setup();
+await p.evaluate(([colSel]) => {
+  const body = document.querySelector(colSel);
+  const rb = body.getBoundingClientRect();
+  const src = document.querySelector('[data-card-id="E"]');
+  const dt = new DataTransfer();
+  src.dispatchEvent(new DragEvent('dragstart', { bubbles:true, cancelable:true, dataTransfer:dt }));
+  const opt = { bubbles:true, cancelable:true, dataTransfer:dt, clientX: rb.left + 10, clientY: rb.bottom - 2 };
+  body.dispatchEvent(new DragEvent('dragover', opt));
+  body.dispatchEvent(new DragEvent('drop', opt));
+  src.dispatchEvent(new DragEvent('dragend', { bubbles:true, cancelable:true, dataTransfer:dt }));
+}, [COL('check')]);
+await p.waitForTimeout(400);
+ok('いちばん下の余白に落としたら末尾（A→B→C→D→E）',
+   JSON.stringify(await seq('check')) === JSON.stringify(['A','B','C','D','E']), await seq('check'));
+
 console.log('\n───── ② 一時並び替え（board-sort.js）─────');
 await setup();
 const master = await seq('check');
@@ -135,6 +173,23 @@ ok('金額が大きい順・暫定含め（C→D→A→B）',
 ok('金額バッジに段が出る（確/受/見/概）',
    /^[確受見概] ¥/.test(await p.evaluate(() => (document.querySelector('#kanban-cols-1 .pit-card.kb-sortkey[data-sortkey]')||{}).getAttribute?.('data-sortkey') || '')),
    await p.evaluate(() => (document.querySelector('#kanban-cols-1 .pit-card.kb-sortkey')||{}).getAttribute?.('data-sortkey')));
+
+/* 🔴 v1.140.1 バッジの中身（時間を出さない・値が無いなら札を付けない） */
+await p.evaluate(() => pitBoardSortSet('in'));
+await p.waitForTimeout(350);
+const badges = () => p.evaluate(() => Array.from(document.querySelectorAll('#kanban-cols-1 .pit-card[data-card-id]'))
+  .map(el => [el.getAttribute('data-card-id'), el.getAttribute('data-sortkey')]));
+ok('🔴 入庫日のバッジに時間が出ない（8/12 のみ）',
+   (await badges()).every(([, v]) => v == null || /^\d+\/\d+$/.test(v)), await badges());
+await p.evaluate(() => pitBoardSortSet('loaner'));
+await p.waitForTimeout(350);
+/* ⚠ 盤ぜんぶを見ているので、作業中の E（代車なし）も入る＝札なしは C と E の2枚 */
+ok('🔴 代車が無いカードには札を付けない（C・E だけ札なし）',
+   (await badges()).filter(([, v]) => v == null).map(x => x[0]).sort().join(',') === 'C,E', await badges());
+ok('代車があるカードには残り日数が出る',
+   (await badges()).filter(([, v]) => v != null).every(([, v]) => /^(超過|残)\d+日$/.test(v)), await badges());
+ok('🔴 並び替え中は車両注意タブを隠している（CSS）',
+   await p.evaluate(() => { const st = Array.from(document.styleSheets).some(sh => { try { return Array.from(sh.cssRules).some(r => /pf-sorting[\s\S]*pcm-cau/.test(r.cssText)); } catch(e){ return false; } }); return st; }));
 
 /* 🔴 データを触っていないこと */
 const beforeOrders = JSON.stringify(await orders());
@@ -173,6 +228,37 @@ await p.evaluate(() => pitBoardSortSet('master'));
 await p.waitForTimeout(300);
 
 console.log('\n───── ③ メンバー絞り込み（myonly-pit.js）─────');
+await setup();
+/* 🔴 v1.140.1（ゆうた報告「数字が全然合わない」）
+   メニューに出る台数＝その人を選んだ時に実際に残る枚数、でなければならない。
+   ⚠ カードによって frontStaffId が入っていたり名前だけだったりするので、そこも混ぜて試す。 */
+await p.evaluate(() => {
+  state.cards.find(c => c.id === 'A').frontStaffId = 's1';   /* IDで持っている */
+  delete state.cards.find(c => c.id === 'A').frontStaff;
+  state.cards.find(c => c.id === 'C').frontStaff = '甲';      /* 名前だけ */
+  window.showView('course1');
+});
+await p.waitForTimeout(300);
+await p.evaluate(() => { document.querySelector('.kb-memfilt').click(); });
+await p.waitForTimeout(300);
+const menuCnt = await p.evaluate(() => Array.from(document.querySelectorAll('.kb-dd [data-memset]'))
+  .filter(el => el.getAttribute('data-memset'))
+  .map(el => [el.getAttribute('data-memset'), (el.querySelector('.kb-dd-sm') || {}).textContent]));
+ok('🔴 メニューの台数が実物と合う（甲＝3台／乙＝2台・IDと名前が混ざっていても）',
+   JSON.stringify(menuCnt) === JSON.stringify([['s1','3台'], ['s2','2台']]), menuCnt);
+ok('🔴 ボタンに絵文字を付けていない',
+   await p.evaluate(() => !/[\u{1F300}-\u{1FAFF}]/u.test(document.querySelector('.kb-memfilt').textContent)));
+await p.evaluate(() => { document.body.click(); });
+await p.waitForTimeout(200);
+await p.evaluate(() => PitMyOnly.setMember('s1'));
+await p.waitForTimeout(350);
+ok('メニューの台数どおりに残る（甲＝3台）',
+   (await seq('check')).length + (await seq('work')).length === 3,
+   [await seq('check'), await seq('work')]);
+ok('帯にも絵文字を付けていない',
+   await p.evaluate(() => !/[\u{1F300}-\u{1FAFF}]/u.test(document.querySelector('.kb-filtbar').textContent)));
+await p.evaluate(() => pitMemberFilterClear());
+await p.waitForTimeout(300);
 await setup();
 await p.evaluate(() => PitMyOnly.setMember('s2'));
 await p.waitForTimeout(350);
