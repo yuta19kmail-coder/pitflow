@@ -173,7 +173,10 @@ console.log('\n── ⑧ 二度と崩れないように（配線チェック）
   const t = fs.readFileSync('js/task.js', 'utf8');
   ok('task.js は列のカードを PitMyOnly.colCards に任せている', /PitMyOnly\.colCards\(board, col\)/.test(t));
   ok('PitMyOnly が無くても動く（保険つき）', /window\.PitMyOnly && PitMyOnly\.colCards/.test(t));
-  ok('カードの印付けも1か所を通している', /PitMyOnly\.decorate\(c, board, cardHtml\(c, o\)\)/.test(t));
+  /* 🔴 v1.140.0 印付けは `_card` の中の1か所のまま。一時並び替えのバッジ（PitBoardSort.decorate）も
+     同じ所につないだので、書き方が1行から数行になった。**通り道が1本であること**を見張る。 */
+  ok('カードの印付けも1か所を通している', /PitMyOnly\.decorate\(c, board, h\)/.test(t) && (t.match(/PitMyOnly\.decorate\(/g) || []).length === 1);
+  ok('一時並び替えのバッジも同じ1か所を通している', /PitBoardSort\.decorate\(c, h\)/.test(t) && (t.match(/PitBoardSort\.decorate\(/g) || []).length === 1);
   const m = fs.readFileSync('js/myonly-pit.js', 'utf8');
   ok('集める相手は state.boards にある盤だけ', /function courseBoardIds\(\)/.test(m));
   ok('印はHTMLを組み立て直さず class を足すだけ', /replace\('<div class="pit-card pcm'/.test(m));
