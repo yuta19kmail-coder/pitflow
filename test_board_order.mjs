@@ -212,6 +212,16 @@ await p.waitForTimeout(350);
 ok('マスター並びに戻すと元どおり', JSON.stringify(await seq('check')) === JSON.stringify(master), await seq('check'));
 ok('帯が消える', await p.evaluate(() => !document.querySelector('.kb-tmpbar')));
 
+/* 🔴 v1.140.2（ゆうた指定）帯の戻すボタンは、青も緑も**「キャンセル」で統一** */
+await p.evaluate(() => { pitBoardSortSet('amt'); PitMyOnly.setMember('s2'); });
+await p.waitForTimeout(400);
+ok('🔴 青い帯のボタンが「キャンセル」',
+   (await p.evaluate(() => (document.querySelector('.kb-tmpbar-x') || {}).textContent)) === 'キャンセル');
+ok('🔴 緑の帯のボタンも「キャンセル」',
+   (await p.evaluate(() => (document.querySelector('.kb-filtbar-x') || {}).textContent)) === 'キャンセル');
+await p.evaluate(() => { pitBoardSortSet('master'); pitMemberFilterClear(); });
+await p.waitForTimeout(300);
+
 /* 区切りラインは薄く出たまま・掴めない */
 await p.evaluate(() => { PitBoardLine.put('default','check','A','今日はここまで'); window.showView('course1'); });
 await p.waitForTimeout(300);
@@ -294,6 +304,21 @@ await p.evaluate(() => window.showView('course1'));
 await p.waitForTimeout(400);
 ok('別のビューへ移ると絞り込みも並び替えも解除される',
    await p.evaluate(() => PitBoardSort.isOn() === false && PitMyOnly.active() === false));
+
+/* 🔴 v1.140.2 お知らせを1本足した（ゆうた「この仕組み自体でお知らせを一本」） */
+console.log('\n───── ④ お知らせ ─────');
+{
+  const n = await p.evaluate(() => (window.PIT_NEWS || []).find(x => x.id === 'n-20260818-boardorder') || null);
+  ok('お知らせが1本入っている（id は二度と変えないこと）', !!n);
+  ok('お知らせが配列のいちばん先頭にある',
+     await p.evaluate(() => ((window.PIT_NEWS || [])[0] || {}).id === 'n-20260818-boardorder'));
+  ok('版と日付が入っている', !!(n && n.version === '1.140.2' && n.date === '2026-08-18'), n && [n.version, n.date]);
+  ok('🔴 コードの言葉を出していない（boardOrder / status / returnStage）',
+     !!n && !/boardOrder|returnStage|frontStaffId|\bstatus\b/.test(n.title + n.body), n && n.title);
+  ok('外し方は「キャンセル」で書いてある', !!n && /キャンセル/.test(n.body));
+  ok('id が重なっていない',
+     await p.evaluate(() => { const ids = (window.PIT_NEWS || []).map(x => x.id); return ids.length === new Set(ids).size; }));
+}
 
 console.log('\n───── まとめ ─────');
 ok('画面のエラーが出ていない', errs.length === 0, errs.slice(0, 5));
