@@ -57,6 +57,8 @@ await base();
 ok('クラウドに繋がっていないので「まとめて表示」は出ない',
    await p.evaluate(() => !document.querySelector('.cfa-btn')));
 ok('available() が false', await p.evaluate(() => CFNoteAll.available() === false));
+ok('🔴 出ない理由が残る（Firestore に繋がっていない）',
+   /繋がって|読み込み|設定/.test(await p.evaluate(() => CFNoteAll.why())), await p.evaluate(() => CFNoteAll.why()));
 
 /* ---- ここから：fb をにせものに差し替えて本番モードのふりをする ---- */
 await p.evaluate(() => {
@@ -79,9 +81,9 @@ await p.evaluate(() => {
   window.fb.db = { collection(){ return mkCol('x'); } };
   window.fb.serverTimestamp = () => 'TS';
   window.fb.company = () => ({ collection: n => mkCol(n) });
+  /* 本番モードのふり＝PIT_CLOUD と fb.db があること（2026-08-19：PitDB の中身には頼らない） */
+  window.PIT_CLOUD = true;
   window.PitDB = window.PitDB || {};
-  window.PitDB.mode = 'cloud';
-  window.PitDB._loaded = true;
   window.__pitSaves = 0;
   const orig = window.PitDB.save;
   window.PitDB.save = function(){ window.__pitSaves++; if (typeof orig === 'function') return orig.apply(this, arguments); };
@@ -90,7 +92,10 @@ await p.evaluate(() => {
 await p.waitForTimeout(300);
 
 console.log('\n───── ② 押すと3アプリぶんが並ぶ ─────');
-ok('本番モードのふりをするとボタンが出る', await p.evaluate(() => !!document.querySelector('.cfa-btn')));
+ok('本番モードのふりをするとボタンが出る', await p.evaluate(() => !!document.querySelector('.cfa-btn')),
+   await p.evaluate(() => CFNoteAll.why()));
+ok('🔴 出ない時は理由が分かる（why が空でない）',
+   await p.evaluate(() => typeof CFNoteAll.why === 'function' && CFNoteAll.why() === ''));
 ok('ボタンは「＋ 付箋を追加」より控えめ（枠だけ・塗りつぶさない）',
    await p.evaluate(() => {
      const el = document.querySelector('.cfa-btn');
