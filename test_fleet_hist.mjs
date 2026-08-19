@@ -57,11 +57,16 @@ async function setup(){
   await p.waitForTimeout(500);
 }
 const rows = () => p.evaluate(() => Array.from(document.querySelectorAll('.fl-hist-row')).map(el => el.innerText.replace(/\s+/g, ' ').trim()));
-const chips = () => p.evaluate(() => Array.from(document.querySelectorAll('.fl-hist-chip')).map(el => ({ t: el.innerText.replace(/\s+/g,' ').trim(), on: el.classList.contains('on') })));
+const opts = () => p.evaluate(() => Array.from(document.querySelectorAll('.fl-hist-sel option')).map(el => ({ t: el.textContent.replace(/\s+/g,' ').trim(), on: el.selected })));
+const open = async () => { await p.evaluate(() => { if (!/▼/.test(document.querySelector('.fl-hist-h').innerText)) flHistToggle(); }); await p.waitForTimeout(400); };
 
 console.log('\n───── ① 出る場所と件数 ─────');
 await setup();
 ok('代車管理に「貸出履歴」が出る', await p.evaluate(() => /貸出履歴/.test(document.getElementById('view-fleet-body').innerText)));
+ok('🔴 最初はたたまれている（中身が出ていない）', (await rows()).length === 0, await rows());
+ok('たたんでいても件数は出る', await p.evaluate(() => /貸出履歴（5件）|貸出履歴（4件）/.test(document.getElementById('view-fleet-body').innerText)));
+await open();
+ok('見出しを押すと開く', (await rows()).length > 0);
 ok('車両リストより下にある',
    await p.evaluate(() => { const t = document.getElementById('view-fleet-body').innerText; return t.indexOf('貸出履歴') > t.indexOf('社用車'); }));
 const r = await rows();
@@ -78,19 +83,21 @@ console.log('\n───── ④ 新しい順 ─────');
 ok('いちばん上が最近の貸出（貸出中のワゴンR）', /ワゴンR/.test(r[0]), r[0]);
 ok('いちばん下がいちばん古い（60日前の旧ムーヴ）', /旧ムーヴ/.test(r[3]), r[3]);
 
-console.log('\n───── ⑤ 代車で絞れる ─────');
-const c0 = await chips();
+console.log('\n───── ⑤ 代車で絞れる（プルダウン）─────');
+ok('🔴 絞り込みはプルダウン（台数が増えても縦に伸びない）',
+   await p.evaluate(() => !!document.querySelector('.fl-hist-sel') && !document.querySelector('.fl-hist-chip')));
+const c0 = await opts();
 ok('「全部」が最初に選ばれている', c0[0].on === true && /全部/.test(c0[0].t), c0[0]);
-ok('貸出がある代車だけボタンに出る（3台）', c0.length === 4, c0.map(x => x.t));
-ok('🔴 引退した代車もボタンに出る', c0.some(x => /旧ムーヴ/.test(x.t)), c0.map(x => x.t));
+ok('貸出がある代車だけ出る（3台＋全部）', c0.length === 4, c0.map(x => x.t));
+ok('🔴 引退した代車も出る', c0.some(x => /旧ムーヴ/.test(x.t)), c0.map(x => x.t));
 await p.evaluate(() => flHistFilter('L1'));
 await p.waitForTimeout(400);
 const r1 = await rows();
 ok('絞ると その代車のぶんだけになる', r1.length === 2 && r1.every(x => /ハスラー/.test(x)), r1);
-ok('絞り込み中と分かる', await p.evaluate(() => /絞り込み中/.test(document.getElementById('view-fleet-body').innerText)));
-await p.evaluate(() => flHistFilter('L1'));
+ok('絞り込み中と分かる（何件出しているか）', await p.evaluate(() => /件を出しています/.test(document.getElementById('view-fleet-body').innerText)));
+await p.evaluate(() => flHistFilter(''));
 await p.waitForTimeout(400);
-ok('もう一度押すと全部に戻る', (await rows()).length === 4);
+ok('「全部」を選ぶと全部に戻る', (await rows()).length === 4);
 
 console.log('\n───── ⑥ 1行の中身 ─────');
 const one = (await rows()).find(x => /田中/.test(x));   /* 予約から作った貸出の行 */
@@ -105,7 +112,7 @@ console.log('\n───── ⑦ 見るだけ ─────');
   const src = fs.readFileSync('js/fleet.js', 'utf8');
   const hist = src.slice(src.indexOf('function _flHistoryHtml'), src.indexOf('function _flUsedCount'));
   ok('🔴 履歴の一覧から消す・直すはできない（押せるのは絞り込みだけ）',
-     !/onclick="(?!flHistFilter)/.test(hist), (hist.match(/onclick="[a-zA-Z]+/g) || []));
+     !/onclick="(?!flHistToggle)/.test(hist), (hist.match(/onclick="[a-zA-Z]+/g) || []));
   ok('貸出の中身を書き換えていない', !/\.returned\s*=|\.toDate\s*=|splice\(|filter\(function\(x\)\{ return x\.id/.test(hist));
 }
 ok('代車カレンダーは今までどおり引退を出さない',
