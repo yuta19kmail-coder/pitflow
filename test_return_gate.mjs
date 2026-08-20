@@ -161,15 +161,28 @@ const real = await p.evaluate(async () => {
   await new Promise(r => setTimeout(r, 400));
   const c = state.cards.find(x=>x.id==='B2');
   const 後 = !!document.querySelector('#view-task [data-card-id="B2"]');
+  /* ⚠ 入れた日は「明日」なので、返車カレンダーも明日に合わせて見る（今日のままだと当然出ない） */
   showView('return');
+  await new Promise(r => setTimeout(r, 250));
+  state.returnRange = 'day';
+  state.returnDate = new Date(window._T.tomo + 'T00:00:00');
+  renderReturn();
   await new Promise(r => setTimeout(r, 400));
-  const 返車に出る = !!document.querySelector('#view-return [data-card-id="B2"]');
-  return { 前, 欄がある:true, 後, 返車に出る, returnStage:c.returnStage, returnDate:c.returnDate };
+  const el2 = document.querySelector('#view-return [data-card-id="B2"]');
+  return { 前, 欄がある:true, 後, 返車に出る: !!el2,
+           未完: !!(el2 && el2.classList.contains('is-retpend')),
+           つかめない: !!(el2 && el2.getAttribute('draggable') === 'false'),
+           returnStage:c.returnStage, returnDate:c.returnDate };
 });
 ok('もともとタスクボードに出ている',                 real.前, real);
 ok('確定返車日の欄が出ている',                       real.欄がある, real);
 ok('🔴 日付を入れてもタスクボードに残る',            real.後, real);
-ok('🔴 返車ビューには出てこない',                    real.返車に出る === false, real);
+/* 🔄 v1.149.0（ゆうた指定 2026-08-19）ここは**わざと変えた**。
+   v1.132.0〜v1.148.0 は「返車ビューに出てこない」だった。
+   いまは **「未完」としてグレーで出る**（見えるだけ・つかめない）。
+   ⚠ 変わっていないのは **盤面から消えないこと／returnStage が空のまま**＝関門そのもの。 */
+ok('🔴 返車ビューに「未完」として出る（v1.149.0）',  real.返車に出る && real.未完, real);
+ok('🔴 でもつかめない（見えるだけ）',                real.つかめない, real);
 ok('🔴 returnStage は空のまま',                      !real.returnStage, real);
 ok('日付は保存されている',                           real.returnDate === T.tomo, real);
 
@@ -227,7 +240,10 @@ console.log('\n■ ⋮ 完TELを通った車は3択（v1.137.0）');
   ok('🔴 返車の予定日・時間は残す（入れ直しにさせない）', r.date && r.time === '16:00', r);
   ok('🔴 確定金額も残す', r.amt === 55000, r);
   ok('🔴 売上の区分は動かない（どちらも「確定」）', r.tier === 'confirmed', r);
-  ok('🔴 返車の一覧からは外れる', r.place === null, r);
+  /* ⚠ v1.149.0 …「完TEL待ち／返車日未定／返車カレンダー」という**返車系の箱からは外れる**（place=null）。
+     　 ただし確定返車日を持ったまま作業完了に戻るので、**カレンダーには「未完」でグレーに出る**。
+     　 ＝箱に入っているか（place）と、一覧に出るか（pitReturnListDate）は別もの。混ぜない。 */
+  ok('🔴 返車系の箱からは外れる（未完としてカレンダーには出る）', r.place === null, r);
   ok('フローに残る', /完TELを取り消して/.test(r.flow), r.flow);
   await closeIt();
 
