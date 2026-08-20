@@ -205,6 +205,82 @@ console.log('\n■ 最短入庫カードの説明');
 ok('🔴 どの決まりで出した日か書いてある', /が取れる日/.test(band.why), band.why);
 ok('🔴 国産のお客様に「輸入は避けている」と言っている', /輸入車の代車は避けて/.test(band.note2), band.note2);
 
+/* ===== ⑥ 🆕 v1.157.0 「まで」が空のうちは、打つそばから最短入庫日も帯も動く =====
+   🗣 ゆうた「代車の**「まで」が入ってない間（いわば検討中の段階）**であれば、
+   　　作業タイプや国産／輸入のチップ、手入力の概算預かり日数で
+   　　**最短入庫日と、それに伴うカレンダーの透過グリーンがリニアに変わる**ようにしてほしい」
+   🔴 打っている最中なので、**入力欄から焦点が飛んではいけない**（数字が打てなくなる）。 */
+console.log('\n■ 🔴 v1.157.0 打つそばから動く（「まで」が空のうち）');
+await seed();
+await p.evaluate(async () => {
+  state.cards = [];
+  const c = { id: 'NEW2', _draft: false, resNo: 'R-NEW2', boardId: 'default', division: 'div1',
+              status: 'reserved', customer: 'リニア', car: 'ノート',
+              workType: null, workTypes: [], dropType: 'drop',
+              estHoldDays: '', reserveDate: window._add(10), reserveTime: '09:00',
+              needLoaner: true, loanerId: '', loanerFrom: '', loanerTo: '', log: [] };
+  state.cards.push(c);
+  openCard(c.id, 'page');
+  await new Promise(r => setTimeout(r, 1000));
+});
+const snap = () => p.evaluate(() => {
+  const rows = Array.from(document.querySelectorAll('#cfs-lg-body tr.cfs-lg-band')).map(r => r.getAttribute('data-ds'));
+  const note = document.querySelector('.cfs-lg-bandnote');
+  const why  = document.querySelector('.cfs-short[data-team="default"] .cfs-el-why');
+  return { n: rows.length, from: rows[0] || '', to: rows[rows.length - 1] || '',
+           note: note ? note.innerText : '', fixed: !!(note && note.classList.contains('fixed')),
+           why: why ? why.innerText : '',
+           focus: (document.activeElement && document.activeElement.getAttribute('data-key')) || '' };
+});
+
+const s0 = await snap();
+ok('🔴 作業タイプ未選択のうちは 1週間ぶんの帯', s0.n === 7, s0);
+ok('🔴 説明も「1週間」と言っている', /1週間/.test(s0.why), s0.why);
+
+/* 実際に人が打つのと同じように、1文字ずつ入れる */
+await p.click('[data-key="estHoldDays"]');
+await p.type('[data-key="estHoldDays"]', '4', { delay: 60 });
+await p.waitForTimeout(250);
+const s1 = await snap();
+ok('🔴 打った瞬間に帯が「預かり4日＋前後1日＝6日」になる', s1.n === 6, s1);
+const _d9 = await p.evaluate(() => window._add(9));
+ok('🔴 帯は入庫日（＋10日）の前日から', s1.from === _d9, { s1: s1, want: _d9 });
+ok('🔴 最短入庫の説明もその場で変わる', /預かり4日/.test(s1.why), s1.why);
+ok('🔴🔴 打っている欄から焦点が飛んでいない（数字が打ち続けられる）', s1.focus === 'estHoldDays', s1.focus);
+ok('まだ「決まった貸出」ではない', s1.fixed === false && /案内|押さえる/.test(s1.note), s1.note);
+
+/* さらに1文字足す＝「4」→「45」ではなく打ち直しで確かめる */
+await p.fill('[data-key="estHoldDays"]', '');
+await p.type('[data-key="estHoldDays"]', '9', { delay: 60 });
+await p.waitForTimeout(250);
+const s2 = await snap();
+ok('🔴 打ち直しにも追従する（9日＋前後1日＝11日）', s2.n === 11, s2);
+ok('🔴 焦点はまだ入力欄', s2.focus === 'estHoldDays', s2.focus);
+
+/* 🔴 「まで」を入れた＝人が決めた。以後は動かさない */
+await p.evaluate(() => {
+  const c = state.cards.find(x => x.id === 'NEW2');
+  const set = (k, v) => { const el = document.querySelector('[data-key="' + k + '"]'); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+  set('loanerFrom', window._add(10));
+  set('loanerTo',   window._add(12));
+});
+await p.waitForTimeout(300);
+const s3 = await snap();
+const want = await p.evaluate(() => ({ a: window._add(10), b: window._add(12) }));
+ok('🔴🔴 「まで」が入ったら帯は決まった貸出の幅で止まる', s3.from === want.a && s3.to === want.b, { s3: s3, want: want });
+ok('🔴 幅は3日ぴったり（前後の予備を足さない）', s3.n === 3, s3);
+ok('🔴 言葉も「決まった貸出の幅」に変わる', /決まった貸出/.test(s3.note), s3.note);
+ok('🔴 見た目も見分けが付く（fixed）', s3.fixed === true, s3);
+
+/* 「まで」を消したら、また検討中に戻る */
+await p.evaluate(() => {
+  const el = document.querySelector('[data-key="loanerTo"]');
+  el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true }));
+});
+await p.waitForTimeout(300);
+const s4 = await snap();
+ok('🔴 「まで」を消せば検討中に戻る（また動く）', s4.fixed === false && s4.n === 11, s4);
+
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 4));
 
