@@ -226,7 +226,7 @@ await p.evaluate(async () => {
 const snap = () => p.evaluate(() => {
   const rows = Array.from(document.querySelectorAll('#cfs-lg-body tr.cfs-lg-band')).map(r => r.getAttribute('data-ds'));
   const note = document.querySelector('.cfs-lg-bandnote');
-  const why  = document.querySelector('.cfs-short[data-team="default"] .cfs-el-why');
+  const why  = document.querySelector('.cfs-card[data-shortbox][data-team="default"] .cfs-el-why');
   return { n: rows.length, from: rows[0] || '', to: rows[rows.length - 1] || '',
            note: note ? note.innerText : '', fixed: !!(note && note.classList.contains('fixed')),
            why: why ? why.innerText : '',
@@ -280,6 +280,63 @@ await p.evaluate(() => {
 await p.waitForTimeout(300);
 const s4 = await snap();
 ok('🔴 「まで」を消せば検討中に戻る（また動く）', s4.fixed === false && s4.n === 11, s4);
+
+/* ===== ⑦ 🔴🔴 v1.157.1（ゆうた報告「全体的に動きが悪い」）
+   **打つたびに予約カレンダーの日付マスが消えていた。**
+   `cfs-short` は「最短入庫カード」だけでなく **予約カレンダーの
+   「いつもと時間が違う日（午前休み・午後休み・早締め）」のマス** にも付いている。
+   しかも**どちらにも `data-team` がある**ので、`.cfs-short[data-team]` で拾うと
+   短縮営業日のマスまで「最短入庫カード」で置き換わって消えていた。
+   🔴 **作り直す物には専用の目印（data-shortbox）を付ける。クラス名の使い回しで拾わない。** */
+console.log('\n■ 🔴🔴 v1.157.1 打っても予約カレンダーのマスが消えない');
+await p.evaluate(async () => {
+  /* MHS から届く形のカレンダーを入れて、短縮営業日を3日つくる（現場では普通にある） */
+  const days = {}; [3, 4, 8].forEach(n => { days[window._add(n)] = { h: 'am', l: '午前休み' }; });
+  window.__PitCalTest({ ver: 1, from: window._add(-30), to: window._add(120), dow: [0], days: days });
+  state.cards = [];
+  const c = { id: 'NEW3', _draft: false, resNo: 'R-NEW3', boardId: 'default', division: 'div1',
+              status: 'reserved', customer: '短縮', car: 'ノート',
+              workType: null, workTypes: [], dropType: 'drop', estHoldDays: '',
+              reserveDate: window._add(10), reserveTime: '09:00',
+              needLoaner: true, loanerId: '', loanerFrom: '', loanerTo: '', log: [] };
+  state.cards.push(c);
+  openCard(c.id, 'page');
+  await new Promise(r => setTimeout(r, 1000));
+});
+const cal0 = await p.evaluate(() => ({
+  days: document.querySelectorAll('.cfs-day').length,
+  short: document.querySelectorAll('.cfs-day.cfs-short').length,
+  boxes: document.querySelectorAll('.cfs-card[data-shortbox]').length
+}));
+ok('前提：短縮営業日のマスが出ている', cal0.short === 3 && cal0.days > 0 && cal0.boxes === 1, cal0);
+await p.click('[data-key="estHoldDays"]');
+await p.type('[data-key="estHoldDays"]', '12', { delay: 60 });
+await p.waitForTimeout(400);
+const cal1 = await p.evaluate(() => ({
+  days: document.querySelectorAll('.cfs-day').length,
+  short: document.querySelectorAll('.cfs-day.cfs-short').length,
+  boxes: document.querySelectorAll('.cfs-card[data-shortbox]').length,
+  why: (document.querySelector('.cfs-card[data-shortbox] .cfs-el-why') || {}).innerText || '',
+  band: document.querySelectorAll('#cfs-lg-body tr.cfs-lg-band').length
+}));
+ok('🔴🔴 予約カレンダーの日付マスが1つも消えていない', cal1.days === cal0.days, { 前: cal0, 後: cal1 });
+ok('🔴 短縮営業日のマスも残っている', cal1.short === 3, cal1);
+ok('🔴 最短入庫カードが増えていない（マスが化けていない）', cal1.boxes === 1, cal1);
+ok('それでも中身はちゃんと変わっている', /預かり12日/.test(cal1.why) && cal1.band === 14, cal1);
+
+/* 速さ＝打つたびに重くなっていないか（1文字あたり） */
+const perf = await p.evaluate(() => {
+  const el = document.querySelector('[data-key="estHoldDays"]');
+  const ts = [];
+  for (let i = 0; i < 10; i++){
+    el.value = String(3 + i);
+    const t0 = performance.now();
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    ts.push(performance.now() - t0);
+  }
+  return ts.reduce((a, b) => a + b, 0) / ts.length;
+});
+ok('🔴 1文字あたりが重くない（50ms未満）', perf < 50, Math.round(perf) + 'ms');
 
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 4));
