@@ -138,7 +138,20 @@ console.log('\n── ⑤ 🔴 二重貸しが画面で分かる ──');
   await p.waitForTimeout(1200);
   const before = await p.evaluate(() => document.querySelectorAll('.lo-dupmark').length);
   const info = await p.evaluate(() => {
-    const a = state.loanerAssigns.find(x => x.loanerId && x.fromDate && x.toDate);
+    /* 🩹 2026-08-20 直し＝**デモのサンプルに貸出が1件も無いと、ここで落ちていた**
+       （`find` が undefined を返して `a.loanerId` で例外＝この試験が丸ごと止まっていた）。
+       🔴 見たいのは「重なった日に印が出るか」なので、元になる貸出が無ければ**こちらで1件作る**。 */
+    let a = state.loanerAssigns.find(x => x.loanerId && x.fromDate && x.toDate);
+    if (!a){
+      /* ⚠ 日付は**今のカレンダーに映る所**にする（先の年に置くと画面に出ず、印も出ない） */
+      const q = n => (n < 10 ? '0' : '') + n;
+      const iso = d => d.getFullYear() + '-' + q(d.getMonth() + 1) + '-' + q(d.getDate());
+      const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+      const t2 = new Date(t0); t2.setDate(t2.getDate() + 2);
+      a = { id:'baseTest', loanerId:(state.loaners[0] || {}).id, cardId:null, customer:'重なりの元',
+            purpose:'試験', fromDate:iso(t0), toDate:iso(t2), manual:true };
+      state.loanerAssigns.push(a);
+    }
     state.loanerAssigns.push({ id:'dupTest', loanerId:a.loanerId, cardId:null, customer:'重なり試験',
       purpose:'試験', fromDate:a.fromDate, toDate:a.toDate, manual:true });
     renderLoaner();
