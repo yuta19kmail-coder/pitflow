@@ -68,7 +68,12 @@ const need = await p.evaluate(() => ({
   未選択: pitLoanerPlanNeed(null), ゼロ: pitLoanerPlanNeed(0), 三日: pitLoanerPlanNeed(3), 五日: pitLoanerPlanNeed(5)
 }));
 ok('🔴 作業タイプ未選択＝7日連続', need.未選択.days === 7 && need.未選択.back === 0, need.未選択);
-ok('0日も未選択あつかい', need.ゼロ.days === 7, need.ゼロ);
+/* 🔴🔴 v1.158.0（ゆうた確定）「0日あり得る。いって帰ってくるだけで代車使いたいと。
+   代車的には1日利用として存在する」＝ **0 は「無し」ではなく「1日」**。未選択（null）とは別物。 */
+ok('🔴🔴 預かり0日＝当日返し。代車は1日ぶん要る（前1日＋1日＋後1日＝3日連続）',
+   need.ゼロ.days === 3 && need.ゼロ.back === 1, need.ゼロ);
+ok('🔴 0日は「1週間」に化けない（未選択と混ぜない）', need.ゼロ.days !== 7, need.ゼロ);
+ok('🔴 0日はそれと分かる言葉で出る（当日返し）', /当日返し/.test(need.ゼロ.why), need.ゼロ.why);
 ok('🔴 預かり3日＝5日連続（前1日＋3日＋後1日）', need.三日.days === 5 && need.三日.back === 1, need.三日);
 ok('🔴 預かり5日＝7日連続', need.五日.days === 7 && need.五日.back === 1, need.五日);
 ok('どの決まりで出したか言葉でも返る', /1週間/.test(need.未選択.why) && /預かり3日/.test(need.三日.why), [need.未選択.why, need.三日.why]);
@@ -132,13 +137,16 @@ const holdOf = await p.evaluate(() => {
     未選択: pitCardHoldDays(mk({})),
     車検: pitCardHoldDays(mk({ workType: 'shaken' })),
     手入力: pitCardHoldDays(mk({ workType: 'shaken', estHoldDays: 2 })),
-    待ち: pitCardHoldDays(mk({ workType: 'shaken', dropType: 'wait' }))
+    待ち: pitCardHoldDays(mk({ workType: 'shaken', dropType: 'wait' })),
+    手入力ゼロ: pitCardHoldDays(mk({ workType: 'shaken', estHoldDays: 0 }))
   };
 });
 ok('🔴 作業タイプ未選択は null（＝1週間の決まりになる）', holdOf.未選択 === null, holdOf);
 ok('作業タイプを選ぶと日数が出る', typeof holdOf.車検 === 'number' && holdOf.車検 > 0, holdOf);
 ok('手で入れた日数が最優先', holdOf.手入力 === 2, holdOf);
-ok('待ち・当日返しは代車の話にならない（null）', holdOf.待ち === null, holdOf);
+/* 🔴🔴 v1.158.0 0 は「決まった答え」。null（まだ決まっていない）に潰さない */
+ok('🔴🔴 手で 0 と入れたら 0 が返る（null に化けない）', holdOf.手入力ゼロ === 0, holdOf);
+ok('🔴 待ち・当日仕上げは 0（＝代車を使うなら1日ぶん。1週間ではない）', holdOf.待ち === 0, holdOf);
 
 /* ===== ④🔴 車格（国産のお客様に輸入の代車を数えない） ===== */
 console.log('\n■ 🔴🔴 国産のお客様には輸入の代車を数えない');
@@ -337,6 +345,57 @@ const perf = await p.evaluate(() => {
   return ts.reduce((a, b) => a + b, 0) / ts.length;
 });
 ok('🔴 1文字あたりが重くない（50ms未満）', perf < 50, Math.round(perf) + 'ms');
+
+/* ===== ⑧ 🔴🔴 v1.158.0 預かり0日（当日返し）でも代車は1日ぶん押さえる =====
+   🗣 ゆうた「**0日あり得る。いって帰ってくるだけで代車使いたいと。
+   　　代車的には1日利用として存在する**」
+   ⚠ v1.157.1 までは 0 を「まだ決まっていない」と同じ扱いにして**1週間の窓**を出していた
+      ＝ 当日返しのお客様に、1週間まるごと空いている日しか案内できていなかった。 */
+console.log('\n■ 🔴🔴 v1.158.0 預かり0日＝当日返しでも代車は1日');
+await seed();
+const zero = await p.evaluate(async () => {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  /* 3台とも 3日後〜9日後 を埋める＝今日〜2日後の3日間だけ空いている */
+  state.loanerAssigns = state.loaners.map(function (l, i) {
+    return { id: 'Z' + i, cardId: null, loanerId: l.id, customer: 'ふさぎ', manual: true,
+             fromDate: window._add(3), toDate: window._add(9), returned: false };
+  });
+  const short = h => { const d = dashEarliestIntake('default', 'loaner', t, h, { board: 'default' }); return d ? window._iso(d) : null; };
+  return {
+    窓: pitLoanerPlanWindow(window._add(10), 0, {}),
+    最短ゼロ: short(0), 最短未選択: short(null), 最短1日: short(1),
+    今日ゼロOK: pitLoanerPlanOk(window._T.today, 0, {}),
+    今日未選択OK: pitLoanerPlanOk(window._T.today, null, {})
+  };
+});
+ok('🔴🔴 0日の窓は3日（前日・当日・翌日）', zero.窓.days === 3, zero.窓);
+ok('🔴 位置も前日から翌日まで', zero.窓.from === (await add(9)) && zero.窓.to === (await add(11)), zero.窓);
+ok('🔴🔴 当日返しなら今日から案内できる（3日空いていれば足りる）', zero.今日ゼロOK === true, zero);
+ok('🔴 未選択のままなら今日は案内しない（1週間は取れない）', zero.今日未選択OK === false, zero);
+ok('🔴🔴 最短入庫日も 0日 と 未選択 で変わる', zero.最短ゼロ === T.today && zero.最短未選択 >= (await add(10)), zero);
+ok('🔴 0日と1日は同じ幅（どちらも代車を1日使う）', zero.最短ゼロ === zero.最短1日, zero);
+
+/* 画面でも「当日返し」と分かるように出ているか */
+await seed();
+const zeroUi = await p.evaluate(async () => {
+  state.cards = [];
+  const c = { id: 'ZERO1', _draft: false, resNo: 'R-ZERO1', boardId: 'default', division: 'div1',
+              status: 'reserved', customer: '当日返し', car: 'ノート',
+              workType: 'shaken', workTypes: ['shaken'], dropType: 'drop', estHoldDays: 0,
+              reserveDate: window._add(10), reserveTime: '09:00',
+              needLoaner: true, loanerId: '', loanerFrom: '', loanerTo: '', log: [] };
+  state.cards.push(c);
+  openCard(c.id, 'page');
+  await new Promise(r => setTimeout(r, 1000));
+  return {
+    why: (document.querySelector('.cfs-card[data-shortbox] .cfs-el-why') || {}).innerText || '',
+    band: document.querySelectorAll('#cfs-lg-body tr.cfs-lg-band').length,
+    note: (document.querySelector('.cfs-lg-bandnote') || {}).innerText || ''
+  };
+});
+ok('🔴 画面の札が「当日返し（代車1日）」と言っている', /当日返し/.test(zeroUi.why), zeroUi.why);
+ok('🔴 帯も3日ぶん', zeroUi.band === 3, zeroUi);
+ok('🔴 帯の説明にも出ている', /当日返し/.test(zeroUi.note), zeroUi.note);
 
 console.log('\n■ JSエラー');
 ok('画面のエラーなし', errs.length === 0, errs.slice(0, 4));
