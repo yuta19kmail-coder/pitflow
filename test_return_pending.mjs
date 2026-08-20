@@ -253,6 +253,48 @@ ok('実績になったら未完ではない', !gone.a.未完 && gone.a.一覧日
 ok('廃車も同じ', !gone.b2.未完 && gone.b2.一覧日 === '', gone.b2);
 ok('まだ入庫していない車も拾わない', !gone.c2.未完, gone.c2);
 
+/* ===== ⑨ v1.150.0 返車時間を入庫時刻で代用しない ＝ ゆうた報告
+   　　「返車時間が入っていない＝未定なのに、当日ボードで AM が入っている」 ===== */
+console.log('\n■ 🔴 返車時間が無い車に、入庫時刻を出さない（v1.150.0）');
+await seed();
+const timeTxt = await p.evaluate(async () => {
+  /* 入庫が「AM」の車たち。返車時間は1文字も入れていない */
+  state.cards.forEach(c => { c.reserveTime = 'AM'; });
+  const one = id => { const c = state.cards.find(x => x.id === id); return pitReturnTimeText(c); };
+  showView('today'); await new Promise(r => setTimeout(r, 500));
+  const rows = Array.from(document.querySelectorAll('#view-today-body .today-row'));
+  const row = rows.find(r => /未完P1/.test(r.textContent));
+  const 時間欄 = row ? row.querySelector('.tr-time').textContent.trim() : '';
+  const 札 = row ? row.querySelector('.ret-pend') : null;
+  return {
+    未完: one('P1'), 待当: one('N3'), 完TEL済: one('N4'),
+    時間欄, 札がtagside: !!(札 && 札.classList.contains('tag-side')),
+    /* AM の文字が返車の列に1つも残っていないこと */
+    返車列にAM: /AM/.test((document.querySelectorAll('.today-col')[1] || {}).textContent || '')
+  };
+});
+ok('🔴 未完で時間が無ければ「未定」（AM ではない）', timeTxt.未完 === '未定', timeTxt);
+ok('🔴 待ち・当日返しで時間が無ければ「終日」', timeTxt.待当 === '終日', timeTxt);
+ok('完TEL済で時間があればその時間', timeTxt.完TEL済 === '14:00', timeTxt);
+ok('🔴 当日ビューの時間欄が「未定」になっている', timeTxt.時間欄 === '未定', timeTxt);
+ok('🔴 返車の列に入庫時刻（AM）が出ていない', timeTxt.返車列にAM === false, timeTxt);
+ok('🔴 未完の札の大きさが他の札とそろっている（同じ寸法の札を着ている）', timeTxt.札がtagside, timeTxt);
+
+/* 札の色が抜けていないこと＝カード側に filter / opacity を掛けていない（ゆうた指摘） */
+console.log('\n■ 🔴 未完の札の色が抜けていない（v1.150.0）');
+const badgeCol = await p.evaluate(async () => {
+  state.returnRange = 'day'; state.returnDate = new Date();
+  showView('return'); await new Promise(r => setTimeout(r, 450));
+  const el = document.querySelector('#view-return [data-card-id="P1"]');
+  const cs = el ? getComputedStyle(el) : null;
+  const bs = el && el.querySelector('.ret-pend') ? getComputedStyle(el.querySelector('.ret-pend')) : null;
+  return { カードのfilter: cs ? cs.filter : '', カードのopacity: cs ? cs.opacity : '',
+           札の背景: bs ? bs.backgroundColor : '', 札の字: bs ? bs.color : '' };
+});
+ok('🔴 カードに filter を掛けていない', badgeCol.カードのfilter === 'none', badgeCol);
+ok('🔴 カードに opacity を掛けていない', badgeCol.カードのopacity === '1', badgeCol);
+ok('🔴 札はハッキリした色（灰色ではない）', /245, *158, *11/.test(badgeCol.札の背景), badgeCol);
+
 console.log('\n' + '='.repeat(50));
 console.log(`  結果： ${pass} OK / ${fail} NG`);
 if (errs.length) { console.log('  ⚠ 画面のエラー:'); errs.slice(0, 8).forEach(e => console.log('    - ' + e)); }
