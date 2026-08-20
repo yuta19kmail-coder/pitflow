@@ -170,24 +170,25 @@ console.log('\n── ⑦ 名前は最初は無い／ダブルクリックで入
   ok('線そのものは出ている', (await p.locator(COL('check') + ' [data-lineid]').count()) === 1);
   ok('🔴 ✕ ボタンは無い（消すのは枠の外へドラッグだけ）',
      (await p.evaluate(() => document.querySelectorAll('.kb-line-x').length)) === 0);
-  /* ダブルクリックで名前を入れる（UI.prompt を差し替えて自動で答える） */
-  await p.evaluate(() => { window.UI = window.UI || {}; window.UI.prompt = () => Promise.resolve('今日はここまで'); });
-  await p.evaluate(sel => document.querySelector(sel + ' [data-lineid]')
-    .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true })), COL('check'));
-  await p.waitForTimeout(350);
+  /* ダブルクリックで名前を入れる
+     🔴 v1.159.0 で窓が**自前のもの**に変わった（共通の UI.prompt は色見本を入れられないため）。
+        ⚠ ここを UI.prompt の差し替えのままにすると、**窓が開きっぱなしで次の操作を全部ふさぐ。**
+           試験も実物の窓を触ること。 */
+  const dbl = async () => {
+    await p.evaluate(sel => document.querySelector(sel + ' [data-lineid]')
+      .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true })), COL('check'));
+    await p.waitForTimeout(300);
+  };
+  const nameIt = async (t) => { await dbl(); await p.fill('.kbl-in', t); await p.click('.kbl-ok'); await p.waitForTimeout(400); };
+  await nameIt('今日はここまで');
   ok('🔴 ダブルクリックで名前が入る',
      (await p.evaluate(sel => { const e = document.querySelector(sel + ' .kb-line-t'); return e ? e.textContent : ''; }, COL('check'))) === '今日はここまで');
   /* 空にすると線だけに戻る */
-  await p.evaluate(() => { window.UI.prompt = () => Promise.resolve(''); });
-  await p.evaluate(sel => document.querySelector(sel + ' [data-lineid]')
-    .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true })), COL('check'));
-  await p.waitForTimeout(350);
+  await nameIt('');
   ok('空にすると線だけに戻る',
      (await p.evaluate(sel => document.querySelectorAll(sel + ' .kb-line-t').length, COL('check'))) === 0);
-  await p.evaluate(() => { window.UI.prompt = () => Promise.resolve('今日はここまで'); });
-  await p.evaluate(sel => document.querySelector(sel + ' [data-lineid]')
-    .dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true })), COL('check'));
-  await p.waitForTimeout(350);
+  await nameIt('今日はここまで');
+  ok('🔴 窓は開きっぱなしにならない', (await p.locator('.kbl-ov').count()) === 0);
   /* ⑧ 用にもう1本 */
   await p.evaluate(() => { window.PitBoardLine.put('default', 'work', 'bc3', ''); window._rerenderActiveBoard(); });
   await p.waitForTimeout(200);
@@ -278,6 +279,105 @@ console.log('\n── ⑧-2 ボタンをクリック＝使い方の吹き出し�
      /区切りライン（v1\.37\.0）/.test(fs.readFileSync('js/help-content.js', 'utf8')));
   await p.evaluate(() => document.querySelector('#kanban-cols-1').click());
   await p.waitForTimeout(200);
+}
+
+console.log('\n── 🎨 v1.159.0 ダブルクリック＝名前と色を直す窓 ──');
+{
+  /* 🗣 ゆうた「ダブルクリックして名前編集画面に。色も複数色用意して、
+     　　点線から含め色を個別に変えられるように。色は5〜7色ぐらいが普通かな？」
+     → 7色でゆうた確定。線の種類は点線のまま。 */
+  await p.evaluate(() => {
+    state.settings.boardLines = [];
+    PitBoardLine.put('default', 'check', 'bc0', '今日はここまで');
+    PitBoardLine.put('default', 'check', 'bc1', '');
+    if (window._rerenderActiveBoard) _rerenderActiveBoard(); else showView(state.currentView);
+  });
+  await p.waitForTimeout(400);
+
+  ok('🔴 色は7色ある', (await p.evaluate(() => PitBoardLine.COLORS.length)) === 7);
+  ok('🔴 既定は今までのオレンジ（昔のラインの色が変わらない）',
+     (await p.evaluate(() => PitBoardLine.DEFCOLOR)) === 'orange');
+  ok('🔴 色が入っていない昔のラインもオレンジで出る',
+     (await p.evaluate(() => PitBoardLine.colorOf({}).k)) === 'orange');
+  ok('🔴 知らない色の名前は黙って消さず既定に戻す',
+     (await p.evaluate(() => PitBoardLine.colorOf({ color: 'まっき' }).k)) === 'orange');
+
+  const line = p.locator(COL('check') + ' .kb-line[data-lineid]:has(.kb-line-t)').first();
+  await line.scrollIntoViewIfNeeded();
+  await line.dblclick();
+  await p.waitForTimeout(350);
+  ok('🔴 ダブルクリックで窓が出る', (await p.locator('.kbl-ov').count()) === 1);
+  ok('🔴 色見本が7つ出ている', (await p.locator('.kbl-sw').count()) === 7);
+  ok('名前は今の言葉が入っている', (await p.inputValue('.kbl-in')) === '今日はここまで');
+  ok('🔴 いまの色に印が付いている',
+     (await p.evaluate(() => (document.querySelector('.kbl-sw.on') || {}).getAttribute
+        ? document.querySelector('.kbl-sw.on').getAttribute('data-ck') : '')) === 'orange');
+  ok('🔴 色だけでなく「見え方」（実物の線）も窓に出る', (await p.locator('.kbl-prev .kb-line').count()) === 1);
+
+  /* 色を押した瞬間、窓の中の見本がその色になる（決定を押す前に分かる） */
+  await p.click('.kbl-sw[data-ck="blue"]');
+  await p.waitForTimeout(200);
+  const prevBlue = await p.evaluate(() => getComputedStyle(document.querySelector('.kbl-prev .kb-line-bar')).borderTopColor);
+  ok('🔴 押した瞬間に見本がその色になる（決定の前に分かる）', prevBlue === 'rgb(55, 138, 221)', prevBlue);
+  ok('保存はまだされていない（決定を押すまで変えない）',
+     (await p.evaluate(() => (state.settings.boardLines[0].color || 'orange'))) === 'orange');
+
+  /* やめる＝1つも変えない */
+  await p.click('.kbl-cancel');
+  await p.waitForTimeout(300);
+  ok('🔴 やめる＝窓が閉じる', (await p.locator('.kbl-ov').count()) === 0);
+  ok('🔴 やめる＝色も名前も変わっていない',
+     (await p.evaluate(() => { const l = state.settings.boardLines[0];
+        return (l.color || 'orange') + '/' + l.label; })) === 'orange/今日はここまで');
+
+  /* もう一度開いて、名前と色を変えて決定 */
+  await line.scrollIntoViewIfNeeded();
+  await line.dblclick();
+  await p.waitForTimeout(350);
+  await p.fill('.kbl-in', '納車便まで');
+  await p.click('.kbl-sw[data-ck="red"]');
+  await p.click('.kbl-ok');
+  await p.waitForTimeout(450);
+  ok('🔴 決定で名前と色が保存される',
+     (await p.evaluate(() => { const l = state.settings.boardLines[0];
+        return l.color + '/' + l.label; })) === 'red/納車便まで');
+  ok('🔴 窓は閉じている', (await p.locator('.kbl-ov').count()) === 0);
+
+  /* 盤面の点線と文字が、その色になっていること */
+  const painted = await p.evaluate(sel => {
+    const e = document.querySelector(sel + ' .kb-line[data-lineid] .kb-line-t');
+    if (!e) return null;
+    const row = e.closest('.kb-line');
+    return { key: row.getAttribute('data-linecolor'),
+             bar: getComputedStyle(row.querySelector('.kb-line-bar')).borderTopColor,
+             style: getComputedStyle(row.querySelector('.kb-line-bar')).borderTopStyle,
+             txt: getComputedStyle(e).color };
+  }, COL('check'));
+  ok('🔴🔴 点線がその色になっている', painted && painted.bar === 'rgb(239, 68, 68)', painted);
+  ok('🔴 文字もその色', painted && painted.txt === 'rgb(239, 68, 68)', painted);
+  ok('🔴 線の種類は点線のまま（ゆうた確定）', painted && painted.style === 'dashed', painted);
+
+  /* 🔴 もう1本のラインは巻き込まれていない＝「線ごと」に変わる */
+  const others = await p.evaluate(() => (state.settings.boardLines || []).map(l => l.color || 'orange'));
+  ok('🔴🔴 もう1本は色が変わっていない（線ごとに個別）', others[1] === 'orange', others);
+
+  /* 名前を空にすると線だけに戻る（v1.37.0 の決めごとはそのまま） */
+  await line.scrollIntoViewIfNeeded();
+  await line.dblclick();
+  await p.waitForTimeout(350);
+  await p.fill('.kbl-in', '');
+  await p.click('.kbl-ok');
+  await p.waitForTimeout(450);
+  ok('🔴 名前を空にすると線だけに戻る（色は残る）',
+     (await p.evaluate(sel => {
+        const row = document.querySelector(sel + ' .kb-line[data-lineid]');
+        return (row.querySelector('.kb-line-t') ? 'あり' : 'なし') + '/' + row.getAttribute('data-linecolor');
+     }, COL('check'))) === 'なし/red');
+
+  ok('ヘルプ画面にも色のことが書いてある',
+     /7色/.test(fs.readFileSync('js/help-content.js', 'utf8')));
+  ok('🔴 色の表は board-line.js の1本（CSSに色を書き写していない）',
+     !/\.kb-line-bar\{[^}]*#e0a33a/.test(fs.readFileSync('css/polish.css', 'utf8')));
 }
 
 console.log('\n── ⑨ 今までの操作が壊れていないこと ──');
