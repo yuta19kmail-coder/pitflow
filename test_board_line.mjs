@@ -281,6 +281,80 @@ console.log('\n── ⑧-2 ボタンをクリック＝使い方の吹き出し�
   await p.waitForTimeout(200);
 }
 
+console.log('\n── 🔴🔴 v1.159.1 列の下の「ここにドラッグ」にも落とせる ──');
+{
+  /* 🗣 ゆうた「カードがあって、ラインが一番下の時に、その下にある **ここにドラッグ が反応しない**」
+     ⚠ 前は `.kanban-col-body` の外＝ぜんぶ「枠の外」＝消す扱いだった。
+        でも「ここにドラッグ」は**列の中に見えていて、カードの下にある**。
+        ＝ ラインが一番下の時、その下へ落とせる場所がそこしか無いのに
+           **新しい線は入らず、動かしていた線は黙って消えていた。** */
+  const PH  = st => '#kanban-cols-1 .kanban-col:has(.kanban-col-body[data-drop-val="' + st + '"]) .kanban-td2-normal';
+  const PHT = st => '#kanban-cols-1 .kanban-col:has(.kanban-col-body[data-drop-val="' + st + '"]) .kanban-td2-test';
+
+  /* ① 新しいライン（ボタンから）を「ここにドラッグ」へ */
+  await p.evaluate(() => { state.settings.boardLines = []; window._rerenderActiveBoard(); });
+  await p.waitForTimeout(300);
+  await hdrag('[data-linenew]', PH('check'), null);
+  const l1 = await linesOf();
+  ok('🔴🔴 新しいラインが「ここにドラッグ」で入る（前は入らなかった）', l1.length === 1, l1);
+  ok('🔴 入った先はその列', l1.length === 1 && l1[0].s === 'check', l1);
+  ok('🔴 位置は列のいちばん下（最後のカードの下）',
+     l1.length === 1 && l1[0].a === 'bc2', l1);
+  const seq1 = await seqOf('check');
+  ok('🔴 画面でもいちばん下に出る', seq1[seq1.length - 1] === 'LINE', seq1);
+
+  /* ② すでにあるラインを「ここにドラッグ」へ動かす＝消えない */
+  await p.evaluate(() => {
+    state.settings.boardLines = [];
+    PitBoardLine.put('default', 'check', '__top', '先頭の線');
+    window._rerenderActiveBoard();
+  });
+  await p.waitForTimeout(300);
+  await hdrag(COL('check') + ' [data-lineid]', PH('check'), null);
+  const l2 = await linesOf();
+  ok('🔴🔴 動かした線が消えない（前は黙って消えていた）', l2.length === 1, l2);
+  ok('🔴 いちばん下へ移った', l2.length === 1 && l2[0].a === 'bc2', l2);
+
+  /* ③ 試運転の枠に落ちても消さない＝その列のいちばん下に置く */
+  await p.evaluate(() => {
+    state.settings.boardLines = [];
+    PitBoardLine.put('default', 'check', '__top', '先頭の線');
+    window._rerenderActiveBoard();
+  });
+  await p.waitForTimeout(300);
+  await hdrag(COL('check') + ' [data-lineid]', PHT('check'), null);
+  const l3 = await linesOf();
+  ok('🔴 試運転の枠でも消さず、その列のいちばん下に置く',
+     l3.length === 1 && l3[0].s === 'check' && l3[0].a === 'bc2', l3);
+
+  /* ④ 🔴 列そのものの外に出したら、今までどおり消える（決めごとは変えていない） */
+  await hdrag(COL('check') + ' [data-lineid]', '#view-course1 .view-header', null);
+  ok('🔴 列の外へ出せば今までどおり消える', (await linesOf()).length === 0);
+
+  /* ⑤ カードのドロップは今までどおり効く（ラインの仕組みが横取りしていない） */
+  await p.evaluate(() => {
+    state.settings.boardLines = [];
+    const c = state.cards.find(x => x.id === 'bc3');   /* work 列のカード */
+    if (c) c.status = 'work';
+    PitBoardLine.put('default', 'check', 'bc2', '今日はここまで');
+    window._rerenderActiveBoard();
+  });
+  await p.waitForTimeout(300);
+  await hdrag('[data-card-id="bc3"]', PH('check'), null);
+  ok('🔴 ラインが一番下でも、カードは「ここにドラッグ」で入る',
+     (await p.evaluate(() => (state.cards.find(x => x.id === 'bc3') || {}).status)) === 'check');
+  ok('🔴 その時ラインは消えていない', (await linesOf()).length === 1);
+
+  /* ⚠ 次の見張り（⑨）は「check に3枚」を数えるので、動かしたカードを戻しておく。
+     🔴 試験どうしで盤面を貸し借りしているので、借りたら**元に戻してから返す**。 */
+  await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'bc3');
+    if (c) c.status = 'work';
+    window._rerenderActiveBoard();
+  });
+  await p.waitForTimeout(300);
+}
+
 console.log('\n── 🎨 v1.159.0 ダブルクリック＝名前と色を直す窓 ──');
 {
   /* 🗣 ゆうた「ダブルクリックして名前編集画面に。色も複数色用意して、
