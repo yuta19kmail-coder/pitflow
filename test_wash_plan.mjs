@@ -117,40 +117,41 @@ const view = await p.evaluate(async () => {
     });
     return out;
   };
-  const grp2 = (el) => {
-    const out = { 予定決定: [], 未定: [] }; let cur = null;
-    Array.from(el.querySelector('.cs-sec-body').children).forEach(ch => {
-      if (ch.classList.contains('cs-subh')) cur = /予定決定/.test(ch.textContent) ? '予定決定' : (/未定/.test(ch.textContent) ? '未定' : null);
-      const c = ch.querySelector && ch.querySelector('[data-card-id]');
-      if (c && cur) out[cur].push(c.getAttribute('data-card-id'));
-    });
-    return out;
-  };
   const 札 = id => {
     const el = document.querySelector('#carsales-body [data-card-id="' + id + '"]');
     const wrap = el && el.closest('.cs-cardwrap');
     const ex = wrap && wrap.querySelector('.cs-extra');
     return { 未完: !!(ex && ex.querySelector('.ret-pend')), 暫定: !!(ex && ex.querySelector('.ret-plan')),
-             文: ex ? ex.textContent.trim() : '' };
+             未定: !!(ex && ex.querySelector('.ret-tbd')), 文: ex ? ex.textContent.trim() : '' };
   };
-  return { 全部: ids(洗車).concat(ids(今週)), 今日明日: grp(洗車), 今週: grp2(今週),
-           札F1: 札('F1'), 札P1: 札('P1'), 札B1: 札('B1') };
+  return { 全部: ids(洗車).concat(ids(今週)), 今日明日: grp(洗車),
+           今週: ids(今週),
+           今週の小見出し: Array.from(今週.querySelectorAll('.cs-sec-body .cs-subh')).map(x => x.textContent.trim()),
+           札F1: 札('F1'), 札P1: 札('P1'), 札B1: 札('B1'), 札N1: 札('N1') };
 });
 ok('🔴 今日＝確定・未完・暫定の3台がそろう',
    ['F1','P1','B1'].every(i => view.今日明日.今日.indexOf(i) >= 0), view.今日明日);
 ok('🔴 明日＝暫定の車が出る', view.今日明日.明日.indexOf('B2') >= 0, view.今日明日);
-ok('🔴 今週＝暫定の車が出る', view.今週.予定決定.indexOf('B3') >= 0, view.今週);
+ok('🔴 今週＝暫定の車が出る', view.今週.indexOf('B3') >= 0, view.今週);
 ok('🔴 来週の車は出さない', view.全部.indexOf('X1') < 0, view.全部);
 ok('🔴 まだ入庫していない車は出さない', view.全部.indexOf('X2') < 0, view.全部);
-ok('完TEL済で日付なしは「返車日未定」の枠', view.今週.未定.indexOf('N1') >= 0, view.今週);
-ok('🔴 盤面で日付なしは「返車日未定」を埋めない', view.今週.未定.indexOf('N2') < 0, view.今週);
+
+/* 🔄 v1.152.0（ゆうた指摘）「洗車で返車日未定」の別枠をやめ、同じ並びに札で混ぜた */
+console.log('\n■ 🔄 「返車日未定」を別枠にしない（v1.152.0）');
+ok('🔴 未定の車が今週の並びに一緒に入っている', view.今週.indexOf('N1') >= 0, view.今週);
+ok('🔴 未定だけの小見出し（別枠）が無くなっている',
+   view.今週の小見出し.every(t => !/未定/.test(t)), view.今週の小見出し);
+ok('🔴 日付のある車が先・未定は最後', view.今週.indexOf('B3') < view.今週.indexOf('N1'), view.今週);
+ok('🔴 盤面で日付なしは出さない（一覧が埋まる）', view.全部.indexOf('N2') < 0, view.全部);
 
 /* ===== ③ どの確からしさかが札で分かる ===== */
-console.log('\n■ 🔴 未完・暫定の札が出る');
-ok('確定の車には札を付けない', !view.札F1.未完 && !view.札F1.暫定, view.札F1);
+console.log('\n■ 🔴 未完・暫定・未定の札が出る');
+ok('確定の車には札を付けない', !view.札F1.未完 && !view.札F1.暫定 && !view.札F1.未定, view.札F1);
 ok('🔴 未完の車には「未完」の札', view.札P1.未完 && !view.札P1.暫定, view.札P1);
 ok('🔴 暫定の車には「暫定」の札', view.札B1.暫定 && !view.札B1.未完, view.札B1);
+ok('🔴 未定の車には「未定」の札', view.札N1.未定 && !view.札N1.暫定 && !view.札N1.未完, view.札N1);
 ok('🔴 返車予定の日付も出ている', /返車 \d+\/\d+/.test(view.札F1.文) && /返車 \d+\/\d+/.test(view.札B1.文), [view.札F1.文, view.札B1.文]);
+ok('未定の車は「返車日未定」と書いてある', /返車日未定/.test(view.札N1.文), view.札N1);
 
 /* ===== ④ 🔴 返車カレンダー・当日ビューは巻き込まれていない ===== */
 console.log('\n■ 🔴🔴 返車カレンダー・当日ビューは「確定だけ」のまま');
