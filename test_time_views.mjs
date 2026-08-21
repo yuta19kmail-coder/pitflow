@@ -161,7 +161,71 @@ await show('today', null, null);
   });
 }
 
-console.log('\n── ⑤ 画面のエラー ──');
+/* 🔴 v1.166.0（ゆうた報告「当日ビューの『決まり次第』が見切れる（MHSも）」）
+   時間の列は 62px 固定。5文字の言葉は 15px だと 76px 必要で、
+   **担当バッジの下に潜って右が隠れていた**。**長い言葉は2段に折って全部見せる。**
+   ⚠ 折るかどうかも切り方も pit-share.js の `pitTimeParts` 1本（表に書いた切り方だけ）。 */
+console.log('\n── ⑤ 当日ビュー：長い言葉は2段（見切れない） ──');
+{
+  const cells = await p.evaluate(() => {
+    const ymd = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const t = ymd(new Date());
+    const mk = (id, tm) => ({ id, customer: '時間 太郎', kana: 'ジカン', car: 'ノート', boardId: 'default',
+      workType: 'general', dropType: 'drop', status: 'reserved', reserveDate: t, reserveTime: tm,
+      division: 'div1', frontStaff: '蓮沼 一郎', log: [] });
+    state.cards = [mk('w1','決まり次第'), mk('w2','勝手に取る'), mk('w3','レッカー'),
+                   mk('w4','鍵ポスト'), mk('w5','09:00'), mk('w6','09:00-10:00'), mk('w7','未定')];
+    window._todayOffset = 0; showView('today'); renderToday();
+    return Array.from(document.querySelectorAll('#view-today-body .today-row')).map(r => {
+      const e = r.querySelector('.tr-time');
+      return { txt: e.textContent.trim(), cls: e.className,
+               lines: Array.from(e.querySelectorAll('.tt-l')).map(x => x.textContent),
+               sep: e.querySelectorAll('.tt-sep').length,
+               over: e.scrollWidth > e.clientWidth + 1,
+               tall: e.scrollHeight > Math.floor(r.getBoundingClientRect().height) };
+    });
+  });
+  const by = t => cells.find(c => c.txt.replace(/\s/g,'') === t.replace(/\s/g,''));
+  ok('🔴 どの時間の書き方でも横にはみ出していない（右が隠れない）',
+     cells.every(c => !c.over), cells.filter(c => c.over));
+  ok('🔴 行の高さからもはみ出していない', cells.every(c => !c.tall), cells.filter(c => c.tall));
+  {
+    const c = by('決まり次第');
+    ok('🔴 「決まり次第」は2段（決まり／次第）',
+       !!c && JSON.stringify(c.lines) === JSON.stringify(['決まり','次第']), c);
+    ok('🔴 is-word2 が付く（時間帯の is-range とは別もの）',
+       !!c && /is-word2/.test(c.cls) && !/is-range/.test(c.cls), c && c.cls);
+    ok('🔴 2つ目の言葉を小さい灰色にしていない（tt-sep は付けない）', !!c && c.sep === 0, c && c.sep);
+  }
+  {
+    const c = by('勝手に取る');
+    ok('🔴 「勝手に取る」も2段（勝手に／取る）',
+       !!c && JSON.stringify(c.lines) === JSON.stringify(['勝手に','取る']), c);
+  }
+  {
+    /* 表に切り方を書いていない言葉は**切らない**（今までどおり） */
+    const a = by('レッカー'), b2 = by('鍵ポスト'), u = by('未定');
+    ok('🔴 表に切り方が無い言葉は折らない（レッカー・鍵ポスト・未定）',
+       [a,b2,u].every(c => c && !/is-word2|is-range/.test(c.cls)), [a,b2,u].map(c => c && c.cls));
+  }
+  {
+    const c = by('09:00〜10:00');
+    ok('時間帯は今までどおり3段（〜は小さい灰色のまま）',
+       !!c && /is-range/.test(c.cls) && c.lines.length === 3 && c.sep === 1, c);
+    const one = by('09:00');
+    ok('ふつうの時刻は1行のまま', !!one && !/is-word2|is-range/.test(one.cls), one && one.cls);
+  }
+  /* 🧭 切り方を画面に書いていないか（表が本物） */
+  const src = await p.evaluate(async () => {
+    const strip = x => x.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    const g = async u => strip(await (await fetch(u + '?t=' + Date.now())).text());
+    return { td: await g('js/today.js'), sp: await g('js/pit-share.js') };
+  });
+  ok('🔴 切り方（決まり／次第）を当日ビューに書いていない', !/'決まり'|'次第'/.test(src.td), '');
+  ok('🔴 切り方は pit-share.js の表にある', /lines:\s*\['決まり',\s*'次第'\]/.test(src.sp), '');
+}
+
+console.log('\n── ⑥ 画面のエラー ──');
 ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 
 await p.screenshot({ path: 'shot_time_views.png', fullPage: false });

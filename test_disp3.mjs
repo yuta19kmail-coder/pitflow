@@ -84,7 +84,11 @@ console.log('\n── ③ 時間帯は3段に折る ──');
   ['09:00',       ['09:00']],
   ['AM',          ['AM']],
   ['レッカー',    ['レッカー']],
-  ['決まり次第',  ['決まり次第']],
+  /* 🔴 2026-08-21（PitFlow v1.166.0・ゆうた報告「決まり次第が見切れる」）
+     5文字は 62px の列に入らないので、**表に切り方を書いた言葉だけ2段**に折るようになった。
+     ⚠ 表に書いていない言葉（レッカー・鍵ポスト…）は今までどおり切らない（下の行で見ている）。 */
+  ['決まり次第',  ['決まり', '次第']],
+  ['勝手に取る',  ['勝手に', '取る']],
   ['',            []]
 ].forEach(([inp, want]) => ok('「' + inp + '」→ ' + JSON.stringify(want),
    JSON.stringify(W.pitTimeLines(inp)) === JSON.stringify(want), W.pitTimeLines(inp)));
@@ -119,8 +123,11 @@ console.log('\n── 🎨 当日ビューの色と時間の配線 ──');
   ok('🔴 バッジの色は pitDivisionColorOr 1本', /pitDivisionColorOr\(c\)/.test(td));
   ok('🔴 人のバッジを車（国産／輸入）から塗っていない', !/isImp \? '#ec4899' : '#1db97a'/.test(td));
   ok('🔴 色を直に書いた分岐が残っていない', !/tr-front" style="background:' \+ \(isImp/.test(td));
-  ok('🔴 時間は pitTimeLines を通している', /pitTimeLines\(time\)/.test(td));
-  ok('3段の時は is-range を付ける', /tr-time is-range/.test(td));
+  /* 🔴 v1.166.0 折る判断は `pitTimeParts` に変わった（時間帯は3段のまま＋長い言葉は2段）。
+     名前が変わっただけで、**1本であることは同じ**。 */
+  ok('🔴 時間は pitTimeParts を通している', /pitTimeParts\(time\)/.test(td));
+  ok('3段（時間帯）は is-range、2段（長い言葉）は is-word2',
+     /is-range/.test(td) && /is-word2/.test(td));
   const css = fs.readFileSync('css/views.css', 'utf8');
   ok('3段用のCSSがある（.tr-time.is-range）', /\.tr-time\.is-range\{/.test(css));
   ok('3段は1行ずつ縦に積む', /\.tr-time\.is-range \.tt-l\{ display:block/.test(css));
