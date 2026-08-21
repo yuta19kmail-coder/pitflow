@@ -270,6 +270,64 @@ console.log('\n── ⑦ 状態の矛盾 ──');
   ok('知らないボードのカード（T09）', (r.by.T09 || []).indexOf('t09') >= 0, r.by.T09);
 }
 
+console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた指定 2026-08-21） ──');
+{
+  const r = await p.evaluate(() => {
+    const D = window._D, M = window._MON;
+    /* ⚠ 休みの元をにせ物にしたら**必ず戻す**（戻さないと、あとの画面が本物の PitCal を呼んで落ちる） */
+    const _kH = window.Holidays, _kC = window.PitCal;
+    window.Holidays = { is: () => false, name: () => null };
+    window.PitCal = { isClosed: () => false, label: () => '', info: () => ({ closed:false }) };
+    window._only([
+      window._clean({ id:'w1', status:'work', amountOrder:null, frontStaff:'椎名' }),            /* 1課の人 */
+      window._clean({ id:'w2', status:'work', amountOrder:null, boardId:'import', division:'div2',
+                      frontStaff:'箱崎', staff:'箱崎', inspectors:['箱崎'], mechanics:['箱崎'] }), /* 2課の人 */
+      window._clean({ id:'w3', status:'work', amountOrder:null, frontStaff:'', staff:'' }),      /* 決まっていない */
+      /* 車検＝フロントとは別に「回送の担当」も出る */
+      window._clean({ id:'w4', status:'work', workType:'shaken', workTypes:['shaken'], feeAmount:50000,
+                      frontStaff:'椎名', reserveDate:D(M + 2), returnDate:D(M + 6),
+                      inspSchedule:{ decided:D(M), resultStaff:'蓮沼', office:'野田' } })
+    ], []);
+    const res = pitInspectRun();
+    const by = {}; res.findings.forEach(f => { by[f.refId] = by[f.refId] || f; });
+    /* ⚠ w4 は お金の所見にも車検の所見にも出る。**回送の担当が付くのは車検の所見だけ**
+          （お金の所見に車検担当を出しても、直す人が分からなくなるだけ）。だから車検のほうを見る。 */
+    by.w4 = res.findings.filter(f => f.refId === 'w4' && f.cat === 'shaken')[0] || by.w4;
+    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const rows = Array.from(body.querySelectorAll('.ins-row')).map(el => ({
+      st: (el.querySelector('.ins-who-st') || {}).textContent || '',
+      st2: (el.querySelector('.ins-who-st2') || {}).textContent || '',
+      color: (el.querySelector('.ins-who-st') || { style:{} }).style.getPropertyValue('--ins-s') || ''
+    }));
+    const out = pitInspectExport(res);
+    window.Holidays = _kH; window.PitCal = _kC;      /* 借りたものは返す */
+    return { w1:by.w1, w2:by.w2, w3:by.w3, w4:by.w4,
+             w4money: res.findings.filter(f => f.refId === 'w4' && f.cat === 'money')[0] || {},
+             rows: rows,
+             expKeys: Object.keys(out.所見[0] || {}),
+             expStaff: out.所見.map(x => x.担当) };
+  });
+  ok('🔴 所見に担当が付く（1課の人）', r.w1.staff === '椎名', r.w1.staff);
+  ok('🔴 所見に担当が付く（2課の人）', r.w2.staff === '箱崎', r.w2.staff);
+  ok('🔴 決まっていなければ空と分かる', r.w3.staff === '', r.w3.staff);
+  ok('🔴 担当バッジの色は課から引く（1課と2課で違う）',
+     !!r.w1.staffColor && !!r.w2.staffColor && r.w1.staffColor !== r.w2.staffColor,
+     [r.w1.staffColor, r.w2.staffColor]);
+  ok('🔴 課が空でも色は返る（グレー）', !!r.w3.staffColor, r.w3.staffColor);
+  ok('🔴 車検の所見には回送の担当も付く（フロントとは別）',
+     r.w4.staff === '椎名' && r.w4.staff2 === '蓮沼', [r.w4.staff, r.w4.staff2]);
+  ok('🔴 車検以外の所見には回送の担当を出さない（直す人がぼやけないように）',
+     !r.w4money.staff2 && r.w4money.staff === '椎名', [r.w4money.cat, r.w4money.staff2]);
+  ok('🔴 画面に担当バッジが出る', r.rows.every(x => !!x.st), r.rows);
+  ok('🔴 担当が空の行は「担当なし」と言う', r.rows.some(x => x.st === '担当なし'), r.rows.map(x => x.st));
+  ok('🔴 車検の行は「車検 ◯◯」も出る', r.rows.some(x => /車検 蓮沼/.test(x.st2)), r.rows.map(x => x.st2));
+  ok('🔴 書き出し（②突合・③AI判断へ渡す形）にも担当が入る',
+     r.expKeys.indexOf('担当') >= 0 && r.expKeys.indexOf('車検担当') >= 0, r.expKeys);
+  ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
+}
+
 console.log('\n── ⑧ 札（見た／これは仕様／直した）と、規則ごとの黙らせ ──');
 {
   const r = await p.evaluate(() => {
@@ -403,7 +461,7 @@ console.log('\n── 🧭 物差しを1本に保てているか（中身を機�
   /* 判定を作り直していないか＝既にある物差しを呼んでいるか */
   ['pitSalesTier', 'pitSalesCountDate', 'pitCardActive', 'pitCardNoSale', 'pitFinalAmountOf',
    'pitIsShaken', 'pitShakenDayOff', 'pitLoanerConflicts', 'pitCustName', 'pitCardStatusText',
-   'pitDivisionLabel', 'pitPhaseStartMs'].forEach(fn => {
+   'pitDivisionLabel', 'pitPhaseStartMs', 'pitStaffCall', 'pitDivisionColorOr'].forEach(fn => {
     ok('🔴 ' + fn + ' に聞いている（自前で判定を作っていない）', new RegExp('\\b' + fn + '\\b').test(src.ir), '');
   });
   /* 画面が判定を持っていないか */
