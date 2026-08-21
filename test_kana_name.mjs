@@ -53,23 +53,31 @@ eq('カナの法人もフル', N.pitCustSurname({ customer:'', kana:'コバヤ�
    ⚠ この試験は「表示名は漢字→カナ」という v1.25.0 の話が壊れていないかを見る所。
    　 色分けそのものの見張りは test_card_check.mjs が本体。 */
 console.log('\n■ 入力チェック：カナは赤（必須）／漢字の名前は黄（入れたほうがいい）');
-const cdSrc = read('card-detail.js');
+/* 🔴 v1.168.0 **表は js/card-miss.js へ移した**（点検＝健康診断が画面を開かずに同じ表を見るため）。
+   ⚠ 前はここで card-detail.js の `_cardMarkMisses` を切り出していたが、
+      あれは**赤枠を塗る処理と一体**だったので、node で動かすのに にせ物のDOMが要った。
+      いまは表そのもの（`pitCardMisses`）を切り出す＝**画面が要らない**。 */
+const cmSrc = read('card-miss.js');
 {
-  const i = cdSrc.indexOf('function _cardMarkMisses(c, root){');
-  const j = cdSrc.indexOf('/* 再描画後に赤枠を貼り直す', i);
-  if (i < 0 || j < 0 || j < i) throw new Error('card-detail.js から _cardMarkMisses を切り出せません（構成が変わった？）');
-  var MISS_FN = cdSrc.slice(i, j);
+  const i = cmSrc.indexOf('function pitCardMisses(c) {');
+  const j = cmSrc.indexOf('w.PIT_MISS_OPTIONAL');
+  if (i < 0 || j < 0 || j < i) throw new Error('card-miss.js から pitCardMisses を切り出せません（構成が変わった？）');
+  var MISS_FN = cmSrc.slice(i, j);
 }
-const markMisses = new Function(MISS_FN + '\nreturn _cardMarkMisses;')();
-/* root は「枠を付ける相手が1つも見つからない入れ物」で足りる（返ってくるラベルだけ見る） */
-const fakeRoot = { querySelector: () => null };
+const miss = new Function('w', 'function t(v){ return String(v == null ? \'\' : v).trim(); }\n'
+                             + MISS_FN + '\nreturn pitCardMisses;')({});
+/* 返ってくるのは { key, label, ok, lv } の並び。見たいのは**名前だけ**なので取り出す */
+const markMisses = c => { const m = miss(c);
+  return { red: m.red.map(x => x.label), yellow: m.yellow.map(x => x.label),
+           all: m.red.concat(m.yellow).map(x => x.label) }; };
+const fakeRoot = null;   /* もう画面は要らない（引数のかたちだけ残す） */
 /* 赤も黄も全部埋まっている状態を土台にする＝見たい項目だけを空にして比べられる */
 const base = { customer:'小林 勇太', kana:'コバヤシ ユウタ', repeat:'repeater',
                tel:'090-0000-0000', boardId:'default', maker:'トヨタ', car:'アクア',
                reserveDate:'2026-08-10', reserveTime:'10:00', menu:'オイル交換',
                workType:'oil', dropType:'wait' };
-const red = c => markMisses(c, fakeRoot).red;
-const yel = c => markMisses(c, fakeRoot).yellow;
+const red = c => markMisses(c).red;
+const yel = c => markMisses(c).yellow;
 
 eq('全部入り＝赤なし',            red({ ...base }), []);
 eq('全部入り＝黄もなし',          yel({ ...base }), []);
@@ -84,7 +92,7 @@ eq('🔴 TEL は赤ではない',          red({ ...base, tel:'' }), []);
 eq('🔴 TEL は黄に出る',            yel({ ...base, tel:'' }), ['TEL']);
 eq('車種は黄に落ちた',            yel({ ...base, car:'' }), ['車種（グレード）']);
 eq('赤が複数なら並ぶ',            red({ ...base, kana:'', dropType:'' }), ['カナ','受付タイプ']);
-eq('all は赤＋黄をまとめたもの',  markMisses({ ...base, kana:'', car:'' }, fakeRoot).all, ['カナ','車種（グレード）']);
+eq('all は赤＋黄をまとめたもの',  markMisses({ ...base, kana:'', car:'' }).all, ['カナ','車種（グレード）']);
 
 console.log('\n■ 車検のときだけ「諸費用」も必須（v1.40.0・ゆうた指定／今も赤）');
 {

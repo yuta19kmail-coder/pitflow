@@ -149,7 +149,7 @@ const BASE_COLOR = {
   'coreflow-presence.js': 1, 'customers.js': 3, 'dashboard.js': 3, 'launcher.js': 2,
   'loaner.js': 3, 'maintdash.js': 2, 'mech-summary.js': 3, 'mydash.js': 5,
   'parking.js': 1, 'pit-floor.js': 6, 'reserve.js': 9, 'result.js': 2,
-  'return.js': 4, 'rules.js': 4, 'sales.js': 22, 'search.js': 2, 'settings.js': 2,
+  'return.js': 4, 'rules.js': 4, 'sales.js': 21, 'search.js': 2, 'settings.js': 2,
   'shaken-log.js': 1, 'shaken.js': 1, 'state.js': 2, 'task.js': 1, 'today.js': 2,
   'ui-dialog.js': 2, 'undetermined.js': 2, 'views.js': 1,
 };

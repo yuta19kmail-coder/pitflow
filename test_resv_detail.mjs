@@ -229,11 +229,11 @@ console.log('\n── ✏ 予約編集：出口は「保存する」「キャン
 
   /* 打っても保存されない＝端末の控えは前のまま */
   const noSave = await p.evaluate(() => {
-    const before = localStorage.getItem('pitflow_data_v12') || '';
+    const before = localStorage.getItem(PitDB.lsKey) || '';
     const c = state.cards.find(x => x.id === 'TR1');
     c.customer = '書き換え 太郎'; c.estAmount = 12345;
     PitDB.save(true);
-    const after = localStorage.getItem('pitflow_data_v12') || '';
+    const after = localStorage.getItem(PitDB.lsKey) || '';
     return { same: before === after, wrote: /書き換え 太郎/.test(after) };
   });
   ok('🔴 「保存する」を押すまで保存されない', noSave.same === true && noSave.wrote === false, noSave);
@@ -283,7 +283,7 @@ console.log('\n── ✏ 予約編集：出口は「保存する」「キャン
     open: document.getElementById('modal-detail').classList.contains('show'),
     view: !!document.getElementById('cv-p-resv'),
     shown: (document.querySelector('#cv-p-resv .cv-rsvb:nth-child(2) .cv-rsvbv') || {}).textContent,
-    ls: /99000/.test(localStorage.getItem('pitflow_data_v12') || '')
+    ls: /99000/.test(localStorage.getItem(PitDB.lsKey) || '')
   }));
   ok('🔴 保存するで中身が残る', saved.amt === 99000, saved);
   ok('見張りが外れて端末にも書かれた', saved.hold === false && saved.editing === false && after.ls === true, { saved, after });
@@ -304,7 +304,7 @@ console.log('\n── 🛟 v1.56.1 見張り（hold）が置き去りになら�
     const c = state.cards.find(x => x.id === 'TR1');
     c.estAmount = 55555;
     PitDB.save(true);
-    return { before: before, after: { hold: !!PitDB.hold }, ls: /55555/.test(localStorage.getItem('pitflow_data_v12') || '') };
+    return { before: before, after: { hold: !!PitDB.hold }, ls: /55555/.test(localStorage.getItem(PitDB.lsKey) || '') };
   });
   ok('🔴 3分を超えたら見張りを自分で外す', r.before.hold === true && r.after.hold === false, r);
   ok('🔴 そのとき打ったものはちゃんと保存される（黙って消えない）', r.ls === true, r);
@@ -328,7 +328,7 @@ console.log('\n── 🛟 v1.56.1 見張り（hold）が置き去りになら�
     const c = state.cards.find(x => x.id === 'TR1'); c.karteNo = '9999';
     pitCardEditRelease();
     PitDB.save = orig;
-    return { n: n, ls: /9999/.test(localStorage.getItem('pitflow_data_v12') || '') };
+    return { n: n, ls: /9999/.test(localStorage.getItem(PitDB.lsKey) || '') };
   });
   await p.waitForTimeout(200);
   ok('🔴 編集を抜けたら保存が走る', flushed.n >= 1, flushed);

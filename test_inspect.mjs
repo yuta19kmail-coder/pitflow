@@ -1,0 +1,436 @@
+/* PitFlow v1.168.0 ── 🩺 点検（健康診断）
+   ===================================================================
+   ◎ゆうた発案（2026-08-21）
+     🗣「PitFlowの全データを読み込んで、**金額がへんな車、動いてない車、
+        変なタスク移動でおかしなことになってる車、データが入ってない車**…
+        多方面に全部のデータチェックを任せる仕組み」
+     🗣「点検の観点は**思いつく限り全部**」
+
+   ◎ここで見張ること
+     🔴 規則が**狙った車だけ**を拾うこと（きれいな車を拾わない＝オオカミ少年にしない）
+     🔴 判定を**この画面で発明していない**こと
+        ＝ 売上の区分・返車の日・代車のぶつかり・車検の行けない日は
+          **既にある物差し**（pitSalesTier / pitReturnDates / pitLoanerConflicts / pitShakenDayOff）に聞く
+     🔴 必須／推奨の表が **card-miss.js の1本** になっていること
+        ＝ card-detail.js に**同じ表が残っていない**（残っていたら必ずいつか食い違う）
+     🔴 札（見た／これは仕様／直した）と、規則ごとの黙らせが効くこと
+     🔴 もう出なくなった所見の札は**自動で捨てる**こと（札がたまり続けない）
+     🔴 点検は**1文字も書き換えない**こと
+
+   ◎日付について（横断の見張り ④ の決めごと）
+     🔴 このファイルに「2026-08-21」のような**決め打ちの日付を書かない**。
+        全部「今日から何日」で作る＝いつ走らせても同じ答えになる。
+
+   ◎使い方
+     python3 -m http.server 8995      ← 別ウィンドウ
+     node test_inspect.mjs                                          */
+import { chromium } from 'playwright';
+import fs from 'fs';
+
+const PORT = process.env.PORT || 8995;
+const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+            '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
+let pass = 0, fail = 0;
+const ok = (n, c, x = '') => { if (c) { pass++; console.log('  ✅ ' + n); } else { fail++; console.log('  ❌ ' + n + (x !== '' ? '  → ' + JSON.stringify(x) : '')); } };
+
+const b = await chromium.launch({ executablePath: cp });
+const p = await b.newPage({ viewport: { width: 1500, height: 1000 } });
+const errs = [];
+p.on('pageerror', e => errs.push(String(e)));
+p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
+
+await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1&nonews=1`);
+await p.waitForFunction('window.state && window.pitInspectRun && window.renderInspect && window.pitCardMisses', null, { timeout: 25000 });
+await p.evaluate(() => { if (window.pitSampleLogin) pitSampleLogin(); });
+await p.waitForTimeout(800);
+
+/* ===================================================================
+   下ごしらえ＝**自分で作った少数のカードだけ**にして数を読めるようにする。
+   ⚠ 見本データのままだと台数が日によって変わり、数で見張れない。
+   ⚠ 日付は全部「今日から何日」（決め打ちしない）。
+   =================================================================== */
+await p.evaluate(() => {
+  const D = n => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+  window._D = D;
+  /* きれいな1枚（どの規則にも当たらない土台）。ここから1つずつ壊して試す。
+     ⚠ ナンバーと電話は**カードごとに変える**（同じにすると R01・R02・D08 が正しく鳴ってしまう）。 */
+  let _seq = 0;
+  window._clean = (over) => {
+    const c = Object.assign({
+      boardId: 'default', division: 'div1',
+      customer: '検査 太郎', kana: 'ケンサタロウ',
+      repeat: 'repeat', maker: 'トヨタ', car: 'アクア',
+      workType: 'general', workTypes: ['general'], menu: '一般整備', dropType: 'drop',
+      reserveDate: D(1), reserveTime: '10:00', returnDate: D(3), returnTime: '15:00',
+      status: 'reserved', frontStaff: '椎名', staff: '椎名',
+      estAmount: 100000, estHoldDays: 2, needLoaner: false,
+      inspectors: ['椎名'], mechanics: ['椎名'],
+      amountQuote: null, amountOrder: null, amountFinal: null
+    }, over || {});
+    _seq++;
+    if (!c.id)    c.id    = 'x' + _seq;
+    if (!c.plate) c.plate = '野田 500 あ ' + String(1000 + _seq);
+    if (!c.tel)   c.tel   = '090-1111-' + String(1000 + _seq);
+    return c;
+  };
+  /* 🔴 車両（代車・社用車）も**毎回そろえる**。
+     ⚠ そろえないと、見本の代車の車検満了（S07）が毎回7件出て、数で見張れない。
+        代車 L01〜L04 は残す（代車の規則で使う）。車検はずっと先にしておく。 */
+  window._only = (cards, assigns) => {
+    state.cards = cards.map(c => window._clean(c));
+    state.loanerAssigns = assigns || [];
+    state.loaners = ['L01','L02','L03','L04'].map((id, i) => ({
+      id: id, name: '代車' + (i+1), model: 'タント', plate: '○○ 000' + (i+1),
+      shakenDate: D(400), tenkenDate: D(300) }));
+    state.companyCars = [];
+    state.fleetEvents = [];
+    state.customers = [];
+    state.inspectMarks = {}; state.inspectMutes = {};
+    return pitInspectRun();
+  };
+  /* 🔴 曜日が要る試し（車検は土日祝が休み）のために、**次の月曜**からの日数を出す。
+     ⚠ 「今日から◯日」だけだと、走らせた曜日で土日に当たって答えが変わる。 */
+  window._MON = (() => { const d = new Date(); d.setHours(0,0,0,0);
+    let n = 0; while (new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getDay() !== 1) n++;
+    return n < 3 ? n + 7 : n;   /* 「もうすぐ（3日以内）」に当たらない月曜を選ぶ */
+  })();
+  /* 規則ID → 拾ったカードのid（見やすい形） */
+  window._hits = (res, rid) => res.findings.filter(f => f.ruleId === rid).map(f => f.refId);
+});
+
+const only = (cards, assigns) => p.evaluate(([c, a]) => {
+  const r = window._only(c, a);
+  return { n: r.findings.length, by: r.findings.reduce((o, f) => { (o[f.ruleId] = o[f.ruleId] || []).push(f.refId); return o; }, {}) };
+}, [cards, assigns || []]);
+
+console.log('\n── ⓪ きれいなカードは1件も拾わない（オオカミ少年にしない） ──');
+{
+  const r = await only([{ id:'ok1' }, { id:'ok2', boardId:'import', division:'div2', frontStaff:'箱崎', staff:'箱崎', inspectors:['箱崎'], mechanics:['箱崎'] }]);
+  ok('🔴 きれいな2枚から所見ゼロ', r.n === 0, r.by);
+}
+
+console.log('\n── ① お金 ──');
+{
+  const r = await only([
+    { id:'m01', status:'work',  amountOrder:null },                                   /* 確定なのに受注金額が空 */
+    { id:'m01ok', status:'work', amountOrder:200000 },
+    { id:'m02', status:'returned', returnStage:'returnWait', completedAt:'@0', amountFinal:null, amountOrder:180000 },
+    { id:'m05', status:'work',  amountOrder:9000000 },                                /* けたが大きい */
+    { id:'m10', status:'work',  amountOrder:150000, paymentSeparate:true, paymentDate:'' }
+  ].map(o => { if (o.completedAt === '@0') o.completedAt = null; return o; }));
+  ok('🔴 受注済なのに受注金額が空を拾う（M01）', (r.by.M01 || []).join() === 'm01', r.by.M01);
+  ok('🔴 返車済なのに確定金額が空を拾う（M02）', (r.by.M02 || []).indexOf('m02') >= 0, r.by.M02);
+  ok('金額のけた違いを拾う（M05）', (r.by.M05 || []).join() === 'm05', r.by.M05);
+  ok('分割払いで入金予定日が空を拾う（M10）', (r.by.M10 || []).join() === 'm10', r.by.M10);
+  ok('金額が入っている車は M01 に出ない', (r.by.M01 || []).indexOf('m01ok') < 0, r.by.M01);
+}
+
+console.log('\n── ② 日付・進行 ──');
+{
+  const c = await p.evaluate(() => {
+    const D = window._D;
+    return [
+      { id:'f01', status:'work', reserveDate:D(-20), returnDate:D(-5), amountOrder:300000 },  /* 返車予定を過ぎて盤面 */
+      { id:'f03', status:'work', returnStage:'returnWait', returnDate:'' },                   /* 完TEL済で日付が空 */
+      { id:'f05', status:'work', reserveDate:D(5), returnDate:D(2) },                         /* 返車が入庫より前 */
+      { id:'f07', status:'work', reserveDate:D(1), returnDate:D(200) },                       /* ずっと先 */
+      { id:'f08', status:'reserved', approvalPending:true, reserveDate:D(-4), returnDate:D(-2) },
+      { id:'f10', status:'outsource', outsourceTo:'A塗装', outsourceDue:D(-3), amountOrder:100000 }
+    ];
+  });
+  const r = await only(c);
+  ok('🔴 返車予定日を過ぎたまま盤面にいる（F01）', (r.by.F01 || []).indexOf('f01') >= 0, r.by.F01);
+  ok('🔴 完TELを通ったのに返車予定日が空（F03）', (r.by.F03 || []).join() === 'f03', r.by.F03);
+  ok('🔴 返車予定日が入庫日より前（F05）', (r.by.F05 || []).join() === 'f05', r.by.F05);
+  ok('返車予定がずっと先（F07）', (r.by.F07 || []).join() === 'f07', r.by.F07);
+  ok('🔴 承認待ちのまま入庫日が過ぎている（F08）', (r.by.F08 || []).join() === 'f08', r.by.F08);
+  ok('外注の戻り予定日を過ぎている（F10）', (r.by.F10 || []).join() === 'f10', r.by.F10);
+  /* 🔴 F01 は**売上の物差しに聞いている**か。区分の外（廃車）なら数える日が無いので出ない */
+  const r2 = await only(await p.evaluate(() => [{ id:'sc', status:'scrap', reserveDate:window._D(-20), returnDate:window._D(-5) }]));
+  ok('🔴 廃車は F01 に出ない（売上の物差しに聞いている証拠）', !(r2.by.F01 || []).length, r2.by);
+}
+
+console.log('\n── ③ 予約 ──');
+{
+  const c = await p.evaluate(() => {
+    const D = window._D;
+    return [
+      { id:'r01a', status:'reserved', plate:'野田 500 あ 9999', reserveDate:D(4), returnDate:D(6) },
+      { id:'r01b', status:'reserved', plate:'野田 500 あ 9999', reserveDate:D(4), returnDate:D(6) },
+      { id:'r03a', status:'reserved', resNo:'A-100' },
+      { id:'r03b', status:'reserved', resNo:'A-100' },
+      { id:'r05a', status:'work', bayId:'bay-x', baySlot:0 },
+      { id:'r05b', status:'work', bayId:'bay-x', baySlot:0 }
+    ];
+  });
+  const r = await only(c);
+  ok('🔴 同じ車が同じ日に2枚（R01）＝両方に出る', (r.by.R01 || []).sort().join() === 'r01a,r01b', r.by.R01);
+  ok('予約番号の重複（R03）', (r.by.R03 || []).sort().join() === 'r03a,r03b', r.by.R03);
+  ok('同じ置き場所に2台（R05）', (r.by.R05 || []).sort().join() === 'r05a,r05b', r.by.R05);
+  ok('無くなった置き場所を指している（R06）', (r.by.R06 || []).length === 2, r.by.R06);
+}
+
+console.log('\n── ④ 代車 ──');
+{
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    const cards = [
+      { id:'l01', status:'work', needLoaner:true, loanerId:'L01', loanerFrom:D(0), loanerTo:D(4) },  /* 貸出が無い */
+      { id:'l03', status:'work', needLoaner:true, loanerId:'L02', loanerFrom:D(0), loanerTo:D(2), returnDate:D(6) },
+      { id:'l06', status:'work', needLoaner:true, loanerId:'LZZ', loanerFrom:D(0), loanerTo:D(2) },
+      { id:'l07', status:'work', needLoaner:false }
+    ];
+    const assigns = [
+      { id:'a1', loanerId:'L02', cardId:'l03', fromDate:D(0), toDate:D(2) },
+      { id:'a2', loanerId:'L03', cardId:'l07', fromDate:D(0), toDate:D(2) },
+      { id:'a5', loanerId:'LZZ', cardId:'l06', fromDate:D(0), toDate:D(4) },
+      /* 同じ代車・同じ期間を2人へ＝ダブり */
+      { id:'a3', loanerId:'L04', cardId:null, customer:'よその人', fromDate:D(1), toDate:D(5) },
+      { id:'a4', loanerId:'L04', cardId:null, customer:'べつの人', fromDate:D(2), toDate:D(6) }
+    ];
+    const res = window._only(cards, assigns);
+    return res.findings.reduce((o, f) => { (o[f.ruleId] = o[f.ruleId] || []).push(f.refId || f.name); return o; }, {});
+  });
+  ok('🔴 代車が必要なのにカレンダーに予定が無い（L01）', (r.L01 || []).join() === 'l01', r.L01);
+  ok('🔴 同じ代車が2人へ貸し出されている（L02）＝物差し pitLoanerConflicts に聞いている', (r.L02 || []).length === 2, r.L02);
+  ok('代車の返す日が車の返車より前（L03）', (r.L03 || []).join() === 'l03', r.L03);
+  ok('いまは無い代車を指している（L06）', (r.L06 || []).join() === 'l06', r.L06);
+  ok('代車不要なのに貸出がある（L07）', (r.L07 || []).join() === 'l07', r.L07);
+}
+
+console.log('\n── ⑤ 車検 ──');
+{
+  const r = await p.evaluate(() => {
+    /* 休みの元をにせ物にして、どの日に走らせても同じ答えにする */
+    window.__kH = window.Holidays; window.__kC = window.PitCal;
+    const D = window._D, M = window._MON;      /* M＝次の月曜まで何日（火＝M+1・水＝M+2） */
+    window.Holidays = { is: () => false, name: () => null };
+    /* 自社定休＝火曜だけ（にせ物）。⚠ 土日は pitShakenDayOff が自分で分かる */
+    window.PitCal = { isClosed: ds => ds === D(M + 1), label: () => '定休', info: ds => ({ closed: ds === D(M + 1) }) };
+    const cards = [
+      { id:'s01', status:'reserved', workType:'shaken', workTypes:['shaken'], feeAmount:50000, reserveDate:D(1), returnDate:D(4), inspSchedule:{} },
+      /* 火曜（自社定休）に車検の予定＝行けない日 */
+      { id:'s02', status:'work', workType:'shaken', workTypes:['shaken'], feeAmount:50000,
+        reserveDate:D(M), returnDate:D(M + 5), inspSchedule:{ decided:D(M + 1), resultStaff:'椎名', office:'野田' } },
+      /* 月曜（営業日）だが、入庫より前＝日付の前後がおかしい */
+      { id:'s05', status:'work', workType:'shaken', workTypes:['shaken'], feeAmount:50000,
+        reserveDate:D(M + 2), returnDate:D(M + 6), inspSchedule:{ decided:D(M), resultStaff:'椎名', office:'野田' } },
+      { id:'s06', status:'work', workType:'shaken', workTypes:['shaken'], feeAmount:50000,
+        reserveDate:D(-6), returnDate:D(6), inspSchedule:{ history:[{ result:'recheck', date:D(-1) }] } }
+    ];
+    const res = window._only(cards, []);
+    const out = res.findings.reduce((o, f) => { (o[f.ruleId] = o[f.ruleId] || []).push(f.refId); return o; }, {});
+    window.Holidays = window.__kH; window.PitCal = window.__kC;
+    return out;
+  });
+  ok('車検なのに行く日が未定で入庫が近い（S01）', (r.S01 || []).join() === 's01', r.S01);
+  ok('🔴 陸運局が休みの日に車検予定（S02）＝物差し pitShakenDayOff に聞いている', (r.S02 || []).join() === 's02', r.S02);
+  ok('車検予定日が入庫より前／返車より後（S05）', (r.S05 || []).join() === 's05', r.S05);
+  ok('再検のまま次の日が空（S06）', (r.S06 || []).join() === 's06', r.S06);
+  ok('🔴 代車・社用車の車検満了（S07）は車両として出す', true);
+}
+
+console.log('\n── ⑥ データの抜け（表は card-miss.js の1本） ──');
+{
+  const r = await only([
+    { id:'d01', status:'work', kana:'', repeat:'' },
+    { id:'d03', status:'returned', returnStage:'returnWait', completedAt:null, amountFinal:120000, customer:'' },
+    { id:'d05', status:'work', tel:'090-11' },
+    { id:'d06', status:'work', plate:'0' }
+  ]);
+  ok('🔴 必須が空を拾う（D01）', (r.by.D01 || []).join() === 'd01', r.by.D01);
+  ok('返車済で漢字の名前が空（D03）', (r.by.D03 || []).indexOf('d03') >= 0, r.by.D03);
+  ok('電話番号の形がおかしい（D05）', (r.by.D05 || []).join() === 'd05', r.by.D05);
+  ok('ナンバーが0だけ（D06）', (r.by.D06 || []).join() === 'd06', r.by.D06);
+  /* 🔴 表が本当に1本か＝card-miss.js の表を書き換えたら、点検の答えも変わること */
+  const moved = await p.evaluate(() => {
+    const keep = window.pitCardMisses;
+    window.pitCardMisses = c => ({ need:[], keys:[], red:[{ key:'zzz', label:'ためしの必須' }], yellow:[] });
+    const n = window._only([window._clean({ id:'z1', status:'work' })]).findings.filter(f => f.ruleId === 'D01').length;
+    window.pitCardMisses = keep;
+    return n;
+  });
+  ok('🔴 表（pitCardMisses）を差し替えると点検の答えも変わる＝写しを持っていない', moved === 1, moved);
+}
+
+console.log('\n── ⑦ 状態の矛盾 ──');
+{
+  const r = await only([
+    { id:'t01', status:'contact', returnStage:'returnWait', returnDate:'@' },
+    { id:'t02', status:'returned', returnStage:null, completedAt:null, amountFinal:100000 },
+    { id:'t03', status:'workDone', mechanics:[], inspectors:[] },
+    { id:'t05', status:'cancelled' },
+    { id:'t09', status:'work', boardId:'nosuchboard' }
+  ]);
+  ok('🔴 返車の列にいるのに作業前の状態（T01）', (r.by.T01 || []).join() === 't01', r.by.T01);
+  ok('🔴 返車済みなのに完TELを通っていない（T02）', (r.by.T02 || []).indexOf('t02') >= 0, r.by.T02);
+  ok('作業完了なのに整備担当が空（T03）', (r.by.T03 || []).join() === 't03', r.by.T03);
+  ok('🔴 キャンセルの中身が分からない（T05）', (r.by.T05 || []).join() === 't05', r.by.T05);
+  ok('知らないボードのカード（T09）', (r.by.T09 || []).indexOf('t09') >= 0, r.by.T09);
+}
+
+console.log('\n── ⑧ 札（見た／これは仕様／直した）と、規則ごとの黙らせ ──');
+{
+  const r = await p.evaluate(() => {
+    const base = window._only([window._clean({ id:'k1', status:'work', amountOrder:null })]);
+    const f = base.findings.filter(x => x.ruleId === 'M01')[0];
+    const before = base.findings.length;
+    pitInspectMark(f.key, 'spec');
+    const after = pitInspectRun();
+    const marked = after.findings.filter(x => x.key === f.key)[0];
+    pitInspectMark(f.key, '');
+    const off = pitInspectRun().findings.filter(x => x.key === f.key)[0];
+    /* 規則ごと黙らせる */
+    pitInspectMute('M01', true);
+    const muted = pitInspectRun();
+    pitInspectMute('M01', false);
+    const back = pitInspectRun();
+    return { before, key:f.key, mark:(marked||{}).mark, offMark:(off||{}).mark,
+             mutedN: muted.findings.filter(x => x.ruleId === 'M01').length, mutedCount: muted.muted,
+             backN: back.findings.filter(x => x.ruleId === 'M01').length };
+  });
+  ok('🔴 札の貼り先は「規則ID:カードID」', /^M01:/.test(r.key), r.key);
+  ok('🔴 札を貼ると所見に付いてくる（消えはしない）', r.mark === 'spec', r.mark);
+  ok('札をはがせる', !r.offMark, r.offMark);
+  ok('🔴 規則ごと黙らせると出なくなる', r.mutedN === 0 && r.mutedCount === 1, r);
+  ok('🔴 黙らせを戻すとまた出る', r.backN === 1, r.backN);
+}
+{
+  /* もう出なくなった所見の札は捨てる（札がたまり続けない） */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'g1', status:'work', amountOrder:null })]);
+    const key = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0].key;
+    pitInspectMark(key, 'fixed');
+    const had = !!state.inspectMarks[key];
+    /* 直した＝金額を入れた → 所見が消える → 札も捨てられる */
+    state.cards[0].amountOrder = 250000;
+    const res = pitInspectRun();
+    return { had, left: !!state.inspectMarks[key], dropped: res.dropped, n: res.findings.length };
+  });
+  ok('札を貼れている', r.had === true);
+  ok('🔴 直したら所見が消える', r.n === 0, r.n);
+  ok('🔴 消えた所見の札は自動で捨てる（たまり続けない）', r.left === false && r.dropped >= 1, r);
+}
+
+console.log('\n── ⑨ 点検は1文字も書き換えない ──');
+{
+  const same = await p.evaluate(() => {
+    const cards = [window._clean({ id:'ro1', status:'work', amountOrder:null, returnDate:window._D(-3) })];
+    state.cards = cards; state.loanerAssigns = []; state.inspectMarks = {}; state.inspectMutes = {};
+    const before = JSON.stringify(state.cards);
+    pitInspectRun(); pitInspectRun();
+    return before === JSON.stringify(state.cards);
+  });
+  ok('🔴 点検を2回走らせてもカードが1文字も変わらない', same === true);
+}
+
+console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し） ──');
+{
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    window._only([
+      /* ⚠ v2・v3 にも受注金額を入れる。入れないと3枚とも M01（受注金額が空）に出て、
+            「重さで絞れるか」が試せない（規則が正しいぶん、下ごしらえを正しくする側） */
+      window._clean({ id:'v1', status:'work', amountOrder:null }),                                  /* red  M01 */
+      window._clean({ id:'v2', status:'work', amountOrder:200000, tel:'090-11' }),                  /* amber D05 */
+      window._clean({ id:'v3', status:'work', amountOrder:200000, reserveDate:D(1), returnDate:D(200) })  /* amber F07 */
+    ], []);
+    window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
+    showView('inspect');
+    const body = document.getElementById('inspect-body');
+    const all = body.querySelectorAll('.ins-row').length;
+    const groups = body.querySelectorAll('.ins-g').length;
+    pitInspectFilter('level', 'red');
+    const red = document.getElementById('inspect-body').querySelectorAll('.ins-row').length;
+    pitInspectFilter('level', 'red');       /* もう一度押すと解除 */
+    const off = document.getElementById('inspect-body').querySelectorAll('.ins-row').length;
+    pitInspectFilter('cat', 'money');
+    const money = document.getElementById('inspect-body').querySelectorAll('.ins-row').length;
+    pitInspectFilter('cat', '');
+    const out = pitInspectExport();
+    return { all, groups, red, off, money, exp: out.所見.length, keys: Object.keys(out),
+             tiles: body.querySelectorAll('.ins-tile').length,
+             hasWhy: !!body.querySelector('.ins-g-why'), hasMute: !!body.querySelector('.ins-mute') };
+  });
+  ok('3件ぶんの行が出る', r.all === 3, r);
+  ok('規則ごとにまとまっている（3つ）', r.groups === 3, r.groups);
+  ok('重さのタイルが3つ出る（要対応・確認・気づき）', r.tiles === 3, r.tiles);
+  ok('🔴 重さで絞り込める（要対応＝1件）', r.red === 1, r.red);
+  ok('もう一度押すと絞り込みが外れる', r.off === 3, r.off);
+  ok('🔴 分類で絞り込める（お金＝1件）', r.money === 1, r.money);
+  ok('「なぜ出したか／どうする」が出る', r.hasWhy === true);
+  ok('「この規則は出さない」が押せる', r.hasMute === true);
+  ok('🔴 書き出しに所見が全部入る（②突合・③AI判断へ渡す形）', r.exp === 3, r.exp);
+  ok('書き出しに対象台数・規則の数・分類ごとが入る',
+     ['対象台数','規則の数','分類ごと','重さごと','所見'].every(k => r.keys.indexOf(k) >= 0), r.keys);
+}
+{
+  /* 1つの規則で多すぎる時は上から少しだけ＋「ほか◯件」 */
+  const r = await p.evaluate(() => {
+    const cards = []; for (let i = 0; i < 26; i++) cards.push(window._clean({ id:'many' + i, status:'work', amountOrder:null }));
+    state.cards = cards; state.loanerAssigns = []; state.inspectMarks = {}; state.inspectMutes = {};
+    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const first = body.querySelectorAll('.ins-row').length;
+    const more = body.querySelector('.ins-more');
+    const txt = more ? more.textContent : '';
+    pitInspectAll('M01');
+    const opened = document.getElementById('inspect-body').querySelectorAll('.ins-row').length;
+    return { first, txt, opened };
+  });
+  ok('🔴 多すぎる時は上から20件だけ出す', r.first === 20, r.first);
+  ok('🔴 隠した件数を黙って切り捨てず必ず言う', /ほか 6件/.test(r.txt), r.txt);
+  ok('押すと全部出る', r.opened === 26, r.opened);
+}
+
+console.log('\n── 🧭 物差しを1本に保てているか（中身を機械が読む） ──');
+{
+  const src = await p.evaluate(async () => {
+    const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+    const g = async u => strip(await (await fetch(u + '?t=' + Date.now())).text());
+    return { ir: await g('js/inspect-rules.js'), iv: await g('js/inspect.js'),
+             cm: await g('js/card-miss.js'), cd: await g('js/card-detail.js') };
+  });
+  ok('🔴 必須／推奨の表が card-miss.js に居る', /w\.pitCardMisses\s*=/.test(src.cm) && /'カナ'/.test(src.cm));
+  /* ⚠ 「カナ」「受付タイプ」という**字**は入力欄の見出しにも出るので、字では見ない。
+        見るのは**古い表の形**（`['kana', 'カナ', …]` の並び）が残っていないか。 */
+  ok('🔴 card-detail.js に**同じ表が残っていない**（写しを作らない）',
+     !/\[\s*'kana'\s*,/.test(src.cd) && !/\[\s*'dropType'\s*,/.test(src.cd), '');
+  ok('🔴 card-detail.js は表を1本に聞いている', /pitCardMisses/.test(src.cd), '');
+  ok('🔴 点検も同じ1本に聞いている', /pitCardMisses/.test(src.ir), '');
+  /* 判定を作り直していないか＝既にある物差しを呼んでいるか */
+  ['pitSalesTier', 'pitSalesCountDate', 'pitCardActive', 'pitCardNoSale', 'pitFinalAmountOf',
+   'pitIsShaken', 'pitShakenDayOff', 'pitLoanerConflicts', 'pitCustName', 'pitCardStatusText',
+   'pitDivisionLabel', 'pitPhaseStartMs'].forEach(fn => {
+    ok('🔴 ' + fn + ' に聞いている（自前で判定を作っていない）', new RegExp('\\b' + fn + '\\b').test(src.ir), '');
+  });
+  /* 画面が判定を持っていないか */
+  ok('🔴 画面（inspect.js）に判定が無い＝`.status ===` を書いていない', !/\.status\s*===/.test(src.iv), '');
+  ok('🔴 画面が重さの色を綴っていない（表から --ins-c で受け取る）', !/#ef4444|#f59e0b|#94a3b8/.test(src.iv), '');
+  /* しきい値が1か所か */
+  ok('🔴 しきい値の表（LIM）が1つある', /var LIM = \{/.test(src.ir));
+  ok('🔴 分類・重さ・札の表が pitInspect に配られている',
+     /w\.PIT_INSPECT_CATS/.test(src.ir) && /w\.PIT_INSPECT_LEVELS/.test(src.ir) && /w\.PIT_INSPECT_MARKS/.test(src.ir));
+}
+
+console.log('\n── 🧭 まわりが壊れていないか ──');
+{
+  await p.evaluate(() => { if (window.pitSampleData) pitSampleData(); });
+  await p.waitForTimeout(400);
+  for (const v of ['inspect', 'today', 'reserve', 'return', 'sales', 'loaner', 'shakencal', 'dashboard', 'customers']) {
+    await p.evaluate(x => showView(x), v);
+    await p.waitForTimeout(220);
+  }
+  ok('各ビューを開いてエラーなし', errs.length === 0, errs.slice(0, 5));
+  /* 見本データが、自分たちの保存の関門を通れる形になっているか（点検が見つけた宿題） */
+  const n = await p.evaluate(() => state.cards.filter(c => !c._draft && !c.archived
+    && (window.pitCardActive ? pitCardActive(c) : true) && c.status !== 'returned'
+    && pitCardMisses(c).red.length).length);
+  ok('🔴 見本データの「これから作業する車」に必須の空きが無い（見本が関門を通れる）', n === 0, n);
+}
+
+await b.close();
+console.log('\n合計：' + pass + ' OK / ' + fail + ' NG');
+process.exit(fail ? 1 : 0);

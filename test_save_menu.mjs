@@ -28,8 +28,14 @@ import path from 'path';
   const gFrom = src.indexOf('function _cardMarkMisses(c, root){');
   const gTo   = src.indexOf('/* 再描画後に赤枠を貼り直す', gFrom);
   if (gFrom < 0 || gTo < 0) throw new Error('card-detail.js から入力チェック＋関門を切り出せません（構成が変わった？）');
+  /* 🔴 v1.168.0 **必須／推奨の表は js/card-miss.js へ移した。**
+     ＝ `_cardMarkMisses` は「どこに赤枠を塗るか」だけになり、表そのものは
+       `pitCardMisses` に聞く。試験台にも**本物のまま**足す（写しを作らない）。
+     ⚠ ここを足し忘れると、関門が「赤ゼロ」と勘違いして**全部素通り**する。 */
+  const missSrc = fs.readFileSync(path.join(dir,'js','card-miss.js'),'utf8');
   fs.writeFileSync(path.join(dir,'_save-part.js'),
-    'let _cardBodyId = "md-body";\nlet _cardCheckOn = false;\n' + src.slice(gFrom,gTo) + '\n' + src.slice(from,to));
+    'let _cardBodyId = "md-body";\nlet _cardCheckOn = false;\n'
+    + missSrc + '\n' + src.slice(gFrom,gTo) + '\n' + src.slice(from,to));
 
   const h = fs.readFileSync(path.join(dir,'index.html'),'utf8');
   const head = h.slice(h.indexOf('<section id="view-card" class="view">'), h.indexOf('<div id="md-body"'));

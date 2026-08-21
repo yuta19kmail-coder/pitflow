@@ -285,7 +285,7 @@ console.log('\n── ④-2 🔴 前に開いたことがある人にも新し�
   const { p, errs } = await open('?demo=1&demoui=1&nonews=1', { stayOnLogin: true });
   /* 「前のデモ版を触ったことがある人」を作る＝古いキーに実名っぽい保存を仕込む */
   await p.evaluate(() => {
-    localStorage.setItem('pitflow_data_v12', JSON.stringify({
+    localStorage.setItem(PitDB.lsKey, JSON.stringify({
       cards: [{ id:'old1', customer:'佐藤 大輔', maker:'トヨタ', car:'アクア',
                 plate:'野田 500 あ 1234', tel:'090-1234-5678', status:'reserved', reserveDate:'2026-08-12' }],
       customers: [{ id:'cu_sold', name:'鈴木 翔太', kana:'スズキショウタ', vehicles: [] }],
@@ -301,9 +301,12 @@ console.log('\n── ④-2 🔴 前に開いたことがある人にも新し�
     n   : state.cards.length
   }));
   ok('🔴 前の中身（佐藤さん・アクア）が出てこない', st.old === false, st);
-  ok('🔴 デモ専用のキーを使っている', st.keys.indexOf('pitflow_demo_v2') >= 0, st.keys);
+  /* ⚠ v1.168.0 版の数字（v2 / v3 …）は**見本の中身を変えるたびに上がる**。
+        ここで数字まで決め打ちすると、中身を直すたびにこの見張りが落ちる。
+        見たいのは「**デモ専用のキーを使っているか**」だけ。 */
+  ok('🔴 デモ専用のキーを使っている', st.keys.some(k => /^pitflow_demo_v\d+$/.test(k)), st.keys);
   ok('🔴 使わなくなった古いキーは片付けている（端末の保存が溢れない）',
-     st.keys.indexOf('pitflow_data_v12') < 0, st.keys);
+     st.keys.every(k => !/^pitflow_data_v\d+$/.test(k)), st.keys);
   ok('新しいサンプルがちゃんと入っている', st.n > 50, st.n);
 
   /* もう一度開いても、架空のまま残る（毎回作り直して重くならない） */
