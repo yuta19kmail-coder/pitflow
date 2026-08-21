@@ -183,13 +183,20 @@ ok('🔴 その状態が受注の窓にそのまま出る',          same.窓で
 ok('🔴 窓で変えるとカードのほうも変わる',          same.窓で不要にしたあと === false, same);
 
 /* ===== ⑧ お知らせに入っているか ===== */
+/* 🔴 2026-08-21 直した：**「配列のいちばん先頭」を見張らない。**
+   その版が出た日は先頭でも、**次のお知らせが足された瞬間に必ず落ちる**＝毎回落ちる見張りになる。
+   見るべきは「**自分のお知らせが在る**」と「**全体が新しい順に並んでいる**」の2つ。 */
 const news = await p.evaluate(() => {
-  const n = (window.PIT_NEWS || [])[0] || {};
+  const list = (window.PIT_NEWS || []);
+  const n = list.find(x => x && x.id === 'n-20260818-washorder') || {};
+  let sorted = true;
+  for (let i = 1; i < list.length; i++) if (String(list[i-1].date||'') < String(list[i].date||'')) sorted = false;
   return { id: n.id, version: n.version, date: n.date, title: n.title || '',
-           body: (n.body || '').replace(/\s+/g, ' '), 件数: (window.PIT_NEWS||[]).length };
+           body: (n.body || '').replace(/\s+/g, ' '), 件数: list.length, 新しい順: sorted };
 });
 console.log('\n■ お知らせ');
-ok('お知らせのいちばん上に足してある',            news.id === 'n-20260818-washorder', news.id);
+ok('お知らせが1本入っている（id は二度と変えないこと）', news.id === 'n-20260818-washorder', news.id);
+ok('🔴 お知らせ全体が新しい順に並んでいる（自分のぶんが先頭かは見ない）', news.新しい順 === true, news.件数);
 ok('版と日付が入っている',                        news.version === '1.122.0' && news.date === '2026-08-18', news);
 ok('題に洗車と受注のことが書いてある',            /洗車/.test(news.title) && /パーツ待ち/.test(news.title), news.title);
 ok('🔴 ねらい（車販のスケジュールを楽に）が書いてある', /車販の(スケジュール|段取り)/.test(news.body), news.body.slice(0,120));

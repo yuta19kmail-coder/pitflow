@@ -7,9 +7,17 @@
 //   使い方： python3 -m http.server 8952 --directory .  →  PORT=8952 node test_nav.mjs
 // ============================================================
 import { chromium } from 'playwright';
+import fs from 'fs';
+/* 🔴 2026-08-21 ここだけ `chromium.launch()` を素で呼んでいたので、
+   ブラウザの置き場所が見つからず **この見張りだけずっと動いていなかった**（NGですらなく起動失敗）。
+   ほかの見張りと同じ探し方にそろえる。 */
+const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
+            '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(x => fs.existsSync(x));
 const PORT = process.env.PORT || 8952;
-const BASE = `http://localhost:${PORT}`;
-const b = await chromium.launch(); const ctx = await b.newContext(); const p = await ctx.newPage();
+/* 🔴 `localhost` だと環境によって IPv6(::1) を先に見に行き、
+   IPv4 でだけ待っているサーバに繋がらない。ほかの見張りと同じ 127.0.0.1 にそろえる。 */
+const BASE = `http://127.0.0.1:${PORT}`;
+const b = await chromium.launch({ executablePath: cp }); const ctx = await b.newContext(); const p = await ctx.newPage();
 let ok=0,ng=0;
 const t=(n,c,x)=>{ c?(ok++,console.log('  OK  '+n)):(ng++,console.log('  NG  '+n+(x!==undefined?'  '+JSON.stringify(x):''))); };
 const view = () => p.evaluate(()=> (document.querySelector('.view.active')||{}).id.replace('view-',''));

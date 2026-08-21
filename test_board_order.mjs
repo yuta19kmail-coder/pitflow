@@ -310,8 +310,15 @@ console.log('\n───── ④ お知らせ ─────');
 {
   const n = await p.evaluate(() => (window.PIT_NEWS || []).find(x => x.id === 'n-20260818-boardorder') || null);
   ok('お知らせが1本入っている（id は二度と変えないこと）', !!n);
-  ok('お知らせが配列のいちばん先頭にある',
-     await p.evaluate(() => ((window.PIT_NEWS || [])[0] || {}).id === 'n-20260818-boardorder'));
+  /* 🔴 2026-08-21 直した：**「配列のいちばん先頭」を見張らない。**
+   その版が出た日は先頭でも、**次のお知らせが足された瞬間に必ず落ちる**＝毎回落ちる見張りになる。
+   見るべきは「**自分のお知らせが在る**」と「**全体が新しい順に並んでいる**」の2つ。  */
+  ok('🔴 お知らせ全体が新しい順に並んでいる（自分のぶんが先頭かは見ない）',
+     await p.evaluate(() => {
+       const ds = (window.PIT_NEWS || []).map(x => String(x.date || ''));
+       for (let i = 1; i < ds.length; i++) if (ds[i - 1] < ds[i]) return false;
+       return true;
+     }));
   ok('版と日付が入っている', !!(n && n.version === '1.140.2' && n.date === '2026-08-18'), n && [n.version, n.date]);
   ok('🔴 コードの言葉を出していない（boardOrder / status / returnStage）',
      !!n && !/boardOrder|returnStage|frontStaffId|\bstatus\b/.test(n.title + n.body), n && n.title);

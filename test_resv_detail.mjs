@@ -37,11 +37,18 @@ await p.waitForTimeout(900);
    ⚠ 本物のサンプルは触らず、頭に足すだけ。 */
 await p.evaluate(() => {
   window.pitCurrentStaffName = function(){ return 'サンプル 花子'; };
+  const _d = n => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
   const base = {
     tel: '090-1111-2222', car: 'アクア', plate: '横浜 300 あ 12-34', karteNo: '1234',
     boardId: 'default', division: 'div1', workType: 'shaken', frontStaff: 'フロント 一郎', reserveStaff: '予約 二郎',
-    reserveDate: '2026-08-20', estHoldDays: 3, estAmount: 88000,
-    needLoaner: true, loanerId: 'L01', loanerTo: '2026-08-25', log: [], maint: {}, office: {}
+    /* 🔴🔴 2026-08-21 直した：**決め打ちの日付をやめる。**
+       直す前は `reserveDate:'2026-08-20'` と**その日の日付を書き込んで**いた。
+       ＝ **翌日からは「入庫日を過ぎた未入庫」**になり、v1.101.0 の自動移動で
+          カードが勝手に「未入庫（cancelled）」へ移り、予約詳細の中身ごと消えて落ちる。
+       ⚠ **見張りにも見本にも「◯年◯月◯日」を書かない。必ず今日からの日数で作る。** */
+    reserveDate: _d(3), estHoldDays: 3, estAmount: 88000,
+    needLoaner: true, loanerId: 'L01', loanerTo: _d(8), log: [], maint: {}, office: {}
   };
   const r = Object.assign({}, base, { id: 'TR1', resNo: 'R-TR1', status: 'reserved',
     customer: '試験 太郎', sei: '試験', mei: '太郎', kana: 'シケン タロウ', seiKana: 'シケン', meiKana: 'タロウ', repeat: 'repeater' });

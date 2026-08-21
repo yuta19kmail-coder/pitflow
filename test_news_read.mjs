@@ -27,9 +27,13 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const PORT = process.env.PORT || 8994;
-const DIR = path.dirname(new URL(import.meta.url).pathname);
+/* 🔴 2026-08-21 `new URL(import.meta.url).pathname` は **%E3%82%A2… の形（URLエンコード）のまま**返る。
+   本物のフォルダは `D:\Claude\アプリ開発\…` と日本語なので、**そのままではファイルが開けない**。
+   （中身が英数字だけの仮フォルダで走らせている間は気づけない。）**必ず fileURLToPath を通す。** */
+const DIR = path.dirname(fileURLToPath(import.meta.url));
 const HARNESS = path.join(DIR, '_news_cloud_harness.html');
 const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
 let pass = 0, fail = 0;

@@ -18,6 +18,7 @@
      ① 状態の名前（'cancelled' など）を自分で綴らない  … **例外ゼロ**
      ② お客様名を自分で組み立てない（漢字だけ見ない）  … **例外ゼロ**（カード以外は下の表で許す）
      ③ 色（国産の緑・輸入のピンク）と「1課／2課」の直書き … **棚卸し方式＝いまの数を超えたら落ちる**
+     ④ 「◯年◯月◯日」の決め打ち（見本データ・見張りの下ごしらえ）… 見本は**例外ゼロ**／見張りは**棚卸し方式**
 
    ◎③が「ゼロ」でないわけ
      いま 100か所以上ある。**今日いっぺんに触ると事故る**（29ファイルに手が入る）ので、
@@ -181,6 +182,59 @@ const cSum = check('国産の緑・輸入のピンク', nowColor, BASE_COLOR);
 const dSum = check('「1課」「2課」という字', nowDiv, BASE_DIV);
 
 console.log('\n  🎯 棚卸しの目標＝どちらも 0（設定の表から引くだけにする）。いま 色 ' + cSum + ' ／ 課 ' + dSum);
+
+/* ==================================================================
+   ④ 「◯年◯月◯日」を決め打ちしない
+   ------------------------------------------------------------------
+   🔴 2026-08-21 に**同じ形のこわれ方を2つ**踏んだので規則にした。
+     ・見本データ（`sample-fleet.js`）が代車の予定を **「今年の 8/17 まで」** と書いていた。
+       ＝ **8/18 を過ぎた日から翌年の春まで、デモ版の代車カレンダーが空っぽ**。
+          しかもエラーは1つも出ない（「今日が8月18日以降だから」なので）。
+     ・見張り（`test_resv_detail`）が入庫日に **`'2026-08-20'`** と書いていた。
+       ＝ **翌日から「入庫日を過ぎた未入庫」**になり、カードが自動で移って毎回落ちる。
+   🔴 **どちらも「今日からの日数」で書けば起きない。**
+   ⚠ 見張りの下ごしらえは 59 か所ある。今日いっぺんに直すと事故るので**棚卸し方式**。
+      減らしたら**下の表も一緒に減らす**こと。
+   ================================================================== */
+console.log('\n── ④ 「◯年◯月◯日」を決め打ちしない ──');
+
+const reFixedYmd  = /'20\d\d-\d\d-\d\d'/g;
+const reFixedMD   = /new Date\([^;\n]*?,\s*\d{1,2}\s*,\s*\d{1,2}\s*\)/g;
+
+/* ④-a 見本データ＝例外ゼロ（どの日に開いても同じ見え方になること） */
+{
+  const bad = [];
+  files.filter(f => /^sample-/.test(f)).forEach(f => {
+    SRC[f].forEach((L, i) => {
+      reFixedYmd.lastIndex = 0; reFixedMD.lastIndex = 0;
+      if (reFixedYmd.test(L) || reFixedMD.test(L))
+        bad.push(f + ':' + (i + 1) + '  ' + L.trim().slice(0, 90));
+    });
+  });
+  ok('🔴 見本データに決め打ちの日付・月日が無い（今日からの日数で作る）',
+     bad.length === 0, bad.join('\n       → '));
+}
+
+/* ④-b 見張りの下ごしらえ＝棚卸し（増やさない）
+   ⚠ 日付そのものを試している見張り（「8/20 の翌日は？」等）は決め打ちで正しい。
+      危ないのは **カードの入庫日・返車日**＝「今日」と比べられる欄に決め打ちを入れること。 */
+const BASE_TESTDATE = {
+  'test_cover_course.mjs': 1, 'test_cover_edit.mjs': 3, 'test_cover_memo.mjs': 3,
+  'test_custform.mjs': 6, 'test_demo.mjs': 1, 'test_kana_name.mjs': 1,
+  'test_mydash_tbd.mjs': 3, 'test_no_native_dialog.mjs': 1, 'test_nosale.mjs': 19,
+  'test_overdue.mjs': 1, 'test_phase_days.mjs': 2, 'test_resv_detail.mjs': 5,
+  'test_return_chain.mjs': 1, 'test_return_slot.mjs': 10, 'test_save_menu.mjs': 1,
+  'test_shaken_ops.mjs': 1,
+};
+{
+  const reField = /(reserveDate|returnDate|loanerFrom|loanerTo|completedAt|cancelledAt|inDate|outDate)\s*:\s*'20\d\d-\d\d-\d\d'/g;
+  const now = {};
+  fs.readdirSync('.').filter(f => /^test_.*\.mjs$/.test(f)).forEach(f => {
+    const n = (fs.readFileSync(f, 'utf8').match(reField) || []).length;
+    if (n) now[f] = n;
+  });
+  check('見張りの下ごしらえの決め打ち日付', now, BASE_TESTDATE);
+}
 
 console.log('\n合計：' + pass + ' OK / ' + fail + ' NG');
 process.exit(fail ? 1 : 0);

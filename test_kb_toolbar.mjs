@@ -52,7 +52,13 @@ const M = await p.evaluate(() => {
     const r = e.getBoundingClientRect(); return { h: Math.round(r.height), x: Math.round(r.left), right: Math.round(r.right) };
   });
   const wrap = getComputedStyle(document.querySelector('#view-course1 > .view-header > .view-actions'));
-  return { my: g('.kb-myonly'), line: g('.kb-lineadd'), vh: g('.vh-btn'), drops, align: wrap.alignItems };
+  /* 🔴 2026-08-21 「担当車両のすぐ右」との間隔を見る。
+     ＝ v1.140.0 で **絞り込み・並び替えのボタンが2つ増えて**、担当車両と区切りラインは
+        もう隣どうしではない。**特定の2つの距離で見張ると、ボタンが増えるたびに落ちる。** */
+  const _my = document.querySelector('#view-course1 .kb-myonly');
+  const _nx = _my && _my.nextElementSibling;
+  const myNextGap = (_my && _nx) ? Math.round(_nx.getBoundingClientRect().left - _my.getBoundingClientRect().right) : null;
+  return { my: g('.kb-myonly'), line: g('.kb-lineadd'), vh: g('.vh-btn'), drops, align: wrap.alignItems, myNextGap };
 });
 
 console.log('\n── ① ボタンが出ている ──');
@@ -89,8 +95,8 @@ console.log('\n── ④ 並び順と間隔は今までどおり ──');
   const toDrop = M.drops[0].x - M.line.right;
   const normal = M.drops[1].x - M.drops[0].right;
   ok('🔴 完TEL済とのあいだは、ふつうの間隔の2倍以上あける（ゆうた指定）', toDrop >= normal * 2, { toDrop, normal });
-  ok('担当車両と区切りラインは隣どうし（くっつきすぎない）',
-     (M.line.x - M.my.right) >= 4 && (M.line.x - M.my.right) <= 14, M.line.x - M.my.right);
+  ok('担当車両とそのすぐ右のボタンは、ふつうの間隔（くっつきすぎず、空きすぎず）',
+     M.myNextGap !== null && M.myNextGap >= 4 && M.myNextGap <= 14, M.myNextGap);
 }
 
 console.log('\n── ⑤ 押した時の見え方は今までどおり（機能は壊していない） ──');

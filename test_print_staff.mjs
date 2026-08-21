@@ -18,8 +18,13 @@ const shareSrc = read('pit-share.js');
 /* ---- 名前まわりの関数だけ切り出す ----
    🔴 v1.103.0 **pitSurname は js/pit-share.js へ移した**（MHS も同じものを借りるため）。
       印刷専用の pitStaffPrintName は state.js に残っているので、2つをつないで動かす。 */
+/* 🔴🔴 2026-08-21 直した：**切り出す範囲が v1.127.0 で置いていかれていた。**
+   直す前は `pitSurname 〜 w.pitCustSurname` までしか持ってきていなかったので、
+   **`pitIsSelfName` も `pitStaffCall`（呼び名＆苗字）も入っていなかった**。
+   ＝ 名簿の別名（小林モータース株式会社）を自社と見分ける道が丸ごと欠けたまま試していた。
+   ⚠ **本体の1本を切り出して試す形は、本体が育ったら切り出す範囲も一緒に広げること。** */
 const si = shareSrc.indexOf('function pitSurname(name){');
-const sj = shareSrc.indexOf('w.pitCustSurname = pitCustSurname;');
+const sj = shareSrc.indexOf('w.pitStaffCall = pitStaffCall;');
 if (si < 0 || sj < 0 || sj < si) throw new Error('pit-share.js から名前まわりの関数を切り出せません（構成が変わった？）');
 const i = stateSrc.indexOf('function pitStaffPrintName(name){');
 const j = stateSrc.indexOf('window.pitStaffPrintName = pitStaffPrintName;');
