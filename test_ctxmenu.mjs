@@ -49,6 +49,10 @@ window.state={ currentView:'task', settings:{},
           {id:'import',name:'輸入車',cols:[{id:'check',name:'点検待ち'},{id:'estim',name:'見積り中'},{id:'contact',name:'連絡中'},{id:'parts',name:'パーツ待ち'},{id:'work',name:'作業待ち'},{id:'workDone',name:'作業完了済',terminal:true}]}]
 };
 window.pitSurname=n=>String(n||'').trim().split(' ')[0];
+/* 🔴 v1.162.0 お名前の1本（pit-share.js）に寄せたので、にせ物もそちらに合わせる。
+   ＝漢字が空ならカナ。ここを足さないと『苗字だけ』が効かず、フルネームが出て落ちる。 */
+window.pitCustName=c=>{ const k=String((c&&c.customer)||'').trim(); return k||String((c&&c.kana)||'').trim(); };
+window.pitCustSurname=c=>window.pitSurname(window.pitCustName(c));
 window.pitToast=m=>window.__toasts.push(m);
 window.openDetail=id=>window.__acts.push('openDetail:'+id);
 window.custOpen=id=>window.__acts.push('custOpen:'+id);
