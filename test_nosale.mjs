@@ -424,7 +424,10 @@ console.log('\n── ↩ 実績を返車前に戻す（v1.138.0・案B） ─�
   ok('🔴 確定売上は残す（入れ直しにさせない）', r.amt === 88000, r);
   ok('🔴 返車日も残す', r.rd === TODAY && r.rdf === TODAY, r);
   ok('🔴 入金日・売掛の印もそのまま（ゆうた指定）', r.pay === '2026-08-20' && r.paySep === true, r);
-  ok('🔴 売上の区分が実績から外れる（actual → confirmed）', r.tier === 'confirmed', r);
+  /* 🔴 v1.167.0（ゆうた指定）『確定』から**実績待**を切り出した。
+     作業完了エリア（workDone）や返車カレンダーにいる車は **actualWait**。
+     ＝ここは「作業は終わっているが、まだ実績カレンダーに入っていない」ぶん。 */
+  ok('🔴 売上の区分が実績から外れる（actual → 実績待）', r.tier === 'actualWait', r);
   ok('🔴 返車カレンダーに戻っている', r.place === 'calendar', r);
   ok('フローに残る', /アーカイブから戻した/.test(r.flow), r.flow);
   await closeIt();
@@ -512,7 +515,7 @@ console.log('\n── 📦 ⑤売上なしの戻し先はタスクボード（v1
   ok('🔴 売上なしの印が外れる', r.noSale === false, r);
   ok('🔴 実績カウント日は空のまま', r.done === '', r);
   ok('🔴 完TELの印は付けない（通っていないので）', r.rs === null, r);
-  ok('売上の区分が戻る（対象外 → 確定）', r.tier === 'confirmed', r);
+  ok('売上の区分が戻る（対象外 → 実績待。作業完了エリアにいるため）', r.tier === 'actualWait', r);
   ok('フローに残る', /アーカイブから戻した（売上なし/.test(r.flow), r.flow);
   await closeIt();
 }
