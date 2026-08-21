@@ -216,6 +216,41 @@ const GRAY  = /131, ?144, ?166|8390a6/;
   ok('🔴 課の色を変えたらバッジの色も変わる', /14, ?165, ?233|0ea5e9/.test(r.bg), r.bg);
 }
 
+console.log('\n── ⑤ 「予約キャンセル」と「未入庫」を言い分ける（英語の cancelled を出さない） ──');
+{
+  /* 🔴 2026-08-21（ゆうた指摘）「予約キャンセルと未入庫は意味合いが違う」。
+     入れ物は同じ `'cancelled'` で、見分けは `c.cancelled` の印（人が押したか／来なかったか）。
+     ⚠ 直す前は状態の文字だけを渡していたので、**画面の札に英語で「cancelled」**と出ていた。 */
+  const r = await p.evaluate(() => ({
+    人: pitCardStatusText({ status: 'cancelled', cancelled: true }),
+    来ず: pitCardStatusText({ status: 'cancelled' }),
+    ふつう: pitCardStatusText({ status: 'workDone' }),
+    予約: pitCardStatusText({ status: 'reserved' }),
+    空: pitCardStatusText(null)
+  }));
+  ok('🔴 人が押した＝「予約キャンセル」', r.人 === '予約キャンセル', r);
+  ok('🔴 来なかった＝「未入庫」', r.来ず === '未入庫', r);
+  ok('ほかの状態は今までどおり', r.ふつう === '作業完了' && r.予約 === '予約', r);
+  ok('カードが無くても落ちない', r.空 === '', r);
+
+  /* 画面に出るところ＝予約カード（時間つきの大きいカード）とカード詳細の札 */
+  const shown = await p.evaluate(() => {
+    const ymd = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const mk = extra => Object.assign({ id: 'ST' + Math.floor(Math.random()*1e6), customer: '取消 太郎',
+      car: 'ノート', boardId: 'default', workType: 'general', dropType: 'drop',
+      reserveDate: ymd(new Date()), reserveTime: '10:00', log: [], maint: {}, office: {} }, extra);
+    const a = mk({ status: 'cancelled', cancelled: true });
+    const b = mk({ status: 'cancelled' });
+    const html = cardHtml(a, {}) + cardHtml(b, {});
+    const box = document.createElement('div'); box.innerHTML = html; document.body.appendChild(box);
+    const txt = Array.from(box.querySelectorAll('.pc-status')).map(e => e.textContent.trim());
+    box.remove();
+    return { txt, english: /cancelled/i.test(html) };
+  });
+  ok('🔴 予約カードの札が「予約キャンセル」「未入庫」', shown.txt[0] === '予約キャンセル' && shown.txt[1] === '未入庫', shown);
+  ok('🔴 英語の「cancelled」が画面に出ていない', shown.english === false, shown);
+}
+
 console.log('\n── 🧭 物差しを1本に保てているか（書き写しの見張り） ──');
 {
   /* ⚠ 覚え書き（コメント）には「前はこう書いてあった」を残してあるので、
