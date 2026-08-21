@@ -13,7 +13,7 @@
           **既にある物差し**（pitSalesTier / pitReturnDates / pitLoanerConflicts / pitShakenDayOff）に聞く
      🔴 必須／推奨の表が **card-miss.js の1本** になっていること
         ＝ card-detail.js に**同じ表が残っていない**（残っていたら必ずいつか食い違う）
-     🔴 札（見た／これは仕様／直した）と、規則ごとの黙らせが効くこと
+     🔴 札（見た／これでOK／直した）と、規則ごとの黙らせが効くこと
      🔴 もう出なくなった所見の札は**自動で捨てる**こと（札がたまり続けない）
      🔴 点検は**1文字も書き換えない**こと
 
@@ -328,7 +328,7 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
   ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
 }
 
-console.log('\n── ⑧ 札（見た／これは仕様／直した）と、規則ごとの黙らせ ──');
+console.log('\n── ⑧ 札（見た／これでOK／直した）と、規則ごとの黙らせ ──');
 {
   const r = await p.evaluate(() => {
     const base = window._only([window._clean({ id:'k1', status:'work', amountOrder:null })]);
@@ -353,6 +353,43 @@ console.log('\n── ⑧ 札（見た／これは仕様／直した）と、規
   ok('札をはがせる', !r.offMark, r.offMark);
   ok('🔴 規則ごと黙らせると出なくなる', r.mutedN === 0 && r.mutedCount === 1, r);
   ok('🔴 黙らせを戻すとまた出る', r.backN === 1, r.backN);
+}
+{
+  /* 🔴 v1.168.1（ゆうた指摘）**札の言葉。**
+     🗣「仕様っていうと、なんか仕組み的にあってるみたいなニュアンスが強いかな」
+     ＝ 中身（id）は 'spec' のまま、**言葉だけ**「これでOK」にした。
+     ⚠ id を変えると**今までに貼った札が全部はがれる**ので、id が変わっていないことも見る。 */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'lb1', status:'work', amountOrder:null })], []);
+    const f = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0];
+    pitInspectMark(f.key, 'spec');
+    const res = pitInspectRun();
+    window._insp.level = ''; window._insp.cat = ''; window._insp.done = true; window._insp.all = {};
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const out = pitInspectExport(res);
+    window._insp.done = false;
+    return {
+      ids: PIT_INSPECT_MARKS.map(m => m.id),
+      labels: PIT_INSPECT_MARKS.map(m => m.label),
+      btns: Array.from(body.querySelectorAll('.ins-mk')).map(e => e.textContent),
+      badge: (body.querySelector('.ins-badge') || {}).textContent || '',
+      mute: (body.querySelector('.ins-mute') || {}).textContent || '',
+      exp: out.所見[0] || {}
+    };
+  });
+  ok('🔴 札の中身（id）は変えていない＝貼った札がはがれない',
+     r.ids.join() === 'seen,spec,fixed', r.ids);
+  ok('🔴 言葉は「見た／これでOK／直した」', r.labels.join() === '見た,これでOK,直した', r.labels);
+  ok('🔴 「仕様」という言い方が画面に残っていない',
+     r.btns.every(x => !/仕様/.test(x)) && !/仕様/.test(r.mute), [r.btns, r.mute]);
+  ok('ボタンは表から出している（3つとも出る）', r.btns.join() === '見た,これでOK,直した', r.btns);
+  ok('貼った札は行にも同じ言葉で出る', r.badge === 'これでOK', r.badge);
+  ok('規則ごとの黙らせも「これで正しい」の言い方', /これで正しい/.test(r.mute), r.mute);
+  /* 🔴 書き出しは**人が読む言葉**で（②突合・③AI判断がそのまま読む） */
+  ok('🔴 書き出しの札が日本語（spec のままではない）', r.exp.札 === 'これでOK', r.exp.札);
+  ok('🔴 書き出しに元の印も残る（機械が読む用）', r.exp.札の印 === 'spec', r.exp.札の印);
+  ok('🔴 書き出しに札をつけた日が入る', /^\d{4}-\d{2}-\d{2}$/.test(r.exp.札をつけた日 || ''), r.exp.札をつけた日);
 }
 {
   /* もう出なくなった所見の札は捨てる（札がたまり続けない） */
