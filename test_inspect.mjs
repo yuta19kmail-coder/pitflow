@@ -44,6 +44,13 @@ await p.waitForFunction('window.state && window.pitInspectRun && window.renderIn
 await p.evaluate(() => { if (window.pitSampleLogin) pitSampleLogin(); });
 await p.waitForTimeout(800);
 
+/* 🔴 見本データの検査は**何も触る前に**取っておく。
+   ⚠ 下ごしらえで state を入れ替えたあとに測ると、入れ替えの残りを見てしまう
+      （最後にまとめて測っていて、実際に1件ぶん嘘をついた）。 */
+const SAMPLE_MISS = await p.evaluate(() => state.cards.filter(c => !c._draft && !c.archived
+  && (window.pitCardActive ? pitCardActive(c) : true) && c.status !== 'returned'
+  && pitCardMisses(c).red.length).length);
+
 /* ===================================================================
    下ごしらえ＝**自分で作った少数のカードだけ**にして数を読めるようにする。
    ⚠ 見本データのままだと台数が日によって変わり、数で見張れない。
@@ -480,6 +487,56 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
   ok('押すと全部出る', r.opened === 26, r.opened);
 }
 
+console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉を混ぜない） ──');
+{
+  /* 🔴 v1.168.1（ゆうた指摘 2026-08-21）
+     🗣「**41.5万 を今月に寄せています って書き方が恐らくみんなわからないと思う**」
+     ＝ 「寄せる」は売上の数え方（sales-count.js）の中の言い方であって、現場の言葉ではない。
+     🔴 **画面に出る文には、作る側だけが分かる言葉を入れない。**
+        下の言葉が1つでも混ざったら落とす＝次に規則を足す人も、ここで気づける。
+     ⚠ コメント（作る側の覚え書き）は対象外。見るのは**人の目に触れる文だけ**。 */
+  const NG = ['寄せ', '盤面', '関門', '所見', '物差し', 'ステータス', 'フラグ', 'null', 'undefined'];
+  const r = await p.evaluate((NG) => {
+    /* ① 規則の表（見出し・なぜ・どうする） */
+    const inTable = [];
+    PIT_INSPECT_RULES.forEach(x => {
+      const t = String(x.title || '') + String(x.why || '') + String(x.fix || '');
+      NG.forEach(w => { if (t.indexOf(w) >= 0) inTable.push(x.id + ' → ' + w); });
+    });
+    /* ② 実際に画面へ出た文（1件ずつの説明・分類・重さ・札・ボタン） */
+    const D = window._D;
+    window._only([
+      window._clean({ id:'j1', status:'work', amountOrder:null, reserveDate:D(-20), returnDate:D(-5) }),
+      window._clean({ id:'j2', status:'returned', returnStage:'returnWait', completedAt:null, amountFinal:null }),
+      window._clean({ id:'j3', status:'work', kana:'', repeat:'' })
+    ], []);
+    window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const onScreen = [];
+    NG.forEach(w => { if ((body.textContent || '').indexOf(w) >= 0) onScreen.push(w); });
+    const stars = [];
+    PIT_INSPECT_RULES.forEach(x => {
+      ['title','why','fix'].forEach(k => { if (/\*\*/.test(String(x[k] || ''))) stars.push(x.id + '.' + k); });
+    });
+    return { inTable: inTable, onScreen: onScreen, stars: stars,
+             sum: (body.querySelector('.ins-tile-sum') || {}).textContent || '',
+             sample: Array.from(body.querySelectorAll('.ins-row-txt')).map(e => e.textContent) };
+  }, NG);
+  ok('🔴 規則の表（見出し・なぜ・どうする）に内輪の言葉が無い', r.inTable.length === 0, r.inTable);
+  /* 🔴 画面は文をそのまま出す（太字の記号は解釈しない）。
+     ⚠ 覚え書きのつもりで ** を書くと、画面に **そのまま** と出る（実際に出ていた）。 */
+  ok('🔴 画面に出る文に ** が残っていない（そのまま字として出てしまう）',
+     r.stars.length === 0, r.stars);
+  ok('🔴 画面に出た文にも内輪の言葉が無い', r.onScreen.length === 0, r.onScreen);
+  /* 🔴 札の言葉を言い換えた時に、ここだけ古いまま残らないか（v1.168.1 で実際に残っていた） */
+  ok('🔴 「片づけた（…）」の中身は札の表から並べている',
+     /片づけた（見た・これでOK・直した）/.test(r.sum), r.sum);
+  /* F01 が言いたいことが、そのまま日本語で読めるか */
+  ok('🔴 F01 は「今月の見込みに入ったまま」と言う（「寄せる」と言わない）',
+     r.sample.some(x => /今月の見込みに入ったままです/.test(x)), r.sample);
+}
+
 console.log('\n── 🧭 物差しを1本に保てているか（中身を機械が読む） ──');
 {
   const src = await p.evaluate(async () => {
@@ -519,11 +576,10 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
     await p.waitForTimeout(220);
   }
   ok('各ビューを開いてエラーなし', errs.length === 0, errs.slice(0, 5));
-  /* 見本データが、自分たちの保存の関門を通れる形になっているか（点検が見つけた宿題） */
-  const n = await p.evaluate(() => state.cards.filter(c => !c._draft && !c.archived
-    && (window.pitCardActive ? pitCardActive(c) : true) && c.status !== 'returned'
-    && pitCardMisses(c).red.length).length);
-  ok('🔴 見本データの「これから作業する車」に必須の空きが無い（見本が関門を通れる）', n === 0, n);
+  /* 🔴 見本データが、自分たちの保存の決まりを通れる形になっているか（点検が見つけた宿題）。
+     ⚠ 測ったのは**このファイルの先頭**（下ごしらえで state を入れ替える前）。 */
+  ok('🔴 見本データの「これから作業する車」に必須の空きが無い（見本が保存の決まりを通れる）',
+     SAMPLE_MISS === 0, SAMPLE_MISS);
 }
 
 await b.close();
