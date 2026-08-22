@@ -134,8 +134,6 @@ console.log('\n── ① お金 ──');
   ].map(o => { if (o.completedAt === '@0') o.completedAt = null; return o; }));
   ok('🔴 受注済なのに受注金額が空を拾う（M01）', (r.by.M01 || []).join() === 'm01', r.by.M01);
   ok('🔴 返車済なのに確定金額が空を拾う（M02）', (r.by.M02 || []).indexOf('m02') >= 0, r.by.M02);
-  ok('金額のけた違いを拾う（M05）', (r.by.M05 || []).join() === 'm05', r.by.M05);
-  ok('分割払いで入金予定日が空を拾う（M10）', (r.by.M10 || []).join() === 'm10', r.by.M10);
   ok('金額が入っている車は M01 に出ない', (r.by.M01 || []).indexOf('m01ok') < 0, r.by.M01);
 }
 
@@ -153,15 +151,11 @@ console.log('\n── ② 日付・進行 ──');
     ];
   });
   const r = await only(c);
-  ok('🔴 返車予定日を過ぎたまま盤面にいる（F01）', (r.by.F01 || []).indexOf('f01') >= 0, r.by.F01);
   ok('🔴 完TELを通ったのに返車予定日が空（F03）', (r.by.F03 || []).join() === 'f03', r.by.F03);
   ok('🔴 返車予定日が入庫日より前（F05）', (r.by.F05 || []).join() === 'f05', r.by.F05);
   ok('返車予定がずっと先（F07）', (r.by.F07 || []).join() === 'f07', r.by.F07);
   ok('🔴 承認待ちのまま入庫日が過ぎている（F08）', (r.by.F08 || []).join() === 'f08', r.by.F08);
   ok('外注の戻り予定日を過ぎている（F10）', (r.by.F10 || []).join() === 'f10', r.by.F10);
-  /* 🔴 F01 は**売上の物差しに聞いている**か。区分の外（廃車）なら数える日が無いので出ない */
-  const r2 = await only(await p.evaluate(() => [{ id:'sc', status:'scrap', reserveDate:window._D(-20), returnDate:window._D(-5) }]));
-  ok('🔴 廃車は F01 に出ない（売上の物差しに聞いている証拠）', !(r2.by.F01 || []).length, r2.by);
 }
 
 console.log('\n── ③ 予約 ──');
@@ -180,7 +174,6 @@ console.log('\n── ③ 予約 ──');
   const r = await only(c);
   ok('🔴 同じ車が同じ日に2枚（R01）＝両方に出る', (r.by.R01 || []).sort().join() === 'r01a,r01b', r.by.R01);
   ok('予約番号の重複（R03）', (r.by.R03 || []).sort().join() === 'r03a,r03b', r.by.R03);
-  ok('同じ置き場所に2台（R05）', (r.by.R05 || []).sort().join() === 'r05a,r05b', r.by.R05);
   ok('無くなった置き場所を指している（R06）', (r.by.R06 || []).length === 2, r.by.R06);
 }
 
@@ -237,10 +230,8 @@ console.log('\n── ⑤ 車検 ──');
     window.Holidays = window.__kH; window.PitCal = window.__kC;
     return out;
   });
-  ok('車検なのに行く日が未定で入庫が近い（S01）', (r.S01 || []).join() === 's01', r.S01);
   ok('🔴 陸運局が休みの日に車検予定（S02）＝物差し pitShakenDayOff に聞いている', (r.S02 || []).join() === 's02', r.S02);
   ok('車検予定日が入庫より前／返車より後（S05）', (r.S05 || []).join() === 's05', r.S05);
-  ok('再検のまま次の日が空（S06）', (r.S06 || []).join() === 's06', r.S06);
   ok('🔴 代車・社用車の車検満了（S07）は車両として出す', true);
 }
 
@@ -255,7 +246,6 @@ console.log('\n── ⑥ データの抜け（表は card-miss.js の1本） �
   ok('🔴 必須が空を拾う（D01）', (r.by.D01 || []).join() === 'd01', r.by.D01);
   ok('返車済で漢字の名前が空（D03）', (r.by.D03 || []).indexOf('d03') >= 0, r.by.D03);
   ok('電話番号の形がおかしい（D05）', (r.by.D05 || []).join() === 'd05', r.by.D05);
-  ok('ナンバーが0だけ（D06）', (r.by.D06 || []).join() === 'd06', r.by.D06);
   /* 🔴 表が本当に1本か＝card-miss.js の表を書き換えたら、点検の答えも変わること */
   const moved = await p.evaluate(() => {
     const keep = window.pitCardMisses;
@@ -432,10 +422,6 @@ console.log('\n── ⑦-4 本番データで空振りしていた2つを直し
   ok('🔴 まだ来ていない車の「漢字の名前が空」は言わない',
      !/お客様名/.test(r.yoyakuTxt), r.yoyakuTxt);
   ok('🔴 入庫した車には言う（車検証で分かるので）', /お客様名/.test(r.nyukoTxt), r.nyukoTxt);
-  ok('🔴 もう預かっている車検は「要対応」で出る（S08）', r.mochiS08 === true && r.s08lv === 'red', r);
-  ok('🔴 これから来る車検は「確認」で出る（S01）', r.koreS01 === true && r.s01lv === 'amber', r);
-  ok('🔴 同じ車が両方には出ない（S08 と S01 は排他）',
-     r.mochiS01 === false && r.koreS08 === false, r);
 }
 
 console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「やらなくていい」道が1つも無いこと ──');
@@ -449,7 +435,7 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
     const marked = after.findings.filter(x => x.key === f.key)[0];
     pitInspectMark(f.key, '');
     const off = pitInspectRun().findings.filter(x => x.key === f.key)[0];
-    /* 🔴 v1.172.0 規則ごと黙らせる道は無い（呼んでも何も起きない） */
+    /* 🔴 v1.172.0 新しく黙らせる道は無い（呼んでも何も起きない） */
     pitInspectMute('M01', true);
     const muted = pitInspectRun();
     return { before, key:f.key, mark:(marked||{}).mark, offMark:(off||{}).mark,
@@ -460,8 +446,32 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
   ok('🔴 札の貼り先は「規則ID:カードID」', /^M01:/.test(r.key), r.key);
   ok('🔴 札を貼っても所見は消えない（数が減らない）', r.mark === 'seen' && r.markedN === r.before, r);
   ok('札をはがせる', !r.offMark, r.offMark);
-  ok('🔴🔴 規則ごと黙らせる道が無い（呼んでも出続ける）', r.mutedN === 1 && r.mutedCount === 0, r);
-  ok('🔴 黙らせの印そのものが残らない', r.mutes === 0, r);
+  ok('🔴🔴 新しく黙らせる道が無い（呼んでも出続ける）', r.mutedN === 1 && r.mutedCount === 0, r);
+  ok('🔴 呼んでも印そのものが増えない', r.mutes === 0, r);
+}
+{
+  /* 🔴🔴 v1.172.1（ゆうた訂正）**前に「出さない」を選んでいた規則は、勝手に捨てない。**
+     🗣「出さないを選択してたやつはルールからはずしていい」＝**規則ごと消す**という意味。
+     ＝ その印は「消す予定の控え」。ただし**黙って隠さない**＝画面に名前を出す。 */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'mu1', status:'work', amountOrder:null })]);
+    state.inspectMutes = { M01:1 };
+    const res = pitInspectRun();
+    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const keep = Object.keys(state.inspectMutes || {}).length;
+    const out = { keep, n: res.findings.filter(x => x.ruleId === 'M01').length,
+                  ids: (res.mutedIds || []).map(x => x.id),
+                  band: (body.querySelector('.ins-tobe') || {}).textContent || '' };
+    state.inspectMutes = {};
+    return out;
+  });
+  ok('🔴🔴 「出さない」を選んだ印を勝手に捨てない（消す規則の控え）', r.keep === 1, r.keep);
+  ok('消すまでの間は、選んだとおり出さない', r.n === 0, r.n);
+  ok('🔴 どの規則かを持っている（mutedIds）', r.ids.join() === 'M01', r.ids);
+  ok('🔴🔴 黙って隠さない＝画面に「消す予定の規則」と名前を出す',
+     /消す予定の規則/.test(r.band) && r.band.length > 20, r.band);
 }
 {
   /* 🔴🔴 v1.172.0（ゆうた指定）**前に押して隠していたものを出し直す。**
@@ -473,11 +483,15 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
     state.inspectMarks[key] = { v:'spec', at:'2026-08-01', by:'昔の人' };
     state.inspectMutes = { M02:1, M03:1 };
     const res = pitInspectRun();
-    return { mark: (state.inspectMarks[key] || {}).v || '', mutes: Object.keys(state.inspectMutes).length,
+    const out = { mark: (state.inspectMarks[key] || {}).v || '', mutes: Object.keys(state.inspectMutes).length,
              shown: res.findings.filter(x => x.key === key).length };
+    state.inspectMutes = {};
+    return out;
   });
   ok('🔴 前に押した「これでOK」の印が外れている', r.mark === '', r.mark);
-  ok('🔴 黙らせていた規則も全部戻っている', r.mutes === 0, r.mutes);
+  /* 🔴🔴 v1.172.1（ゆうた訂正）**「出さない」を選んだ規則は戻さない＝規則ごと消すもの。**
+     ここは「勝手に捨てていないこと」を見る（消すのはコードから規則を削る時）。 */
+  ok('🔴🔴 「出さない」を選んだ印は残っている（消す予定の控え）', r.mutes === 2, r.mutes);
   ok('🔴 その所見はちゃんと出ている', r.shown === 1, r.shown);
 }
 {
@@ -663,9 +677,9 @@ console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉
      前の「片づけた◯件」（札を貼った数）は廃止した＝札を成果のように見せない。 */
   ok('🔴 タイルの右で「0にする」と言っている',
      /0/.test(r.sum) && /直/.test(r.sum) && !/片づけた/.test(r.sum), r.sum);
-  /* F01 が言いたいことが、そのまま日本語で読めるか */
-  ok('🔴 F01 は「今月の見込みに入ったまま」と言う（「寄せる」と言わない）',
-     r.sample.some(x => /今月の見込みに入ったままです/.test(x)), r.sample);
+  /* 規則が言いたいことが、そのまま日本語で読めるか（M01＝受注金額が空） */
+  ok('🔴 規則の文がそのまま日本語で読める（M01）',
+     r.sample.some(x => /受注金額が空です/.test(x)), r.sample);
 }
 
 console.log('\n── ⑫ 名前が「データチェック」になっている（ゆうた指定 2026-08-22） ──');
@@ -895,9 +909,11 @@ console.log('\n── 🧭 物差しを1本に保てているか（中身を機�
   ok('🔴 card-detail.js は表を1本に聞いている', /pitCardMisses/.test(src.cd), '');
   ok('🔴 データチェックも同じ1本に聞いている', /pitCardMisses/.test(src.ir), '');
   /* 判定を作り直していないか＝既にある物差しを呼んでいるか */
+  /* ⚠ v1.172.2 `pitPhaseStartMs` を外した＝それを使っていた F02（同じエリアに長く止まっている）を
+     規則表から消したため（規則を消したら、その規則だけが使っていた道具も一緒に消す）。 */
   ['pitSalesTier', 'pitSalesCountDate', 'pitCardActive', 'pitCardNoSale', 'pitFinalAmountOf',
    'pitIsShaken', 'pitShakenDayOff', 'pitLoanerConflicts', 'pitCustName', 'pitCardStatusText',
-   'pitDivisionLabel', 'pitPhaseStartMs', 'pitStaffCall', 'pitDivisionColorOr'].forEach(fn => {
+   'pitDivisionLabel', 'pitStaffCall', 'pitDivisionColorOr'].forEach(fn => {
     ok('🔴 ' + fn + ' に聞いている（自前で判定を作っていない）', new RegExp('\\b' + fn + '\\b').test(src.ir), '');
   });
   /* 画面が判定を持っていないか */
@@ -962,6 +978,34 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
      SAMPLE_MISS === 0, SAMPLE_MISS);
 }
 
+console.log('\n── 🗑 v1.172.2 ゆうたが「出さない」を選んでいた13本を規則表から消した ──');
+{
+  /* 🗣「出さないを選択してたやつはルールからはずしていい」＝**規則ごと消す**という意味だった。
+     ⚠ 消したものが**うっかり戻っていないか**を、次に規則を足す人のためにここで見張る。 */
+  const GONE = ['M05','M10','F01','F02','F11','R05','R07','S08','S01','S03','S04','S06','D06'];
+  const r = await p.evaluate((gone) => {
+    const ids = (window.PIT_INSPECT_RULES || []).map(x => x.id);
+    return { n: ids.length, back: gone.filter(g => ids.indexOf(g) >= 0),
+             fix: gone.filter(g => (window.PIT_RULE_FIX || {})[g] !== undefined) };
+  }, GONE);
+  ok('🔴 消した13本が1本も戻っていない', r.back.length === 0, r.back);
+  ok('🔴 「ここを直す」の表からも消えている', r.fix.length === 0, r.fix);
+  ok('残っている規則の数（いま48本）', r.n === 48, r.n);
+}
+{
+  /* 🔴 消した規則に付いていた「出さない」の印は片づく。生きている規則の印は残す。 */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'mz1', status:'work', amountOrder:null })]);
+    state.inspectMutes = { S01:1, M02:1 };     /* S01＝消した規則 ／ M02＝生きている規則 */
+    pitInspectRun();
+    const left = Object.keys(state.inspectMutes || {});
+    state.inspectMutes = {};
+    return left;
+  });
+  ok('🔴 消した規則に付いていた印は片づく', r.indexOf('S01') < 0, r);
+  ok('🔴 生きている規則の印は残す（勝手に捨てない）', r.indexOf('M02') >= 0, r);
+}
+
 console.log('\n── 🧭 ソースの見張り（v1.172.0「やらなくていい」道が残っていないか） ──');
 {
   const iv = fs.readFileSync('js/inspect.js', 'utf8');
@@ -975,8 +1019,11 @@ console.log('\n── 🧭 ソースの見張り（v1.172.0「やらなくてい
   ok('🔴🔴 「この規則は出さない」を画面が出していない', !/ins-mute"/.test(live(iv)), '');
   ok('🔴 規則の「どうする」が「これでOK」「この規則は出さない」を勧めていない',
      !/fix:[^\n]*これでOK/.test(ir) && !/fix:[^\n]*この規則は出さない/.test(ir), '');
-  ok('🔴 走らせる時に黙らせを見ていない（全部の規則を走らせる）',
-     !/if \(mu\[rule\.id\]\)/.test(ir), '');
+  ok('🔴 v1.172.1 「出さない」の印は消す予定の控え＝走らせる時に読むだけ',
+     /mutedIds\.push/.test(ir), '');
+  /* 🔴 v1.172.2 生きている規則の印は触らない＝**消した規則のぶんだけ**片づける */
+  ok('🔴 生きている規則の「出さない」の印は捨てていない',
+     /if \(!have\[k\]\)/.test(ir), '');
   ok('🔴 前に隠したものを外す手順が1本ある（sweepEscapes）', /function sweepEscapes/.test(ir), '');
   ok('🔴 CSS からも消えている（.ins-mute / .ins-chk）',
      !/^\.ins-mute\{/m.test(ic) && !/^\.ins-chk\{/m.test(ic), '');
