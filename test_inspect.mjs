@@ -984,16 +984,16 @@ console.log('\n── 🧭 v1.173.0 規則は2種類（抜け・矛盾／要判�
 {
   /* 🗣「見積もりと確定が大きく違うも、間違えの可能性もあるけど普通にOKなのもある」
      ＝ 見て決めるしかない規則には「確認した（合っている）」を出す。ほかには出さない。 */
-  const JUDGE = ['M06','M07','F07','R04','L03','D08','T08'];
+  const JUDGE = ['M04','M06','M07','F07','R04','L03','D08','T08'];
   const r = await p.evaluate((judge) => {
     const R = window.PIT_INSPECT_RULES || [];
     const on = R.filter(x => x.judge).map(x => x.id).sort();
     return { on, want: judge.slice().sort(), n: R.length,
              marks: (window.PIT_INSPECT_MARKS || []).map(m => m.id + ':' + (m.judge ? 'judge' : '-')) };
   }, JUDGE);
-  ok('🔴🔴 「要判断」はこの7本ちょうど（増えても減っても落ちる）',
+  ok('🔴🔴 「要判断」はこの8本ちょうど（増えても減っても落ちる）',
      r.on.join() === r.want.join(), r.on);
-  ok('🔴 残り41本は「直すしかない」', r.n - r.on.length === 41, r.n);
+  ok('🔴 残り40本は「直すしかない」', r.n - r.on.length === 40, r.n);
   ok('🔴 「確認した」の札だけが要判断ものと結びついている',
      r.marks.join() === 'fixed:-,ok:judge', r.marks);
 }
