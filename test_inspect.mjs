@@ -335,48 +335,62 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
   ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
 }
 
-console.log('\n── ⑦-3 「終わった記録」を既定で混ぜない（v1.169.1・チェック1つ） ──');
+console.log('\n── ⑦-3 隠さない・全部出す／「もう一度点検」が効く（v1.169.2） ──');
 {
-  /* 🔴 ゆうた指摘（2026-08-21）本番 377台で所見260件のうち **129件が返車の済んだ車の記録**だった。
-     ＝ もう直しても現場は動かないものが、今週動かせる車を埋めていた。
-     🔴 規則を割るのではなく、**所見に「どちらの車か」の印**を付けて画面で分ける。 */
+  /* 🔴 ゆうた指定（2026-08-22）
+       「**終わった車も見る も要らない。確実に全て出して**」
+       「**もう一度点検は押してもなんか動いてる感じがしない**」
+     ＝ ① 画面の側で黙って隠さない  ② 押したら走ったと分かる */
   const r = await p.evaluate(() => {
     const D = window._D;
     window._only([
-      window._clean({ id:'s1', status:'work', amountOrder:null }),                                    /* いま */
+      window._clean({ id:'s1', status:'work', amountOrder:null }),
       window._clean({ id:'s2', status:'returned', returnStage:'returnWait', completedAt:D(-2),
-                      amountFinal:null, amountOrder:120000 }),                                        /* 終わった記録 */
-      window._clean({ id:'s3', status:'work', amountOrder:200000, archived:true, tel:'090-11' })      /* アーカイブ＝終わった記録 */
+                      amountFinal:null, amountOrder:120000 }),
+      window._clean({ id:'s3', status:'work', amountOrder:200000, archived:true, tel:'090-11' })
     ], []);
     const res = pitInspectRun();
-    const of = id => (res.findings.filter(f => f.refId === id)[0] || {}).scope;
-    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
-    const liveRows = Array.from(body.querySelectorAll('.ins-row-who')).map(e => e.textContent);
-    const liveTiles = Array.from(body.querySelectorAll('.ins-tile-n')).map(e => +e.textContent);
-    const chks = Array.from(body.querySelectorAll('.ins-chk')).map(e => e.textContent);
-    pitInspectTogglePast(true);
-    const b2 = document.getElementById('inspect-body');
-    const bothRows = Array.from(b2.querySelectorAll('.ins-row-who')).map(e => e.textContent);
-    const btns = b2.querySelectorAll('.ins-scope').length;   /* 🔴 ボタン2つはやめた＝0であること */
-    pitInspectTogglePast(false);
-    return { s1:of('s1'), s2:of('s2'), s3:of('s3'), byScope:res.byScope,
-             liveN:liveRows.length, bothN:bothRows.length, liveTiles:liveTiles,
-             chks:chks, btns:btns, exp:pitInspectExport(res).所見.map(x => x.車のいま) };
+    return {
+      found: res.findings.length,
+      rows: body.querySelectorAll('.ins-row').length,
+      tiles: Array.from(body.querySelectorAll('.ins-tile-n')).map(e => +e.textContent),
+      chks: Array.from(body.querySelectorAll('.ins-chk')).map(e => e.textContent),
+      scopeBtns: body.querySelectorAll('.ins-scope').length,
+      when: (body.querySelector('.ins-when') || {}).textContent || '',
+      hasRerun: !!document.getElementById('ins-rerun')
+    };
   });
-  ok('🔴 いま動いている車は live', r.s1 === 'live', r.s1);
-  ok('🔴 返車済みは「終わった記録」', r.s2 === 'past', r.s2);
-  ok('🔴 アーカイブも「終わった記録」', r.s3 === 'past', r.s3);
-  ok('数え上げが両方ぶん出る', r.byScope.live.n >= 1 && r.byScope.past.n >= 2, r.byScope);
-  ok('🔴 既定は「いま動かせる車」だけ出す', r.liveN === 1, r.liveN);
-  ok('🔴 チェックを入れると終わった記録も混ざる', r.bothN >= 3, r.bothN);
-  ok('🔴 重さのタイルも、いま出している側だけを数える',
-     r.liveTiles.reduce((a, b) => a + b, 0) === r.liveN, [r.liveTiles, r.liveN]);
-  /* 🔴 ゆうた指摘（2026-08-22）「普通に一個がよかった」＝ボタン2つで切り替える形はやめた */
-  ok('🔴 切り替えのボタン2つは出さない（一個＝チェックだけ）', r.btns === 0, r.btns);
-  ok('🔴 チェックは「終わった記録も見る」', r.chks.some(t => /終わった記録も見る/.test(t)), r.chks);
-  ok('🔴 書き出しにも日本語で入る', r.exp.indexOf('終わった記録') >= 0 && r.exp.indexOf('いま動いている車') >= 0, r.exp);
+  ok('🔴 物差しが見つけた所見が、1件残らず画面に出ている（隠さない）', r.rows === r.found, r);
+  ok('🔴 重さのタイルの合計も、見つけた数と同じ',
+     r.tiles.reduce((a, b) => a + b, 0) === r.found, [r.tiles, r.found]);
+  ok('🔴 「終わった記録も見る」のチェックは無い', r.chks.every(t => !/終わった記録/.test(t)), r.chks);
+  ok('🔴 切り替えのボタンも無い', r.scopeBtns === 0, r.scopeBtns);
+  ok('🔴 上の帯に「◯時◯分◯秒に点検」と出る（走った証拠）',
+     /\d{2}:\d{2}:\d{2}/.test(r.when), r.when);
+  ok('「もう一度点検」のボタンがある', r.hasRerun === true);
+}
+{
+  /* 🔴 押したら **時刻が変わる**（＝本当に走り直している）。
+     ⚠ 中身が同じだと画面が1文字も変わらず「動いていない」ように見えたのが、ゆうた報告の正体。 */
+  const r = await p.evaluate(async () => {
+    const when = () => (document.querySelector('.ins-when') || {}).textContent || '';
+    const before = when();
+    const toasts = [];
+    const keep = window.pitToast;
+    window.pitToast = function (m) { toasts.push(m); };
+    await new Promise(r => setTimeout(r, 1100));
+    pitInspectRerun();
+    await new Promise(r => setTimeout(r, 400));
+    const after = when();
+    window.pitToast = keep;
+    return { before, after, toasts };
+  });
+  ok('🔴 押すと点検した時刻が変わる（走り直している）', r.before !== r.after, r);
+  ok('🔴 変わりが無くても黙らない（必ず何か言う）', r.toasts.length === 1, r.toasts);
+  ok('🔴 「変わりはありません」と件数を言う', /変わりはありません|→/.test(r.toasts[0] || ''), r.toasts);
 }
 
 console.log('\n── ⑦-4 本番データで空振りしていた2つを直した（v1.169.0） ──');
