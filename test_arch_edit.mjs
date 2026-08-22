@@ -283,8 +283,10 @@ console.log('\n── ⑦ ソースの見張り ──');
   ok('版が3か所そろっている',
      !!ver && ix.indexOf('<span class="ver">v' + ver + '</span>') >= 0
            && ix.indexOf('<div class="login-ver">v' + ver + '</div>') >= 0, ver);
+  /* ⚠ 見張るのは**この回で直した2本**だけ。ほかのファイルの番号まで書くと、
+     関係のない直しで落ちる（`errcode-pit.js` の番号を書いていて実際に落ちた）。 */
   ok('直した2本にキャッシュ番号が付いている',
-     /card-view\.js\?v=76/.test(ix) && /card-view\.css\?v=37/.test(ix) && /errcode-pit\.js\?v=7/.test(ix));
+     /card-view\.js\?v=\d+/.test(ix) && /card-view\.css\?v=\d+/.test(ix));
 }
 
 ok('JSエラーが出ていない', errs.length === 0, errs.slice(0, 3));

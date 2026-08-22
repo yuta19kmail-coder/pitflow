@@ -430,7 +430,7 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
     const base = window._only([window._clean({ id:'k1', status:'work', amountOrder:null })]);
     const f = base.findings.filter(x => x.ruleId === 'M01')[0];
     const before = base.findings.length;
-    pitInspectMark(f.key, 'seen');
+    pitInspectMark(f.key, 'fixed');
     const after = pitInspectRun();
     const marked = after.findings.filter(x => x.key === f.key)[0];
     pitInspectMark(f.key, '');
@@ -444,7 +444,7 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
              mutedCount: muted.muted, mutes: Object.keys(state.inspectMutes || {}).length };
   });
   ok('🔴 札の貼り先は「規則ID:カードID」', /^M01:/.test(r.key), r.key);
-  ok('🔴 札を貼っても所見は消えない（数が減らない）', r.mark === 'seen' && r.markedN === r.before, r);
+  ok('🔴 「直した」を貼っても所見は消えない（数が減らない）', r.mark === 'fixed' && r.markedN === r.before, r);
   ok('札をはがせる', !r.offMark, r.offMark);
   ok('🔴🔴 新しく黙らせる道が無い（呼んでも出続ける）', r.mutedN === 1 && r.mutedCount === 0, r);
   ok('🔴 呼んでも印そのものが増えない', r.mutes === 0, r);
@@ -500,7 +500,7 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
   const r = await p.evaluate(() => {
     window._only([window._clean({ id:'lb1', status:'work', amountOrder:null })], []);
     const f = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0];
-    pitInspectMark(f.key, 'seen');
+    pitInspectMark(f.key, 'fixed');
     const res = pitInspectRun();
     window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
@@ -519,20 +519,22 @@ console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「や�
       exp: out.所見[0] || {}
     };
   });
-  ok('🔴 札の中身（id）は変えていない＝貼った札がはがれない', r.ids.join() === 'seen,fixed', r.ids);
-  ok('🔴 言葉は「見た／直した」の2つだけ', r.labels.join() === '見た,直した', r.labels);
+  ok('🔴 札の中身（id）は変えていない＝貼った札がはがれない', r.ids.join() === 'fixed,ok', r.ids);
+  ok('🔴 言葉は「直した／確認した」の2つだけ（v1.173.0 で「見た」を廃止）',
+     r.labels.join() === '直した,確認した', r.labels);
   ok('🔴🔴 「これでOK」がどこにも出ていない', !/これでOK/.test(r.text), r.btns);
   ok('🔴🔴 「この規則は出さない」のボタンが無い', r.mute === 0, r.mute);
   ok('🔴 「片づけたものも見る」も無い（隠しているものが無いので要らない）', r.chk === 0, r.chk);
-  ok('ボタンは表から出している（2つとも出る）', r.btns.join() === '見た,直した', r.btns);
+  /* 🔴🔴 v1.173.0 M01 は「抜け・矛盾」＝**直すしかない**ので「確認した」は出ない */
+  ok('🔴🔴 抜け・矛盾の規則には「確認した」を出さない', r.btns.join() === '直した', r.btns);
   ok('🔴 札を貼っても行は消えない', r.rows === 1, r.rows);
-  ok('貼った札は行にも同じ言葉で出る', r.badge === '見た', r.badge);
+  ok('貼った札は行にも同じ言葉で出る', r.badge === '直した', r.badge);
   ok('🔴 「0にする」と画面が言っている', /0/.test(r.goal) && /直/.test(r.goal), r.goal);
   ok('🔴 「やらなくていい」ふうの言い方が画面に無い',
      !/仕様かも|そのままで大丈夫|やらなくて/.test(r.text), r.text.slice(0, 200));
   /* 🔴 書き出しは**人が読む言葉**で（②突合・③AI判断がそのまま読む） */
-  ok('🔴 書き出しの札が日本語（seen のままではない）', r.exp.札 === '見た', r.exp.札);
-  ok('🔴 書き出しに元の印も残る（機械が読む用）', r.exp.札の印 === 'seen', r.exp.札の印);
+  ok('🔴 書き出しの札が日本語（fixed のままではない）', r.exp.札 === '直した', r.exp.札);
+  ok('🔴 書き出しに元の印も残る（機械が読む用）', r.exp.札の印 === 'fixed', r.exp.札の印);
   ok('🔴 書き出しに札をつけた日が入る', /^\d{4}-\d{2}-\d{2}$/.test(r.exp.札をつけた日 || ''), r.exp.札をつけた日);
 }
 {
@@ -976,6 +978,109 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
      ⚠ 測ったのは**このファイルの先頭**（下ごしらえで state を入れ替える前）。 */
   ok('🔴 見本データの「これから作業する車」に必須の空きが無い（見本が保存の決まりを通れる）',
      SAMPLE_MISS === 0, SAMPLE_MISS);
+}
+
+console.log('\n── 🧭 v1.173.0 規則は2種類（抜け・矛盾／要判断）＋ 起点日 ──');
+{
+  /* 🗣「見積もりと確定が大きく違うも、間違えの可能性もあるけど普通にOKなのもある」
+     ＝ 見て決めるしかない規則には「確認した（合っている）」を出す。ほかには出さない。 */
+  const JUDGE = ['M06','M07','F07','R04','L03','D08','T08'];
+  const r = await p.evaluate((judge) => {
+    const R = window.PIT_INSPECT_RULES || [];
+    const on = R.filter(x => x.judge).map(x => x.id).sort();
+    return { on, want: judge.slice().sort(), n: R.length,
+             marks: (window.PIT_INSPECT_MARKS || []).map(m => m.id + ':' + (m.judge ? 'judge' : '-')) };
+  }, JUDGE);
+  ok('🔴🔴 「要判断」はこの7本ちょうど（増えても減っても落ちる）',
+     r.on.join() === r.want.join(), r.on);
+  ok('🔴 残り41本は「直すしかない」', r.n - r.on.length === 41, r.n);
+  ok('🔴 「確認した」の札だけが要判断ものと結びついている',
+     r.marks.join() === 'fixed:-,ok:judge', r.marks);
+}
+{
+  /* 🔴 要判断の規則では「確認した」を押せて、**数から外れる**。行は消えない。 */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'j1', status:'returned', returnStage:'returnWait',
+                                  amountQuote:100000, amountFinal:900000,
+                                  completedAt:window._D(-2), reserveDate:window._D(-5), returnDate:window._D(-2) })]);
+    const before = pitInspectRun();
+    const f = before.findings.filter(x => x.ruleId === 'M07')[0];
+    if (!f) return { none:true };
+    pitInspectMark(f.key, 'ok');
+    const after = pitInspectRun();
+    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {}; window._insp.okOpen = true;
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const g = after.findings.filter(x => x.key === f.key)[0] || {};
+    return { judge: f.judge, mark: g.mark, by: g.markBy !== undefined,
+             openBefore: before.openN, openAfter: after.openN, okN: after.okN,
+             all: after.findings.length,
+             box: !!body.querySelector('.ins-okbox'),
+             boxTxt: (body.querySelector('.ins-okh') || {}).textContent || '',
+             rows: body.querySelectorAll('.ins-okbox .ins-row').length,
+             judgeBadge: !!body.querySelector('.ins-judge') };
+  });
+  ok('🔴 M07 は「見て決める」規則', r.judge === true, r);
+  ok('🔴 「確認した」を押せる', r.mark === 'ok', r);
+  ok('🔴🔴 押すと直す数から外れる（0にできる）', r.openAfter === r.openBefore - 1, r);
+  ok('🔴🔴 でも消えていない（確認したの別枠に出る）',
+     r.all === r.openBefore && r.okN === 1 && r.box === true && r.rows === 1, r);
+  ok('別枠に件数が出る', /確認した/.test(r.boxTxt) && /1件/.test(r.boxTxt), r.boxTxt);
+  ok('🔴 行に「見て決める」の印が出る', r.judgeBadge === true, r);
+  ok('🔴 誰がいつ決めたかを持っている', r.by === true, r);
+}
+{
+  /* 🔴🔴 抜け・矛盾の規則には「確認した」を付けられない（画面から消すだけにしない） */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'j2', status:'work', amountOrder:null })]);
+    const f = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0];
+    pitInspectMark(f.key, 'ok');                    /* 直に呼んでも通らないこと */
+    const after = pitInspectRun();
+    return { mark: (after.findings.filter(x => x.key === f.key)[0] || {}).mark || '', open: after.openN };
+  });
+  ok('🔴🔴 直に呼んでも「確認した」は付かない', r.mark === '', r);
+  ok('🔴 数も減らない', r.open === 1, r);
+}
+{
+  /* 🔴🔴 起点日＝この日より前に入庫した車は、日付の前後を言わない（8月の一斉入力の跡） */
+  const r = await p.evaluate(() => {
+    /* ⚠ 決め打ちの日付は書かない（規則④）。今日からの日数で作る。 */
+    const D = window._D, FROM = D(-10);
+    state.settings.inspectFrom = FROM;
+    window._only([
+      window._clean({ id:'old', status:'work', reserveDate:D(-20), returnDate:D(-22) }),
+      window._clean({ id:'new', status:'work', reserveDate:D(-3),  returnDate:D(-5)  })
+    ]);
+    const on = pitInspectRun();
+    state.settings.inspectFrom = '';
+    const off = pitInspectRun();
+    state.settings.inspectFrom = FROM;
+    const hit = (res, id) => res.findings.some(f => f.refId === id && f.ruleId === 'F05');
+    return { oldOn: hit(on,'old'), newOn: hit(on,'new'), oldOff: hit(off,'old'), from: on.from, want: FROM };
+  });
+  ok('🔴🔴 起点日より前に入庫した車は言わない（8月の一斉入力の跡）', r.oldOn === false, r);
+  ok('🔴🔴 起点日より後の打ち間違いはちゃんと出る', r.newOn === true, r);
+  ok('起点日を空にすると、ぜんぶ見る', r.oldOff === true, r);
+  ok('いつからかを画面に渡している', r.from === r.want, r);
+}
+{
+  /* 🔴 起点日は「黙って効かせない」＝画面に出す。変えられるのは管理だけ */
+  const r = await p.evaluate(() => {
+    window.PIT_CLOUD = true; window.__adm = false;
+    window.pitCanEditFinal = function(){ return !!window.__adm; };
+    window._only([window._clean({ id:'fx', status:'work', amountOrder:null })]);
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const line = (body.querySelector('.ins-from') || {}).textContent || '';
+    const noEdit = !body.querySelector('.ins-fromin');
+    window.__adm = true; renderInspect();
+    const b2 = document.getElementById('inspect-body');
+    return { line, noEdit, canEdit: !!b2.querySelector('.ins-fromin') };
+  });
+  ok('🔴 いつからか、が画面に書いてある',
+     /\d{4}-\d{2}-\d{2}/.test(r.line) && /日付の前後/.test(r.line), r.line);
+  ok('🔴 管理でない人は変えられない', r.noEdit === true, r);
+  ok('🔴 管理なら変えられる', r.canEdit === true, r);
 }
 
 console.log('\n── 🗑 v1.172.2 ゆうたが「出さない」を選んでいた13本を規則表から消した ──');
