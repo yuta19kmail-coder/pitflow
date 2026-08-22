@@ -300,7 +300,7 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
     /* ⚠ w4 は お金の所見にも車検の所見にも出る。**回送の担当が付くのは車検の所見だけ**
           （お金の所見に車検担当を出しても、直す人が分からなくなるだけ）。だから車検のほうを見る。 */
     by.w4 = res.findings.filter(f => f.refId === 'w4' && f.cat === 'shaken')[0] || by.w4;
-    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const rows = Array.from(body.querySelectorAll('.ins-row')).map(el => ({
@@ -335,7 +335,7 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
   ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
 }
 
-console.log('\n── ⑦-3 「いま動いている車」と「終わった記録」を分ける（v1.169.0） ──');
+console.log('\n── ⑦-3 「終わった記録」を既定で混ぜない（v1.169.1・チェック1つ） ──');
 {
   /* 🔴 ゆうた指摘（2026-08-21）本番 377台で所見260件のうち **129件が返車の済んだ車の記録**だった。
      ＝ もう直しても現場は動かないものが、今週動かせる車を埋めていた。
@@ -350,29 +350,32 @@ console.log('\n── ⑦-3 「いま動いている車」と「終わった記�
     ], []);
     const res = pitInspectRun();
     const of = id => (res.findings.filter(f => f.refId === id)[0] || {}).scope;
-    window._insp.scope = 'live'; window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const liveRows = Array.from(body.querySelectorAll('.ins-row-who')).map(e => e.textContent);
     const liveTiles = Array.from(body.querySelectorAll('.ins-tile-n')).map(e => +e.textContent);
-    pitInspectScope('past');
+    const chks = Array.from(body.querySelectorAll('.ins-chk')).map(e => e.textContent);
+    pitInspectTogglePast(true);
     const b2 = document.getElementById('inspect-body');
-    const pastRows = Array.from(b2.querySelectorAll('.ins-row-who')).map(e => e.textContent);
-    const scopeBtns = Array.from(b2.querySelectorAll('.ins-scope')).map(e => e.textContent);
-    pitInspectScope('live');
+    const bothRows = Array.from(b2.querySelectorAll('.ins-row-who')).map(e => e.textContent);
+    const btns = b2.querySelectorAll('.ins-scope').length;   /* 🔴 ボタン2つはやめた＝0であること */
+    pitInspectTogglePast(false);
     return { s1:of('s1'), s2:of('s2'), s3:of('s3'), byScope:res.byScope,
-             liveN:liveRows.length, pastN:pastRows.length, liveTiles:liveTiles,
-             scopeBtns:scopeBtns, exp:pitInspectExport(res).所見.map(x => x.車のいま) };
+             liveN:liveRows.length, bothN:bothRows.length, liveTiles:liveTiles,
+             chks:chks, btns:btns, exp:pitInspectExport(res).所見.map(x => x.車のいま) };
   });
   ok('🔴 いま動いている車は live', r.s1 === 'live', r.s1);
   ok('🔴 返車済みは「終わった記録」', r.s2 === 'past', r.s2);
   ok('🔴 アーカイブも「終わった記録」', r.s3 === 'past', r.s3);
   ok('数え上げが両方ぶん出る', r.byScope.live.n >= 1 && r.byScope.past.n >= 2, r.byScope);
-  ok('🔴 既定は「いま動いている車」だけ出す', r.liveN === 1, r.liveN);
-  ok('🔴 切り替えると「終わった記録」が出る', r.pastN >= 2, r.pastN);
+  ok('🔴 既定は「いま動かせる車」だけ出す', r.liveN === 1, r.liveN);
+  ok('🔴 チェックを入れると終わった記録も混ざる', r.bothN >= 3, r.bothN);
   ok('🔴 重さのタイルも、いま出している側だけを数える',
      r.liveTiles.reduce((a, b) => a + b, 0) === r.liveN, [r.liveTiles, r.liveN]);
-  ok('切り替えのボタンが2つ出る', r.scopeBtns.length === 2, r.scopeBtns);
+  /* 🔴 ゆうた指摘（2026-08-22）「普通に一個がよかった」＝ボタン2つで切り替える形はやめた */
+  ok('🔴 切り替えのボタン2つは出さない（一個＝チェックだけ）', r.btns === 0, r.btns);
+  ok('🔴 チェックは「終わった記録も見る」', r.chks.some(t => /終わった記録も見る/.test(t)), r.chks);
   ok('🔴 書き出しにも日本語で入る', r.exp.indexOf('終わった記録') >= 0 && r.exp.indexOf('いま動いている車') >= 0, r.exp);
 }
 
@@ -451,7 +454,7 @@ console.log('\n── ⑧ 札（見た／これでOK／直した）と、規則�
     const f = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0];
     pitInspectMark(f.key, 'spec');
     const res = pitInspectRun();
-    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.done = true; window._insp.all = {};
+    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.done = true; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const out = pitInspectExport(res);
@@ -523,7 +526,7 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
       window._clean({ id:'v2', status:'work', amountOrder:200000, tel:'090-11' }),                  /* amber D05 */
       window._clean({ id:'v3', status:'work', amountOrder:200000, reserveDate:D(1), returnDate:D(200) })  /* amber F07 */
     ], []);
-    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
+    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
     showView('inspect');
     const body = document.getElementById('inspect-body');
     const all = body.querySelectorAll('.ins-row').length;
@@ -558,7 +561,7 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
   const r = await p.evaluate(() => {
     const cards = []; for (let i = 0; i < 26; i++) cards.push(window._clean({ id:'many' + i, status:'work', amountOrder:null }));
     state.cards = cards; state.loanerAssigns = []; state.inspectMarks = {}; state.inspectMutes = {};
-    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const first = body.querySelectorAll('.ins-row').length;
@@ -596,7 +599,7 @@ console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉
       window._clean({ id:'j2', status:'returned', returnStage:'returnWait', completedAt:null, amountFinal:null }),
       window._clean({ id:'j3', status:'work', kana:'', repeat:'' })
     ], []);
-    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
+    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const onScreen = [];
