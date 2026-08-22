@@ -1064,23 +1064,21 @@ console.log('\n── 🧭 v1.173.0 規則は2種類（抜け・矛盾／要判�
   ok('いつからかを画面に渡している', r.from === r.want, r);
 }
 {
-  /* 🔴 起点日は「黙って効かせない」＝画面に出す。変えられるのは管理だけ */
+  /* 🔴🔴 v1.173.2（ゆうた指定）**起点日は画面に出さない。**
+     🗣「表示要らない。あくまで内部処理でつかって。本当にスタート時の誤差ってだけだから」
+     ⚠ 効いていること自体は上の節で見ている（前は言わない／後は出る）。ここは**出ていないこと**を見る。 */
   const r = await p.evaluate(() => {
     window.PIT_CLOUD = true; window.__adm = false;
     window.pitCanEditFinal = function(){ return !!window.__adm; };
     window._only([window._clean({ id:'fx', status:'work', amountOrder:null })]);
     renderInspect();
     const body = document.getElementById('inspect-body');
-    const line = (body.querySelector('.ins-from') || {}).textContent || '';
-    const noEdit = !body.querySelector('.ins-fromin');
-    window.__adm = true; renderInspect();
-    const b2 = document.getElementById('inspect-body');
-    return { line, noEdit, canEdit: !!b2.querySelector('.ins-fromin') };
+    return { band: !!body.querySelector('.ins-from'), input: !!body.querySelector('.ins-fromin'),
+             txt: /起点日|日付の前後/.test(body.textContent || '') };
   });
-  ok('🔴 いつからか、が画面に書いてある',
-     /\d{4}-\d{2}-\d{2}/.test(r.line) && /日付の前後/.test(r.line), r.line);
-  ok('🔴 管理でない人は変えられない', r.noEdit === true, r);
-  ok('🔴 管理なら変えられる', r.canEdit === true, r);
+  ok('🔴🔴 起点日の帯を画面に出していない', r.band === false, r);
+  ok('🔴 起点日を変える入力欄も出していない', r.input === false, r);
+  ok('🔴 起点日の話が画面の字にも出ていない', r.txt === false, r);
 }
 
 console.log('\n── 🗑 v1.172.2 ゆうたが「出さない」を選んでいた13本を規則表から消した ──');
