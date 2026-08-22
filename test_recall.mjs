@@ -218,7 +218,10 @@ console.log('\n── 🧭 物差しが1本か ──');
   ok('🔴 呼び出し側はそれを借りている', /pitSearchWords\(qstr\)/.test(cu) && /pitSearchNorm/.test(cu), '');
   ok('🔴 打ち切りが残っていない（10件も30件も）', !/slice\(0,\s*(10|30)\)/.test(cu) && !/RECALL_MAX/.test(cu), '');
   const sc2 = fs.readFileSync('js/search.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-  ok('🔴 マスター検索の顧客も切っていない', !/custHits\.slice/.test(sc2), '');
+  /* 🔴 v1.177.0 「先に100件だけ組み立てて、残りは次の周期から足す」に変えた。
+     ＝ slice はあるが**切っていない**。切っていない証拠は、下の「本当に全部そろうか」で見る。 */
+  ok('🔴 マスター検索の顧客を切っていない（残りを足す仕掛けがある）',
+     !/custHits\.slice/.test(sc2) || /restSoon\(/.test(sc2), '');
   ok('カードは今までどおり上位30件のまま', /list\.slice\(0, MAX\)/.test(sc2), '');
 
   await p.evaluate(() => { if (window.pitSampleData) pitSampleData(); });
@@ -228,6 +231,97 @@ console.log('\n── 🧭 物差しが1本か ──');
     await p.waitForTimeout(200);
   }
   ok('各ビューを開いてエラーなし', errs.length === 0, errs.slice(0, 5));
+}
+
+/* ============================================================
+   🔴🔴 v1.177.0（ゆうた報告「なんか検索ボックスの挙動が おそい・・・」）
+   **速くしたが、1件も切っていない**ことをここで見張る。
+   ・打っている間は描き直さない（pitSearchSoon）
+   ・顧客は先頭100件を先に出して、残りは次の周期から足す（restSoon）
+   ⚠ 「速い」だけを見張ると、黙って切る直し方が通ってしまう。**必ず件数と一緒に見る。**
+   ============================================================ */
+console.log('\n── ⏱ 速さ（数は1件も減らさない） ──');
+{
+  await p.evaluate(() => {
+    const q = n => (n < 10 ? '0' : '') + n;
+    const cu = [];
+    for (let i = 0; i < 900; i++) cu.push({ id: 'sp' + i, name: '速水 一郎' + i, kana: 'ハヤミ イチロウ',
+      updatedAt: i, contacts: [{ tel: '090-0000-0000', primary: true }],
+      vehicles: [{ id: 'spv' + i, plate: '袖ヶ浦 500 そ ' + q(i % 100), maker: 'ホンダ', car: 'フィット' }] });
+    state.customers = cu; state.cards = [];
+    let box = document.getElementById('pit-search-results');
+    if (!box) { box = document.createElement('div'); box.id = 'pit-search-results'; document.body.appendChild(box); }
+    pitSearchBind('pit-search-wrap', 'pit-search-input', 'pit-search-results');
+    box.innerHTML = '';
+  });
+  const r = await p.evaluate(async () => {
+    const box = document.getElementById('pit-search-results');
+    const t0 = performance.now();
+    pitSearchInput('速水');
+    const firstMs = performance.now() - t0;
+    const firstRows = box.querySelectorAll('.psr-cust-tag').length;
+    const t1 = performance.now();
+    while (box.querySelectorAll('.psr-cust-tag').length < 900 && performance.now() - t1 < 15000) {
+      await new Promise(r => setTimeout(r, 10));
+    }
+    const head = ([].map.call(box.querySelectorAll('.psr-head'), e => e.textContent.trim())
+                   .find(h => /顧客/.test(h))) || '';
+    return { firstMs: Math.round(firstMs), firstRows, allRows: box.querySelectorAll('.psr-cust-tag').length,
+             allMs: Math.round(performance.now() - t0), head: head };
+  });
+  ok('🔴 最初の1画面がすぐ出る（900人ヒットでも 300ms 未満）', r.firstMs < 300, r.firstMs + 'ms');
+  ok('先に出すのは先頭100件', r.firstRows === 100, r.firstRows);
+  ok('🔴🔴 残りも足されて **900件そろう**（切っていない）', r.allRows === 900, r);
+  ok('🔴 見出しは最初から本当の数を言う', /900件/.test(r.head), r.head);
+  ok('🔴 「上位◯件」とは言わない', !/上位/.test(r.head), r.head);
+  console.log('     ⏱ 最初の1画面 ' + r.firstMs + 'ms ／ 900件そろうまで ' + r.allMs + 'ms');
+}
+{
+  /* 打っている間は描き直さない＝1文字ごとに固まらない */
+  const r = await p.evaluate(async () => {
+    const box = document.getElementById('pit-search-results');
+    box.innerHTML = '';
+    let wrap = document.getElementById('pit-search-wrap');
+    if (!wrap) { wrap = document.createElement('div'); wrap.id = 'pit-search-wrap'; document.body.appendChild(wrap); }
+    let inp = document.getElementById('pit-search-input');
+    if (!inp) { inp = document.createElement('input'); inp.id = 'pit-search-input';
+                inp.setAttribute('oninput', 'pitSearchSoon(this.value,event)'); wrap.appendChild(inp); }
+    const s = '速水', out = [];
+    for (let i = 1; i <= s.length; i++) {
+      inp.value = s.slice(0, i);
+      const t0 = performance.now();
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      out.push(Math.round(performance.now() - t0));
+      await new Promise(r => setTimeout(r, 60));
+    }
+    const midRows = box.querySelectorAll('.psr-cust-tag').length;
+    await new Promise(r => setTimeout(r, 700));
+    return { ms: out, midRows, afterRows: box.querySelectorAll('.psr-cust-tag').length };
+  });
+  ok('🔴 打っている間は固まらない（1打あたり 50ms 未満）', r.ms.every(x => x < 50), r.ms);
+  ok('🔴 打っている途中では描き直していない', r.midRows === 0, r.midRows);
+  ok('🔴 手を止めたら出る', r.afterRows >= 100, r.afterRows);
+}
+{
+  /* 待つのは入力欄だけ。呼んだらその場で描く口はそのまま残す（試験・他所からの呼び出し用） */
+  const sc = fs.readFileSync('js/search.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const cu = fs.readFileSync('js/customers.js', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const md = fs.readFileSync('js/mydash.js', 'utf8');
+  const cd = fs.readFileSync('js/card-detail.js', 'utf8');
+  ok('🔴 待ち方の物差しは search.js の1本', /window\.pitTypeSoon/.test(sc), '');
+  ok('🔴 呼び出し側はそれを借りている（書き写していない）',
+     /pitTypeSoon\('recall'/.test(cu) && !/setTimeout\([\s\S]{0,40}custSuggest/.test(cu), '');
+  ok('マスター検索の入力欄は待つ口を呼ぶ', /pitSearchSoon\(this\.value,event\)/.test(md), '');
+  ok('呼び出しの入力欄も待つ口を呼ぶ', /custSuggestSoon\(this\.value,event\)/.test(cd), '');
+  ok('🔴 その場で描く口は残っている', /window\.pitSearchInput = function/.test(sc) && /window\.custSuggest=function/.test(cu), '');
+  const c1 = fs.readFileSync('css/search.css', 'utf8');
+  const c2 = fs.readFileSync('css/polish.css', 'utf8');
+  ok('🔴 画面の外の行は組み立てを後回し（マスター検索）', /\.psr-row[\s\S]{0,600}?content-visibility:\s*auto/.test(c1), '');
+  ok('🔴 同じ手を呼び出しにも', /\.cf-recall-item\{[\s\S]{0,400}?content-visibility:auto/.test(c2), '');
+  const ix = fs.readFileSync('index.html', 'utf8');
+  ok('直したファイルにキャッシュ番号が付いている',
+     /search\.js\?v=18/.test(ix) && /customers\.js\?v=51/.test(ix) && /mydash\.js\?v=18/.test(ix)
+     && /card-detail\.js\?v=138/.test(ix) && /search\.css\?v=8/.test(ix) && /polish\.css\?v=212/.test(ix), '');
 }
 
 await b.close();
