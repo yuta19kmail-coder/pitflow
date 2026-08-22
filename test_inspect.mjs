@@ -438,67 +438,87 @@ console.log('\n── ⑦-4 本番データで空振りしていた2つを直し
      r.mochiS01 === false && r.koreS08 === false, r);
 }
 
-console.log('\n── ⑧ 札（見た／これでOK／直した）と、規則ごとの黙らせ ──');
+console.log('\n── ⑧ 札（見た／直した）と、🔴 v1.172.0 「やらなくていい」道が1つも無いこと ──');
 {
   const r = await p.evaluate(() => {
     const base = window._only([window._clean({ id:'k1', status:'work', amountOrder:null })]);
     const f = base.findings.filter(x => x.ruleId === 'M01')[0];
     const before = base.findings.length;
-    pitInspectMark(f.key, 'spec');
+    pitInspectMark(f.key, 'seen');
     const after = pitInspectRun();
     const marked = after.findings.filter(x => x.key === f.key)[0];
     pitInspectMark(f.key, '');
     const off = pitInspectRun().findings.filter(x => x.key === f.key)[0];
-    /* 規則ごと黙らせる */
+    /* 🔴 v1.172.0 規則ごと黙らせる道は無い（呼んでも何も起きない） */
     pitInspectMute('M01', true);
     const muted = pitInspectRun();
-    pitInspectMute('M01', false);
-    const back = pitInspectRun();
     return { before, key:f.key, mark:(marked||{}).mark, offMark:(off||{}).mark,
-             mutedN: muted.findings.filter(x => x.ruleId === 'M01').length, mutedCount: muted.muted,
-             backN: back.findings.filter(x => x.ruleId === 'M01').length };
+             markedN: after.findings.length,
+             mutedN: muted.findings.filter(x => x.ruleId === 'M01').length,
+             mutedCount: muted.muted, mutes: Object.keys(state.inspectMutes || {}).length };
   });
   ok('🔴 札の貼り先は「規則ID:カードID」', /^M01:/.test(r.key), r.key);
-  ok('🔴 札を貼ると所見に付いてくる（消えはしない）', r.mark === 'spec', r.mark);
+  ok('🔴 札を貼っても所見は消えない（数が減らない）', r.mark === 'seen' && r.markedN === r.before, r);
   ok('札をはがせる', !r.offMark, r.offMark);
-  ok('🔴 規則ごと黙らせると出なくなる', r.mutedN === 0 && r.mutedCount === 1, r);
-  ok('🔴 黙らせを戻すとまた出る', r.backN === 1, r.backN);
+  ok('🔴🔴 規則ごと黙らせる道が無い（呼んでも出続ける）', r.mutedN === 1 && r.mutedCount === 0, r);
+  ok('🔴 黙らせの印そのものが残らない', r.mutes === 0, r);
 }
 {
-  /* 🔴 v1.168.1（ゆうた指摘）**札の言葉。**
-     🗣「仕様っていうと、なんか仕組み的にあってるみたいなニュアンスが強いかな」
-     ＝ 中身（id）は 'spec' のまま、**言葉だけ**「これでOK」にした。
+  /* 🔴🔴 v1.172.0（ゆうた指定）**前に押して隠していたものを出し直す。**
+     ＝ ボタンだけ消して印を残すと、戻す手立てが無いまま永久に隠れる。 */
+  const r = await p.evaluate(() => {
+    window._only([window._clean({ id:'sw1', status:'work', amountOrder:null })]);
+    const key = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0].key;
+    /* 昔の「これでOK」と「この規則は出さない」を手で埋め込む（v1.171.0 以前の状態） */
+    state.inspectMarks[key] = { v:'spec', at:'2026-08-01', by:'昔の人' };
+    state.inspectMutes = { M02:1, M03:1 };
+    const res = pitInspectRun();
+    return { mark: (state.inspectMarks[key] || {}).v || '', mutes: Object.keys(state.inspectMutes).length,
+             shown: res.findings.filter(x => x.key === key).length };
+  });
+  ok('🔴 前に押した「これでOK」の印が外れている', r.mark === '', r.mark);
+  ok('🔴 黙らせていた規則も全部戻っている', r.mutes === 0, r.mutes);
+  ok('🔴 その所見はちゃんと出ている', r.shown === 1, r.shown);
+}
+{
+  /* 🔴🔴 v1.172.0（ゆうた指定）**札は2つだけ／隠す道は画面に1つも無い。**
      ⚠ id を変えると**今までに貼った札が全部はがれる**ので、id が変わっていないことも見る。 */
   const r = await p.evaluate(() => {
     window._only([window._clean({ id:'lb1', status:'work', amountOrder:null })], []);
     const f = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0];
-    pitInspectMark(f.key, 'spec');
+    pitInspectMark(f.key, 'seen');
     const res = pitInspectRun();
-    window._insp.past = false; window._insp.level = ''; window._insp.cat = ''; window._insp.done = true; window._insp.all = {};
+    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const out = pitInspectExport(res);
-    window._insp.done = false;
     return {
       ids: PIT_INSPECT_MARKS.map(m => m.id),
       labels: PIT_INSPECT_MARKS.map(m => m.label),
       btns: Array.from(body.querySelectorAll('.ins-mk')).map(e => e.textContent),
       badge: (body.querySelector('.ins-badge') || {}).textContent || '',
-      mute: (body.querySelector('.ins-mute') || {}).textContent || '',
+      rows: body.querySelectorAll('.ins-row').length,
+      mute: body.querySelectorAll('.ins-mute').length,
+      chk: body.querySelectorAll('.ins-chk').length,
+      goal: (body.querySelector('.ins-goal') || {}).textContent || '',
+      text: body.textContent,
       exp: out.所見[0] || {}
     };
   });
-  ok('🔴 札の中身（id）は変えていない＝貼った札がはがれない',
-     r.ids.join() === 'seen,spec,fixed', r.ids);
-  ok('🔴 言葉は「見た／これでOK／直した」', r.labels.join() === '見た,これでOK,直した', r.labels);
-  ok('🔴 「仕様」という言い方が画面に残っていない',
-     r.btns.every(x => !/仕様/.test(x)) && !/仕様/.test(r.mute), [r.btns, r.mute]);
-  ok('ボタンは表から出している（3つとも出る）', r.btns.join() === '見た,これでOK,直した', r.btns);
-  ok('貼った札は行にも同じ言葉で出る', r.badge === 'これでOK', r.badge);
-  ok('規則ごとの黙らせも「これで正しい」の言い方', /これで正しい/.test(r.mute), r.mute);
+  ok('🔴 札の中身（id）は変えていない＝貼った札がはがれない', r.ids.join() === 'seen,fixed', r.ids);
+  ok('🔴 言葉は「見た／直した」の2つだけ', r.labels.join() === '見た,直した', r.labels);
+  ok('🔴🔴 「これでOK」がどこにも出ていない', !/これでOK/.test(r.text), r.btns);
+  ok('🔴🔴 「この規則は出さない」のボタンが無い', r.mute === 0, r.mute);
+  ok('🔴 「片づけたものも見る」も無い（隠しているものが無いので要らない）', r.chk === 0, r.chk);
+  ok('ボタンは表から出している（2つとも出る）', r.btns.join() === '見た,直した', r.btns);
+  ok('🔴 札を貼っても行は消えない', r.rows === 1, r.rows);
+  ok('貼った札は行にも同じ言葉で出る', r.badge === '見た', r.badge);
+  ok('🔴 「0にする」と画面が言っている', /0/.test(r.goal) && /直/.test(r.goal), r.goal);
+  ok('🔴 「やらなくていい」ふうの言い方が画面に無い',
+     !/仕様かも|そのままで大丈夫|やらなくて/.test(r.text), r.text.slice(0, 200));
   /* 🔴 書き出しは**人が読む言葉**で（②突合・③AI判断がそのまま読む） */
-  ok('🔴 書き出しの札が日本語（spec のままではない）', r.exp.札 === 'これでOK', r.exp.札);
-  ok('🔴 書き出しに元の印も残る（機械が読む用）', r.exp.札の印 === 'spec', r.exp.札の印);
+  ok('🔴 書き出しの札が日本語（seen のままではない）', r.exp.札 === '見た', r.exp.札);
+  ok('🔴 書き出しに元の印も残る（機械が読む用）', r.exp.札の印 === 'seen', r.exp.札の印);
   ok('🔴 書き出しに札をつけた日が入る', /^\d{4}-\d{2}-\d{2}$/.test(r.exp.札をつけた日 || ''), r.exp.札をつけた日);
 }
 {
@@ -571,7 +591,8 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
   ok('もう一度押すと絞り込みが外れる', r.off === 3, r.off);
   ok('🔴 分類で絞り込める（お金＝1件）', r.money === 1, r.money);
   ok('「なぜ出したか／どうする」が出る', r.hasWhy === true);
-  ok('「この規則は出さない」が押せる', r.hasMute === true);
+  /* 🔴🔴 v1.172.0（ゆうた指定）ここに「この規則は出さない」ボタンは無い */
+  ok('🔴 「この規則は出さない」ボタンが無い', r.hasMute === false);
   ok('🔴 書き出しに所見が全部入る（②突合・③AI判断へ渡す形）', r.exp === 3, r.exp);
   ok('書き出しに対象台数・規則の数・分類ごとが入る',
      ['対象台数','規則の数','分類ごと','重さごと','所見'].every(k => r.keys.indexOf(k) >= 0), r.keys);
@@ -629,7 +650,7 @@ console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉
       ['title','why','fix'].forEach(k => { if (/\*\*/.test(String(x[k] || ''))) stars.push(x.id + '.' + k); });
     });
     return { inTable: inTable, onScreen: onScreen, stars: stars,
-             sum: (body.querySelector('.ins-tile-sum') || {}).textContent || '',
+             sum: (body.querySelector('.ins-goal') || {}).textContent || '',
              sample: Array.from(body.querySelectorAll('.ins-row-txt')).map(e => e.textContent) };
   }, NG);
   ok('🔴 規則の表（見出し・なぜ・どうする）に内輪の言葉が無い', r.inTable.length === 0, r.inTable);
@@ -638,9 +659,10 @@ console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉
   ok('🔴 画面に出る文に ** が残っていない（そのまま字として出てしまう）',
      r.stars.length === 0, r.stars);
   ok('🔴 画面に出た文にも内輪の言葉が無い', r.onScreen.length === 0, r.onScreen);
-  /* 🔴 札の言葉を言い換えた時に、ここだけ古いまま残らないか（v1.168.1 で実際に残っていた） */
-  ok('🔴 「片づけた（…）」の中身は札の表から並べている',
-     /片づけた（見た・これでOK・直した）/.test(r.sum), r.sum);
+  /* 🔴🔴 v1.172.0（ゆうた指定）タイルの右は「0にする」＝運用そのもの。
+     前の「片づけた◯件」（札を貼った数）は廃止した＝札を成果のように見せない。 */
+  ok('🔴 タイルの右で「0にする」と言っている',
+     /0/.test(r.sum) && /直/.test(r.sum) && !/片づけた/.test(r.sum), r.sum);
   /* F01 が言いたいことが、そのまま日本語で読めるか */
   ok('🔴 F01 は「今月の見込みに入ったまま」と言う（「寄せる」と言わない）',
      r.sample.some(x => /今月の見込みに入ったままです/.test(x)), r.sample);
@@ -938,6 +960,31 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
      ⚠ 測ったのは**このファイルの先頭**（下ごしらえで state を入れ替える前）。 */
   ok('🔴 見本データの「これから作業する車」に必須の空きが無い（見本が保存の決まりを通れる）',
      SAMPLE_MISS === 0, SAMPLE_MISS);
+}
+
+console.log('\n── 🧭 ソースの見張り（v1.172.0「やらなくていい」道が残っていないか） ──');
+{
+  const iv = fs.readFileSync('js/inspect.js', 'utf8');
+  const ir = fs.readFileSync('js/inspect-rules.js', 'utf8');
+  const ic = fs.readFileSync('css/inspect.css', 'utf8');
+  const hp = fs.readFileSync('js/help-content.js', 'utf8');
+  const live = (t) => t.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  ok('🔴🔴 画面に「これでOK」のボタンを組み立てていない', !/'これでOK'|>これでOK</.test(live(iv)), '');
+  ok('🔴🔴 札の表に \'spec\' が残っていない（外す表だけ）',
+     !/id:'spec'/.test(ir) && /DEAD_MARKS/.test(ir), '');
+  ok('🔴🔴 「この規則は出さない」を画面が出していない', !/ins-mute"/.test(live(iv)), '');
+  ok('🔴 規則の「どうする」が「これでOK」「この規則は出さない」を勧めていない',
+     !/fix:[^\n]*これでOK/.test(ir) && !/fix:[^\n]*この規則は出さない/.test(ir), '');
+  ok('🔴 走らせる時に黙らせを見ていない（全部の規則を走らせる）',
+     !/if \(mu\[rule\.id\]\)/.test(ir), '');
+  ok('🔴 前に隠したものを外す手順が1本ある（sweepEscapes）', /function sweepEscapes/.test(ir), '');
+  ok('🔴 CSS からも消えている（.ins-mute / .ins-chk）',
+     !/^\.ins-mute\{/m.test(ic) && !/^\.ins-chk\{/m.test(ic), '');
+  /* ⚠ ヘルプには「無くしました」と経緯を書いてあるので、言葉が1回だけ出るのは正しい。
+     見張るのは「まだ使える案内として書いていないか」＝**無くした、と書いてあること**。 */
+  ok('🔴 ヘルプも「0にする」と書いている', /0 にするのが運用/.test(hp), '');
+  ok('🔴 ヘルプが「これでOK」を使い方として案内していない',
+     !/これでOK/.test(hp) || /「これでOK（次から出さない）」と「この規則は出さない」は無くしました/.test(hp), '');
 }
 
 await b.close();

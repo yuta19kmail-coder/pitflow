@@ -276,8 +276,13 @@ console.log('\n── ⑦ ソースの見張り ──');
      (cv.match(/_c\.coverCall\.done\s*=/g) || []).length === 1);
   ok('⚠ 見出しを flex にしたのは完了アーカイブだけ（.cv-sect 全部を触っていない）',
      /\.cv-sect-arch\{/.test(cs) && !/^\.cv-sect\{[^}]*display:flex/m.test(cs));
+  /* 🔴 版の「数字そのもの」は、いちばん新しい試験だけが見張る。
+     古い試験に数字を書くと、版を上げるたびに落ちる（CoreNote v3.17.0 の教訓）。
+     ここが見るのは **3か所がそろっていること** だけ。 */
+  const ver = (ix.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('版が3か所そろっている',
-     (ix.match(/1\.171\.0/g) || []).length >= 3);
+     !!ver && ix.indexOf('<span class="ver">v' + ver + '</span>') >= 0
+           && ix.indexOf('<div class="login-ver">v' + ver + '</div>') >= 0, ver);
   ok('直した2本にキャッシュ番号が付いている',
      /card-view\.js\?v=76/.test(ix) && /card-view\.css\?v=37/.test(ix) && /errcode-pit\.js\?v=7/.test(ix));
 }
