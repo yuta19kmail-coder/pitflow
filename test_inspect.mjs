@@ -1,10 +1,14 @@
-/* PitFlow v1.168.0 ── 🩺 点検（健康診断）
+/* PitFlow v1.170.0 ── 🩺 データチェック（旧「点検」）
    ===================================================================
    ◎ゆうた発案（2026-08-21）
      🗣「PitFlowの全データを読み込んで、**金額がへんな車、動いてない車、
         変なタスク移動でおかしなことになってる車、データが入ってない車**…
         多方面に全部のデータチェックを任せる仕組み」
      🗣「点検の観点は**思いつく限り全部**」
+     🗣（2026-08-22）「まず **点検→データチェック** に名称変更」
+                     「ビューの中に **日常チェック** と **クォーターチェック** に一番上部で切り替えられるように」
+                     「**アーカイブ車両であっても、該当箇所だけは修正をだれでもかけられる**ようにしたい／
+                      **ほかの箇所は触れない**／**確定金額と確定日だけはこれまで通り管理者のみ**」
 
    ◎ここで見張ること
      🔴 規則が**狙った車だけ**を拾うこと（きれいな車を拾わない＝オオカミ少年にしない）
@@ -15,7 +19,9 @@
         ＝ card-detail.js に**同じ表が残っていない**（残っていたら必ずいつか食い違う）
      🔴 札（見た／これでOK／直した）と、規則ごとの黙らせが効くこと
      🔴 もう出なくなった所見の札は**自動で捨てる**こと（札がたまり続けない）
-     🔴 点検は**1文字も書き換えない**こと
+     🔴 規則は**1文字も書き換えない**こと（書き換えは「ここを直す」を人が押した時だけ）
+     🔴 🔴 **確定金額（amountFinal）と確定日（completedAt / returnDateFinal）は管理者だけ**であること
+     🔴 「ここを直す」が**指摘された欄しか出さない**こと（ほかの箇所は触れない）
 
    ◎日付について（横断の見張り ④ の決めごと）
      🔴 このファイルに「2026-08-21」のような**決め打ちの日付を書かない**。
@@ -335,11 +341,11 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
   ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
 }
 
-console.log('\n── ⑦-3 隠さない・全部出す／「もう一度点検」が効く（v1.169.2） ──');
+console.log('\n── ⑦-3 隠さない・全部出す／「もう一度チェック」が効く（v1.169.2） ──');
 {
   /* 🔴 ゆうた指定（2026-08-22）
        「**終わった車も見る も要らない。確実に全て出して**」
-       「**もう一度点検は押してもなんか動いてる感じがしない**」
+       「**もう一度は押してもなんか動いてる感じがしない**」
      ＝ ① 画面の側で黙って隠さない  ② 押したら走ったと分かる */
   const r = await p.evaluate(() => {
     const D = window._D;
@@ -368,9 +374,9 @@ console.log('\n── ⑦-3 隠さない・全部出す／「もう一度点検�
      r.tiles.reduce((a, b) => a + b, 0) === r.found, [r.tiles, r.found]);
   ok('🔴 「終わった記録も見る」のチェックは無い', r.chks.every(t => !/終わった記録/.test(t)), r.chks);
   ok('🔴 切り替えのボタンも無い', r.scopeBtns === 0, r.scopeBtns);
-  ok('🔴 上の帯に「◯時◯分◯秒に点検」と出る（走った証拠）',
+  ok('🔴 上の帯に「◯時◯分◯秒にチェック」と出る（走った証拠）',
      /\d{2}:\d{2}:\d{2}/.test(r.when), r.when);
-  ok('「もう一度点検」のボタンがある', r.hasRerun === true);
+  ok('「もう一度チェック」のボタンがある', r.hasRerun === true);
 }
 {
   /* 🔴 押したら **時刻が変わる**（＝本当に走り直している）。
@@ -388,7 +394,7 @@ console.log('\n── ⑦-3 隠さない・全部出す／「もう一度点検�
     window.pitToast = keep;
     return { before, after, toasts };
   });
-  ok('🔴 押すと点検した時刻が変わる（走り直している）', r.before !== r.after, r);
+  ok('🔴 押すとチェックした時刻が変わる（走り直している）', r.before !== r.after, r);
   ok('🔴 変わりが無くても黙らない（必ず何か言う）', r.toasts.length === 1, r.toasts);
   ok('🔴 「変わりはありません」と件数を言う', /変わりはありません|→/.test(r.toasts[0] || ''), r.toasts);
 }
@@ -512,7 +518,7 @@ console.log('\n── ⑧ 札（見た／これでOK／直した）と、規則�
   ok('🔴 消えた所見の札は自動で捨てる（たまり続けない）', r.left === false && r.dropped >= 1, r);
 }
 
-console.log('\n── ⑨ 点検は1文字も書き換えない ──');
+console.log('\n── ⑨ 規則は1文字も書き換えない（書き換えは「ここを直す」だけ） ──');
 {
   const same = await p.evaluate(() => {
     const cards = [window._clean({ id:'ro1', status:'work', amountOrder:null, returnDate:window._D(-3) })];
@@ -640,13 +646,224 @@ console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉
      r.sample.some(x => /今月の見込みに入ったままです/.test(x)), r.sample);
 }
 
+console.log('\n── ⑫ 名前が「データチェック」になっている（ゆうた指定 2026-08-22） ──');
+{
+  /* 🔴 なぜ見張るか
+       PitFlow の「点検」は **車の12ヶ月点検・タスクボードの点検待ち** を指す言葉。
+       同じ字でデータの見直しも呼ぶと現場で必ず取り違えるので言い換えた。
+     ⚠ 車のほうの「点検」は**そのまま**（言い換えていないことも一緒に見張る）。 */
+  const r = await p.evaluate(() => {
+    window._insp.mode = 'daily'; renderInspect();
+    const nav = document.querySelector('.si-item[data-view="inspect"]');
+    const ttl = document.querySelector('#view-inspect .view-title');
+    const body = document.getElementById('inspect-body');
+    return {
+      nav: (nav && nav.textContent || '').trim(),
+      title: (ttl && ttl.textContent || '').trim(),
+      rerun: (document.getElementById('ins-rerun') || {}).textContent || '',
+      when: (body.querySelector('.ins-when') || {}).textContent || '',
+      /* 車のほうの「点検」は残っていること＝言い換えすぎていない */
+      keepPhase: (window.pitCardStatusText ? pitCardStatusText({ status:'check' }) : '')
+    };
+  });
+  ok('🔴 メニューが「データチェック」', r.nav === 'データチェック', r.nav);
+  ok('🔴 見出しも「データチェック」', /^データチェック/.test(r.title), r.title);
+  ok('🔴 ボタンは「もう一度チェック」（「点検」と言わない）',
+     r.rerun === 'もう一度チェック', r.rerun);
+  ok('🔴 上の帯も「チェック」と言う', /にチェック/.test(r.when), r.when);
+  ok('🔴 車のほうの「点検待ち」は言い換えていない', /点検/.test(r.keepPhase), r.keepPhase);
+}
+
+console.log('\n── ⑬ いちばん上で「日常チェック／クォーターチェック」を切り替えられる ──');
+{
+  const r = await p.evaluate(() => {
+    window._insp.mode = 'daily'; renderInspect();
+    const body = document.getElementById('inspect-body');
+    const btns = Array.from(body.querySelectorAll('.ins-mode-b'));
+    /* 切り替えは**いちばん上**にあること（下に埋もれていたら見つけられない） */
+    const first = body.firstElementChild;
+    const dailyOn = btns.map(b => b.classList.contains('on'));
+    const dailyHasRules = !!body.querySelector('.ins-tiles');
+    pitInspectMode('quarter');
+    const qBody = document.getElementById('inspect-body');
+    const qOn = Array.from(qBody.querySelectorAll('.ins-mode-b')).map(b => b.classList.contains('on'));
+    const qTxt = qBody.textContent || '';
+    const qWin = (qBody.querySelector('.ins-q-now') || {}).textContent || '';
+    const qHasRules = !!qBody.querySelector('.ins-tiles');
+    pitInspectMode('daily');
+    return {
+      labels: btns.map(b => (b.querySelector('.ins-mode-l') || {}).textContent),
+      firstIsMode: !!(first && first.classList.contains('ins-mode')),
+      dailyOn, qOn, dailyHasRules, qHasRules, qTxt, qWin,
+      /* クォーターの区切りは売上の物差しから借りているか */
+      ruler: !!window.pitQuarterOf,
+      sameAsSales: window.pitQuarterOf ? window.pitQuarterOf('2026-08-09').no : null
+    };
+  });
+  ok('🔴 切り替えは2つ＝日常チェック／クォーターチェック',
+     JSON.stringify(r.labels) === JSON.stringify(['日常チェック', 'クォーターチェック']), r.labels);
+  ok('🔴 切り替えは画面のいちばん上にある', r.firstIsMode === true);
+  ok('日常チェックが選ばれている時は、規則の一覧が出る', r.dailyOn[0] === true && r.dailyHasRules === true, r);
+  ok('🔴 クォーターチェックに切り替わると、規則の一覧は出ない（別の中身）',
+     r.qOn[1] === true && r.qHasRules === false, r);
+  ok('クォーターチェックは②突合と③AIチェックの話をしている',
+     /売上チェックリストPDF/.test(r.qTxt) && /AIチェック/.test(r.qTxt), r.qTxt.slice(0, 120));
+  ok('🔴 クォーターの区切りは売上の物差し（pitQuarterOf）を借りている', r.ruler === true);
+  ok('🔴 8月9日は第2クォーター（1〜7／8〜15／16〜23／24〜末）', r.sameAsSales === 2, r.sameAsSales);
+  ok('いまのクォーターの期間が出ている', /\d{4}-\d{2}-\d{2} 〜 \d{4}-\d{2}-\d{2}/.test(r.qWin), r.qWin);
+}
+
+console.log('\n── ⑭ 「ここを直す」＝アーカイブ済みでも、該当箇所だけ直せる（ゆうた指定 2026-08-22） ──');
+{
+  /* 🔴 ゆうたの言葉そのまま
+       「アーカイブ車両であっても、**該当箇所だけ**は修正をだれでもかけられるようにしたい」
+       「**ほかの箇所は触れない**」
+       「**確定金額と確定日だけはこれまで通り管理者のみ**」 */
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    /* アーカイブ済み＋必須（カナ）が空＝D09 が拾う車 */
+    window._only([ window._clean({ id:'a1', status:'returned', archived:true, returnStage:'returnWait',
+                                   completedAt:D(-10), amountFinal:300000, kana:'', tel:'090-1111-2222' }) ], []);
+    window._insp.mode = 'daily'; window._insp.level = ''; window._insp.cat = '';
+    window._insp.done = false; window._insp.all = {};
+    renderInspect();
+    const res = window._insp.res;
+    const f = res.findings.filter(x => x.ruleId === 'D09')[0];
+    const before = JSON.stringify(state.cards[0]);
+    const btn = document.querySelector('.ins-fixb');
+    pitFixOpen(f.key);
+    const win = document.getElementById('ins-fix');
+    const labels = Array.from(win.querySelectorAll('.ins-fix-l')).map(e => e.textContent.replace(/🔒.*/, '').trim());
+    const inputs = Array.from(win.querySelectorAll('.ins-fix-in')).map(e => e.id);
+    const archNote = !!win.querySelector('.ins-fix-arch');
+    const txt = win.textContent || '';
+    /* 直す */
+    document.getElementById('ins-fix-f-kana').value = 'ケンサジロウ';
+    pitFixSave();
+    const c = state.cards[0];
+    return {
+      hasFinding: !!f, hasBtn: !!btn, labels, inputs, archNote, txt,
+      closed: !document.getElementById('ins-fix'),
+      kana: c.kana,
+      /* 🔴 ほかの箇所が動いていないこと */
+      untouched: c.plate === JSON.parse(before).plate && c.amountFinal === JSON.parse(before).amountFinal
+                 && c.completedAt === JSON.parse(before).completedAt && c.customer === JSON.parse(before).customer,
+      flow: (c.log || []).filter(e => /データチェックから直した/.test(String(e.label || e.text || ''))).length,
+      /* 🔴 本当に直ったなら、所見そのものが消えていること（札で隠すのではない） */
+      goneAfter: pitInspectRun().findings.filter(x => x.key === f.key).length,
+      mark: (state.inspectMarks[f.key] || {}).v || ''
+    };
+  });
+  ok('アーカイブ済みの車でも、抜けは見つかる（D09）', r.hasFinding === true);
+  ok('🔴 アーカイブ済みの車にも「ここを直す」が出る（誰でも押せる）', r.hasBtn === true);
+  ok('🔴 小窓は「アーカイブ済み」だと言ってから開く（黙って開けない）', r.archNote === true);
+  ok('🔴 小窓に出るのは**抜けている欄だけ**（カナ）',
+     JSON.stringify(r.labels) === JSON.stringify(['カナ']), r.labels);
+  ok('🔴 ほかの欄（ナンバー・確定金額）は小窓に出ない＝触れない',
+     r.inputs.every(id => !/plate|amountFinal|completedAt/.test(id)), r.inputs);
+  ok('その場で直せた', r.kana === 'ケンサジロウ', r.kana);
+  ok('🔴 直した欄以外は1文字も動いていない', r.untouched === true);
+  ok('直したらフローに「何を どこから どこへ」が残る', r.flow === 1, r.flow);
+  /* 🔴 直したのに所見が残る＝まだ直り切っていない、ということ。
+     そこへ自動で「直した」の札を貼ると、残っている問題を自分で隠してしまう。 */
+  ok('🔴 直ったら、その所見が消える（札で隠すのではない）', r.goneAfter === 0, r.goneAfter);
+  ok('🔴 「直した」の札は自動で貼らない', r.mark === '', r.mark);
+  ok('直したら小窓は閉じる', r.closed === true);
+  /* ⚠ 小窓の文にも内輪の言葉を混ぜない（⑪と同じ物差し） */
+  ok('🔴 小窓の文に内輪の言葉が無い',
+     ['寄せ', '盤面', '関門', '所見', '物差し', 'ステータス', 'フラグ', 'null', 'undefined']
+       .every(w => r.txt.indexOf(w) < 0), r.txt.slice(0, 160));
+}
+{
+  /* 🔴🔴 ここが今回いちばん大事な見張り＝**確定金額と確定日は管理者だけ。**
+     ⚠ 物差しは card-view.js の `pitCanEditFinal()` 1本。ここを差し替えて、
+        データチェックが**本当にそれを見ているか**を確かめる（自前で判定していたら通らない）。 */
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    const keep = window.pitCanEditFinal;
+    window.pitCanEditFinal = () => false;                 /* ＝管理でない人 */
+    window._only([ window._clean({ id:'b1', status:'returned', archived:true, returnStage:'returnWait',
+                                   completedAt:D(-10), amountFinal:null, amountOrder:250000 }) ], []);
+    window._insp.mode = 'daily'; window._insp.done = false; renderInspect();
+    const f = window._insp.res.findings.filter(x => x.ruleId === 'M02')[0];
+    pitFixOpen(f.key);
+    let win = document.getElementById('ins-fix');
+    const lockedTxt = win.textContent || '';
+    const noInput = !document.getElementById('ins-fix-f-amountFinal');
+    const readOnly = !!win.querySelector('.ins-fix-ro');
+    /* ボタンを押しても入らないこと（画面を消しただけにしない） */
+    pitFixSave();
+    const stillEmpty = state.cards[0].amountFinal == null;
+    if (document.getElementById('ins-fix')) pitFixClose();
+
+    /* 管理ならその場で入る */
+    window.pitCanEditFinal = () => true;
+    renderInspect();
+    const f2 = window._insp.res.findings.filter(x => x.ruleId === 'M02')[0];
+    pitFixOpen(f2.key);
+    document.getElementById('ins-fix-f-amountFinal').value = '312000';
+    pitFixSave();
+    const after = state.cards[0].amountFinal;
+    window.pitCanEditFinal = keep;
+    return { lockedTxt, noInput, readOnly, stillEmpty, after };
+  });
+  ok('🔴 管理でない人には、確定金額の入力欄が出ない', r.noInput === true);
+  ok('🔴 でも数字は見える（欄ごと消さない＝無いのか触れないのか分かる）', r.readOnly === true);
+  ok('🔴 「🔒 管理のみ」と札で言う', /管理のみ/.test(r.lockedTxt), r.lockedTxt.slice(0, 120));
+  ok('🔴 ボタンを押しても入らない（画面を消しただけにしていない）', r.stillEmpty === true);
+  ok('🔴 管理ならその場で直せる', r.after === 312000, r.after);
+}
+{
+  /* 実績カウント日＝確定日も同じ守り。さらに**空にはできない**（どの月にも数えられなくなる）。 */
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    const keep = window.pitCanEditFinal;
+    window._only([ window._clean({ id:'c1', status:'returned', returnStage:'returnWait',
+                                   completedAt:'', amountFinal:180000 }) ], []);
+    window._insp.mode = 'daily'; window._insp.done = false; renderInspect();
+    const f = window._insp.res.findings.filter(x => x.ruleId === 'F04')[0];
+
+    window.pitCanEditFinal = () => false;
+    pitFixOpen(f.key);
+    const noInput = !document.getElementById('ins-fix-f-completedAt');
+    pitFixClose();
+
+    window.pitCanEditFinal = () => true;
+    pitFixOpen(f.key);
+    document.getElementById('ins-fix-f-completedAt').value = D(-4);
+    pitFixSave();
+    const c = state.cards[0];
+    window.pitCanEditFinal = keep;
+    return { noInput, completedAt: c.completedAt, returnDate: c.returnDate, returnDateFinal: c.returnDateFinal, want: D(-4) };
+  });
+  ok('🔴 実績カウント日も、管理でない人には入力欄が出ない', r.noInput === true);
+  ok('🔴 管理なら入る', r.completedAt === r.want, r);
+  ok('🔴 実績日を入れたら返車日も一緒に揃う（card-view.js と同じ1本を通っている）',
+     r.returnDate === r.want && r.returnDateFinal === r.want, r);
+}
+{
+  /* 欄が1つに決まらない規則には「ここを直す」を出さない
+     ＝ 小窓で直せるふりをすると、直したつもりで直っていない、が起きる。 */
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    window._only([ window._clean({ id:'d1', status:'check', returnStage:'returnWait', returnDate:D(2) }) ], []);
+    window._insp.mode = 'daily'; window._insp.done = false; renderInspect();
+    const res = window._insp.res;
+    const t01 = res.findings.filter(x => x.ruleId === 'T01')[0];
+    return { has: !!t01, fields: t01 ? (pitFixFieldsFor(t01) || []).length : -1 };
+  });
+  ok('T01（タスクの列を動かす）は見つかる', r.has === true);
+  ok('🔴 T01 には「ここを直す」を出さない（欄が1つに決まらない）', r.fields === 0, r.fields);
+}
+
 console.log('\n── 🧭 物差しを1本に保てているか（中身を機械が読む） ──');
 {
   const src = await p.evaluate(async () => {
     const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
     const g = async u => strip(await (await fetch(u + '?t=' + Date.now())).text());
     return { ir: await g('js/inspect-rules.js'), iv: await g('js/inspect.js'),
-             cm: await g('js/card-miss.js'), cd: await g('js/card-detail.js') };
+             cm: await g('js/card-miss.js'), cd: await g('js/card-detail.js'),
+             ifx: await g('js/inspect-fix.js'), cv: await g('js/card-view.js') };
   });
   ok('🔴 必須／推奨の表が card-miss.js に居る', /w\.pitCardMisses\s*=/.test(src.cm) && /'カナ'/.test(src.cm));
   /* ⚠ 「カナ」「受付タイプ」という**字**は入力欄の見出しにも出るので、字では見ない。
@@ -654,7 +871,7 @@ console.log('\n── 🧭 物差しを1本に保てているか（中身を機�
   ok('🔴 card-detail.js に**同じ表が残っていない**（写しを作らない）',
      !/\[\s*'kana'\s*,/.test(src.cd) && !/\[\s*'dropType'\s*,/.test(src.cd), '');
   ok('🔴 card-detail.js は表を1本に聞いている', /pitCardMisses/.test(src.cd), '');
-  ok('🔴 点検も同じ1本に聞いている', /pitCardMisses/.test(src.ir), '');
+  ok('🔴 データチェックも同じ1本に聞いている', /pitCardMisses/.test(src.ir), '');
   /* 判定を作り直していないか＝既にある物差しを呼んでいるか */
   ['pitSalesTier', 'pitSalesCountDate', 'pitCardActive', 'pitCardNoSale', 'pitFinalAmountOf',
    'pitIsShaken', 'pitShakenDayOff', 'pitLoanerConflicts', 'pitCustName', 'pitCardStatusText',
@@ -668,6 +885,44 @@ console.log('\n── 🧭 物差しを1本に保てているか（中身を機�
   ok('🔴 しきい値の表（LIM）が1つある', /var LIM = \{/.test(src.ir));
   ok('🔴 分類・重さ・札の表が pitInspect に配られている',
      /w\.PIT_INSPECT_CATS/.test(src.ir) && /w\.PIT_INSPECT_LEVELS/.test(src.ir) && /w\.PIT_INSPECT_MARKS/.test(src.ir));
+
+  /* ---- 🔴 v1.170.0 「ここを直す」の表（inspect-fix.js）---- */
+  ok('🔴 直せる欄の表が inspect-fix.js に1本ある',
+     /w\.PIT_FIX_FIELDS/.test(src.ifx) && /w\.PIT_RULE_FIX/.test(src.ifx));
+  /* 🔴🔴 いちばん大事：管理者の判定を**書き写していない**こと。
+     ⚠ ここに pitIsAdmin() を書き写した日から、片方だけ直る事故が始まる。 */
+  ok('🔴🔴 inspect-fix.js は pitIsAdmin を自分で見ていない（card-view.js の1本を借りる）',
+     !/pitIsAdmin/.test(src.ifx) && /pitCanEditFinal/.test(src.ifx), '');
+  ok('🔴 card-view.js がその1本を貸している', /window\.pitCanEditFinal\s*=/.test(src.cv), '');
+  ok('🔴 実績日を入れる手順も1本を借りている（3つ揃える手順を書き写さない）',
+     /pitApplyResultDate/.test(src.ifx) && /window\.pitApplyResultDate\s*=/.test(src.cv), '');
+  ok('🔴 画面（inspect.js）は直せる欄を組み立てていない＝表に聞くだけ',
+     /pitFixFieldsFor/.test(src.iv) && !/PIT_FIX_FIELDS/.test(src.iv), '');
+  ok('🔴 クォーターの区切りを画面で書き写していない（売上の物差しを借りる）',
+     /pitQuarterOf/.test(src.iv) && !/16\s*[?:]|<=\s*23/.test(src.iv), '');
+
+  /* 表そのものの筋が通っているか（機械が読む） */
+  const tbl = await p.evaluate(() => {
+    const ruleIds = PIT_INSPECT_RULES.map(r => r.id);
+    const fieldIds = PIT_FIX_FIELDS.map(f => f.id);
+    const badRule = Object.keys(PIT_RULE_FIX).filter(k => ruleIds.indexOf(k) < 0);
+    const badField = [];
+    Object.keys(PIT_RULE_FIX).forEach(k => {
+      const v = PIT_RULE_FIX[k];
+      if (typeof v === 'function') return;                    /* 抜けている欄そのもの＝card-miss.js が決める */
+      v.forEach(f => { if (fieldIds.indexOf(f) < 0) badField.push(k + ' → ' + f); });
+    });
+    return { badRule, badField,
+             admin: PIT_FIX_FIELDS.filter(f => f.admin).map(f => f.id),
+             dup: fieldIds.filter((x, i) => fieldIds.indexOf(x) !== i) };
+  });
+  ok('🔴 表が指している規則は全部ある（消えた規則を指していない）', tbl.badRule.length === 0, tbl.badRule);
+  ok('🔴 表が指している欄も全部ある', tbl.badField.length === 0, tbl.badField);
+  ok('🔴 欄の名前がダブっていない', tbl.dup.length === 0, tbl.dup);
+  /* 🔴🔴 ゆうた指定そのもの＝管理者だけの欄は**この3つだけ**（増やしても減らしてもいけない） */
+  ok('🔴🔴 管理者だけの欄は「確定金額・実績カウント日・確定返車日」の3つだけ',
+     JSON.stringify(tbl.admin.slice().sort()) ===
+     JSON.stringify(['amountFinal', 'completedAt', 'returnDateFinal']), tbl.admin);
 }
 
 console.log('\n── 🧭 まわりが壊れていないか ──');

@@ -276,7 +276,16 @@ console.log('\n── ソースの見張り ──');
   ok('🔴 実績化の書き込みが1か所に集まっている', (rp.match(/c\.status = 'returned';/g) || []).length === 1,
      (rp.match(/c\.status = 'returned';/g) || []).length);
   ok('実績日を直せるかの物差しは pitIsAdmin', /pitIsAdmin\(\)/.test(cv) && /function canEditResultDate/.test(cv));
-  ok('実績日を変えたら返車日も動かしている', /_c\.completedAt = v;[\s\S]{0,200}_c\.returnDate = v;/.test(cv));
+  /* 🔴 v1.170.0 3つ（実績日・返車日・確定返車日）を揃える手順は **pitApplyResultDate の1本**へ移した。
+     ◎なぜ
+       データチェックの「ここを直す」からも実績日を入れられるようにしたので、
+       **入口が2つ**になった。手順を書き写すと、片方だけ直る日が必ず来る。
+     ⚠ ここで見るのは「1本があること」と「入口がそれを通っていること」の2つ。 */
+  ok('🔴 実績日を変えたら返車日も動かす手順が1本にある',
+     /window\.pitApplyResultDate\s*=\s*function[\s\S]{0,200}c\.completedAt = v;[\s\S]{0,120}c\.returnDate = v;[\s\S]{0,120}c\.returnDateFinal = v;/.test(cv));
+  ok('🔴 カード画面の実績日もその1本を通っている', /pitApplyResultDate\(_c, v\)/.test(cv));
+  ok('🔴 その1本を外へ貸している（データチェックの「ここを直す」が借りる）',
+     /window\.pitApplyResultDate\s*=/.test(cv) && /window\.pitCanEditFinal\s*=/.test(cv));
 
   const ix = fs.readFileSync('index.html', 'utf8');
   const vs = [(ix.match(/app-version" content="([\d.]+)"/) || [])[1],
