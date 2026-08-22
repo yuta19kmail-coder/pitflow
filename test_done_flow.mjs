@@ -287,20 +287,34 @@ const mgShown = () => p.evaluate(() => {
 
   /* チップを押す＝その場で入る・バーが動く */
   const after = await p.evaluate(() => {
-    const chip = document.querySelector('#mg-pick .cf-mech-m .cf-mchip');
+    const chip = document.querySelector('#mg-pick .cf-mech-m .cf-mperson');
     const name = chip.textContent.replace(/[×✕]\d*/g, '').trim();
     chip.click();
     return { name: name,
              mech: (state.cards.find(x => x.id === 'cDF').mechanics || []).slice(),
-             on: !!document.querySelector('#mg-pick .cf-mech-m .cf-mchip.on'),
+             on: !!document.querySelector('#mg-pick .cf-mech-m .cf-mperson.on'),
              bar: !!document.querySelector('#mg-mech-live .mech-split') };
   });
   await p.waitForTimeout(200);
   ok('🔴 その場で担当者が入る', after.mech.length === 1 && after.mech[0] === after.name, after);
   ok('押したチップが光る', after.on === true, after);
   ok('🔴 動くバーが出る', after.bar === true, after);
-  const okLb = await p.evaluate(() => document.getElementById('mg-ok').textContent);
-  ok('ボタンの文言が「入れて作業完了へ」に変わる', okLb === '入れて作業完了へ', okLb);
+  /* 🔴 v1.174.0 片方だけ入れても**まだ決まっていない**（点検が空）＝文言は変わらない */
+  const okLb1 = await p.evaluate(() => document.getElementById('mg-ok').textContent);
+  ok('🔴 片方だけ入れた時点では「このまま進める」のまま', okLb1 === 'このまま進める', okLb1);
+  /* 点検は「なし」と決める＝両方そろう */
+  const noneR = await p.evaluate(() => {
+    const b = document.querySelector('#mg-pick .cf-mech-i .cf-mnone');
+    b.click();
+    return { on: !!document.querySelector('#mg-pick .cf-mech-i .cf-mnone.on'),
+             flag: !!state.cards.find(x => x.id === 'cDF').inspectorsNone,
+             lb: document.getElementById('mg-ok').textContent,
+             warn: (document.getElementById('mg-warn') || {}).textContent || '' };
+  });
+  await p.waitForTimeout(150);
+  ok('🔴🔴 窓の中でも「なし」を押せる', noneR.on === true && noneR.flag === true, noneR);
+  ok('ボタンの文言が「入れて作業完了へ」に変わる', noneR.lb === '入れて作業完了へ', noneR.lb);
+  ok('🔴 そろったら注意も引っ込む', /決まりました/.test(noneR.warn), noneR.warn);
 
   await p.evaluate(() => PitMechGuard.close(1));
   await p.waitForTimeout(300);
@@ -329,11 +343,26 @@ const mgShown = () => p.evaluate(() => {
   ok('やめたらカードは動かない', c.status === 'work', c);
 }
 {
-  /* 片方でも入っていれば出さない */
+  /* 🔴🔴 v1.174.0（ゆうた指定）**片方が空でも出す。**
+     ＝「居ないなら『なし』」という答えができたので、空のまま通す理由が無い。
+     ⚠ v1.97.0 は「片方でも入っていれば出さない」だった。**そこを変えた。** */
   await put({ status: 'work', dropType: 'drop', reserveDate: -1, inspectors: [], mechanics: ['蓮沼'] });
   await p.evaluate(() => applyCardDrop('cDF', 'status', 'workDone'));
   await p.waitForTimeout(300);
-  ok('🔴 整備担当だけでも出さない', await mgShown() === false);
+  ok('🔴🔴 整備だけ入れて点検が空なら出す（いちばん多い忘れ方）', await mgShown() === true);
+  const w1 = await p.evaluate(() => (document.getElementById('mg-warn') || {}).textContent || '');
+  ok('🔴 どちらが空かを名指しで言う', /点検担当/.test(w1) && !/整備担当/.test(w1), w1);
+  ok('🔴 居ない時の逃げ道（なし）を案内する', /なし/.test(w1), w1);
+  await p.evaluate(() => PitMechGuard.close(0));
+  await p.waitForTimeout(150);
+}
+{
+  /* 🔴 「なし」を押して決めれば、もう出ない */
+  await put({ status: 'work', dropType: 'drop', reserveDate: -1, inspectors: [], mechanics: ['蓮沼'] });
+  await p.evaluate(() => { PitMechPick.none('x', 'cDF', 'inspectors'); });
+  await p.evaluate(() => applyCardDrop('cDF', 'status', 'workDone'));
+  await p.waitForTimeout(300);
+  ok('🔴🔴 点検担当を「なし」と決めたら出さない', await mgShown() === false);
   const c = await readCard();
   ok('そのまま作業完了へ進む', c.status === 'workDone', c);
 }
@@ -341,7 +370,9 @@ const mgShown = () => p.evaluate(() => {
   await put({ status: 'work', dropType: 'drop', reserveDate: -1, inspectors: ['蓮沼'], mechanics: [] });
   await p.evaluate(() => applyCardDrop('cDF', 'status', 'workDone'));
   await p.waitForTimeout(300);
-  ok('🔴 点検担当だけでも出さない', await mgShown() === false);
+  ok('🔴 点検だけ入れて整備が空でも出す', await mgShown() === true);
+  await p.evaluate(() => PitMechGuard.close(0));
+  await p.waitForTimeout(150);
 }
 {
   /* 作業完了以外の列では出さない */
@@ -380,7 +411,7 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
   });
   ok('🔴 カード詳細の整備タブも今までどおり出る', cv.blocks === 2 && cv.chips > 0 && cv.live, cv);
   const tap = await p.evaluate(() => {
-    const chip = document.querySelector('#cv-p-maint .cf-mech-i .cf-mchip');
+    const chip = document.querySelector('#cv-p-maint .cf-mech-i .cf-mperson');
     chip.click();
     return (state.cards[0].inspectors || []).length;
   });

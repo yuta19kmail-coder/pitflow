@@ -55,7 +55,7 @@ console.log('\n── 🎛 チップ式（案B）になっているか ──');
   await seed();
   await p.waitForTimeout(200);
   const r = await p.evaluate(() => ({
-    chips: document.querySelectorAll('#cv-p-maint .cf-mchip').length,
+    chips: document.querySelectorAll('#cv-p-maint .cf-mperson').length,
     selects: document.querySelectorAll('#cv-p-maint select').length,
     blocks: document.querySelectorAll('#cv-p-maint .cf-mech-block').length,
     live: !!document.getElementById('cv-mech-live'),
@@ -74,13 +74,13 @@ console.log('\n── ⚡ タップした瞬間に％が出る（ライブ） �
   await p.waitForTimeout(150);
   const r = await p.evaluate(() => {
     const out = {};
-    const chip = document.querySelector('#cv-p-maint .cf-mech-i .cf-mchip');
+    const chip = document.querySelector('#cv-p-maint .cf-mech-i .cf-mperson');
     out.name = chip.textContent.replace(/[×✕].*$/, '').trim();
     chip.click();
     out.after1 = document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
-    out.on1 = document.querySelectorAll('#cv-p-maint .cf-mech-i .cf-mchip.on').length;
+    out.on1 = document.querySelectorAll('#cv-p-maint .cf-mech-i .cf-mperson.on').length;
     /* 整備側も1人 */
-    const m = document.querySelector('#cv-p-maint .cf-mech-m .cf-mchip');
+    const m = document.querySelector('#cv-p-maint .cf-mech-m .cf-mperson');
     out.mname = m.textContent.replace(/[×✕].*$/, '').trim();
     m.click();
     out.after2 = document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
@@ -125,15 +125,15 @@ console.log('\n── ×2・×3（同じ人をもう一度タップ＝取り分�
   await seed();
   await p.waitForTimeout(150);
   const r = await p.evaluate(() => {
-    const chips = document.querySelectorAll('#cv-p-maint .cf-mech-m .cf-mchip');
+    const chips = document.querySelectorAll('#cv-p-maint .cf-mech-m .cf-mperson');
     const a = chips[0], bnm = chips[1].textContent.replace(/[×✕].*$/, '').trim();
     a.click();                                             // A ×1
-    document.querySelectorAll('#cv-p-maint .cf-mech-m .cf-mchip')[1].click();  // B ×1
+    document.querySelectorAll('#cv-p-maint .cf-mech-m .cf-mperson')[1].click();  // B ×1
     const half = document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
     /* A をもう一度 → A ×2 */
-    document.querySelectorAll('#cv-p-maint .cf-mech-m .cf-mchip')[0].click();
+    document.querySelectorAll('#cv-p-maint .cf-mech-m .cf-mperson')[0].click();
     const two = document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
-    const badge = !!document.querySelector('#cv-p-maint .cf-mech-m .cf-mchip .cf-mchip-x');
+    const badge = !!document.querySelector('#cv-p-maint .cf-mech-m .cf-mperson .cf-mchip-x');
     return { half, two, badge, arr: state.cards[0].mechanics.slice(), bnm };
   });
   ok('2人なら 50% / 50%', (r.half.match(/50%/g) || []).length === 2, r.half);
@@ -145,7 +145,7 @@ console.log('\n── ×2・×3（同じ人をもう一度タップ＝取り分�
 console.log('\n── ✕ で外す（×2 でも1回で消える） ──');
 {
   const r = await p.evaluate(() => {
-    const x = document.querySelector('#cv-p-maint .cf-mech-m .cf-mchip .cf-mchip-off');
+    const x = document.querySelector('#cv-p-maint .cf-mech-m .cf-mperson .cf-mchip-off');
     x.click();
     return { arr: state.cards[0].mechanics.slice(),
              txt: document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ') };
@@ -160,7 +160,7 @@ console.log('\n── 🧯 片方が居ないとき（点検料の行き先） �
   await seed();
   await p.waitForTimeout(150);
   const only = await p.evaluate(() => {
-    document.querySelector('#cv-p-maint .cf-mech-m .cf-mchip').click();
+    document.querySelector('#cv-p-maint .cf-mech-m .cf-mperson').click();
     return document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
   });
   ok('整備だけなら 100%', /100%/.test(only) && !/¥|円/.test(only), only);
@@ -169,7 +169,7 @@ console.log('\n── 🧯 片方が居ないとき（点検料の行き先） �
   await seed();
   await p.waitForTimeout(150);
   const oi = await p.evaluate(() => {
-    document.querySelector('#cv-p-maint .cf-mech-i .cf-mchip').click();
+    document.querySelector('#cv-p-maint .cf-mech-i .cf-mperson').click();
     return document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
   });
   ok('点検だけなら 100%', /100%/.test(oi), oi);
@@ -181,7 +181,7 @@ console.log('\n── 🕒 返車前でもライブで出る（前は返車済�
     await seed({ status: st });
     await p.waitForTimeout(120);
     const r = await p.evaluate(() => {
-      document.querySelector('#cv-p-maint .cf-mech-m .cf-mchip').click();
+      document.querySelector('#cv-p-maint .cf-mech-m .cf-mperson').click();
       return document.getElementById('cv-mech-live').innerText.replace(/\s+/g, ' ');
     });
     ok('「' + st + '」でも配分％が出る', /%/.test(r), r);
