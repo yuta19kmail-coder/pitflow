@@ -300,7 +300,7 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
     /* ⚠ w4 は お金の所見にも車検の所見にも出る。**回送の担当が付くのは車検の所見だけ**
           （お金の所見に車検担当を出しても、直す人が分からなくなるだけ）。だから車検のほうを見る。 */
     by.w4 = res.findings.filter(f => f.refId === 'w4' && f.cat === 'shaken')[0] || by.w4;
-    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const rows = Array.from(body.querySelectorAll('.ins-row')).map(el => ({
@@ -333,6 +333,86 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
   ok('🔴 書き出し（②突合・③AI判断へ渡す形）にも担当が入る',
      r.expKeys.indexOf('担当') >= 0 && r.expKeys.indexOf('車検担当') >= 0, r.expKeys);
   ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
+}
+
+console.log('\n── ⑦-3 「いま動いている車」と「終わった記録」を分ける（v1.169.0） ──');
+{
+  /* 🔴 ゆうた指摘（2026-08-21）本番 377台で所見260件のうち **129件が返車の済んだ車の記録**だった。
+     ＝ もう直しても現場は動かないものが、今週動かせる車を埋めていた。
+     🔴 規則を割るのではなく、**所見に「どちらの車か」の印**を付けて画面で分ける。 */
+  const r = await p.evaluate(() => {
+    const D = window._D;
+    window._only([
+      window._clean({ id:'s1', status:'work', amountOrder:null }),                                    /* いま */
+      window._clean({ id:'s2', status:'returned', returnStage:'returnWait', completedAt:D(-2),
+                      amountFinal:null, amountOrder:120000 }),                                        /* 終わった記録 */
+      window._clean({ id:'s3', status:'work', amountOrder:200000, archived:true, tel:'090-11' })      /* アーカイブ＝終わった記録 */
+    ], []);
+    const res = pitInspectRun();
+    const of = id => (res.findings.filter(f => f.refId === id)[0] || {}).scope;
+    window._insp.scope = 'live'; window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const liveRows = Array.from(body.querySelectorAll('.ins-row-who')).map(e => e.textContent);
+    const liveTiles = Array.from(body.querySelectorAll('.ins-tile-n')).map(e => +e.textContent);
+    pitInspectScope('past');
+    const b2 = document.getElementById('inspect-body');
+    const pastRows = Array.from(b2.querySelectorAll('.ins-row-who')).map(e => e.textContent);
+    const scopeBtns = Array.from(b2.querySelectorAll('.ins-scope')).map(e => e.textContent);
+    pitInspectScope('live');
+    return { s1:of('s1'), s2:of('s2'), s3:of('s3'), byScope:res.byScope,
+             liveN:liveRows.length, pastN:pastRows.length, liveTiles:liveTiles,
+             scopeBtns:scopeBtns, exp:pitInspectExport(res).所見.map(x => x.車のいま) };
+  });
+  ok('🔴 いま動いている車は live', r.s1 === 'live', r.s1);
+  ok('🔴 返車済みは「終わった記録」', r.s2 === 'past', r.s2);
+  ok('🔴 アーカイブも「終わった記録」', r.s3 === 'past', r.s3);
+  ok('数え上げが両方ぶん出る', r.byScope.live.n >= 1 && r.byScope.past.n >= 2, r.byScope);
+  ok('🔴 既定は「いま動いている車」だけ出す', r.liveN === 1, r.liveN);
+  ok('🔴 切り替えると「終わった記録」が出る', r.pastN >= 2, r.pastN);
+  ok('🔴 重さのタイルも、いま出している側だけを数える',
+     r.liveTiles.reduce((a, b) => a + b, 0) === r.liveN, [r.liveTiles, r.liveN]);
+  ok('切り替えのボタンが2つ出る', r.scopeBtns.length === 2, r.scopeBtns);
+  ok('🔴 書き出しにも日本語で入る', r.exp.indexOf('終わった記録') >= 0 && r.exp.indexOf('いま動いている車') >= 0, r.exp);
+}
+
+console.log('\n── ⑦-4 本番データで空振りしていた2つを直した（v1.169.0） ──');
+{
+  const r = await p.evaluate(() => {
+    const D = window._D, M = window._MON;
+    const _kH = window.Holidays, _kC = window.PitCal;
+    window.Holidays = { is: () => false, name: () => null };
+    window.PitCal = { isClosed: () => false, label: () => '', info: () => ({ closed:false }) };
+    window._only([
+      /* ① まだ来ていない車の「漢字の名前が空」は言わない（電話受付ではカナだけが正しい） */
+      window._clean({ id:'yoyaku', status:'reserved', customer:'', kana:'タナカ' }),
+      /* ② 入庫したら言う（車検証で分かるので） */
+      window._clean({ id:'nyuko',  status:'work', amountOrder:200000, customer:'', kana:'スズキ' }),
+      /* ③ 車検で行く日が未定：もう預かっている */
+      window._clean({ id:'shaMochi', status:'work', amountOrder:200000, workType:'shaken', workTypes:['shaken'],
+                      feeAmount:50000, reserveDate:D(-9), returnDate:D(4), inspSchedule:{} }),
+      /* ④ 車検で行く日が未定：これから来る */
+      window._clean({ id:'shaKore',  status:'reserved', workType:'shaken', workTypes:['shaken'],
+                      feeAmount:50000, reserveDate:D(2), returnDate:D(6), inspSchedule:{} })
+    ], []);
+    const res = pitInspectRun();
+    const hit = (id, rid) => res.findings.some(f => f.refId === id && f.ruleId === rid);
+    const txt = id => (res.findings.filter(f => f.refId === id && f.ruleId === 'D02')[0] || {}).text || '';
+    const lvOf = rid => (res.findings.filter(f => f.ruleId === rid)[0] || {}).level;
+    window.Holidays = _kH; window.PitCal = _kC;
+    return { yoyakuD02: hit('yoyaku','D02'), yoyakuTxt: txt('yoyaku'),
+             nyukoD02: hit('nyuko','D02'), nyukoTxt: txt('nyuko'),
+             mochiS08: hit('shaMochi','S08'), mochiS01: hit('shaMochi','S01'),
+             koreS01: hit('shaKore','S01'), koreS08: hit('shaKore','S08'),
+             s08lv: lvOf('S08'), s01lv: lvOf('S01') };
+  });
+  ok('🔴 まだ来ていない車の「漢字の名前が空」は言わない',
+     !/お客様名/.test(r.yoyakuTxt), r.yoyakuTxt);
+  ok('🔴 入庫した車には言う（車検証で分かるので）', /お客様名/.test(r.nyukoTxt), r.nyukoTxt);
+  ok('🔴 もう預かっている車検は「要対応」で出る（S08）', r.mochiS08 === true && r.s08lv === 'red', r);
+  ok('🔴 これから来る車検は「確認」で出る（S01）', r.koreS01 === true && r.s01lv === 'amber', r);
+  ok('🔴 同じ車が両方には出ない（S08 と S01 は排他）',
+     r.mochiS01 === false && r.koreS08 === false, r);
 }
 
 console.log('\n── ⑧ 札（見た／これでOK／直した）と、規則ごとの黙らせ ──');
@@ -371,7 +451,7 @@ console.log('\n── ⑧ 札（見た／これでOK／直した）と、規則�
     const f = pitInspectRun().findings.filter(x => x.ruleId === 'M01')[0];
     pitInspectMark(f.key, 'spec');
     const res = pitInspectRun();
-    window._insp.level = ''; window._insp.cat = ''; window._insp.done = true; window._insp.all = {};
+    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.done = true; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const out = pitInspectExport(res);
@@ -431,6 +511,11 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
 {
   const r = await p.evaluate(() => {
     const D = window._D;
+    /* ⚠ 定休日カレンダーを止める。止めないと「200日先」がたまたま定休日に当たって
+          R04 が余分に鳴り、走らせた日によって件数が変わる（実際に変わった）。 */
+    const _kH = window.Holidays, _kC = window.PitCal;
+    window.Holidays = { is: () => false, name: () => null };
+    window.PitCal = { isClosed: () => false, label: () => '', info: () => ({ closed:false }) };
     window._only([
       /* ⚠ v2・v3 にも受注金額を入れる。入れないと3枚とも M01（受注金額が空）に出て、
             「重さで絞れるか」が試せない（規則が正しいぶん、下ごしらえを正しくする側） */
@@ -438,7 +523,7 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
       window._clean({ id:'v2', status:'work', amountOrder:200000, tel:'090-11' }),                  /* amber D05 */
       window._clean({ id:'v3', status:'work', amountOrder:200000, reserveDate:D(1), returnDate:D(200) })  /* amber F07 */
     ], []);
-    window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
+    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
     showView('inspect');
     const body = document.getElementById('inspect-body');
     const all = body.querySelectorAll('.ins-row').length;
@@ -451,6 +536,7 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
     const money = document.getElementById('inspect-body').querySelectorAll('.ins-row').length;
     pitInspectFilter('cat', '');
     const out = pitInspectExport();
+    window.Holidays = _kH; window.PitCal = _kC;      /* 借りたものは返す */
     return { all, groups, red, off, money, exp: out.所見.length, keys: Object.keys(out),
              tiles: body.querySelectorAll('.ins-tile').length,
              hasWhy: !!body.querySelector('.ins-g-why'), hasMute: !!body.querySelector('.ins-mute') };
@@ -472,7 +558,7 @@ console.log('\n── ⑩ 画面（並べるだけ・絞り込み・書き出し
   const r = await p.evaluate(() => {
     const cards = []; for (let i = 0; i < 26; i++) cards.push(window._clean({ id:'many' + i, status:'work', amountOrder:null }));
     state.cards = cards; state.loanerAssigns = []; state.inspectMarks = {}; state.inspectMutes = {};
-    window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
+    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const first = body.querySelectorAll('.ins-row').length;
@@ -510,7 +596,7 @@ console.log('\n── ⑪ 現場の言葉で書けているか（内輪の言葉
       window._clean({ id:'j2', status:'returned', returnStage:'returnWait', completedAt:null, amountFinal:null }),
       window._clean({ id:'j3', status:'work', kana:'', repeat:'' })
     ], []);
-    window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
+    window._insp.scope = 'live'; window._insp.level = ''; window._insp.cat = ''; window._insp.done = false; window._insp.all = {};
     renderInspect();
     const body = document.getElementById('inspect-body');
     const onScreen = [];
