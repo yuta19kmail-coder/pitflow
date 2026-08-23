@@ -287,7 +287,8 @@ console.log('\n── ⑦ まわりを壊していない ──');
              hasFix: !!body.querySelector('.ins-fixb') };
   });
   ok('所見の数は変わっていない（受注金額の抜けが1件）', r.n === 1 && r.open === true, r);
-  ok('規則の数は 48本のまま', r.rules === 48, r.rules);
+  /* ⚠ v1.185.0 M11 を足して 49本。番号の付け方（規則ID＋6桁）は1文字も変えていない。 */
+  ok('規則の数は 49本', r.rules === 49, r.rules);
   ok('行も「ここを直す」も今までどおり出る', r.hasRow && r.hasFix, r);
 }
 ok('🔴 画面がつまずいていない（赤いエラーが1つも出ていない）', errs.length === 0, errs.slice(0, 3));

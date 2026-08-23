@@ -226,6 +226,12 @@ const BASE_TESTDATE = {
   'test_overdue.mjs': 1, 'test_phase_days.mjs': 2, 'test_resv_detail.mjs': 5,
   'test_return_chain.mjs': 1, 'test_return_slot.mjs': 10, 'test_save_menu.mjs': 1,
   'test_shaken_ops.mjs': 1,
+  /* ⚠ v1.185.0 test_sales_date.mjs は**日付どうしの関係**を試している見張り
+     （売上日 2026-07-31 と 実績日 2026-08-03 で「月がちがう」と言うか）。
+     ＝ 上の④-b の但し書き「日付そのものを試している見張りは決め打ちで正しい」に当たる。
+     🔴 「今日」と比べられる欄（まだ返していない車の返車予定日）だけは、今日からの日数で置いてある。
+        ここを決め打ちに戻さないこと。 */
+  'test_sales_date.mjs': 20,
 };
 {
   const reField = /(reserveDate|returnDate|loanerFrom|loanerTo|completedAt|cancelledAt|inDate|outDate)\s*:\s*'20\d\d-\d\d-\d\d'/g;
