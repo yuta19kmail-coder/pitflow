@@ -472,7 +472,9 @@ console.log('\n── ⑦ ソースの見張り ──');
      /collection\('pitSettings'\)\.doc\('qmarks'\)/.test(fx), 'quarter-fix.js');
   ok('版が3か所そろっている（v2.0.0）', [...idx.matchAll(/v?2\.0\.0/g)].length >= 3, '');
   ok('キャッシュ番号が付いている（quarter-fix.js）', /js\/quarter-fix\.js\?v=/.test(idx), '');
-  ok('キャッシュ番号が付いている（quarter.js）', /js\/quarter\.js\?v=5/.test(idx), '');
+  /* ⚠ 番号そのものは直すたびに変わるので、**付いていること**だけを見る
+     （数字を書くと、直すたびにここも直すことになり、見張りの意味が薄れる）。 */
+  ok('キャッシュ番号が付いている（quarter.js）', /js\/quarter\.js\?v=\d+/.test(idx), '');
 }
 ok('🔴 画面がつまずいていない（赤いエラーが1つも出ていない）', errs.length === 0, errs.slice(0, 4));
 

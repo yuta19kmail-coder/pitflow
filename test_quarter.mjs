@@ -227,6 +227,21 @@ console.log('\n── ⑥-2🔴🔴 本物のPDFを、頭からおしりまで�
       const m = pitQMatch(soft, pit.明細, { from:'2026-08-01', to:'2026-08-07' });
       return {
         ok: g.ok, pages, 検証: g.検証, 合計: g.合計,
+        /* 🗓 v2.0.0 PDF が自分で言っている期間と日付区分 */
+        期間: g.期間, 日付区分: g.日付区分,
+        split: (function(){
+          const sp = pitQSplit(g.期間, soft);
+          return { 期間: sp.期間, 出どころ: sp.期間の出どころ,
+                   組: sp.組.map(x => ({ label:x.label, from:x.from, to:x.to, 全部:x.全部, 枚:x.伝票.length })) };
+        })(),
+        /* 8/8 まで広げて出したPDFのつもりで割ってみる（＝端が別Qの「一部」になるか） */
+        split2: (function(){
+          const sp = pitQSplit({ from:'2026-08-01', to:'2026-08-10' }, soft);
+          return sp.組.map(x => ({ label:x.label, from:x.from, to:x.to, 全部:x.全部, 枚:x.伝票.length }));
+        })(),
+        /* 月まるごとで出した時（Q1〜Q4に割れるか） */
+        split3: pitQSplit({ from:'2026-08-01', to:'2026-08-31' }, soft)
+                  .組.map(x => ({ no:x.no, from:x.from, to:x.to, 全部:x.全部, 枚:x.伝票.length })),
         blank: {
           plate: g.伝票.filter(x => !x.ナンバー).length,
           name:  g.伝票.filter(x => !x.顧客名).length,
@@ -262,7 +277,172 @@ console.log('\n── ⑥-2🔴🔴 本物のPDFを、頭からおしりまで�
        r.tied === 55 && r.crossQ === 10 && r.staffNg === 0, { t:r.tied, q:r.crossQ, s:r.staffNg });
     ok('🔴 まとめて返車済みにした日（2026-08-08・10台）も同じ',
        r.lump.length === 1 && r.lump[0].日 === '2026-08-08' && r.lump[0].台数 === 10, r.lump);
+
+    /* ============================================================
+       🗓 v2.0.0（ゆうた指定）**PDF の日付から、クォーターを自動で割り振る**
+       ============================================================ */
+    ok('🗓 PDF が自分で「対象期間」を言っている（2026-08-01〜08-07）',
+       !!r.期間 && r.期間.from === '2026-08-01' && r.期間.to === '2026-08-07', r.期間);
+    ok('🔴🔴 日付区分が「売上日」だと確かめている',
+       r.日付区分 === '売上日' && r.検証.日付区分が売上日 === true, { k:r.日付区分, o:r.検証.日付区分が売上日 });
+    ok('🗓 期間の出どころは PDF（伝票の日付から推し量っていない）', r.split.出どころ === 'PDF', r.split);
+    ok('🗓 このPDFは 8月Q1 ひとつ・まるごと・67枚',
+       r.split.組.length === 1 && r.split.組[0].全部 === true && r.split.組[0].枚 === 67
+       && r.split.組[0].from === '2026-08-01' && r.split.組[0].to === '2026-08-07', r.split.組);
+    ok('🗓 8/10 まで出したつもりなら、Q2 が「一部」で足される',
+       r.split2.length === 2 && r.split2[0].全部 === true
+       && r.split2[1].全部 === false && r.split2[1].from === '2026-08-08' && r.split2[1].to === '2026-08-10',
+       r.split2);
+    ok('🔴🔴 「一部」の期間は Q の窓ではなく、PDF に入っている日だけ'
+       + '（窓で切ると、PDFに無い日の実績が丸ごと「PitFlowだけ」に化ける）',
+       r.split2[1].to === '2026-08-10', r.split2);
+    ok('🗓 月まるごとで出したら Q1〜Q4 の4つに割れる',
+       r.split3.length === 4 && r.split3.every(x => x.全部 === true)
+       && r.split3.map(x => x.no).join() === '1,2,3,4', r.split3);
+    ok('🗓 割っても伝票は1枚も落とさない（67枚のまま）',
+       r.split3.reduce((a, x) => a + x.枚, 0) === 67, r.split3.map(x => x.枚));
+    ok('🗓 月の最後のQは月末まで（8/24〜8/31）',
+       r.split3[3].from === '2026-08-24' && r.split3[3].to === '2026-08-31', r.split3[3]);
   }
+}
+
+console.log('\n── ⑥-3🗓 日付区分が「売上日」でないPDFは通さない（v2.0.0） ──');
+{
+  const r = await p.evaluate(() => {
+    /* 行の形は実物のとおり。日付区分だけ「入金日」に変えてある */
+    const L = t => ({ text: t, x: 0, y: 0 });
+    const base = [
+      L('売上チェックリスト'), L('[伝票番号]'),
+      L('作成日付： 令和 8年 8月 7日 19時35分 ページ： 1'),
+      L('請求計上組織：本社'),
+      L('対象期間：令和 8年 8月 1日 ～ 令和 8年 8月 7日'),
+      L('日付区分：入金日'),
+      L('合計枚数 0 0')
+    ];
+    const g = pitQPdfParse(base);
+    return { ok: g.ok, kbn: g.日付区分, term: g.期間, say: (g.検証.言い分 || []).join('／') };
+  });
+  ok('🔴🔴 入金日で出したPDFは通さない（数字を1つも出さない）', r.ok === false, r);
+  ok('🔴 何がいけないかを、そのまま伝えられる文で言う',
+     /日付区分：入金日/.test(r.say) && /売上日/.test(r.say) && /出し直して/.test(r.say), r.say);
+  ok('🗓 それでも対象期間は読めている', !!r.term && r.term.from === '2026-08-01', r.term);
+}
+
+console.log('\n── ⑥-4🗓🧹 画面（クォーターの割り振り／片づけ）v2.0.0 ──');
+{
+  const mk = (groups, gi, term) => p.evaluate(([soft, pit, gs, i, tm]) => {
+    window._insp = window._insp || {};
+    window._insp.mode = 'quarter';
+    const build = g => {
+      const rows = soft.伝票.filter(x => x.売上日 >= g.from && x.売上日 <= g.to);
+      return { no:g.no, label:g.label, from:g.from, to:g.to, 全部:g.全部, soft:rows,
+               res: pitQMatch(rows, pit.明細, { from:g.from, to:g.to }) };
+    };
+    const G = gs.map(build);
+    window._insp.q = { from:G[i].from, to:G[i].to, res:G[i].res, soft:G[i].soft,
+                       pdf:'テスト.pdf', tab:'lump', busy:'', err:'',
+                       list:[], listBusy:false, saved:null, savedId:'', savedTab:'期間の外',
+                       ym:'2026-08', savedAt:'12:00', marks:[], marksBusy:false, saveTimer:0,
+                       groups:G, gi:i, term:tm, termSrc:'PDF' };
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    return {
+      term: (body.querySelector('.q-term-h') || {}).textContent || '',
+      one:  (body.querySelector('.q-term-1') || {}).textContent || '',
+      note: (body.querySelector('.q-term-n') || {}).textContent || '',
+      chips: Array.from(body.querySelectorAll('.q-g')).map(b => b.textContent),
+      on:    Array.from(body.querySelectorAll('.q-g.on')).map(b => b.textContent),
+      part:  body.querySelectorAll('.q-g.part').length,
+      clear: !!body.querySelector('.q-clear')
+    };
+  }, [SOFT, PIT, groups, gi, term]);
+
+  /* ① 1つのQ・まるごと＝今までどおり（チップは出さない） */
+  const a = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-01', to:'2026-08-07', 全部:true }], 0,
+                     { from:'2026-08-01', to:'2026-08-07' });
+  ok('🗓 PDFが言っている期間を画面に出す', /2026-08-01 〜 2026-08-07/.test(a.term), a.term);
+  ok('🗓 どこから読んだかも書く（PDFの対象期間）', /対象期間/.test(a.term), a.term);
+  ok('🗓 1つのQだけなら、切り替えのボタンは出さない', a.chips.length === 0, a.chips);
+  ok('🗓 そのQの名前と枚数を出す', /8月 第1クォーター/.test(a.one) && /67枚/.test(a.one), a.one);
+  ok('🧹 「別のPDFを入れ直す」が出る', a.clear === true, a);
+
+  /* ② 1つのQだが「一部」＝済にしないと、はっきり書く */
+  const b2 = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-03', to:'2026-08-07', 全部:false }], 0,
+                      { from:'2026-08-03', to:'2026-08-07' });
+  ok('🔴 「一部」だと分かるように書く', /の一部/.test(b2.one), b2.one);
+  ok('🔴🔴 「済」にしないと、はっきり書く', /「済」にはしません/.test(b2.note), b2.note);
+  ok('🔴 どの日だけが入っているかを書く', /2026-08-03/.test(b2.note), b2.note);
+
+  /* ③ 2つに分かれた＝切り替えのボタンが出る */
+  const c2 = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-01', to:'2026-08-07', 全部:true },
+                       { no:2, label:'8月 第2クォーター', from:'2026-08-08', to:'2026-08-10', 全部:false }], 0,
+                      { from:'2026-08-01', to:'2026-08-10' });
+  ok('🗓 2つに分かれたら、切り替えのボタンが2つ出る', c2.chips.length === 2, c2.chips);
+  ok('🗓 いま見ているほうに印が付く', c2.on.length === 1 && /第1クォーター/.test(c2.on[0]), c2.on);
+  ok('🔴 「一部」のほうは見た目でも分かる（点線）', c2.part === 1, c2.part);
+  ok('🔴🔴 「まるごと」のQだけ残した、と書いてある', /まるごと.*だけ結果を残しました/.test(c2.note), c2.note);
+
+  /* 押すと切り替わる */
+  const d2 = await p.evaluate(() => {
+    pitQPickGroup(1);
+    const body = document.getElementById('inspect-body');
+    return { on: Array.from(body.querySelectorAll('.q-g.on')).map(x => x.textContent),
+             from: document.getElementById('q-from').value,
+             to:   document.getElementById('q-to').value };
+  });
+  ok('🗓 押すと、そのQに切り替わる', /第2クォーター/.test(d2.on[0] || ''), d2.on);
+  ok('🗓 期間の欄もそのQに合う', d2.from === '2026-08-08' && d2.to === '2026-08-10', d2);
+
+  /* ④ 画面を空にする＝残してあるものには触らない */
+  const e2 = await p.evaluate(() => {
+    window._insp.q.list = [{ id:'qrun-x', from:'2026-08-01', to:'2026-08-07' }];
+    pitQClearScreen();
+    const U = window._insp.q;
+    return { res: U.res, soft: U.soft, groups: U.groups, pdf: U.pdf, list: (U.list || []).length };
+  });
+  ok('🧹 画面を空にすると、読んだPDFの中身が消える',
+     e2.res === null && e2.soft === null && e2.groups === null && e2.pdf === null, e2);
+  ok('🧹 でも残してある結果には触らない', e2.list === 1, e2);
+}
+
+console.log('\n── ⑥-5🧹 済んだQを「まだ」に戻す（ゆうた指定 v2.0.0） ──');
+{
+  const r = await p.evaluate(() => {
+    /* ⚠ Q1〜Q4 の行は本番（クラウド）でだけ出る＝練習用サイトでは「残りません」と書く作り */
+    window.PIT_CLOUD = true;
+    window._insp.q = Object.assign(window._insp.q || {}, {
+      ym:'2026-08', from:'2026-08-01', to:'2026-08-07', res:null, pdf:null, err:'', busy:'',
+      groups:null, gi:0, term:null, termSrc:'',
+      list: [{ id:'qrun-2026-08-01_2026-08-07', from:'2026-08-01', to:'2026-08-07',
+               at:'2026-08-23T09:00:00.000Z', by:'サンプル 花子', 検算:true, 差金額:3237935, 直す件数:26 }]
+    });
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const xs = Array.from(body.querySelectorAll('.q-pq-x'));
+    return { pq: body.querySelectorAll('.q-pq').length, x: xs.length,
+             onclick: (xs[0] || {}).getAttribute ? xs[0].getAttribute('onclick') : '',
+             title: (xs[0] || {}).getAttribute ? xs[0].getAttribute('title') : '' };
+  });
+  ok('🧹 Q1〜Q4 は今までどおり4つ出る', r.pq === 4, r.pq);
+  ok('🧹 「×」は済んでいるQにだけ出る（1つ）', r.x === 1, r.x);
+  ok('🧹 押すとその期間を消しにいく', /pitQDropRun\('2026-08-01','2026-08-07'\)/.test(r.onclick || ''), r.onclick);
+  ok('🧹 何が起きるかを、乗せた時に出す', /まだ/.test(r.title || ''), r.title);
+
+  /* 聞いてから消す／印は消さない、が確認の文に入っているか */
+  const c = await p.evaluate(async () => {
+    window.__asked = [];
+    window.pitAsk = function (msg, opt) { window.__asked.push(String(msg) + '｜' + ((opt && opt.detail) || '')); return Promise.resolve(false); };
+    pitQDropRun('2026-08-01', '2026-08-07');
+    await new Promise(r => setTimeout(r, 60));
+    return { asked: window.__asked, list: window._insp.q.list.length };
+  });
+  ok('🔴 消す前に必ず聞く', c.asked.length === 1, c.asked);
+  ok('🔴 「伝票を直した」の印は消さない、と先に言う',
+     /「伝票を直した」の印は消しません/.test(c.asked[0] || ''), c.asked[0]);
+  ok('🔴 戻せないことも先に言う', /消したら戻せません/.test(c.asked[0] || ''), c.asked[0]);
+  ok('🔴 やめたら1つも消えない', c.list === 1, c);
+  ok('🧹 消す道具がある（残してある結果だけを消す）',
+     await p.evaluate(() => typeof window.pitQDeleteRun === 'function'), '');
 }
 
 console.log('\n── ⑦ 画面（並べるだけ・判定を書き写していない） ──');
