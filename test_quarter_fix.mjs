@@ -383,7 +383,11 @@ await mkCards();
       mk: cells.map(c => c.querySelectorAll('.q-fx-mk').length),
       heavy: cells.map(c => c.querySelectorAll('.q-fx-go.is-heavy').length),
       none: cells.map(c => c.querySelectorAll('.q-act-ok').length),
-      order: rows.map(t => (t.querySelector('td') || {}).textContent || '')
+      /* ⚠ 1つめのマスは v2.0.0 で「番号」になった。名前は2つめ */
+      order: rows.map(t => (t.querySelectorAll('td')[1] || {}).textContent || ''),
+      nos: rows.map(t => (t.querySelector('td.q-no .ins-no') || {}).textContent || ''),
+      copy: rows.map(t => (t.querySelector('td.q-no .ins-no') || {}).getAttribute
+                          ? t.querySelector('td.q-no .ins-no').getAttribute('onclick') : '')
     };
   }, SOFT);
   ok('全部の行に「直す／済」のマスが出る', r.cells === 3, r.cells);
@@ -396,6 +400,11 @@ await mkCards();
   ok('🔴 どのズレにも「伝票を直した」が並ぶ（ズレの数だけ出る）',
      r.mk.join() === '2,1,0', r.mk);
   ok('🔴 まだの行が上、片づいた行が下', /い 二郎/.test(r.order[0] || ''), r.order);
+  /* 🔢 v2.0.0（ゆうた指定）1件ずつの番号 */
+  ok('🔢 全部の行に番号が出る', r.nos.every(x => /^Q-\d{6}$/.test(x)), r.nos);
+  ok('🔢 行ごとにちがう番号', new Set(r.nos).size === 3, r.nos);
+  ok('🔢 押すとコピーできる（データチェックと同じ部品）',
+     (r.copy[0] || '').indexOf('pitInspectCopyNo') >= 0, r.copy[0]);
   ok('🔴 重いもの（実績日・金額）は赤で出す', r.heavy.reduce((a, b) => a + b, 0) === 2, r.heavy);
   ok('ズレの無い行は「—」だけ', r.none.reduce((a, b) => a + b, 0) === 1, r.none);
 }
@@ -463,7 +472,7 @@ console.log('\n── ⑦ ソースの見張り ──');
      /collection\('pitSettings'\)\.doc\('qmarks'\)/.test(fx), 'quarter-fix.js');
   ok('版が3か所そろっている（v2.0.0）', [...idx.matchAll(/v?2\.0\.0/g)].length >= 3, '');
   ok('キャッシュ番号が付いている（quarter-fix.js）', /js\/quarter-fix\.js\?v=/.test(idx), '');
-  ok('キャッシュ番号が付いている（quarter.js）', /js\/quarter\.js\?v=4/.test(idx), '');
+  ok('キャッシュ番号が付いている（quarter.js）', /js\/quarter\.js\?v=5/.test(idx), '');
 }
 ok('🔴 画面がつまずいていない（赤いエラーが1つも出ていない）', errs.length === 0, errs.slice(0, 4));
 
