@@ -560,6 +560,82 @@ console.log('\n── 👤 v1.56.3 フロント担当と予約担当を取り違
   ok('🔴 予約担当が reserveStaff を見ている', /c\.reserveStaff/.test(src));
 }
 
+console.log('\n── ✍ v1.183.0 引継ぎ・伝達の欄が、書いてある内容に合わせて伸びる（ゆうた指定） ──');
+{
+  /* 🗣「予約詳細カードのコメント部分を、書いてある内容に応じて、全部見える状態で開いてほしい。
+     　　今はデフォルトのハイトが決まってる感じ」
+     🔴 見るのは「中でスクロールしなくても全部見えるか」＝ **中身の高さ ≦ 欄の高さ**。
+     ⚠ 高さの数値そのものは決め打ちしない（字の大きさが変われば変わるため）。 */
+  await open('TR1');
+  const r = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'TR1');
+    const keep = c.handoffMemo;
+    const read = () => {
+      const el = document.querySelector('#md-body-modal textarea.cv-hoinput');
+      if (!el) return null;
+      return { h: el.offsetHeight, cls: el.className,
+               oninput: el.getAttribute('oninput') || '',
+               cut: el.scrollHeight > el.clientHeight + 1 };
+    };
+    c.handoffMemo = ''; renderCardView(c, 'md-body-modal');
+    const empty = read();
+    c.handoffMemo = '部品待ち'; renderCardView(c, 'md-body-modal');
+    const one = read();
+    c.handoffMemo = Array.from({ length: 12 }, (_, i) => 'ひきつぎ ' + (i + 1) + ' 行目です').join('\n');
+    renderCardView(c, 'md-body-modal');
+    const many = read();
+    /* 打っている間も伸びるか */
+    const el = document.querySelector('#md-body-modal textarea.cv-hoinput');
+    const before = el.offsetHeight;
+    el.value = el.value + '\n' + Array.from({ length: 8 }, (_, i) => 'あとから足した ' + (i + 1)).join('\n');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    const after = el.offsetHeight;
+    const cutAfter = el.scrollHeight > el.clientHeight + 1;
+    c.handoffMemo = keep; renderCardView(c, 'md-body-modal');
+    return { empty, one, many, typed: { before, after, cutAfter } };
+  });
+  ok('欄に「伸びる」印が付いている', r.many && /cv-grow/.test(r.many.cls), r.many && r.many.cls);
+  ok('🔴🔴 12行書いてあっても、中でスクロールせずに全部見える', r.many && r.many.cut === false, r.many);
+  ok('🔴 中身が増えたぶん、欄も高くなる（1行 → 12行）',
+     r.many && r.one && r.many.h > r.one.h + 40, { one: r.one, many: r.many });
+  ok('🔴 打っている間も伸びる', r.typed && r.typed.after > r.typed.before, r.typed);
+  ok('🔴 打ったあともスクロールが出ない', r.typed && r.typed.cutAfter === false, r.typed);
+  ok('空のときは小さくなりすぎない', r.empty && r.empty.h >= 40, r.empty);
+  ok('空でもスクロールは出ない', r.empty && r.empty.cut === false, r.empty);
+  ok('🔴 打った時に高さを直す手が配線されている', r.many && /cvGrow\(this\)/.test(r.many.oninput), r.many && r.many.oninput);
+
+  /* 🔴🔴 ここが本番の道＝**カードを開く**（描いた瞬間はまだ窓が開ききっていない）。
+     ⚠ 上の節は「見えている所で描き直した」だけなので、これを見ていないと
+        **開いた時だけ小さいまま**という形を取り逃がす（実際そうなっていた）。 */
+  const opened = await p.evaluate(async () => {
+    const c = state.cards.find(x => x.id === 'TR1');
+    const keep = c.handoffMemo;
+    c.handoffMemo = Array.from({ length: 12 }, (_, i) => 'ひらいた時の ' + (i + 1) + ' 行目').join('\n');
+    closeDetail && closeDetail();
+    openCard('TR1', 'modal');
+    await new Promise(r => setTimeout(r, 500));
+    const el = document.querySelector('#md-body-modal textarea.cv-hoinput');
+    const out = el ? { h: el.offsetHeight, cut: el.scrollHeight > el.clientHeight + 1 } : null;
+    c.handoffMemo = keep; renderCardView(c, 'md-body-modal');
+    return out;
+  });
+  ok('🔴🔴 カードを開いた時点で、12行が全部見えている（中でスクロールしない）',
+     opened && opened.cut === false && opened.h > 100, opened);
+
+  const src = fs.readFileSync('js/card-view.js', 'utf8');
+  ok('🔴 伸ばす手は1本（cv-grow が付いた欄をまとめて測る）',
+     /function growAll/.test(src) && /textarea\.cv-grow/.test(src), '');
+  ok('🔴 枠のぶんを足している（足さないと1行ぶん足りない）', /offsetHeight - el\.clientHeight/.test(src), '');
+  ok("🔴 開いた時にも測る（描き直しのたび・窓が開ききってからも）", /growSoon\(host\)/.test(src) && /function growSoon/.test(src), "");
+  ok('🔴 タブを開いた時にも測る（隠れていると高さが0になるため）', /growSoon\(el \|\| document\)/.test(src), '');
+  ok('🔴🔴 窓が開ききってから、もう一度測り直す（開く前は高さが測れない）',
+     /function growSoon/.test(src) && /requestAnimationFrame/.test(src) && /260\)/.test(src), '');
+  {
+    const seg = src.slice(src.indexOf('function grow('), src.indexOf('function memoLines'));
+    ok('⚠ 「◯行まで」の上限を付けていない', seg.length > 50 && !/maxHeight|max-height/.test(seg), '');
+  }
+}
+
 console.log('\n── 🎨 v1.56.2 どのテーマでも文字が読める（ライトで --text1 が白いまま残っていた件） ──');
 {
   const THEMES = ['dark', 'light', 'dark-liquid', 'light-liquid'];
