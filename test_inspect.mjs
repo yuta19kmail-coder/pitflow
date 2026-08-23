@@ -66,6 +66,18 @@ await p.evaluate(() => {
   const D = n => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + n);
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
   window._D = D;
+  /* 🔴🔴 2026-08-23 修理 ── **既定の入庫日・返車日は「開いている日」から選ぶ。**
+     ⚠ 前は「今日から1日／3日」を決め打ちしていたので、**走らせた曜日で答えが変わっていた**。
+        お店は水曜が定休なので、日曜に走らせると「今日から3日」＝水曜に当たり、
+        きれいなはずの土台のカードが R04（お休みの日の予定）を鳴らして **7項目が落ちていた**。
+        ＝ 規則④「日付の決め打ちをしない」の親戚。**曜日にも寄りかからない。**
+     ⚠ 休みかどうかは**画面と同じ物差し**（PitCal）に聞く。ここで曜日を綴らない。 */
+  window._OPEN = (from) => {
+    for (let n = from, i = 0; i < 40; i++, n++){
+      if (!(window.PitCal && PitCal.isClosed && PitCal.isClosed(D(n)))) return n;
+    }
+    return from;
+  };
   /* きれいな1枚（どの規則にも当たらない土台）。ここから1つずつ壊して試す。
      ⚠ ナンバーと電話は**カードごとに変える**（同じにすると R01・R02・D08 が正しく鳴ってしまう）。 */
   let _seq = 0;
@@ -75,7 +87,8 @@ await p.evaluate(() => {
       customer: '検査 太郎', kana: 'ケンサタロウ',
       repeat: 'repeat', maker: 'トヨタ', car: 'アクア',
       workType: 'general', workTypes: ['general'], menu: '一般整備', dropType: 'drop',
-      reserveDate: D(1), reserveTime: '10:00', returnDate: D(3), returnTime: '15:00',
+      reserveDate: D(window._OPEN(1)), reserveTime: '10:00',
+      returnDate: D(window._OPEN(window._OPEN(1) + 2)), returnTime: '15:00',
       status: 'reserved', frontStaff: '椎名', staff: '椎名',
       estAmount: 100000, estHoldDays: 2, needLoaner: false,
       inspectors: ['椎名'], mechanics: ['椎名'],
