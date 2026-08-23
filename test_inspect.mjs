@@ -149,6 +149,29 @@ console.log('\n── ① お金 ──');
   ok('🔴 返車済なのに確定金額が空を拾う（M02）', (r.by.M02 || []).indexOf('m02') >= 0, r.by.M02);
   ok('金額が入っている車は M01 に出ない', (r.by.M01 || []).indexOf('m01ok') < 0, r.by.M01);
 }
+{
+  /* 🤝 v1.179.0（ゆうた指定 2026-08-23）**外注に出している車は M01 の対象外。**
+     🗣「板金のばあい、外注だから、正確な見積もり金額が出ないことが多い。
+     　　だから外注欄にある場合はこのルールの適応外にしてほしい。つうじょうの場合は注意の対象にして」
+     🔴 見るのは**居場所（外注エリアに居るか）だけ**。外注先の名前が入っているかでは決めない。
+     🔴 **永久に黙るのではない**＝外注から出たら、また出る。 */
+  const r = await only([
+    { id:'out1',  status:'outsource', amountOrder:null, outsourceTo:'畑中板金' },   /* 外注＝言わない */
+    { id:'out2',  status:'outsource', amountOrder:null },                           /* 外注先が空でも言わない */
+    { id:'nml',   status:'work',      amountOrder:null, outsourceTo:'畑中板金' },   /* ふつうの車＝言う */
+    { id:'back',  status:'work',      amountOrder:null }                            /* 外注から出た形＝言う */
+  ]);
+  const m01 = r.by.M01 || [];
+  ok('🤝🔴 外注に出している車は M01 に出ない', m01.indexOf('out1') < 0, m01);
+  ok('🔴 外注先が空でも、外注エリアに居れば出ない（居場所で決める）', m01.indexOf('out2') < 0, m01);
+  ok('🔴 ふつうの車は今までどおり出る（外注先の名前だけでは外さない）', m01.indexOf('nml') >= 0, m01);
+  ok('🔴 外注から出た車は、また出る（永久に黙らない）', m01.indexOf('back') >= 0, m01);
+  ok('🔴 「どうする」に、外注は対象外だと書いてある',
+     await p.evaluate(() => {
+       const r0 = (window.PIT_INSPECT_RULES || []).filter(x => x.id === 'M01')[0] || {};
+       return /外注/.test(r0.fix || '');
+     }), '');
+}
 
 console.log('\n── ② 日付・進行 ──');
 {
