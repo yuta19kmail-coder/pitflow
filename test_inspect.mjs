@@ -308,6 +308,33 @@ console.log('\n── ⑦ 状態の矛盾 ──');
   ok('🔴 キャンセルの中身が分からない（T05）', (r.by.T05 || []).join() === 't05', r.by.T05);
   ok('知らないボードのカード（T09）', (r.by.T09 || []).indexOf('t09') >= 0, r.by.T09);
 }
+{
+  /* ☎ v1.180.0（ゆうた報告 2026-08-23・T02-673394 / T02-559296）
+     🗣「完TELを編集で入れたんだけど、リストから外れないんだよね」
+     ＝ 完TELの印は2つある（盤面を通った印／表紙チェックの「完TEL 済」）。
+       完了アーカイブから直せるのは後者だけなので、**後者でも消える**ようにした。
+     🔴 T01（返車の列にいるのに作業前）は**居場所の話**なので、後者では鳴らさない。 */
+  const r = await only([
+    { id:'tc0', status:'returned', returnStage:null, completedAt:null, amountFinal:100000,
+      coverCall:{ done:false, at:'', staff:'' } },                                   /* どちらも無い＝出る */
+    { id:'tc1', status:'returned', returnStage:null, completedAt:null, amountFinal:100000,
+      coverCall:{ done:true, at:'8/1', staff:'椎名' } },                             /* 表紙チェックで済＝出ない */
+    { id:'tc2', status:'returned', returnStage:'returnWait', completedAt:null, amountFinal:100000,
+      coverCall:{ done:false, at:'', staff:'' } },                                   /* 盤面を通った＝出ない */
+    { id:'tc3', status:'contact', returnStage:null,
+      coverCall:{ done:true, at:'8/1', staff:'椎名' } }                              /* T01 は鳴らさない */
+  ]);
+  const t02 = r.by.T02 || [], t01 = r.by.T01 || [];
+  ok('🔴 どちらの印も無ければ、今までどおり出る（T02）', t02.indexOf('tc0') >= 0, t02);
+  ok('☎🔴🔴 完了アーカイブで「完TEL 済」にしたら消える', t02.indexOf('tc1') < 0, t02);
+  ok('🔴 盤面を通った印だけでも消える（今までどおり）', t02.indexOf('tc2') < 0, t02);
+  ok('🔴 T01（返車の列にいるのに作業前）は表紙チェックでは鳴らさない', t01.indexOf('tc3') < 0, t01);
+  ok('🔴 「どうする」に、完了アーカイブで済にすれば消えると書いてある',
+     await p.evaluate(() => {
+       const r0 = (window.PIT_INSPECT_RULES || []).filter(x => x.id === 'T02')[0] || {};
+       return /完了アーカイブ/.test(r0.fix || '');
+     }), '');
+}
 
 console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた指定 2026-08-21） ──');
 {
