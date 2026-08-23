@@ -408,13 +408,19 @@ console.log('\n── ⑦-4 一番右のマスが半行ズレない（ゆうた�
     renderInspect();
     const tr = document.querySelector('#inspect-body .q-t tbody tr');
     const tds = Array.prototype.slice.call(tr.querySelectorAll('td'));
-    const last = tds[tds.length - 1];
+    /* ⚠ v2.0.0 いちばん右は「直す／済」（q-act）になった。
+       半行ズレの見張りが見たいのは**結び方のマス（q-how）**なので、名前で取る。 */
+    const how = tr.querySelector('td.q-how');
+    const last = how || tds[tds.length - 1];
+    const act = tr.querySelector('td.q-act');
     const first = tds[0];
     return {
       disp: getComputedStyle(last).display,
       /* 同じ行のマスなら、上の位置がそろう */
       dy: Math.abs(last.getBoundingClientRect().top - first.getBoundingClientRect().top),
       cls: last.className,
+      actDisp: act ? getComputedStyle(act).display : '',
+      actDy: act ? Math.abs(act.getBoundingClientRect().top - first.getBoundingClientRect().top) : 0,
       blockTd: Array.prototype.some.call(document.querySelectorAll('#inspect-body .q-t td'),
                                          e => getComputedStyle(e).display !== 'table-cell')
     };
@@ -423,6 +429,9 @@ console.log('\n── ⑦-4 一番右のマスが半行ズレない（ゆうた�
   ok('🔴 同じ行のマスと、上の位置がそろっている（半行ズレない）', r.dy < 1.5, r);
   ok('🔴 表のマスに block を付けている所が1つも無い', r.blockTd === false, r);
   ok('小さい字にするクラスは別に立てた（q-how）', /q-how/.test(r.cls), r.cls);
+  /* 🛠 v2.0.0 足した「直す／済」のマスも、同じ落とし穴を踏んでいないこと */
+  ok('🔴 v2.0.0「直す／済」のマスも表のマスのまま', r.actDisp === 'table-cell', r);
+  ok('🔴 その列も上の位置がそろっている', r.actDy < 1.5, r);
 }
 
 console.log('\n── ⑧🤖 AIチェック（鍵は画面に置かない・管理だけ） ──');

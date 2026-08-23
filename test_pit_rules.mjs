@@ -231,7 +231,10 @@ const BASE_TESTDATE = {
      ＝ 上の④-b の但し書き「日付そのものを試している見張りは決め打ちで正しい」に当たる。
      🔴 「今日」と比べられる欄（まだ返していない車の返車予定日）だけは、今日からの日数で置いてある。
         ここを決め打ちに戻さないこと。 */
-  'test_sales_date.mjs': 20,
+  'test_sales_date.mjs': 21,
+  /* ⚠ v2.0.0 test_quarter_fix.mjs も**日付どうしの関係**を試す見張り
+     （伝票 8/4 と 実績 8/5 で「直すボタンが出るか」）。上の但し書きに当たる。 */
+  'test_quarter_fix.mjs': 6,
 };
 {
   const reField = /(reserveDate|returnDate|loanerFrom|loanerTo|completedAt|cancelledAt|inDate|outDate)\s*:\s*'20\d\d-\d\d-\d\d'/g;

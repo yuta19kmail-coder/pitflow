@@ -326,26 +326,100 @@ console.log('\n── ⑤ 予約詳細カードの「売上日」の行（誰で
   ok('実績カードに「売上日」の行が出る', r.has === true, r);
   ok('何の日か分かる書き方（伝票が立った日）', /売上日/.test(r.label) && /伝票/.test(r.label), r.label);
   ok('いまの売上日が出ている', r.val === '2026-08-08', r);
-  ok('🔴 鍵をかけていない（ゆうた指定「誰でも直せる」）', r.lock === false && r.adminOnly === false, r);
+  /* 🔒 v2.0.0（ゆうた指定）**アーカイブ（返車済み）になったら管理者だけ。** */
+  ok('🔒 v2.0.0 返車済みの車では鍵がかかっている', r.lock === true, r);
+  ok('管理なら「編集」が出る（管理のみ、にはならない）', r.adminOnly === false, r);
   ok('実績日とのちがいを添えている', /実績日/.test(r.note), r.note);
+
+  /* 管理なら、編集を押すと入力欄が出て直せる */
+  const e = await p.evaluate(() => {
+    cvUnlockSalesDate();
+    const input = !!document.getElementById('cv-salesdate');
+    cvSetSalesDate('2026-08-09');
+    const c = state.cards.find(x => x.id === 'SD1');
+    return { input, sd: c.salesDate, done: c.completedAt, rd: c.returnDate, rf: c.returnDateFinal };
+  });
+  ok('管理なら編集で入力欄が出る', e.input === true, e);
+  ok('管理なら直せる', e.sd === '2026-08-09', e);
+  ok('🔴🔴 直しても実績カウント日は動かない', e.done === '2026-08-10', e);
+  ok('🔴🔴 直しても返車日は動かない', e.rd === '2026-08-10' && e.rf === '2026-08-10', e);
 }
 {
-  /* 🔴 管理者でない人でも直せる（ここが実績カウント日との決定的なちがい） */
+  /* 🔒 v2.0.0 管理でない人には、返車済みの車の入力欄そのものを描かない */
   const r = await p.evaluate(() => {
     window.__admin = false;
     const c = state.cards.find(x => x.id === 'SD1');
     renderCardView(c, 'md-body-modal');
     const input = !!document.getElementById('cv-salesdate');
-    cvSetSalesDate('2026-08-09');
-    const after = state.cards.find(x => x.id === 'SD1');
-    return { input, sd: after.salesDate, done: after.completedAt, rd: after.returnDate, rf: after.returnDateFinal,
+    const before = c.salesDate;
+    cvSetSalesDate('2026-01-01');                     /* 外から直に呼んでも通らないこと */
+    return { input, before, after: c.salesDate,
+             adminOnly: !!document.querySelector('#md-body-modal .cv-salesdate .cv-adminonly'),
+             val: (document.getElementById('cv-sdlock') || {}).textContent || '',
              resInput: !!document.getElementById('cv-resinput') };
   });
-  ok('🔴 管理でない人にも入力欄が出る', r.input === true, r);
-  ok('🔴 管理でない人が直せる（ゆうた指定）', r.sd === '2026-08-09', r);
-  ok('🔴🔴 直しても実績カウント日は動かない', r.done === '2026-08-10', r);
-  ok('🔴🔴 直しても返車日は動かない', r.rd === '2026-08-10' && r.rf === '2026-08-10', r);
+  ok('🔒 管理でない人には「管理のみ」を出す', r.adminOnly === true, r);
+  ok('🔒 入力欄そのものを描かない', r.input === false, r);
+  ok('🔴 外から直に呼んでも変わらない（ボタンを消しただけにしない）', r.before === r.after, r);
+  ok('日付は見えるだけ残る', !!r.val && r.val !== '—', r);
   ok('⚠ 実績カウント日のほうは今までどおり管理だけ（壊していない）', r.resInput === false, r);
+}
+{
+  /* 🔒 v2.0.0 アーカイブ**前**の車は、今までどおり誰でも直せる（返車日と同じ扱い） */
+  const r = await p.evaluate(() => {
+    window.__admin = false;
+    state.cards = state.cards.filter(x => x.id !== 'SD1B');
+    state.cards.push({ id:'SD1B', resNo:'R-SD1B', status:'workDone', returnStage:'returnWait',
+                       customer:'返車前 太郎', car:'ノート', returnDate:'2026-08-20',
+                       salesDate:'2026-08-08', log:[] });
+    openCard('SD1B', 'modal');
+    const input = !!document.getElementById('cv-salesdate');
+    cvSetSalesDate('2026-08-07');
+    const c = state.cards.find(x => x.id === 'SD1B');
+    return { input, sd: c.salesDate,
+             lock: !!document.querySelector('#md-body-modal .cv-salesdate .cv-locktag') };
+  });
+  ok('🔒 アーカイブ前は鍵をかけない', r.lock === false, r);
+  ok('🔒 アーカイブ前は誰でも直せる', r.input === true && r.sd === '2026-08-07', r);
+}
+{
+  /* 🔴🔴 v2.0.0 特例①＝データチェックの「ここを直す」からは、アーカイブ済みでも誰でも直せる */
+  const r = await p.evaluate(() => {
+    window.__admin = false;
+    const fd = (window.PIT_FIX_FIELDS || []).filter(x => x.id === 'salesDate')[0] || null;
+    const c = state.cards.find(x => x.id === 'SD1');
+    const before = c.salesDate;
+    if (fd && fd.set) fd.set(c, '2026-08-05');
+    const money = (window.PIT_FIX_FIELDS || []).filter(x => x.id === 'amountFinal')[0] || null;
+    const rdate = (window.PIT_FIX_FIELDS || []).filter(x => x.id === 'completedAt')[0] || null;
+    return { has: !!fd, admin: fd ? !!fd.admin : null, before, after: c.salesDate,
+             moneyAdmin: money ? !!money.admin : null, dateAdmin: rdate ? !!rdate.admin : null };
+  });
+  ok('🔴 特例① データチェックの欄に鍵は付いていない', r.has === true && r.admin === false, r);
+  ok('🔴 特例① 管理でない人でも、そこからなら直せる', r.after === '2026-08-05' && r.before !== r.after, r);
+  ok('⚠ 確定金額は特例に入れていない（今までどおり管理だけ）', r.moneyAdmin === true, r);
+  ok('⚠ 実績カウント日も特例に入れていない（今までどおり管理だけ）', r.dateAdmin === true, r);
+}
+{
+  /* 🔴🔴 v2.0.0 特例②＝クォーターチェックの直すボタンも、売上日だけは誰でも */
+  const r = await p.evaluate(() => {
+    window.__admin = false;
+    const mk = (over) => Object.assign({
+      soft: { i:0, 売上日:'2026-08-04', 伝票:'0001', ナンバー:'船橋 300 あ 1111', 顧客名:'あ 一郎', 金額:100000 },
+      pit:  { 生:{id:'X'}, 数える日:'2026-08-06', 売上日:'2026-08-01', 確定金額:100000 },
+      日付: { kind:'sameQ', label:'同じQ内（+2日）' }, 金額一致: true, 期間の外: false, 差: 0
+    }, over);
+    const kinds = pitQFixKinds(mk({}));
+    const heavy = pitQFixKinds(mk({ 日付:{kind:'crossMonth',label:'月またぎ（+2日）'}, 金額一致:false, 差:-500 }));
+    const by = {}; heavy.forEach(k => by[k.kind] = k.can);
+    return { sd: (kinds.filter(k => k.kind === '売上日')[0] || {}).can,
+             heavyKinds: heavy.map(k => k.kind), by };
+  });
+  ok('🔴 特例② 売上日は管理でなくても押せる', r.sd === true, r);
+  ok('🔴 実績日と金額は、管理でなければ押せない', r.by['実績日'] === false && r.by['金額'] === false, r);
+  ok('ズレの並びは「安いものから」（売上日→実績日→金額）',
+     r.heavyKinds.join() === '売上日,実績日,金額', r.heavyKinds);
+  await p.evaluate(() => { window.__admin = true; });
 }
 {
   /* 借り物の時は、そう言う */
@@ -568,12 +642,13 @@ console.log('\n── ⑧ ソースの見張り（写しを作っていないか
      posState < posSd && posSd < posSlot && posSd < posCard && posSd < posRules && posSd < posMatch && posSd < posPop,
      { posState, posSd, posSlot, posCard, posRules, posMatch, posPop });
 
-  const vers = [...idx.matchAll(/1\.185\.0/g)].length;
-  ok('版が3か所そろっている（v1.185.0）', vers >= 3, vers);
-  ok('版が v1.184.0 より下がっていない', !/content="1\.18[0-4]\./.test(idx));
+  const vers = [...idx.matchAll(/v?2\.0\.0/g)].length;
+  ok('版が3か所そろっている（v2.0.0）', vers >= 3, vers);
+  ok('版が v1 に戻っていない', !/content="1\./.test(idx));
   ['js/sales-date.js', 'js/return-slot.js', 'js/return-popup.js', 'js/card-view.js',
    'js/inspect-rules.js', 'js/inspect-fix.js', 'js/quarter-match.js', 'js/quarter.js',
-   'js/quarter-store.js', 'js/undetermined.js', 'css/card-view.css', 'css/quarter.css']
+   'js/quarter-store.js', 'js/undetermined.js', 'js/quarter-fix.js',
+   'css/card-view.css', 'css/quarter.css']
     .forEach(f => ok('キャッシュ番号が付いている（' + f + '）', new RegExp(f.replace('.', '\\.') + '\\?v=') .test(idx)));
 }
 {
@@ -591,7 +666,14 @@ console.log('\n── ⑨ ヘルプにも書いてある（読んで分かる形
   const hp = src('js/help-content.js');
   ok('🔴 ヘルプに売上日の説明がある', /売上日（v1\.185\.0）/.test(hp));
   ok('🔴 実績カウント日と別物だと書いてある', /実績カウント日とは別物/.test(hp), '');
-  ok('🔴 誰でも直せると書いてある', /売上の数字は1円も動きません[\s\S]{0,80}誰でも直せます/.test(hp), '');
+  /* 🔒 v2.0.0 ヘルプも新しい鍵の書き方になっていること（アーカイブは管理者／画面からは特例） */
+  ok('🔴 売上の数字が動かないと書いてある', /売上の数字は1円も動きません/.test(hp), '');
+  ok('🔒 アーカイブ後は管理者だけ、と書いてある',
+     /返車済みになった<strong>後<\/strong>＝カードからは<strong>管理者だけ<\/strong>/.test(hp), '');
+  ok('🔴 特例（データチェック・クォーターチェックからは誰でも）が書いてある',
+     /ただし特例[\s\S]{0,220}どなたでも<\/strong>直せます/.test(hp), '');
+  ok('⚠ 確定金額・実績カウント日は特例に入らない、と書いてある',
+     /確定金額・実績カウント日はこの特例に入りません/.test(hp), '');
   ok('🔴 完TELの窓で金額と一緒に入ると書いてある', /確定金額と一緒に入ります/.test(hp), '');
   ok('🔴 データチェックの規則も説明してある', /月がちがう」（v1\.185\.0）/.test(hp), '');
   ok('🔴 Qがちがうだけでは言わない、と書いてある', /クォーターがちがうだけなら言いません/.test(hp), '');
