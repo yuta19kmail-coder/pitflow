@@ -46,7 +46,7 @@ p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errs.push(m.text()); });
 
 await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1&nonews=1`);
-await p.waitForFunction('window.state && window.pitQMatch && window.pitQPdfParse && window.pitQuarterHtml && window.pitAiHtml', null, { timeout: 25000 });
+await p.waitForFunction("window.state && window.pitQMatch && window.pitQPdfParse && window.pitQuarterHtml && window.pitAiHtml && window.pitQSaveRun", null, { timeout: 25000 });
 await p.evaluate(() => { if (window.pitSampleLogin) pitSampleLogin(); });
 await p.waitForTimeout(600);
 
@@ -300,6 +300,127 @@ console.log('\n── ⑦ 画面（並べるだけ・判定を書き写してい
   ok('タブが7つ出る', r.tabs === 7, r.tabs);
   ok('一覧に行が出る（期間の外＝10件）', r.rows === 10, r.rows);
   ok('🤖 ③AIチェックの「渡すもの」も出る', r.ai === true, r);
+}
+
+console.log('\n── ⑦-2📥 ドラッグでPDFを入れられる（ゆうた指定 v1.184.0） ──');
+{
+  const r = await p.evaluate(() => {
+    window._insp.q = { from:'2026-08-01', to:'2026-08-07', res:null, pdf:null, tab:'lump',
+                       busy:'', err:'', list:[], listBusy:false, saved:null, savedId:'', savedTab:'期間の外', ym:'', savedAt:'' };
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const zone = document.getElementById('q-drop');
+    const out = { zone: !!zone,
+      over: (zone && zone.getAttribute('ondragover')) || '',
+      drop: (zone && zone.getAttribute('ondrop')) || '',
+      say: /ドラッグ/.test(body.textContent || ''),
+      file: !!body.querySelector('.q-file input[type=file]') };
+    /* 光る／消える */
+    pitQDrag({ preventDefault(){} }, 1); out.lit = zone.classList.contains('over');
+    pitQDrag({ preventDefault(){} }, 0); out.off = !zone.classList.contains('over');
+    /* PDF でないものを落とした時＝黙らずに言う */
+    pitQDrop({ preventDefault(){}, dataTransfer: { files: [ { name:'めも.txt', type:'text/plain' } ] } });
+    out.ngErr = window._insp.q.err;
+    return out;
+  });
+  ok('🔴 落とす枠がある', r.zone === true, r);
+  ok('🔴 ドラッグを受け取る配線がある', /pitQDrag/.test(r.over) && /pitQDrop/.test(r.drop), r);
+  ok('🔴 押して選ぶ道も残っている（ドラッグが苦手な人のため）', r.file === true, r);
+  ok('画面に「ドラッグしても入る」と書いてある', r.say === true, r);
+  ok('持ってきている間は枠が光る', r.lit === true && r.off === true, r);
+  ok('🔴 PDF でないものを落としたら、黙らずにそう言う',
+     /PDF ではありません/.test(r.ngErr || ''), r.ngErr);
+}
+
+console.log('\n── ⑦-3🗄 突き合わせた結果が残る（ゆうた指定 v1.184.0） ──');
+{
+  /* 🔴 本物の Firestore は触れないので、**書き込み口だけ差し替えて**中身を見る。
+     ⚠ 差し替えるのは `fb.company()` の1つだけ＝本物の道をそのまま通す。 */
+  const r = await p.evaluate(([soft, pit]) => {
+    const wrote = {};
+    const keepFb = window.fb, keepCloud = window.PIT_CLOUD;
+    window.PIT_CLOUD = true;
+    window.fb = { company: () => ({
+      collection: () => ({
+        doc: (id) => ({
+          set: (v) => { wrote[id] = v; return Promise.resolve(); },
+          get: () => Promise.resolve({ exists: !!wrote[id], data: () => wrote[id] })
+        })
+      })
+    }) };
+    const res = pitQMatch(soft.伝票, pit.明細, { from:'2026-08-01', to:'2026-08-07' });
+    return pitQSaveRun(res, { pdf: 'テスト.pdf' }).then(d => {
+      const id = pitQRunId('2026-08-01', '2026-08-07');
+      const body = wrote[id] || null;
+      const list = (wrote['qruns'] || {}).一覧 || [];
+      /* もう一度＝上書き（積み上がらない） */
+      return pitQSaveRun(res, { pdf: 'テスト2.pdf' }).then(() => {
+        const list2 = (wrote['qruns'] || {}).一覧 || [];
+        /* 検算が合っていない結果は残さない */
+        const bad = JSON.parse(JSON.stringify({ 期間:res.期間, 検算:{ 合う:false } }));
+        return pitQSaveRun(bad, {}).then(() => 'saved', () => 'refused').then(refused => {
+          const plan = pitQMonthPlan('2026-08', list2);
+          window.fb = keepFb; window.PIT_CLOUD = keepCloud;
+          return {
+            id, d, keys: Object.keys(wrote).sort(),
+            body, listN: list.length, list2N: list2.length,
+            pdf2: (list2[0] || {}).pdf, refused,
+            planN: plan.length, planQ1: plan[0], planQ2: plan[1]
+          };
+        });
+      });
+    });
+  }, [SOFT, PIT]);
+
+  ok('🔴 名前は期間そのもの（qrun-開始_終了）', r.id === 'qrun-2026-08-01_2026-08-07', r.id);
+  ok('🔴 置き場所は pitSettings の中（新しい入れ物を作っていない＝ルール無改修）',
+     r.keys.join() === 'qrun-2026-08-01_2026-08-07,qruns', r.keys);
+  ok('🔴 合計・差・内訳・検算が残る',
+     r.body && r.body.差.金額 === 3237935 && r.body.検算.合う === true
+     && r.body.内訳.期間の外.台数 === 10, r.body && r.body.差);
+  ok('🔴 まとめて返車済みにした日も残る',
+     r.body && r.body.まとめ返車.length === 1 && r.body.まとめ返車[0].台数 === 10, r.body && r.body.まとめ返車);
+  ok('🔴 残すのは「これから直すもの」だけ（合っていた行は残さない）',
+     r.body && r.body.直すもの && r.body.直すもの.整備ソフトだけ.length === 12
+     && r.body.直すもの.期間の外.length === 10 && !('結びついた' in r.body), Object.keys((r.body||{}).直すもの||{}));
+  ok('いつ・誰が・どのPDFで走らせたかが残る',
+     r.body && !!r.body.走らせた日時 && ('走らせた人' in r.body) && r.body.PDF === 'テスト.pdf', r.body && r.body.PDF);
+  ok('🔴🔴 同じ期間をもう一度やっても積み上がらない（上書き）',
+     r.listN === 1 && r.list2N === 1 && r.pdf2 === 'テスト2.pdf', { a:r.listN, b:r.list2N, pdf:r.pdf2 });
+  ok('🔴🔴 検算が合っていない結果は残さない', r.refused === 'refused', r.refused);
+  ok('🔴 月の Q1〜Q4 が並ぶ', r.planN === 4, r.planN);
+  ok('🔴 Q1 は 1〜7日／Q2 は 8〜15日（区切りは売上の物差しを借りている）',
+     r.planQ1 && r.planQ1.from === '2026-08-01' && r.planQ1.to === '2026-08-07'
+     && r.planQ2 && r.planQ2.from === '2026-08-08' && r.planQ2.to === '2026-08-15', [r.planQ1, r.planQ2]);
+  ok('🔴 済んだQには結果が付いてくる（済み／まだが分かる）',
+     r.planQ1 && r.planQ1.run && r.planQ1.run.差金額 === 3237935 && r.planQ2 && r.planQ2.run === null, r.planQ1 && r.planQ1.run);
+}
+
+console.log('\n── ⑦-4 一番右のマスが半行ズレない（ゆうた報告 v1.184.0） ──');
+{
+  const r = await p.evaluate(([soft, pit]) => {
+    window._insp.q = { from:'2026-08-01', to:'2026-08-07',
+      res: pitQMatch(soft.伝票, pit.明細, { from:'2026-08-01', to:'2026-08-07' }),
+      pdf:'x.pdf', tab:'lump', busy:'', err:'', list:[], listBusy:false,
+      saved:null, savedId:'', savedTab:'期間の外', ym:'', savedAt:'12:00' };
+    renderInspect();
+    const tr = document.querySelector('#inspect-body .q-t tbody tr');
+    const tds = Array.prototype.slice.call(tr.querySelectorAll('td'));
+    const last = tds[tds.length - 1];
+    const first = tds[0];
+    return {
+      disp: getComputedStyle(last).display,
+      /* 同じ行のマスなら、上の位置がそろう */
+      dy: Math.abs(last.getBoundingClientRect().top - first.getBoundingClientRect().top),
+      cls: last.className,
+      blockTd: Array.prototype.some.call(document.querySelectorAll('#inspect-body .q-t td'),
+                                         e => getComputedStyle(e).display !== 'table-cell')
+    };
+  }, [SOFT, PIT]);
+  ok('🔴🔴 一番右のマスが表のマスのまま（block になっていない）', r.disp === 'table-cell', r);
+  ok('🔴 同じ行のマスと、上の位置がそろっている（半行ズレない）', r.dy < 1.5, r);
+  ok('🔴 表のマスに block を付けている所が1つも無い', r.blockTd === false, r);
+  ok('小さい字にするクラスは別に立てた（q-how）', /q-how/.test(r.cls), r.cls);
 }
 
 console.log('\n── ⑧🤖 AIチェック（鍵は画面に置かない・管理だけ） ──');
