@@ -10,6 +10,7 @@
       ".github/**",
       ".firebase/**",
       "**/node_modules/**",
+      "functions/**",
       "資料/**",
       "test_*.mjs",
       "test-*.html",
@@ -35,5 +36,10 @@
     "rewrites": [
       { "source": "**", "destination": "/index.html" }
     ]
+  },
+  "functions": {
+    "source": "functions",
+    "codebase": "pitflow",
+    "runtime": "nodejs20"
   }
 }
