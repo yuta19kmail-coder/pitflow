@@ -234,7 +234,7 @@ const BASE_TESTDATE = {
   'test_sales_date.mjs': 21,
   /* ⚠ v2.0.0 test_quarter_fix.mjs も**日付どうしの関係**を試す見張り
      （伝票 8/4 と 実績 8/5 で「直すボタンが出るか」）。上の但し書きに当たる。 */
-  'test_quarter_fix.mjs': 6,
+  'test_quarter_fix.mjs': 10,
 };
 {
   const reField = /(reserveDate|returnDate|loanerFrom|loanerTo|completedAt|cancelledAt|inDate|outDate)\s*:\s*'20\d\d-\d\d-\d\d'/g;

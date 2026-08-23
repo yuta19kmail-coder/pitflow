@@ -642,9 +642,13 @@ console.log('\n── ⑧ ソースの見張り（写しを作っていないか
      posState < posSd && posSd < posSlot && posSd < posCard && posSd < posRules && posSd < posMatch && posSd < posPop,
      { posState, posSd, posSlot, posCard, posRules, posMatch, posPop });
 
-  const vers = [...idx.matchAll(/v?2\.0\.0/g)].length;
-  ok('版が3か所そろっている（v2.0.0）', vers >= 3, vers);
-  ok('版が v1 に戻っていない', !/content="1\./.test(idx));
+  /* ⚠ 版そのものは上がり続けるので、**3か所が同じ**ことと **v2 以上**であることだけを見る
+     （数字を書くと、版を上げるたびに見張りも直すことになり、意味が薄れる）。 */
+  const _v = [ (idx.match(/app-version" content="([\d.]+)"/) || [])[1],
+               (idx.match(/class="login-ver">v([\d.]+)</) || [])[1],
+               (idx.match(/class="ver">v([\d.]+)</) || [])[1] ];
+  ok('版が3か所そろっている', !!_v[0] && _v[0] === _v[1] && _v[1] === _v[2], _v);
+  ok('版が v2 以上（v1 に戻っていない）', /^2\./.test(_v[0] || ''), _v[0]);
   ['js/sales-date.js', 'js/return-slot.js', 'js/return-popup.js', 'js/card-view.js',
    'js/inspect-rules.js', 'js/inspect-fix.js', 'js/quarter-match.js', 'js/quarter.js',
    'js/quarter-store.js', 'js/undetermined.js', 'js/quarter-fix.js',
@@ -656,7 +660,7 @@ console.log('\n── ⑧ ソースの見張り（写しを作っていないか
   const q = src('js/quarter.js'), st = src('js/quarter-store.js');
   ok('🔴 残す中身にも「売上日ちがい」がある', /売上日ちがい:\s*cut\(/.test(st));
   ok('🔴 残した結果を開くタブの綴りがそろっている',
-     /'Qまたぎ', '売上日ちがい', '整備ソフトだけ'/.test(q), 'quarter.js');
+     /'Qまたぎ', '売上日ちがい', '担当ちがい', '整備ソフトだけ'/.test(q), 'quarter.js');
   ok('⚠ 「直す件数」に日付だけの直しを混ぜていない',
      /直す件数: \(res\.整備ソフトだけ\.length \+ res\.PitFlowだけ\.length[\s\S]{0,80}?res\.金額ちがい\.length \+ res\.内訳\.期間の外\.台数\)/.test(st), 'quarter-store.js');
 }

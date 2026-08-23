@@ -386,12 +386,15 @@ console.log('\n── ⑥-4🗓🧹 画面（クォーターの割り振り／�
   const d2 = await p.evaluate(() => {
     pitQPickGroup(1);
     const body = document.getElementById('inspect-body');
+    /* ⚠ v2.1.0 期間の入力欄は撤去した（PDFが期間を言うので選ばせない）。
+       切り替わったかは**画面の覚え**で見る。 */
     return { on: Array.from(body.querySelectorAll('.q-g.on')).map(x => x.textContent),
-             from: document.getElementById('q-from').value,
-             to:   document.getElementById('q-to').value };
+             from: window._insp.q.from, to: window._insp.q.to,
+             hasRange: !!document.getElementById('q-from') };
   });
   ok('🗓 押すと、そのQに切り替わる', /第2クォーター/.test(d2.on[0] || ''), d2.on);
-  ok('🗓 期間の欄もそのQに合う', d2.from === '2026-08-08' && d2.to === '2026-08-10', d2);
+  ok('🗓 その期間に切り替わる', d2.from === '2026-08-08' && d2.to === '2026-08-10', d2);
+  ok('🧹 v2.1.0 期間の入力欄は撤去した（PDFが期間を言うので選ばせない）', d2.hasRange === false, d2);
 
   /* ④ 画面を空にする＝残してあるものには触らない */
   const e2 = await p.evaluate(() => {
@@ -468,7 +471,7 @@ console.log('\n── ⑦ 画面（並べるだけ・判定を書き写してい
       audit: /ぴったり合いました/.test(t2),
       lump: /まとめて返車済みにした日/.test(t2) && /10台/.test(t2),
       tabs: body.querySelectorAll('.q-tab').length,
-      rows: body.querySelectorAll('.q-t tbody tr').length,
+      rows: body.querySelectorAll('.q-cards .q-c').length,
       ai: /AI に渡すもの/.test(t2)
     };
   }, [SOFT, PIT]);
@@ -477,10 +480,11 @@ console.log('\n── ⑦ 画面（並べるだけ・判定を書き写してい
   ok('🔴 合計が画面に出る', r.sum === true, r);
   ok('🔴 検算の結果が画面に出る', r.audit === true, r);
   ok('🔴 まとめて返車済みにした日が先頭に出る', r.lump === true, r);
-  /* ⚠ v1.185.0 「売上日ちがい」を足して 7 → 8つ。
-     🔴 このタブは**お金の話ではない**（直すのは日付だけ）ので、検算の内訳には入れていない。 */
-  ok('タブが8つ出る', r.tabs === 8, r.tabs);
-  ok('一覧に行が出る（期間の外＝10件）', r.rows === 10, r.rows);
+  /* ⚠ v1.185.0 「売上日ちがい」／v2.1.0 「担当ちがい」を足して 7 → 9つ。
+     🔴 どちらも**お金の話ではない**（直すのは日付と名前だけ）ので、検算の内訳には入れていない。 */
+  ok('タブが9つ出る', r.tabs === 9, r.tabs);
+  /* 🃏 v2.1.0 表 → カード。1件＝1枚（`.q-c`） */
+  ok('一覧にカードが出る（期間の外＝10件）', r.rows === 10, r.rows);
   ok('🤖 ③AIチェックの「渡すもの」も出る', r.ai === true, r);
 }
 
@@ -578,40 +582,57 @@ console.log('\n── ⑦-3🗄 突き合わせた結果が残る（ゆうた指
      r.planQ1 && r.planQ1.run && r.planQ1.run.差金額 === 3237935 && r.planQ2 && r.planQ2.run === null, r.planQ1 && r.planQ1.run);
 }
 
-console.log('\n── ⑦-4 一番右のマスが半行ズレない（ゆうた報告 v1.184.0） ──');
+console.log('\n── ⑦-4🃏 一覧はカード（横スクロールが出ない・客名が大きい）v2.1.0 ──');
 {
+  /* 🗣 ゆうた「個別のデータの字がかなり小さい」「ワイドはスクロールになると確認しずらい」
+     「ハイト方向にひろげるなら広げて、もう少し大きなテキストで客名とかもはっきりさせたい」
+     「PitとPitFlowと整備ソフトの差とかは同一列を見るとか見やすくしたい」
+     ⚠ v1.184.0 の「半行ズレ」は**表そのものを無くした**ので、その落とし穴ごと消えた。
+        代わりに **横スクロールが出ないこと**と**字の大きさ**を見張る。 */
   const r = await p.evaluate(([soft, pit]) => {
     window._insp.q = { from:'2026-08-01', to:'2026-08-07',
       res: pitQMatch(soft.伝票, pit.明細, { from:'2026-08-01', to:'2026-08-07' }),
-      pdf:'x.pdf', tab:'lump', busy:'', err:'', list:[], listBusy:false,
-      saved:null, savedId:'', savedTab:'期間の外', ym:'', savedAt:'12:00' };
+      soft: soft.伝票, pdf:'x.pdf', tab:'lump', busy:'', err:'', list:[], listBusy:false,
+      saved:null, savedId:'', savedTab:'期間の外', ym:'2026-08', savedAt:'12:00',
+      marks:[], marksBusy:false, saveTimer:0, groups:null, gi:0, term:null, termSrc:'' };
     renderInspect();
-    const tr = document.querySelector('#inspect-body .q-t tbody tr');
-    const tds = Array.prototype.slice.call(tr.querySelectorAll('td'));
-    /* ⚠ v2.0.0 いちばん右は「直す／済」（q-act）になった。
-       半行ズレの見張りが見たいのは**結び方のマス（q-how）**なので、名前で取る。 */
-    const how = tr.querySelector('td.q-how');
-    const last = how || tds[tds.length - 1];
-    const act = tr.querySelector('td.q-act');
-    const first = tds[0];
+    const body = document.getElementById('inspect-body');
+    const c0 = body.querySelector('.q-cards .q-c');
+    const who = c0.querySelector('.q-c-who');
+    const rows = Array.from(c0.querySelectorAll('.q-c-r'));
+    const px = el => parseFloat(getComputedStyle(el).fontSize);
+    const dts = rows.map(x => x.querySelector('.q-c-d').getBoundingClientRect().left);
+    const ams = rows.map(x => x.querySelector('.q-c-a').getBoundingClientRect().right);
     return {
-      disp: getComputedStyle(last).display,
-      /* 同じ行のマスなら、上の位置がそろう */
-      dy: Math.abs(last.getBoundingClientRect().top - first.getBoundingClientRect().top),
-      cls: last.className,
-      actDisp: act ? getComputedStyle(act).display : '',
-      actDy: act ? Math.abs(act.getBoundingClientRect().top - first.getBoundingClientRect().top) : 0,
-      blockTd: Array.prototype.some.call(document.querySelectorAll('#inspect-body .q-t td'),
-                                         e => getComputedStyle(e).display !== 'table-cell')
+      cards: body.querySelectorAll('.q-cards .q-c').length,
+      tables: body.querySelectorAll('.q-cards table').length,
+      whoPx: px(who),
+      datePx: px(rows[0].querySelector('.q-c-d')),
+      amtPx: px(rows[0].querySelector('.q-c-a')),
+      /* 🔴 整備ソフトと PitFlow が「同じ列」に来ているか＝左端がそろっている */
+      dateSame: Math.abs(dts[0] - dts[1]) < 1.5,
+      amtSame:  Math.abs(ams[0] - ams[1]) < 1.5,
+      srcs: rows.map(x => x.querySelector('.q-c-src').textContent),
+      gapUnder: !!c0.querySelector('.q-c-cmp .q-c-gap'),
+      /* 🔴 横スクロールが1つも出ていないこと */
+      overX: (function(){
+        const all = Array.from(body.querySelectorAll('.q-cards, .q-cards *'));
+        return all.filter(e => e.scrollWidth - e.clientWidth > 2).length;
+      })(),
+      bodyOverX: body.scrollWidth - body.clientWidth
     };
   }, [SOFT, PIT]);
-  ok('🔴🔴 一番右のマスが表のマスのまま（block になっていない）', r.disp === 'table-cell', r);
-  ok('🔴 同じ行のマスと、上の位置がそろっている（半行ズレない）', r.dy < 1.5, r);
-  ok('🔴 表のマスに block を付けている所が1つも無い', r.blockTd === false, r);
-  ok('小さい字にするクラスは別に立てた（q-how）', /q-how/.test(r.cls), r.cls);
-  /* 🛠 v2.0.0 足した「直す／済」のマスも、同じ落とし穴を踏んでいないこと */
-  ok('🔴 v2.0.0「直す／済」のマスも表のマスのまま', r.actDisp === 'table-cell', r);
-  ok('🔴 その列も上の位置がそろっている', r.actDy < 1.5, r);
+  ok('🃏 1件＝1枚のカードで出る', r.cards === 10, r.cards);
+  ok('🃏 カードの中に表は無い（横スクロールの元を断つ）', r.tables === 0, r.tables);
+  ok('🔴 お客様の名前がいちばん大きい（15px以上）', r.whoPx >= 15, r.whoPx);
+  ok('🔴 日付・金額も読める大きさ（13px以上）', r.datePx >= 13 && r.amtPx >= 13, { d:r.datePx, a:r.amtPx });
+  ok('🔴 整備ソフトと PitFlow が上下2行に並んでいる',
+     r.srcs.join() === '整備ソフト,PitFlow', r.srcs);
+  ok('🔴🔴 日付が同じ列にそろっている（左右に目を振らない）', r.dateSame === true, r);
+  ok('🔴🔴 金額も同じ列にそろっている', r.amtSame === true, r);
+  ok('🔴 差は、比べた2行のすぐ下にある', r.gapUnder === true, r);
+  ok('🔴🔴 横スクロールが1つも出ていない', r.overX === 0, r.overX);
+  ok('🔴 画面そのものも横に伸びていない', r.bodyOverX <= 2, r.bodyOverX);
 }
 
 console.log('\n── ⑧🤖 AIチェック（鍵は画面に置かない・管理だけ） ──');

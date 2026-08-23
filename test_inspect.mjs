@@ -394,6 +394,67 @@ console.log('\n── ⑦-2 担当がそれぞれの所見に付く（ゆうた�
   ok('書き出しの担当が空文字で埋まっていない', r.expStaff.some(x => x === '椎名'), r.expStaff);
 }
 
+console.log('\n── ⑦-2🗓 月で「大分」する（v2.1.0・ゆうた指定） ──');
+{
+  /* 🗣「TOPのデータチェックの下に月を置いて まず月次で大分する」
+     🔴🔴 **大分＝分けて並べる。隠すのではない**（v1.169.2 の決めごとは生きている）。 */
+  const r = await p.evaluate(() => {
+    const iso = (y, m, d) => y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+    /* 8月の車と、7月の車を1枚ずつ（どちらも同じ規則にひっかかる形＝確定金額が空） */
+    state.cards = [
+      { id:'M8', resNo:'R-M8', status:'returned', customer:'八月 太郎', kana:'ハチガツ', car:'車',
+        completedAt: iso(2026,8,5), returnDate: iso(2026,8,5), returnDateFinal: iso(2026,8,5),
+        reserveDate: iso(2026,8,1), amountFinal:'', log:[], maint:{}, office:{} },
+      { id:'M7', resNo:'R-M7', status:'returned', customer:'七月 次郎', kana:'シチガツ', car:'車',
+        completedAt: iso(2026,7,5), returnDate: iso(2026,7,5), returnDateFinal: iso(2026,7,5),
+        reserveDate: iso(2026,7,1), amountFinal:'', log:[], maint:{}, office:{} }
+    ];
+    window._insp.ym = '2026-08';
+    window._insp.mode = 'daily'; window._insp.level = ''; window._insp.cat = '';
+    renderInspect();
+    const body = document.getElementById('inspect-body');
+    const other = body.querySelector('.ins-other');
+    const otherTxt = other ? other.textContent : '';
+    const all = Array.from(body.querySelectorAll('.ins-row, .ins-no')).length;
+    const res = pitInspectRun();
+    return {
+      month: (body.querySelector('.ins-m-now') || {}).textContent || '',
+      hasOther: !!other,
+      otherN: other ? (other.querySelector('.ins-other-n') || {}).textContent : '',
+      otherHasJuly: /七月 次郎/.test(otherTxt),
+      /* 🔴 隠していないこと＝物差しが見つけた数と、画面に出ている番号の数が同じ */
+      found: res.findings.length,
+      shown: body.querySelectorAll('.ins-no').length,
+      ymOnFinding: res.findings.every(f => 'ym' in f),
+      julyYm: (res.findings.filter(f => f.refId === 'M7')[0] || {}).ym,
+      augYm:  (res.findings.filter(f => f.refId === 'M8')[0] || {}).ym
+    };
+  });
+  ok('🗓 いちばん上に月が出る', /2026年 8月/.test(r.month), r.month);
+  ok('🗓 所見が「どの月の話か」を持っている', r.ymOnFinding === true, r);
+  ok('🗓 返車済みの車は、数える日の月になる', r.julyYm === '2026-07' && r.augYm === '2026-08', r);
+  ok('🗓 ほかの月は下にまとめて出る', r.hasOther === true, r);
+  ok('🗓 まとめた中に7月の車が入っている', r.otherHasJuly === true, r);
+  ok('🔴🔴 隠していない＝見つけた数と、画面に出ている数が同じ', r.found === r.shown, { f:r.found, s:r.shown });
+  ok('🔴 件数も出す（何件を下にまとめたか）', /件/.test(r.otherN || ''), r.otherN);
+
+  /* 月を送ると、まとまる相手が入れかわる */
+  const r2 = await p.evaluate(() => {
+    pitInspectMonth(-1);                       /* 7月へ */
+    const body = document.getElementById('inspect-body');
+    const other = body.querySelector('.ins-other');
+    return { month: (body.querySelector('.ins-m-now') || {}).textContent || '',
+             otherHasAug: other ? /八月 太郎/.test(other.textContent) : false,
+             shown: body.querySelectorAll('.ins-no').length,
+             back: !!body.querySelector('.ins-m-back') };
+  });
+  ok('🗓 月を送れる', /2026年 7月/.test(r2.month), r2.month);
+  ok('🗓 送ると、下にまとまるのが入れかわる（8月が下へ）', r2.otherHasAug === true, r2);
+  ok('🔴🔴 送っても件数は減らない（隠さない）', r2.shown >= 2, r2.shown);
+  ok('🗓 今月でない時は「今月へ」が出る', r2.back === true, r2);
+  await p.evaluate(() => { pitInspectMonth(0); });
+}
+
 console.log('\n── ⑦-3 隠さない・全部出す／「もう一度チェック」が効く（v1.169.2） ──');
 {
   /* 🔴 ゆうた指定（2026-08-22）
@@ -783,6 +844,10 @@ console.log('\n── ⑬ いちばん上で「日常チェック／クォータ
     const btns = Array.from(body.querySelectorAll('.ins-mode-b'));
     /* 切り替えは**いちばん上**にあること（下に埋もれていたら見つけられない） */
     const first = body.firstElementChild;
+    /* ⚠ 下で描き直すと、この `first` は画面から外れて次の兄弟を見失う。**いま**見ておく。 */
+    const _isMonth = !!(first && first.classList.contains('ins-month'));
+    const _isMode  = !!(first && first.nextElementSibling
+                              && first.nextElementSibling.classList.contains('ins-mode'));
     const dailyOn = btns.map(b => b.classList.contains('on'));
     const dailyHasRules = !!body.querySelector('.ins-tiles');
     pitInspectMode('quarter');
@@ -794,7 +859,9 @@ console.log('\n── ⑬ いちばん上で「日常チェック／クォータ
     pitInspectMode('daily');
     return {
       labels: btns.map(b => (b.querySelector('.ins-mode-l') || {}).textContent),
-      firstIsMode: !!(first && first.classList.contains('ins-mode')),
+      /* 🗓 v2.1.0（ゆうた指定）いちばん上は「月」、その**すぐ下**が日常／クォーターの切り替え */
+      firstIsMonth: _isMonth,
+      firstIsMode: _isMode,
       dailyOn, qOn, dailyHasRules, qHasRules, qTxt, qWin,
       /* クォーターの区切りは売上の物差しから借りているか */
       ruler: !!window.pitQuarterOf,
@@ -803,7 +870,9 @@ console.log('\n── ⑬ いちばん上で「日常チェック／クォータ
   });
   ok('🔴 切り替えは2つ＝日常チェック／クォーターチェック',
      JSON.stringify(r.labels) === JSON.stringify(['日常チェック', 'クォーターチェック']), r.labels);
-  ok('🔴 切り替えは画面のいちばん上にある', r.firstIsMode === true);
+  /* 🗓 v2.1.0 ゆうた「TOPのデータチェックの下に月を置いて まず月次で大分する その下に日常orクォーターで選ぶ」 */
+  ok('🗓 いちばん上は「月」', r.firstIsMonth === true, r);
+  ok('🔴 切り替えは月のすぐ下にある', r.firstIsMode === true, r);
   ok('日常チェックが選ばれている時は、規則の一覧が出る', r.dailyOn[0] === true && r.dailyHasRules === true, r);
   ok('🔴 クォーターチェックに切り替わると、規則の一覧は出ない（別の中身）',
      r.qOn[1] === true && r.qHasRules === false, r);

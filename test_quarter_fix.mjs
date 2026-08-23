@@ -140,6 +140,66 @@ await mkCards();
   ok('⚠ ±1円は直すボタンを出さない（丸めのぶん）', r.indexOf('金額') < 0, r);
 }
 
+console.log('\n── ①-4👤 担当のズレ（ゆうた指定 v2.1.0） ──');
+{
+  const r = await p.evaluate(() => {
+    /* 伝票側は**役職**で来る（専務・チーフ…）。名寄せしてから比べる／入れる。 */
+    state.staff = [{ id:'s1', name:'小林 和枝', front:true }, { id:'s2', name:'小林 政幸', front:true }];
+    const soft = [{ 売上日:'2026-08-05', 伝票:'0009', ナンバー:'船橋 300 え 4444',
+                    顧客名:'え 四郎', 金額:50000, 受付担当:'専務' }];
+    state.cards = [{ id:'S1', resNo:'R-S1', status:'returned', plate:'船橋 300 え 4444', customer:'え 四郎',
+                     completedAt:'2026-08-05', returnDate:'2026-08-05', returnDateFinal:'2026-08-05',
+                     salesDate:'2026-08-05', amountFinal:50000, frontStaff:'小林 政幸', log:[] }];
+    const R = pitQMatch(soft, pitQCollect({ from:'2026-08-01', to:'2026-08-07' }).明細,
+                        { from:'2026-08-01', to:'2026-08-07' });
+    const pr = R.結びついた[0];
+    const k = pitQFixKinds(pr).filter(x => x.kind === '担当')[0];
+    return { n: (R.担当ちがい || []).length, has: !!k, can: k && k.can, to: k && k.to,
+             label: k && k.label, why: k && k.why, 重い: k && k.重い,
+             kinds: pitQFixKinds(pr).map(x => x.kind), pair: pr };
+  });
+  ok('👤 担当がちがう車が「担当ちがい」に出る', r.n === 1, r.n);
+  ok('👤 直すボタンが出る', r.has === true && r.can === true, r);
+  ok('🔴 役職（専務）を名簿の名前（小林 和枝）に寄せてから入れる', r.to === '小林 和枝', r);
+  ok('🔴 なぜ出したかに、伝票側の書き方も出す', /専務/.test(r.why || ''), r.why);
+  ok('⚠ 重い直し（赤）にはしない＝売上の合計は動かない', r.重い === false, r);
+  ok('並びは金額のうしろ（ついでに押させない）',
+     r.kinds.join() === '担当' || r.kinds.indexOf('担当') === r.kinds.length - 1, r.kinds);
+
+  const w = await p.evaluate(async () => {
+    const soft = [{ 売上日:'2026-08-05', 伝票:'0009', ナンバー:'船橋 300 え 4444',
+                    顧客名:'え 四郎', 金額:50000, 受付担当:'専務' }];
+    const R = pitQMatch(soft, pitQCollect({ from:'2026-08-01', to:'2026-08-07' }).明細,
+                        { from:'2026-08-01', to:'2026-08-07' });
+    window.__admin = false;                       /* 🔴 管理でなくても押せる */
+    const done = await pitQFixApply('担当', R.結びついた[0]);
+    window.__admin = true;
+    const c = state.cards.find(x => x.id === 'S1');
+    return { done, front: c.frontStaff, at: c.completedAt, amt: c.amountFinal,
+             log: (c.log || []).map(x => x.label || '').join(' | ') };
+  });
+  ok('👤 管理でなくても直せる（合計が動かないので）', w.done === true && w.front === '小林 和枝', w);
+  ok('🔴🔴 直しても実績日・金額は1つも動かない', w.at === '2026-08-05' && w.amt === 50000, w);
+  ok('フローに残る', /フロント担当を/.test(w.log), w.log);
+
+  const g = await p.evaluate(() => {
+    /* 名簿にいない名前は入れられない＝ボタンを出さない（売上が行き場を失うため） */
+    state.staff = [{ id:'s1', name:'小林 和枝', front:true }];
+    const soft = [{ 売上日:'2026-08-05', 伝票:'0010', ナンバー:'船橋 300 お 5555',
+                    顧客名:'お 五郎', 金額:50000, 受付担当:'いない人' }];
+    state.cards = [{ id:'S2', resNo:'R-S2', status:'returned', plate:'船橋 300 お 5555', customer:'お 五郎',
+                     completedAt:'2026-08-05', returnDate:'2026-08-05', returnDateFinal:'2026-08-05',
+                     salesDate:'2026-08-05', amountFinal:50000, frontStaff:'小林 和枝', log:[] }];
+    const R = pitQMatch(soft, pitQCollect({ from:'2026-08-01', to:'2026-08-07' }).明細,
+                        { from:'2026-08-01', to:'2026-08-07' });
+    const k = pitQFixKinds(R.結びついた[0]).filter(x => x.kind === '担当')[0];
+    return { has: !!k, can: k && k.can, label: k && k.label };
+  });
+  ok('🔴 名簿にいない名前は入れられない（ボタンを出さない）', g.has === true && g.can === false, g);
+  ok('🔴 その理由も画面に出る', /いません/.test(g.label || ''), g.label);
+  await mkCards();
+}
+
 /* ============================================================================
    ② 誰が押せるか
    ============================================================================ */
@@ -373,25 +433,26 @@ await mkCards();
                        marks:[], marksBusy:false, saveTimer:0 };
     renderInspect();
     await new Promise(r => setTimeout(r, 120));
-    const cells = Array.from(document.querySelectorAll('#inspect-body .q-t td.q-act'));
-    const rows = Array.from(document.querySelectorAll('#inspect-body .q-t tbody tr'));
+    /* 🃏 v2.1.0 表 → カード。マスではなくカードの中の箱を見る。 */
+    const cells = Array.from(document.querySelectorAll('#inspect-body .q-cards .q-c-act'));
+    const rows = Array.from(document.querySelectorAll('#inspect-body .q-cards .q-c'));
     return {
       cells: cells.length,
-      head: (document.querySelector('#inspect-body .q-t thead') || {}).textContent || '',
+      head: (document.querySelector('#inspect-body .q-cards .q-c-who') || {}).textContent || '',
       way: (document.querySelector('#inspect-body .q-2way') || {}).textContent || '',
       go: cells.map(c => Array.from(c.querySelectorAll('.q-fx-go')).map(b => b.textContent)),
       mk: cells.map(c => c.querySelectorAll('.q-fx-mk').length),
       heavy: cells.map(c => c.querySelectorAll('.q-fx-go.is-heavy').length),
       none: cells.map(c => c.querySelectorAll('.q-act-ok').length),
       /* ⚠ 1つめのマスは v2.0.0 で「番号」になった。名前は2つめ */
-      order: rows.map(t => (t.querySelectorAll('td')[1] || {}).textContent || ''),
-      nos: rows.map(t => (t.querySelector('td.q-no .ins-no') || {}).textContent || ''),
-      copy: rows.map(t => (t.querySelector('td.q-no .ins-no') || {}).getAttribute
-                          ? t.querySelector('td.q-no .ins-no').getAttribute('onclick') : '')
+      order: rows.map(t => (t.querySelector('.q-c-who') || {}).textContent || ''),
+      nos: rows.map(t => (t.querySelector('.q-c-h .ins-no') || {}).textContent || ''),
+      copy: rows.map(t => (t.querySelector('.q-c-h .ins-no') || {}).getAttribute
+                          ? t.querySelector('.q-c-h .ins-no').getAttribute('onclick') : '')
     };
   }, SOFT);
-  ok('全部の行に「直す／済」のマスが出る', r.cells === 3, r.cells);
-  ok('見出しにも列が増えている', /直す／済/.test(r.head), r.head);
+  ok('全部のカードに「直す／済」が出る', r.cells === 3, r.cells);
+  ok('🔴 お客様の名前がカードの頭に出る', /二郎|一郎|三郎/.test(r.head), r.head);
   ok('🔴 2択の説明が表の上に出ている', /直す/.test(r.way) && /伝票を直した/.test(r.way), r.way.slice(0, 60));
   ok('🔴 説明に「PDFは入れ直さなくていい」と書いてある', /入れ直さなくて/.test(r.way), r.way.slice(0, 200));
   ok('直すボタンに行き先の値が入っている',
@@ -406,7 +467,7 @@ await mkCards();
   ok('🔢 押すとコピーできる（データチェックと同じ部品）',
      (r.copy[0] || '').indexOf('pitInspectCopyNo') >= 0, r.copy[0]);
   ok('🔴 重いもの（実績日・金額）は赤で出す', r.heavy.reduce((a, b) => a + b, 0) === 2, r.heavy);
-  ok('ズレの無い行は「—」だけ', r.none.reduce((a, b) => a + b, 0) === 1, r.none);
+  ok('ズレの無いカードは「直すところはありません」だけ', r.none.reduce((a, b) => a + b, 0) === 1, r.none);
 }
 {
   /* 印を付けると「済」になり、戻すボタンが出て、タブの数が減る */
@@ -416,7 +477,7 @@ await mkCards();
     const tabBefore = Array.from(document.querySelectorAll('#inspect-body .q-tab')).map(b => b.textContent);
     pitQMk('売上日', f1.soft.i, 1);
     await new Promise(r => setTimeout(r, 250));
-    const cells = Array.from(document.querySelectorAll('#inspect-body .q-t td.q-act'));
+    const cells = Array.from(document.querySelectorAll('#inspect-body .q-cards .q-c-act'));
     return { done: cells.map(c => c.querySelectorAll('.q-fx-done').length).reduce((a,b)=>a+b,0),
              un: cells.map(c => c.querySelectorAll('.q-fx-un').length).reduce((a,b)=>a+b,0),
              tabBefore, tabAfter: Array.from(document.querySelectorAll('#inspect-body .q-tab')).map(b => b.textContent) };
@@ -432,7 +493,7 @@ await mkCards();
     window.__admin = false;
     renderInspect();
     await new Promise(r => setTimeout(r, 120));
-    const cells = Array.from(document.querySelectorAll('#inspect-body .q-t td.q-act'));
+    const cells = Array.from(document.querySelectorAll('#inspect-body .q-cards .q-c-act'));
     const o = { lock: cells.map(c => c.querySelectorAll('.q-fx-lock').length).reduce((a,b)=>a+b,0),
                 go:   cells.map(c => c.querySelectorAll('.q-fx-go').length).reduce((a,b)=>a+b,0),
                 mk:   cells.map(c => c.querySelectorAll('.q-fx-mk').length).reduce((a,b)=>a+b,0) };
@@ -470,7 +531,12 @@ console.log('\n── ⑦ ソースの見張り ──');
      idx.indexOf('js/quarter-fix.js') < idx.indexOf('js/quarter.js'), '');
   ok('🔴 印の入れ物は既にあるルールの中（pitSettings）',
      /collection\('pitSettings'\)\.doc\('qmarks'\)/.test(fx), 'quarter-fix.js');
-  ok('版が3か所そろっている（v2.0.0）', [...idx.matchAll(/v?2\.0\.0/g)].length >= 3, '');
+  /* ⚠ 数字は上がり続けるので、**3か所が同じ**ことと **v2 以上**だけを見る */
+  const _v = [ (idx.match(/app-version" content="([\d.]+)"/) || [])[1],
+               (idx.match(/class="login-ver">v([\d.]+)</) || [])[1],
+               (idx.match(/class="ver">v([\d.]+)</) || [])[1] ];
+  ok('版が3か所そろっている', !!_v[0] && _v[0] === _v[1] && _v[1] === _v[2], _v);
+  ok('版が v2 以上', /^2\./.test(_v[0] || ''), _v[0]);
   ok('キャッシュ番号が付いている（quarter-fix.js）', /js\/quarter-fix\.js\?v=/.test(idx), '');
   /* ⚠ 番号そのものは直すたびに変わるので、**付いていること**だけを見る
      （数字を書くと、直すたびにここも直すことになり、見張りの意味が薄れる）。 */
