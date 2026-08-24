@@ -92,7 +92,7 @@ const cases = [
   ['付箋を消す',            () => { state.boardNotes = [{ id:'n1', title:'テスト付箋', replies:[] }]; deleteBoardNoteFromCard('n1'); }],
   ['代車の返却を確定',      () => { state.loanerAssigns = [{ id:'a1', loanerId:'l1', fromDate:'2026-08-01', toDate:'2026-08-20' }]; loReturnConfirm('a1'); }],
   ['代車をキャンセル',      () => { state.loanerAssigns = [{ id:'a1', loanerId:'l1', fromDate:'2026-08-01', toDate:'2026-08-20' }]; loCancelLoaner('a1'); }],
-  ['作業タイプを消す',      () => { pitWtDel(0); }],
+  /* v2.5.0：作業タイプの削除は廃止（設定から触れない＝正は state.js の PIT_WORK_TYPES） */
   ['外注先を消す',          () => { state.settings.outsourcePartners = ['A社']; pitOsDel(0); }],
   ['設定を初期値に戻す',    () => { pitSettingsReset(); }],
   ['顧客の控えを全部消す',  () => { clearCustomers(); }],
