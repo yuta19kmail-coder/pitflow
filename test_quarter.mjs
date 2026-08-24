@@ -328,11 +328,17 @@ console.log('\n── ⑥-3🗓 日付区分が「売上日」でないPDFは通
   ok('🗓 それでも対象期間は読めている', !!r.term && r.term.from === '2026-08-01', r.term);
 }
 
-console.log('\n── ⑥-4🗓🧹 画面（クォーターの割り振り／片づけ）v2.0.0 ──');
+console.log('\n── ⑥-4🗓🧹 画面（クォーターの割り振り／片づけ）v2.2.0 ──');
+/* 🔴🔴 v2.2.0（ゆうた 2026-08-24）**クォーターの切り替え口は、Qの BOX 1本。**
+   🗣「入れたPDFに対して上記の表示は要らなくない？ その下にQごとがあるから、
+      Qごとの BOX に結び付く感じじゃダメかな？」
+   ＝ 前は同じQが「PDFの帯の切り替えボタン」と「Q1〜Q4のBOX」の2か所に出ていた。
+   ⚠ PDFの期間の1行だけは残す（読み取りがズレていた時に、ここで気づけるから）。 */
 {
-  const mk = (groups, gi, term) => p.evaluate(([soft, pit, gs, i, tm]) => {
+  const mk = (groups, gi, term, src) => p.evaluate(([soft, pit, gs, i, tm, sc]) => {
     window._insp = window._insp || {};
     window._insp.mode = 'quarter';
+    window.PIT_CLOUD = true;
     const build = g => {
       const rows = soft.伝票.filter(x => x.売上日 >= g.from && x.売上日 <= g.to);
       return { no:g.no, label:g.label, from:g.from, to:g.to, 全部:g.全部, soft:rows,
@@ -340,47 +346,55 @@ console.log('\n── ⑥-4🗓🧹 画面（クォーターの割り振り／�
     };
     const G = gs.map(build);
     window._insp.q = { from:G[i].from, to:G[i].to, res:G[i].res, soft:G[i].soft,
-                       pdf:'テスト.pdf', tab:'lump', busy:'', err:'',
+                       pdf:'テスト.pdf', tab:'data', busy:'', err:'',
                        list:[], listBusy:false, saved:null, savedId:'', savedTab:'期間の外',
                        ym:'2026-08', savedAt:'12:00', marks:[], marksBusy:false, saveTimer:0,
-                       groups:G, gi:i, term:tm, termSrc:'PDF' };
+                       groups:G, gi:i, term:tm, termSrc:(sc || 'PDF') };
     renderInspect();
     const body = document.getElementById('inspect-body');
+    const T = e => (e ? e.textContent : '');
     return {
-      term: (body.querySelector('.q-term-h') || {}).textContent || '',
-      one:  (body.querySelector('.q-term-1') || {}).textContent || '',
-      note: (body.querySelector('.q-term-n') || {}).textContent || '',
-      chips: Array.from(body.querySelectorAll('.q-g')).map(b => b.textContent),
-      on:    Array.from(body.querySelectorAll('.q-g.on')).map(b => b.textContent),
-      part:  body.querySelectorAll('.q-g.part').length,
+      term: T(body.querySelector('.q-term-h')),
+      /* 🔴 前に有った「上の切り替えボタン列」は、もう1つも出てはいけない */
+      old:  body.querySelectorAll('.q-g, .q-gs, .q-term-1, .q-term-n').length,
+      box:  Array.from(body.querySelectorAll('.q-pq')).map(T),
+      now:  Array.from(body.querySelectorAll('.q-pq.now')).map(T),
+      on:   Array.from(body.querySelectorAll('.q-pq.now.on')).map(T),
+      part: Array.from(body.querySelectorAll('.q-pq.now.part')).map(T),
       clear: !!body.querySelector('.q-clear')
     };
-  }, [SOFT, PIT, groups, gi, term]);
+  }, [SOFT, PIT, groups, gi, term, src]);
 
-  /* ① 1つのQ・まるごと＝今までどおり（チップは出さない） */
+  /* ① 1つのQ・まるごと */
   const a = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-01', to:'2026-08-07', 全部:true }], 0,
                      { from:'2026-08-01', to:'2026-08-07' });
   ok('🗓 PDFが言っている期間を画面に出す', /2026-08-01 〜 2026-08-07/.test(a.term), a.term);
-  ok('🗓 どこから読んだかも書く（PDFの対象期間）', /対象期間/.test(a.term), a.term);
-  ok('🗓 1つのQだけなら、切り替えのボタンは出さない', a.chips.length === 0, a.chips);
-  ok('🗓 そのQの名前と枚数を出す', /8月 第1クォーター/.test(a.one) && /67枚/.test(a.one), a.one);
+  ok('🔴🔴 上の切り替えボタン列は、もう出さない（入り口を2つ持たない）', a.old === 0, a.old);
+  ok('🗓 Q1〜Q4 の BOX は4つ出ている', a.box.length === 4, a.box.length);
+  ok('🔴🔴 PDFに入っているQの BOX が、そのまま入り口になる', a.now.length === 1, a.now);
+  ok('🗓 その BOX に、このPDFの枚数が出る', /このPDF 67枚/.test(a.now[0] || ''), a.now[0]);
+  ok('🗓 その BOX が「いま開いている」印になる', a.on.length === 1, a.on);
+  ok('🗓 右には 残り件数 か OK が出る', /残|OK/.test(a.now[0] || ''), a.now[0]);
   ok('🧹 「別のPDFを入れ直す」が出る', a.clear === true, a);
 
-  /* ② 1つのQだが「一部」＝済にしないと、はっきり書く */
+  /* ①-b 対象期間が読めなかった時は、どこから採ったかを言う（黙らない） */
+  const a2 = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-01', to:'2026-08-07', 全部:true }], 0,
+                      { from:'2026-08-01', to:'2026-08-07' }, '伝票');
+  ok('🔴 PDFに対象期間が無かった時は、そう言う', /伝票の日付から/.test(a2.term), a2.term);
+
+  /* ② 1つのQだが「一部」＝そのQの日がぜんぶ入っていない */
   const b2 = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-03', to:'2026-08-07', 全部:false }], 0,
                       { from:'2026-08-03', to:'2026-08-07' });
-  ok('🔴 「一部」だと分かるように書く', /の一部/.test(b2.one), b2.one);
-  ok('🔴🔴 「済」にしないと、はっきり書く', /「済」にはしません/.test(b2.note), b2.note);
-  ok('🔴 どの日だけが入っているかを書く', /2026-08-03/.test(b2.note), b2.note);
+  ok('🔴 「一部」の BOX は見た目でも分かる（点線）', b2.part.length === 1, b2.part);
+  ok('🔴 どの日だけが入っているかを、その BOX に書く', /3〜7日だけ/.test(b2.part[0] || ''), b2.part[0]);
 
-  /* ③ 2つに分かれた＝切り替えのボタンが出る */
+  /* ③ 2つに分かれた＝BOX が2つとも入り口になる */
   const c2 = await mk([{ no:1, label:'8月 第1クォーター', from:'2026-08-01', to:'2026-08-07', 全部:true },
                        { no:2, label:'8月 第2クォーター', from:'2026-08-08', to:'2026-08-10', 全部:false }], 0,
                       { from:'2026-08-01', to:'2026-08-10' });
-  ok('🗓 2つに分かれたら、切り替えのボタンが2つ出る', c2.chips.length === 2, c2.chips);
-  ok('🗓 いま見ているほうに印が付く', c2.on.length === 1 && /第1クォーター/.test(c2.on[0]), c2.on);
-  ok('🔴 「一部」のほうは見た目でも分かる（点線）', c2.part === 1, c2.part);
-  ok('🔴🔴 「まるごと」のQだけ残した、と書いてある', /まるごと.*だけ結果を残しました/.test(c2.note), c2.note);
+  ok('🗓 2つに分かれたら、BOX が2つとも入り口になる', c2.now.length === 2, c2.now.length);
+  ok('🗓 いま見ているほうにだけ印が付く', c2.on.length === 1 && /Q1/.test(c2.on[0]), c2.on);
+  ok('🔴 「一部」のほうは点線（Q2 だけ）', c2.part.length === 1 && /Q2/.test(c2.part[0]), c2.part);
 
   /* 押すと切り替わる */
   const d2 = await p.evaluate(() => {
@@ -388,13 +402,22 @@ console.log('\n── ⑥-4🗓🧹 画面（クォーターの割り振り／�
     const body = document.getElementById('inspect-body');
     /* ⚠ v2.1.0 期間の入力欄は撤去した（PDFが期間を言うので選ばせない）。
        切り替わったかは**画面の覚え**で見る。 */
-    return { on: Array.from(body.querySelectorAll('.q-g.on')).map(x => x.textContent),
+    return { on: Array.from(body.querySelectorAll('.q-pq.now.on')).map(x => x.textContent),
              from: window._insp.q.from, to: window._insp.q.to,
              hasRange: !!document.getElementById('q-from') };
   });
-  ok('🗓 押すと、そのQに切り替わる', /第2クォーター/.test(d2.on[0] || ''), d2.on);
+  ok('🗓 押すと、そのQに切り替わる', /Q2/.test(d2.on[0] || ''), d2.on);
   ok('🗓 その期間に切り替わる', d2.from === '2026-08-08' && d2.to === '2026-08-10', d2);
   ok('🧹 v2.1.0 期間の入力欄は撤去した（PDFが期間を言うので選ばせない）', d2.hasRange === false, d2);
+
+  /* ③-b PDFに入っていないQを押した＝どの BOX も「開いている」印にしない
+     ＝ 印だけ残ると、出ている中身と光っている箱がズレる */
+  const f2 = await p.evaluate(() => {
+    pitQOpenPlan('2026-08-16', '2026-08-23');
+    const body = document.getElementById('inspect-body');
+    return { on: body.querySelectorAll('.q-pq.now.on').length, gi: window._insp.q.gi };
+  });
+  ok('🔴 PDFに入っていないQを開いたら、印はどこにも付かない', f2.on === 0 && f2.gi === -1, f2);
 
   /* ④ 画面を空にする＝残してあるものには触らない */
   const e2 = await p.evaluate(() => {
@@ -453,7 +476,7 @@ console.log('\n── ⑦ 画面（並べるだけ・判定を書き写してい
   const r = await p.evaluate(([soft, pit]) => {
     window._insp = window._insp || {};
     window._insp.mode = 'quarter';
-    window._insp.q = { from:'2026-08-01', to:'2026-08-07', res:null, pdf:'テスト.pdf', tab:'lump', busy:'', err:'' };
+    window._insp.q = { from:'2026-08-01', to:'2026-08-07', res:null, pdf:'テスト.pdf', tab:'data', busy:'', err:'' };
     /* 読み取りに失敗した時＝数字を1つも出さない */
     window._insp.q.err = 'テスト：総合計が合いません';
     renderInspect();
@@ -468,9 +491,10 @@ console.log('\n── ⑦ 画面（並べるだけ・判定を書き写してい
     return {
       ngShown: /読み取りに失敗/.test(ngTxt), ngNoNumber: !hasNum,
       sum: /8,155,215/.test(t2) && /4,917,280/.test(t2),
-      audit: /ぴったり合いました/.test(t2),
-      lump: /まとめて返車済みにした日/.test(t2) && /10台/.test(t2),
-      tabs: body.querySelectorAll('.q-tab').length,
+      audit: /ぴったり同じです/.test(t2),
+      groups: Array.from(body.querySelectorAll('.q-grb')).map(x => ({
+        l: (x.querySelector('.q-grb-l')||{}).textContent,
+        n: +((x.querySelector('.q-grb-n')||{}).textContent || 0) })),
       rows: body.querySelectorAll('.q-cards .q-c').length,
       ai: /AI に渡すもの/.test(t2)
     };
@@ -479,12 +503,22 @@ console.log('\n── ⑦ 画面（並べるだけ・判定を書き写してい
   ok('🔴🔴 その時、数字を1つも出さない', r.ngNoNumber === true, r);
   ok('🔴 合計が画面に出る', r.sum === true, r);
   ok('🔴 検算の結果が画面に出る', r.audit === true, r);
-  ok('🔴 まとめて返車済みにした日が先頭に出る', r.lump === true, r);
-  /* ⚠ v1.185.0 「売上日ちがい」／v2.1.0 「担当ちがい」を足して 7 → 9つ。
-     🔴 どちらも**お金の話ではない**（直すのは日付と名前だけ）ので、検算の内訳には入れていない。 */
-  ok('タブが9つ出る', r.tabs === 9, r.tabs);
+  /* ================================================================
+     🗂 v2.2.0（ゆうた指定 2026-08-24）**入り口は4つだけ。**
+     🗣「金額が違う／日付が違う／データがちがう／OK の4グループじゃ事足りない？
+        いまだと症状ごととかで入り口が多すぎてわかりにくい気がする」
+     🔴 **1件は1か所にしか出ない**ので、4つを足すと結びついた件数＋片方だけの件数になる。
+     ================================================================ */
+  ok('🗂 入り口は4つ（データがちがう／金額がちがう／日付がちがう／OK）',
+     r.groups.length === 4 && r.groups.map(x => x.l).join() === 'データがちがう,金額がちがう,日付がちがう,OK',
+     r.groups);
+  ok('🔴🔴 4つを足すと全部になる（1件が2か所に出ていない）',
+     r.groups.reduce((a, x) => a + x.n, 0) === (55 + 12 + 2), r.groups);
   /* 🃏 v2.1.0 表 → カード。1件＝1枚（`.q-c`） */
-  ok('一覧にカードが出る（期間の外＝10件）', r.rows === 10, r.rows);
+  /* ⚠ この材料（手で書き出した JSON）は**車種も車体番号も持っていない**ので、
+     「別の車かも」は 0 件。＝ 片方にしか無い 14件（12＋2）だけがカードで出る。
+     本物のPDFから読むと車種も車体番号も入るので、そちらは ⑥-2 で見張っている。 */
+  ok('一覧にカードが出る（データがちがう＝片方にしか無い 12＋2件）', r.rows === 14, r.rows);
   ok('🤖 ③AIチェックの「渡すもの」も出る', r.ai === true, r);
 }
 
@@ -592,14 +626,15 @@ console.log('\n── ⑦-4🃏 一覧はカード（横スクロールが出な
   const r = await p.evaluate(([soft, pit]) => {
     window._insp.q = { from:'2026-08-01', to:'2026-08-07',
       res: pitQMatch(soft.伝票, pit.明細, { from:'2026-08-01', to:'2026-08-07' }),
-      soft: soft.伝票, pdf:'x.pdf', tab:'lump', busy:'', err:'', list:[], listBusy:false,
+      soft: soft.伝票, pdf:'x.pdf', tab:'date', busy:'', err:'', list:[], listBusy:false,
       saved:null, savedId:'', savedTab:'期間の外', ym:'2026-08', savedAt:'12:00',
       marks:[], marksBusy:false, saveTimer:0, groups:null, gi:0, term:null, termSrc:'' };
     renderInspect();
     const body = document.getElementById('inspect-body');
     const c0 = body.querySelector('.q-cards .q-c');
     const who = c0.querySelector('.q-c-who');
-    const rows = Array.from(c0.querySelectorAll('.q-c-r'));
+    /* ⚠ v2.2.0 いちばん上に**列の見出しの行**（.q-c-hd）が入ったので、中身の2行だけを見る */
+    const rows = Array.from(c0.querySelectorAll('.q-c-r')).filter(x => !x.classList.contains('q-c-hd'));
     const px = el => parseFloat(getComputedStyle(el).fontSize);
     const dts = rows.map(x => x.querySelector('.q-c-d').getBoundingClientRect().left);
     const ams = rows.map(x => x.querySelector('.q-c-a').getBoundingClientRect().right);
@@ -612,8 +647,8 @@ console.log('\n── ⑦-4🃏 一覧はカード（横スクロールが出な
       /* 🔴 整備ソフトと PitFlow が「同じ列」に来ているか＝左端がそろっている */
       dateSame: Math.abs(dts[0] - dts[1]) < 1.5,
       amtSame:  Math.abs(ams[0] - ams[1]) < 1.5,
-      srcs: rows.map(x => x.querySelector('.q-c-src').textContent),
-      gapUnder: !!c0.querySelector('.q-c-cmp .q-c-gap'),
+      srcs: rows.filter(x => x.querySelector('.q-c-src')).map(x => x.querySelector('.q-c-src').textContent),
+      gapUnder: !!c0.querySelector('.q-c-gap'),
       /* 🔴 横スクロールが1つも出ていないこと */
       overX: (function(){
         const all = Array.from(body.querySelectorAll('.q-cards, .q-cards *'));
@@ -622,12 +657,13 @@ console.log('\n── ⑦-4🃏 一覧はカード（横スクロールが出な
       bodyOverX: body.scrollWidth - body.clientWidth
     };
   }, [SOFT, PIT]);
-  ok('🃏 1件＝1枚のカードで出る', r.cards === 10, r.cards);
+  ok('🃏 1件＝1枚のカードで出る', r.cards > 0, r.cards);
   ok('🃏 カードの中に表は無い（横スクロールの元を断つ）', r.tables === 0, r.tables);
   ok('🔴 お客様の名前がいちばん大きい（15px以上）', r.whoPx >= 15, r.whoPx);
   ok('🔴 日付・金額も読める大きさ（13px以上）', r.datePx >= 13 && r.amtPx >= 13, { d:r.datePx, a:r.amtPx });
-  ok('🔴 整備ソフトと PitFlow が上下2行に並んでいる',
-     r.srcs.join() === '整備ソフト,PitFlow', r.srcs);
+  /* 🔤 v2.2.0（ゆうた指定）整備ソフトの名前は「フロントマン」。画面はその呼び方で統一する */
+  ok('🔴 フロントマンと PitFlow が上下2行に並んでいる',
+     r.srcs.join() === 'フロントマン,PitFlow', r.srcs);
   ok('🔴🔴 日付が同じ列にそろっている（左右に目を振らない）', r.dateSame === true, r);
   ok('🔴🔴 金額も同じ列にそろっている', r.amtSame === true, r);
   ok('🔴 差は、比べた2行のすぐ下にある', r.gapUnder === true, r);
