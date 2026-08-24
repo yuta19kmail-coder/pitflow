@@ -235,6 +235,10 @@ const BASE_TESTDATE = {
   /* ⚠ v2.0.0 test_quarter_fix.mjs も**日付どうしの関係**を試す見張り
      （伝票 8/4 と 実績 8/5 で「直すボタンが出るか」）。上の但し書きに当たる。 */
   'test_quarter_fix.mjs': 10,
+  /* ⚠ v2.2.0 test_quarter_write.mjs も**日付どうしの関係**を試す見張り
+     （8/1〜8/7 のクォーターの中に、伝票の売上日 8/4 と 実績日 8/4 が入っているか）。
+     🔴 「今日」と比べる欄（まだ返していない車の返車予定日）は1つも使っていない。 */
+  'test_quarter_write.mjs': 2,
 };
 {
   const reField = /(reserveDate|returnDate|loanerFrom|loanerTo|completedAt|cancelledAt|inDate|outDate)\s*:\s*'20\d\d-\d\d-\d\d'/g;
