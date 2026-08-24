@@ -74,9 +74,10 @@ await p.waitForTimeout(700);
 console.log('\n── 🧰 マスターの中身 ──');
 {
   const m = await p.evaluate(() => (window.PIT_WORK_TYPES || []).map(w => w.id));
-  ok('マスターが7種そろっている', m.length === 7, m);
-  ok('中身が 車検/12点/一般/オイル/B.P/1Y/3M',
-     JSON.stringify(m) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m']), m);
+  /* ⚠ 作業タイプを足したら、この並びも一緒に直す（＝勝手に増えていないかの見張り） */
+  ok('マスターが8種そろっている', m.length === 8, m);
+  ok('中身が 車検/12点/一般/オイル/B.P/1Y/3M/車販',
+     JSON.stringify(m) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m', 'carsale']), m);
   const same = await p.evaluate(() =>
     JSON.stringify((state.workTypes || []).map(w => w.id)) ===
     JSON.stringify(((state.settings || {}).workTypes || []).map(w => w.id)));
@@ -95,12 +96,12 @@ console.log('\n── ⚙ 設定画面（見るだけになっているか） �
   ok('色の四角（input color）が無い', (await p.locator('.ps-wt-ro input[type=color]').count()) === 0);
   ok('ゴミ箱（削除）が無い', (await p.locator('.ps-wt-ro .rl-del').count()) === 0);
   ok('そもそも作業タイプの行に入力欄が1つも無い', (await p.locator('.ps-wt-ro input').count()) === 0);
-  ok('一覧は7行出ている', (await p.locator('.ps-wt-ro').count()) === 7,
+  ok('一覧は8行出ている', (await p.locator('.ps-wt-ro').count()) === 8,
      await p.locator('.ps-wt-ro').count());
   const names = await p.locator('.ps-wt-name').allInnerTexts();
   ok('名前が読める（車検が居る）', names.indexOf('車検') >= 0, names);
   const tags = await p.locator('.ps-wt-tag').allInnerTexts();
-  ok('併用可の札が3つ（B.P / 1Y / 3M）', tags.filter(t => t === '併用可').length === 3, tags);
+  ok('併用可の札が4つ（B.P / 1Y / 3M / 車販）', tags.filter(t => t === '併用可').length === 4, tags);
 }
 
 console.log('\n── 🔧 揃え直し（クラウドに古いものが残っていた時） ──');
@@ -124,9 +125,9 @@ console.log('\n── 🔧 揃え直し（クラウドに古いものが残っ�
   });
   ok('🔴 勝手に変えられた名前がコードの名前に戻る', r.shaken && r.shaken.label === '車検', r.shaken);
   ok('🔴 色もコードに戻る', r.shaken && r.shaken.color === '#ef4444', r.shaken);
-  ok('コードの7種が先頭に並ぶ',
-     JSON.stringify(r.ids.slice(0, 7)) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m']), r.ids);
-  ok('🔴 コードに無い型は消さずに末尾に残る', !!r.old && r.ids[7] === 'w1750000000000', r.ids);
+  ok('コードの8種が先頭に並ぶ',
+     JSON.stringify(r.ids.slice(0, 8)) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m', 'carsale']), r.ids);
+  ok('🔴 コードに無い型は消さずに末尾に残る', !!r.old && r.ids[8] === 'w1750000000000', r.ids);
   ok('残した型には「旧」の印が付く', !!r.old && r.old.legacy === true, r.old);
   ok('揃え直したので「保存が要る」印が立つ', r.dirty === true);
   ok('🔴 settings.workTypes に書き戻されている（MHS が読む）', r.linked === true);
