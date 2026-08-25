@@ -284,6 +284,46 @@ console.log('\n── 🗄 残した結果でも、走らせた直後と同じ�
   ok('🔴 v2.8.4 より前に残した結果では出さない（無い物を作らない）', !/このうち/.test(h3));
 }
 
+console.log('\n── 🔘 v2.8.5 直すボタンは「全部のカード」に出る ──');
+/* 🗣「売上日を変えるボタンとかが一番上にしか出ないで、クリックすると次のが上がって押せるようになる」
+   ◎正体 …… `rows.map(card)` と裸で書いていた。`Array.map` は2つ目に**添え字**を渡すので、
+     `card(p, saved)` の `saved` に 0,1,2… が入り、**1枚目以外が「残した結果」として描かれ**、
+     直すボタンが丸ごと消えていた。v2.7.0 で2つ目の引数を足した時に生まれたもの。 */
+{
+  const view = fs.readFileSync(path.join(process.cwd(), 'js', 'quarter.js'), 'utf8');
+  /* ⚠ このファイル自身の注意書きにも `.map(card)` の字が出るので、**コメントを外してから**見る
+     （v2.6.0 の試験で同じ罠を踏んでいる）。 */
+  const 素 = view.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+  ok('🔴 `.map(card)` と裸で書いていない（添え字が saved に入る）', !/\.map\(card\)/.test(素));
+  ok('　包む関数を通している', /\.map\(one\)/.test(view) && /function one\(p\)\{?\s*return card\(p\)/.test(view));
+
+  const r = await p.evaluate(() => {
+    const mk = (i) => ({ id:'C'+i, resNo:'R'+i, status:'returned',
+      completedAt:'2026-08-0'+i, returnDateFinal:'2026-08-0'+i, salesDate:'',   /* 売上日なし＝直す対象 */
+      plate:'習志野500あ111'+i, customer:'客'+i, car:'ノア', amountFinal:100000+i, frontStaff:'蓮沼' });
+    const keep = window.state.cards;
+    window.state.cards = [1,2,3,4,5].map(mk);
+    const soft = [1,2,3,4,5].map(i => ({ 売上日:'2026-08-0'+i, 伝票:'D-'+i,
+      ナンバー:'習志野 500 あ 11-1'+i, 顧客名:'客'+i, 車種:'ノア', 金額:100000+i, 受付担当:'蓮沼' }));
+    const res = window.pitQMatch(soft, window.pitQCollect({from:'2026-08-01',to:'2026-08-07'}).明細,
+      { from:'2026-08-01', to:'2026-08-07' });
+    const U = (window._insp = window._insp || {}); U.q = U.q || {};
+    Object.assign(U.q, { res, saved:null, savedId:'', pdf:{}, soft,
+      from:'2026-08-01', to:'2026-08-07', tab:'date', groups:[], list:[] });
+    window.state.cards = keep;
+    const html = window.pitQuarterHtml();
+    const d = document.createElement('div'); d.innerHTML = html;
+    return { 行:res.グループ.日付.length, カード:d.querySelectorAll('.q-cards > .q-c').length,
+      直すボタン:(html.match(/pitQDo\('売上日'/g)||[]).length,
+      伝票を直した:(html.match(/pitQMk\('売上日'/g)||[]).length,
+      カードを開く:(html.match(/もう一度PDFを読ませて/g)||[]).length };
+  });
+  ok('5行が5枚のカードで出る', r.行 === 5 && r.カード === 5, r);
+  ok('🔴 5枚**全部**に直すボタンが出る（1枚目だけではない）', r.直すボタン === 5, r);
+  ok('🔴 5枚全部に「伝票を直した」が出る', r.伝票を直した === 5, r);
+  ok('🔴 走らせた直後に「もう一度PDFを読ませて」を出さない', r.カードを開く === 0, r);
+}
+
 console.log('\n── 🧭 まわり ──');
 {
   await p.evaluate(() => { try { showView('inspect'); } catch (e) {} });
