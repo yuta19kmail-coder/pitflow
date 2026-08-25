@@ -45,8 +45,14 @@ console.log('\n── 🔍 コードの決めごと ──');
   ok('🔴 HTMLの入った変数を esc() で丸ごと包んでいない', !/esc\(loa\)|esc\(tags\)|esc\(stBadge\)/.test(js),
      (js.match(/esc\((loa|tags|stBadge)\)/g) || []));
   ok('🕘 履歴の覚えが1つある（_hist）', /var _hist = \{ custId/.test(js));
-  ok('🔀 見る範囲の切替がある（この車／お客様ぜんぶ）',
-     /w?indow\.custHistMode/.test(js) && /custHistVeh/.test(js));
+  ok('🔀 見る範囲の切替がある（この車／お客様ぜんぶ）', /w?indow\.custHistMode/.test(js));
+  /* 🔖 v2.12.1 左は伝票1件ごとの目次。飛ばし方は1本（_histJump）。 */
+  ok('🔖 v2.12.1 左の目次から飛ぶ入口がある（custHistGo）', /w?indow\.custHistGo/.test(js));
+  ok('🔴 飛ばし方は1本（_histJump）',
+     /function _histJump\(id\)/.test(js) && (js.match(/_histJump\(/g) || []).length >= 3, // 定義＋開いた時＋目次
+     (js.match(/_histJump\(/g) || []).length);
+  ok('🚗 車のBOXはもう出さない', !/ch-car"/.test(js) && !/class="ch-cars/.test(js));
+  ok('🔴 伝票の目印に伝票番号を使わない（"00" が重なる）', !/id="dnp'\+esc\(String\(den\.伝票番号/.test(js));
   ok('🔴 拾う決まりは今までどおり（_cardDone）', /\.filter\(_cardDone\)/.test(js));
   ok('📋 行のボタンの作り方が1本（_histBtns）', /function _histBtns\(c, opt\)/.test(js));
   ok('🔴 v2.11.1 状態の札は押させない（飛び先はボタン）',
@@ -187,16 +193,22 @@ console.log('\n── 🕘 履歴の画面（広い・左サイドバー） ─�
       幅: box ? Math.round(box.getBoundingClientRect().width) : 0,
       サイドバー: !!side,
       切替の数: document.querySelectorAll('.ch-mb').length,
-      車の数: document.querySelectorAll('.ch-car').length,
+      目次の数: document.querySelectorAll('.ch-ix').length,
+      目次に車種: document.querySelectorAll('.ch-ix-c').length,
+      車のBOX: document.querySelectorAll('.ch-car').length,
       行の数: document.querySelectorAll('.ch-row').length,
       横スクロール: main ? (main.scrollWidth > main.clientWidth + 1) : true,
+      サイドの横スクロール: side ? (side.scrollWidth > side.clientWidth + 1) : true,
       文字: main ? main.textContent : ''
     };
   });
   ok('🔴 画面が広い（1000px以上）', r.幅 >= 1000, r.幅);
   ok('🔴 左にサイドバーがある', r.サイドバー === true);
   ok('🔴 切替が2つ（この車／お客様ぜんぶ）', r.切替の数 === 2, r.切替の数);
-  ok('🔴 サイドバーに車が並ぶ（横断できる）', r.車の数 >= 3, r.車の数);
+  ok('🔖 v2.12.1 目次は**伝票1件ごと**＝本文の行と同じ数', r.目次の数 === r.行の数, r);
+  ok('🚗 v2.12.1 車のBOXはもう無い', r.車のBOX === 0, r.車のBOX);
+  ok('🔴「この車」の間は目次に車種を出さない（全部おなじ車だから）', r.目次に車種 === 0, r.目次に車種);
+  ok('🔴 目次に横スクロールが出ていない', r.サイドの横スクロール === false);
   ok('🔴 本文に横スクロールが出ていない', r.横スクロール === false);
   ok('🔴🔴 ここでもタグが文字で出ていない', r.文字.indexOf('data-ic') < 0, r.文字.slice(0, 160));
   ok('この車だけ＝2件', r.行の数 === 2, r.行の数);
@@ -208,15 +220,44 @@ console.log('\n── 🔀 お客様ぜんぶ で横断できる ──');
     custHistMode('cust');
     const rows = [].slice.call(document.querySelectorAll('.ch-row'));
     const dts = rows.map(x => (x.querySelector('.ch-dt') || {}).textContent || '');
+    const ix = [].slice.call(document.querySelectorAll('.ch-ix'));
     return { 行: rows.length, 日付: dts,
              新しい順: dts.slice().sort().reverse().join() === dts.join(),
              ナンバーが出る: rows.some(x => !!x.querySelector('.ch-plate')),
+             目次: ix.length,
+             目次の日付: ix.map(x => (x.querySelector('.ch-ix-d') || {}).textContent || ''),
+             目次に車種: ix.filter(x => !!x.querySelector('.ch-ix-c')).length,
              切替が光る: (document.querySelectorAll('.ch-mb.on')[0] || {}).textContent === 'お客様ぜんぶ' };
   });
   ok('🔴 3台ぶんが混ざる（6件）', r.行 === 6, r.行);
   ok('🔴 日付の新しい順', r.新しい順 === true, r.日付);
   ok('🔴 どの車かが分かる（ナンバーを出す）', r.ナンバーが出る === true);
   ok('切替の光り方が合っている', r.切替が光る === true);
+  ok('🔖 目次も一緒に入れ替わる（6件）', r.目次 === 6, r.目次);
+  ok('🔖 目次の並びは本文と同じ', r.目次の日付.join() === r.日付.join(), { 目次:r.目次の日付, 本文:r.日付 });
+  ok('🔴「お客様ぜんぶ」の時だけ目次に車種を出す', r.目次に車種 === 6, r.目次に車種);
+  /* 🔖 目次を押したら、その1件まで動いて、そこだと分かる */
+  const 飛び = await p.evaluate(async () => {
+    const main = document.querySelector('.ch-main');
+    main.scrollTop = 0;
+    const b = document.querySelectorAll('.ch-ix')[4];
+    const id = (b.getAttribute('onclick') || '').replace(/^.*custHistGo\('/, '').replace(/'.*$/, '');
+    b.click();
+    await new Promise(r => setTimeout(r, 200));
+    /* ⚠ 中身が短くて動かせない時は 0 のままが正しい。「動いた」ではなく**狙った所に居る**かを見る。 */
+    const el = document.getElementById(id);
+    const 狙い = Math.min(Math.max(0, el.offsetTop - main.offsetTop - 8),
+                          Math.max(0, main.scrollHeight - main.clientHeight));
+    return { 動いた: Math.abs(main.scrollTop - 狙い) <= 1,
+             ここ: (document.querySelectorAll('.ch-item.is-here').length === 1)
+                && document.querySelector('.ch-item.is-here').id === id,
+             目次が光る: document.querySelectorAll('.ch-ix.on').length === 1,
+             開き直していない: document.querySelectorAll('.ch-ix').length === 6 };
+  });
+  ok('🔖 押した1件の所まで動く', 飛び.動いた === true, 飛び);
+  ok('🔖 押した1件だけが「ここ」になる', 飛び.ここ === true, 飛び);
+  ok('🔖 目次のその行だけが光る', 飛び.目次が光る === true, 飛び);
+  ok('🔴 押しても画面を開き直さない（跳ねない）', 飛び.開き直していない === true, 飛び);
   const back = await p.evaluate(() => { custHistMode('veh'); return document.querySelectorAll('.ch-row').length; });
   ok('「この車」に戻せる', back === 2, back);
 }
