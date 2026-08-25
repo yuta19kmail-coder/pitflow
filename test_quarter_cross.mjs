@@ -459,6 +459,66 @@ console.log('\n── 🚗 v2.9.2 ナンバーと客名が合っていれば、�
      !/plateNG[\s\S]{0,80}q-c-g bad/.test(view));
 }
 
+console.log('\n── 🩶 v2.9.3 押していないのに灰色にしない／行き止まりを作らない ──');
+/* 🗣「あけぼのさんがイエローで戻ってきたけど **OKボタンが既に押されているのかな？ グレーアウトしてある**。
+   　　そしてその状態で残っている。どうしたらいい？」
+   ◎正体 …… `rowLeft` が 0 だと灰色（is-done）にしていた。
+     「押したから0」と「**そもそも直すところが無いから0**」を見分けていなかった。
+     さらに v2.9.2 で plateNG を「データがちがう」に入れたのに**押せる札を作らなかった**ので、
+     その行は永久に残った＝行き止まり。 */
+{
+  const 描く = (o) => p.evaluate((x) => {
+    const pair = {
+      soft:{ ナンバー:x.伝票ナンバー, 顧客名:x.客, 車種:'', 車体番号:'', 売上日:'2026-08-03',
+             金額:100000, 伝票:'0619', 受付担当:'蓮沼', i:0 },
+      pit: { ナンバー:x.カードナンバー, 顧客名:x.客, 車種:'ポロ', 車体番号:'', 売上日:'2026-08-03',
+             数える日:'2026-08-03', 確定金額:100000, フロント担当:'蓮沼', 予約番号:'A05989',
+             生:{ id:'card-a' } }
+    };
+    pair.同一性 = window.pitQSameCar(pair);
+    pair.同じ車 = (pair.同一性 !== 'vinNG' && pair.同一性 !== 'carNG');
+    pair.期間の外 = false; pair.金額一致 = true; pair.担当一致 = true; pair.差 = 0;
+    pair.売上日差 = { kind:'same', label:'売上日が一致' };
+    pair.組 = window.pitQGroupOf(pair);
+    pair.効き = 0; pair.結び方 = '顧客名＋金額';
+    const R = { グループ:{ データ:[], 金額:[], 日付:[], OK:[] }, 整備ソフトだけ:[], PitFlowだけ:[],
+      内訳:{ 整備ソフトだけ:{台数:0,金額:0}, PitFlowだけ:{台数:0,金額:0},
+             期間の外:{台数:0,金額:0}, 金額ちがい:{台数:0,金額:0} },
+      検算:{合う:true}, 差:{台数:0,金額:0}, 整備ソフト:{枚数:1,金額:100000}, PitFlow:{台数:1,金額:100000},
+      結びついた:[pair] };
+    R.グループ[pair.組==='data'?'データ':pair.組==='money'?'金額':pair.組==='ok'?'OK':'日付'].push(pair);
+    const U=(window._insp=window._insp||{}); U.q=U.q||{};
+    Object.assign(U.q,{ res:R, saved:null, savedId:'', pdf:{}, soft:[pair.soft],
+      from:'2026-08-01', to:'2026-08-07', tab:(pair.組==='data'?'data':'ok'), groups:[], list:[] });
+    const html = window.pitQuarterHtml();
+    return { 同一性:pair.同一性, 組:pair.組,
+      仕事の数: window.pitQRowTotal ? window.pitQRowTotal(pair) : -1,
+      残り: window.pitQRowLeft(pair),
+      灰色: /class="q-c is-done/.test(html) || /class="q-c [^"]*is-done/.test(html),
+      確かめたボタン: /確かめた（同じ車です）/.test(html),
+      直すところなし: /直すところはありません/.test(html) };
+  }, o);
+
+  /* ① ナンバーが読めない行（あけぼの自動車／仮登録車両） */
+  let r = await 描く({ 伝票ナンバー:'仮登録車両', カードナンバー:'', 客:'あけぼの自動車' });
+  ok('🔴 ナンバーが読めない＝要注意（データがちがう）', r.同一性 === 'plateNG' && r.組 === 'data', r);
+  ok('🔴🔴 押せる札がある（行き止まりにしない）', r.確かめたボタン === true && r.仕事の数 > 0, r);
+  ok('🔴🔴 まだ押していないので灰色ではない', r.灰色 === false, r);
+
+  /* ② ふつうに全部そろっている行（直すところが無い） */
+  r = await 描く({ 伝票ナンバー:'習志野 500 あ 11-11', カードナンバー:'習志野 500 あ 11-11', 客:'あけぼの自動車' });
+  ok('直すところが無い行はOKに入る', r.組 === 'ok', r);
+  ok('🔴🔴 直すところが無いだけの行を、押したように灰色にしない', r.灰色 === false, r);
+  ok('　「直すところはありません」とは書く', r.直すところなし === true, r);
+
+  /* ③ コードの決めごと */
+  const fix = fs.readFileSync(path.join(process.cwd(), 'js', 'quarter-fix.js'), 'utf8');
+  const view = fs.readFileSync(path.join(process.cwd(), 'js', 'quarter.js'), 'utf8');
+  ok('🔴 「もともと仕事があったか」を数える1本がある', /w\.pitQRowTotal\s*=/.test(fix));
+  ok('🔴 灰色は「押して片づけた」時だけ', /片づけた\s*=\s*\(total > 0 && left === 0\)/.test(view));
+  ok('🔴 札の文言を画面で決め打ちしていない', /esc\(k\.label \|\| 'このままでよい'\)/.test(view));
+}
+
 console.log('\n── 🧭 まわり ──');
 {
   await p.evaluate(() => { try { showView('inspect'); } catch (e) {} });
