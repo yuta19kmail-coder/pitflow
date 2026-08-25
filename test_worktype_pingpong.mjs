@@ -41,6 +41,16 @@ console.log('\n── 🔍 増幅器が外れているか ──');
   ok('往復を数えている（_wtSpins）', /_wtSpins/.test(src));
   ok('版の印がある（workTypesVer）', /workTypesVer/.test(src));
   ok('版くらべが文字比較になっていない', /_verCmp/.test(src) && /split\('\.'\)\.map\(Number\)/.test(src));
+  /* 🔴 v2.8.2 の教訓：数える場所と折れる場所は同じ関数に置くこと。
+     2.8.1 は折れる判断を _flushWorkTypes に置き、その呼び出しを同じ版で外した＝一度も折れなかった。 */
+  const fn = (name) => { const j = src.indexOf('_' + name + ': function'); if (j < 0) return '';
+    let d = 0, k = src.indexOf('{', j);
+    for (let m = k; m < src.length; m++) { if (src[m] === '{') d++; else if (src[m] === '}') { d--; if (!d) return src.slice(k, m + 1); } }
+    return ''; };
+  ok('🔴 折れる判断が _applyWorkTypes の中にある', /_wtGaveUp\s*=\s*true/.test(fn('applyWorkTypes')));
+  ok('🔴 折れる判断を _flushWorkTypes に置いていない', !/_wtGaveUp\s*=\s*true/.test(fn('flushWorkTypes')));
+  ok('🔴 数えるのも _applyWorkTypes の中', /\+\+this\._wtSpins/.test(fn('applyWorkTypes')));
+  ok('🔴 印は一覧の版（PIT_WORK_TYPES_VER）を使う', /PIT_WORK_TYPES_VER/.test(src));
 }
 
 /* ================= ② 実際に動かす ================= */
@@ -98,8 +108,9 @@ const sim = (opt) => p.evaluate((o) => {
 }, opt);
 
 const CODE = await p.evaluate(() => (window.PIT_WORK_TYPES.slice(-1)[0] || {}).label);
-const VER  = await p.evaluate(() => document.querySelector('meta[name=app-version]').content);
-console.log('  （コードの最後の作業タイプ＝「' + CODE + '」／この版＝' + VER + '）');
+const VER  = await p.evaluate(() => window.PIT_WORK_TYPES_VER);
+const APPVER = await p.evaluate(() => document.querySelector('meta[name=app-version]').content);
+console.log('  （コードの最後の作業タイプ＝「' + CODE + '」／一覧の版＝' + VER + '／アプリの版＝' + APPVER + '）');
 
 console.log('\n── 🚨 ③古い端末が相手（印を知らない）＝必ず止まる ──');
 {
@@ -151,9 +162,10 @@ console.log('\n── 🧭 まわり ──');
   });
   await p.waitForTimeout(400);
   ok('作業タイプが画面に出ている', /車販依頼/.test(lab), lab);
+  ok('🔴 一覧の版が state.js にある', !!VER, VER);
   ok('エラーなし', errs.length === 0, errs.slice(0, 4));
-  const vn = String(VER || '').split('.').map(Number);
-  ok('版が v2.8.1 以降', vn[0] > 2 || (vn[0] === 2 && (vn[1] > 8 || (vn[1] === 8 && vn[2] >= 1))), VER);
+  const vn = String(APPVER || '').split('.').map(Number);
+  ok('版が v2.8.2 以降', vn[0] > 2 || (vn[0] === 2 && (vn[1] > 8 || (vn[1] === 8 && vn[2] >= 2))), APPVER);
 }
 
 console.log('\n' + (fail === 0 ? '🎉 ' : '⚠ ') + pass + ' OK / ' + fail + ' NG');
