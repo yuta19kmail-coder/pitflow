@@ -48,7 +48,11 @@ console.log('\n── 🔍 コードの決めごと ──');
   ok('🔀 見る範囲の切替がある（この車／お客様ぜんぶ）',
      /w?indow\.custHistMode/.test(js) && /custHistVeh/.test(js));
   ok('🔴 拾う決まりは今までどおり（_cardDone）', /\.filter\(_cardDone\)/.test(js));
-  ok('📋 顧客詳細の行に「履歴」ボタンがある', /class="cd-hhist"/.test(js));
+  ok('📋 行のボタンの作り方が1本（_histBtns）', /function _histBtns\(c, custId, vehId\)/.test(js));
+  ok('🔴 v2.11.1 状態の札は押させない（飛び先はボタン）',
+     !/cd-htag st[^"]*clickable/.test(js) && /実績ボード/.test(js) && /予約表/.test(js));
+  ok('🧾 v2.11.1 伝票の開け閉めは無い（最初から開く）', !/custDenToggle/.test(js));
+  ok('🔘 v2.11.1 引継ぎメモの下から履歴を開ける（custHistoryByPlate）', /w?indow\.custHistoryByPlate/.test(js));
   ok('🔴 顧客詳細の行にナンバーを出していない', !/'<div class="cd-hmid">[^;]*c\.plate\?' ・ '/.test(js));
   ok('🏷 札は2行目にまとめている（cd-htags）', /class="cd-htags"/.test(js));
   ok('🚗 車体番号にラベルが付いている', /class="cd-vvin"><i>車体番号<\/i>/.test(js));
@@ -103,7 +107,17 @@ console.log('\n── 📋 顧客詳細の来店履歴の行 ──');
       行がある: !!row,
       html: row ? row.innerHTML : '',
       文字: row ? row.textContent : '',
-      履歴ボタン: !!(row && row.querySelector('.cd-hhist')),
+      履歴ボタン: !!(row && [].slice.call(row.querySelectorAll('.cd-b')).some(x=>/履歴/.test(x.textContent))),
+      実績ボタン: !!(row && [].slice.call(row.querySelectorAll('.cd-b')).some(x=>/実績ボード/.test(x.textContent))),
+      状態は押せない: !(row && row.querySelector('.cd-htag.clickable')),
+      札の高さ: row ? [].slice.call(row.querySelectorAll('.cd-htag')).map(x=>Math.round(x.getBoundingClientRect().height)) : [],
+      金額とボタンの縦: (function(){
+        if(!row) return null;
+        const a=row.querySelector('.cd-hamt'), b2=row.querySelector('.cd-hbtns');
+        if(!a||!b2) return null;
+        const ra=a.getBoundingClientRect(), rb=b2.getBoundingClientRect();
+        return Math.abs((ra.top+ra.bottom)/2 - (rb.top+rb.bottom)/2);
+      })(),
       札の行: !!(row && row.querySelector('.cd-htags')),
       札: row ? [].slice.call(row.querySelectorAll('.cd-htag')).map(x => x.textContent.trim()) : [],
       /* ⚠ 代車は k=0 の行だけ。**代車がある行**を探して見る（先頭の行には無い） */
@@ -124,7 +138,11 @@ console.log('\n── 📋 顧客詳細の来店履歴の行 ──');
      r.文字.indexOf('data-ic') < 0 && r.文字.indexOf('<i ') < 0, r.文字.slice(0, 160));
   ok('🔴 代車はアイコンとして出ている（コードが文字で出ない）',
      r.代車アイコン === true && r.代車の文字.indexOf('data-ic') < 0, r.代車の文字);
-  ok('🔴 右の押せる所が「履歴」ボタン', r.履歴ボタン === true);
+  ok('🔴 右に「履歴」ボタンがある', r.履歴ボタン === true);
+  ok('🔴 「実績ボード」が別ボタンで並んでいる', r.実績ボタン === true);
+  ok('🔴 状態の札は押させない', r.状態は押せない === true);
+  ok('🔴 札の大きさがそろっている', r.札の高さ.length > 1 && new Set(r.札の高さ).size === 1, r.札の高さ);
+  ok('🔴 金額とボタンの縦がそろっている（2px以内）', r.金額とボタンの縦 != null && r.金額とボタンの縦 <= 2, r.金額とボタンの縦);
   ok('🔴 札は2行目にまとまっている', r.札の行 === true);
   ok('　札に状態が入っている', r.札.some(x => /返車|完了|売上なし|キャンセル/.test(x)), r.札);
   ok('　札に保険が入っている', r.札.indexOf('保険') >= 0, r.札);
@@ -185,11 +203,11 @@ console.log('\n── 🧭 まわり ──');
   const ver = await p.evaluate(() => (document.querySelector('meta[name=app-version]') || {}).content || '');
   /* 🔴 版くらべは数で（'2.10.0' < '2.9.6' の事故を 2026-08-25 に踏んだ） */
   const vn = (String(ver).match(/\d+/g) || []).map(Number);
-  const need = '2.11.0'.split('.').map(Number);
+  const need = '2.11.1'.split('.').map(Number);
   const ge = (a, b) => (a[0]||0) !== (b[0]||0) ? (a[0]||0) > (b[0]||0)
                      : (a[1]||0) !== (b[1]||0) ? (a[1]||0) > (b[1]||0)
                      : (a[2]||0) >= (b[2]||0);
-  ok('版が v2.11.0 以降', ge(vn, need), ver);
+  ok('版が v2.11.1 以降', ge(vn, need), ver);
 }
 
 await b.close();
