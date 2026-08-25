@@ -142,7 +142,14 @@ console.log('\n── 🧭 まわり ──');
      !empty || empty.every(function(h){ return h <= 180; }), empty);
   ok('エラーなし', errs.length === 0, errs.slice(0, 3));
   const ver = await p.evaluate(() => (document.querySelector('meta[name=app-version]') || {}).content || '');
-  ok('版が v2.9.6 以降', ver >= '2.9.6', ver);
+  /* 🔴 版くらべは**数で**。文字のままだと '2.10.0' < '2.9.6' になって落ちる
+     （2026-08-25 に踏んだ。2.9 の次が 2.10 になった瞬間、見張りが全部赤くなった）。 */
+  const vn = (String(ver).match(/\d+/g) || []).map(Number);
+  const need = '2.9.6'.split('.').map(Number);
+  const ge = (a, b) => (a[0]||0) !== (b[0]||0) ? (a[0]||0) > (b[0]||0)
+                     : (a[1]||0) !== (b[1]||0) ? (a[1]||0) > (b[1]||0)
+                     : (a[2]||0) >= (b[2]||0);
+  ok('版が v2.9.6 以降', ge(vn, need), ver);
 }
 
 await b.close();

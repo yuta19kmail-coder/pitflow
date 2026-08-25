@@ -58,9 +58,12 @@ console.log('\n── 🔍 決めごとがコードに入っているか ──'
      /伝票を残せなかった/.test(store) && /_v:\s*\(伝票OK\s*\?\s*3\s*:\s*2\)/.test(store));
 
   ok('🔴 画面がまとめて残す口を使っている', /pitQSaveRuns\(items\)/.test(view));
-  ok('🔴 開き直しで伝票からもう一度突き合わせる', /r\.伝票/.test(view) && /w\.pitQMatch\(伝票, pit/.test(view));
+  /* 🗓 v2.10.0 開き直しは `buildMonth` に移した（その月の全部のQをそろえてから突き合わせる）。
+     ⚠ ここは「保存した伝票からもう一度突き合わせているか」を見る所。関数名を追いかけない。 */
+  ok('🔴 開き直しで伝票からもう一度突き合わせる',
+     /r\.伝票/.test(view) && /w\.pitQMatch\(den, pit/.test(view));
   ok('🔴 開き直しで新しい判定を作っていない（pitQCollect と pitQMatch だけ）',
-     /w\.pitQCollect\(\{ from: from, to: to \}\)/.test(view));
+     /w\.pitQCollect\(\{ from: x\.from, to: x\.to \}\)/.test(view));
   ok('🔴 一覧に無くても書類があれば開く', !/var has = \(U\.list \|\| \[\]\)\.some/.test(view));
   ok('✅ チェック済みの枠がある（doneBox）', /function doneBox\(/.test(view));
   ok('✅ 片づいた行を箱から抜く口がある（splitDone）', /function splitDone\(R\)/.test(view));
@@ -370,7 +373,14 @@ console.log('\n── 🧭 まわり ──');
 {
   ok('エラーなし', errs.length === 0, errs.slice(0, 3));
   const ver = await p.evaluate(() => (document.querySelector('meta[name=app-version]') || {}).content || '');
-  ok('版が v2.9.9 以降', ver >= '2.9.9', ver);
+  /* 🔴 版くらべは**数で**。文字のままだと '2.10.0' < '2.9.6' になって落ちる
+     （2026-08-25 に踏んだ。2.9 の次が 2.10 になった瞬間、見張りが全部赤くなった）。 */
+  const vn = (String(ver).match(/\d+/g) || []).map(Number);
+  const need = '2.9.9'.split('.').map(Number);
+  const ge = (a, b) => (a[0]||0) !== (b[0]||0) ? (a[0]||0) > (b[0]||0)
+                     : (a[1]||0) !== (b[1]||0) ? (a[1]||0) > (b[1]||0)
+                     : (a[2]||0) >= (b[2]||0);
+  ok('版が v2.9.9 以降', ge(vn, need), ver);
 }
 
 await b.close();
