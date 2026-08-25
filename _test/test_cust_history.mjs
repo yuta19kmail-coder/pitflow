@@ -48,13 +48,20 @@ console.log('\n── 🔍 コードの決めごと ──');
   ok('🔀 見る範囲の切替がある（この車／お客様ぜんぶ）',
      /w?indow\.custHistMode/.test(js) && /custHistVeh/.test(js));
   ok('🔴 拾う決まりは今までどおり（_cardDone）', /\.filter\(_cardDone\)/.test(js));
-  ok('📋 行のボタンの作り方が1本（_histBtns）', /function _histBtns\(c, custId, vehId\)/.test(js));
+  ok('📋 行のボタンの作り方が1本（_histBtns）', /function _histBtns\(c, opt\)/.test(js));
   ok('🔴 v2.11.1 状態の札は押させない（飛び先はボタン）',
      !/cd-htag st[^"]*clickable/.test(js) && /実績ボード/.test(js) && /予約表/.test(js));
   ok('🧾 v2.11.1 伝票の開け閉めは無い（最初から開く）', !/custDenToggle/.test(js));
-  ok('🔘 v2.11.1 引継ぎメモの下から履歴を開ける（custHistoryByPlate）', /w?indow\.custHistoryByPlate/.test(js));
+  ok('🔘 v2.11.2 カードから開く入口が1本（custHistoryForCard）', /w?indow\.custHistoryForCard/.test(js));
+  ok('🧾 v2.11.2 伝票は予約番号で引く（ナンバーが無くても紐づく）',
+     /予約番号\|\|''\)\.trim\(\)===res/.test(js) && /\(list\(\)\|\|\[\]\)\.some/.test(js));
+  ok('🔴 v2.11.2 車に紐づかないカードは「1件だけ」で出す', /_hist\.only/.test(js));
+  const cv = bare('js/card-view.js');
+  ok('🔴 v2.11.2 ボタンの名前は「作業履歴」', /> 作業履歴<\/button>/.test(cv));
+  ok('🔴 v2.11.2 ナンバーの有無で出し分けない', !/pitIsRealPlate\(c\.plate\)\)\{[\s\S]{0,200}custHistory/.test(cv));
   ok('🔴 顧客詳細の行にナンバーを出していない', !/'<div class="cd-hmid">[^;]*c\.plate\?' ・ '/.test(js));
-  ok('🏷 札は2行目にまとめている（cd-htags）', /class="cd-htags"/.test(js));
+  /* 🕘 v2.11.2 2行に戻したので、印は**1行目の後ろ**に並べる（`cd-htags` の行は無くした） */
+  ok('🏷 印は1行目の後ろに並べる（cd-htag）', /class="cd-htag/.test(js) && !/class="cd-htags"/.test(js));
   ok('🚗 車体番号にラベルが付いている', /class="cd-vvin"><i>車体番号<\/i>/.test(js));
   const vin = (css.match(/\.cd-vvin\{[^}]*\}/) || [''])[0];
   ok('🔴 車体番号が小さくない（13px以上）', /font-size:\s*(1[3-9]|[2-9]\d)px/.test(vin), vin);
@@ -111,6 +118,18 @@ console.log('\n── 📋 顧客詳細の来店履歴の行 ──');
       実績ボタン: !!(row && [].slice.call(row.querySelectorAll('.cd-b')).some(x=>/実績ボード/.test(x.textContent))),
       状態は押せない: !(row && row.querySelector('.cd-htag.clickable')),
       札の高さ: row ? [].slice.call(row.querySelectorAll('.cd-htag')).map(x=>Math.round(x.getBoundingClientRect().height)) : [],
+      /* v2.11.2 */
+      行が押せる: !!(row && row.classList.contains('clickable')),
+      予約番号が日付の下: !!(row && row.querySelector('.cd-hdt .cd-hres')),
+      返車済みの札がない: row ? row.textContent.indexOf('返車') < 0 : false,
+      本文の行数: row ? row.querySelectorAll('.cd-hmid > div').length : 0,
+      ボタンにアイコンが無い: row ? [].slice.call(row.querySelectorAll('.cd-hbtns .cd-b')).every(x=>!x.querySelector('svg')) : false,
+      ボタンが上下: (function(){
+        if(!row) return false;
+        const bs=[].slice.call(row.querySelectorAll('.cd-hbtns .cd-b'));
+        if(bs.length<2) return false;
+        return bs[1].getBoundingClientRect().top > bs[0].getBoundingClientRect().bottom - 2;
+      })(),
       金額とボタンの縦: (function(){
         if(!row) return null;
         const a=row.querySelector('.cd-hamt'), b2=row.querySelector('.cd-hbtns');
@@ -118,7 +137,7 @@ console.log('\n── 📋 顧客詳細の来店履歴の行 ──');
         const ra=a.getBoundingClientRect(), rb=b2.getBoundingClientRect();
         return Math.abs((ra.top+ra.bottom)/2 - (rb.top+rb.bottom)/2);
       })(),
-      札の行: !!(row && row.querySelector('.cd-htags')),
+      札の行: !!(row && row.querySelector('.cd-hl1 .cd-htag')),
       札: row ? [].slice.call(row.querySelectorAll('.cd-htag')).map(x => x.textContent.trim()) : [],
       /* ⚠ 代車は k=0 の行だけ。**代車がある行**を探して見る（先頭の行には無い） */
       代車アイコン: (function(){
@@ -141,11 +160,16 @@ console.log('\n── 📋 顧客詳細の来店履歴の行 ──');
   ok('🔴 右に「履歴」ボタンがある', r.履歴ボタン === true);
   ok('🔴 「実績ボード」が別ボタンで並んでいる', r.実績ボタン === true);
   ok('🔴 状態の札は押させない', r.状態は押せない === true);
-  ok('🔴 札の大きさがそろっている', r.札の高さ.length > 1 && new Set(r.札の高さ).size === 1, r.札の高さ);
+  ok('🔴 札の大きさがそろっている', r.札の高さ.length === 0 || new Set(r.札の高さ).size === 1, r.札の高さ);
+  ok('🔴 v2.11.2 行ぜんぶを押すと予約詳細', r.行が押せる === true);
+  ok('🔴 v2.11.2 日付の下に予約番号', r.予約番号が日付の下 === true);
+  ok('🔴 v2.11.2 「返車済み」の札は出さない', r.返車済みの札がない === true);
+  ok('🔴 v2.11.2 本文は2行（車種の行＋メモの行）', r.本文の行数 <= 2, r.本文の行数);
+  ok('🔴 v2.11.2 ボタンにアイコンを付けない', r.ボタンにアイコンが無い === true);
+  ok('🔴 v2.11.2 ボタンは上下に並ぶ', r.ボタンが上下 === true);
   ok('🔴 金額とボタンの縦がそろっている（2px以内）', r.金額とボタンの縦 != null && r.金額とボタンの縦 <= 2, r.金額とボタンの縦);
-  ok('🔴 札は2行目にまとまっている', r.札の行 === true);
-  ok('　札に状態が入っている', r.札.some(x => /返車|完了|売上なし|キャンセル/.test(x)), r.札);
-  ok('　札に保険が入っている', r.札.indexOf('保険') >= 0, r.札);
+  ok('🔴 印は1行目の後ろに並んでいる', r.札の行 === true);
+  ok('　印に保険が入っている', r.札.indexOf('保険') >= 0, r.札);
   ok('🔴 行にナンバーを出していない（車種・担当・代車でいい）', r.ナンバー === false, r.文字.slice(0, 160));
   ok('🚗 車体番号が13px以上', r.車体番号の大きさ >= 13, r.車体番号の大きさ);
   ok('🚗 車体番号にラベルが付いている', r.車体番号にラベル === true);
@@ -197,17 +221,51 @@ console.log('\n── 🔀 お客様ぜんぶ で横断できる ──');
   ok('「この車」に戻せる', back === 2, back);
 }
 
+console.log('\n── 🧾 ナンバーが無いカードでも「作業履歴」が開く ──');
+{
+  const r = await p.evaluate(() => {
+    /* 伝票だけ在って、ナンバーが無いカード（仮登録車両） */
+    const cu = state.customers[0];
+    const v = (cu.vehicles || [])[0];
+    v.伝票 = (v.伝票 || []).concat([{ 予約番号:'NOPLATE1', 伝票番号:'0708', 売上日:'2026-08-17',
+      金額:32850, 原価:7810, 消費税:3285, 伝票計:36135, 法定:[],
+      明細:[{ 種:'作業', 名:'点検', 区分:'点検', 数量:1, 単価:0, 金額:32850, 原価:7810 }],
+      フロント:'小林モータース', 入れた日:'2026-08-25' }]);
+    state.cards.push({ id:'NOPLATE', resNo:'NOPLATE1', status:'returned', plate:'仮登録車両',
+      customer:'Faithful auto', car:'', boardId:'default',
+      completedAt:'2026-08-17', returnDate:'2026-08-17', returnDateFinal:'2026-08-17',
+      reserveDate:'2026-08-17', salesDate:'2026-08-17', amountFinal:32850, frontStaff:'小林モータース',
+      workType:'general', workTypes:['general'], workSpecials:[] });
+    custHistoryForCard('NOPLATE');
+    const box = document.querySelector('.cm-box.ch-box');
+    return {
+      開いた: !!box,
+      題: (document.querySelector('.cm-head') || {}).textContent || '',
+      行: document.querySelectorAll('.ch-row').length,
+      切替を出さない: document.querySelectorAll('.ch-mb').length === 0,
+      伝票が出る: !!document.querySelector('.ch-den'),
+      伝票番号: (document.querySelector('.ch-den-h i') || {}).textContent || ''
+    };
+  });
+  ok('🔴 ナンバーが無くても開く', r.開いた === true);
+  ok('🔴 題は「作業履歴」', /作業履歴/.test(r.題), r.題);
+  ok('🔴 1件なら1件', r.行 === 1, r.行);
+  ok('🔴 押しても変わらない切替は出さない', r.切替を出さない === true);
+  ok('🔴🔴 伝票は予約番号で紐づくので出る', r.伝票が出る === true);
+  ok('　その伝票番号が合っている', /0708/.test(r.伝票番号), r.伝票番号);
+}
+
 console.log('\n── 🧭 まわり ──');
 {
   ok('エラーなし', errs.length === 0, errs.slice(0, 3));
   const ver = await p.evaluate(() => (document.querySelector('meta[name=app-version]') || {}).content || '');
   /* 🔴 版くらべは数で（'2.10.0' < '2.9.6' の事故を 2026-08-25 に踏んだ） */
   const vn = (String(ver).match(/\d+/g) || []).map(Number);
-  const need = '2.11.1'.split('.').map(Number);
+  const need = '2.11.2'.split('.').map(Number);
   const ge = (a, b) => (a[0]||0) !== (b[0]||0) ? (a[0]||0) > (b[0]||0)
                      : (a[1]||0) !== (b[1]||0) ? (a[1]||0) > (b[1]||0)
                      : (a[2]||0) >= (b[2]||0);
-  ok('版が v2.11.1 以降', ge(vn, need), ver);
+  ok('版が v2.11.2 以降', ge(vn, need), ver);
 }
 
 await b.close();
