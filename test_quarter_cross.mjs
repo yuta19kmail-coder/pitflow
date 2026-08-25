@@ -193,6 +193,53 @@ console.log('\n── 🃏 ④画面が赤ではなく黄で出す ──');
   ok('青い印が付く（q-c-g cross）', /q-c-g cross/.test(html));
 }
 
+console.log('\n── 🔔 v2.8.3 直す先が無いQまたぎは「お知らせ」（扱いはOK） ──');
+/* 🗣「結局直しようがないような？？？」→「そのケースは あくまでお知らせで、扱いはOKにしてほしい」
+   🗣「ダメなのは月またぎ」（2026-08-08 の3段階をそのまま守る）
+   実データ（8/1〜8/23・109枚）では、期間の外18件のうち16件がこれだった。 */
+{
+  const 判定 = (o) => p.evaluate((x) => {
+    const pair = {
+      期間の外: x.期間の外, 同じ車: x.同じ車, 金額一致: x.金額一致,
+      日付: { kind: x.日付kind }, 売上日差: { kind: x.売上日差kind }
+    };
+    return { 正常: window.pitQCrossOnly(pair), 組: window.pitQGroupOf(Object.assign({
+      soft: { 金額: 100000, 車種: 'ノア', 車体番号: 'V1' },
+      pit:  { 確定金額: 100000, 車種: 'ノア', 車体番号: 'V1' },
+      担当一致: true
+    }, pair)) };
+  }, o);
+
+  const 素 = { 期間の外:true, 同じ車:true, 金額一致:true, 日付kind:'crossQ', 売上日差kind:'same' };
+  let r = await 判定(素);
+  ok('🔴 4つ揃えばお知らせ＝OK扱い', r.正常 === true && r.組 === 'ok', r);
+
+  r = await 判定(Object.assign({}, 素, { 日付kind: 'crossMonth' }));
+  ok('🔴🔴 月をまたいだら**絶対に**お知らせにしない（2026-08-08 の決めごと）',
+     r.正常 === false && r.組 === 'date', r);
+
+  r = await 判定(Object.assign({}, 素, { 金額一致: false }));
+  ok('金額が合っていなければお知らせにしない', r.正常 === false, r);
+
+  r = await 判定(Object.assign({}, 素, { 同じ車: false }));
+  ok('別の車かもならお知らせにしない', r.正常 === false, r);
+
+  r = await 判定(Object.assign({}, 素, { 売上日差kind: 'none' }));
+  ok('🔴 カードに売上日が無ければお知らせにしない（確かめようが無い）', r.正常 === false, r);
+
+  r = await 判定(Object.assign({}, 素, { 売上日差kind: 'diff' }));
+  ok('売上日どうしがズレていればお知らせにしない', r.正常 === false, r);
+
+  r = await 判定(Object.assign({}, 素, { 期間の外: false }));
+  ok('そもそも期間の中ならお知らせではない', r.正常 === false, r);
+
+  /* 画面：OK の箱を 0円と決め打ちしていないこと（＝4つを足すと差になる、が崩れない） */
+  const view = fs.readFileSync(path.join(process.cwd(), 'js', 'quarter.js'), 'utf8');
+  ok('🔴 OKの箱の金額を 0 と決め打ちしていない', /id:'ok'[\s\S]{0,120}v:\s*eff\(G\.OK\)/.test(view));
+  ok('🔴 画面が自分で判定していない（印を読むだけ）', /p\.正常なQまたぎ/.test(view) && !/kind\s*===\s*'crossMonth'/.test(view));
+  ok('カードに「直すところはありません」を出す', /直すところはありません/.test(view));
+}
+
 console.log('\n── 🧭 まわり ──');
 {
   await p.evaluate(() => { try { showView('inspect'); } catch (e) {} });
