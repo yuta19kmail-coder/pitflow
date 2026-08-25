@@ -254,6 +254,65 @@ ok('🔴 17台ぶんが「別のQ（確定）」として OK 側にいる', Q2.�
 ok('⚠ 同じ月を見ている間、書類を何度も読みに行かない（1つの月で4件まで）',
    Q2.読んだ書類 <= 5, Q2.読んだ書類);
 
+/* ================================================================
+   ✍ 書き込みは「Qごと」（ゆうた 2026-08-25）
+   ================================================================ */
+console.log('\n── ✍ 書き込みは Q ごと ──');
+const 書き = await p.evaluate(async () => {
+  const U = window._insp.q;
+  /* PDFを読み直して、3つの組がそろった状態に戻す */
+  window.pitQClearForMonth('2026-08');
+  U.list = await window.pitQLoadList();
+  window.pitQOpenPlan('2026-08-01', '2026-08-07');
+  await new Promise(r => setTimeout(r, 1500));
+  /* 押す前の確認の文言を横取りする（本当に押さずに中身だけ見る） */
+  let det = null;
+  const askOrig = window.pitAsk;
+  window.pitAsk = function (title, opt) { det = (opt && opt.detail) || ''; return Promise.resolve(true); };
+  const 帯 = g => { window.pitQPickGroup(g); return window.pitQWritePanel(U.res, U); };
+  const 前 = [0,1,2].map(帯);
+  window.pitQPickGroup(0);
+  window.pitQWriteGo();
+  await new Promise(r => setTimeout(r, 400));
+  const 後 = [0,1,2].map(帯);
+  window.pitAsk = askOrig;
+  window.pitQPickGroup(0);
+  return {
+    確認の文: Array.isArray(det) ? det : [String(det || '')],
+    前: 前.map(h => /書き込みました/.test(h) ? '済' : (/書き込む<\/button>/.test(h) ? '書ける' : (h ? 'その他' : '出ない'))),
+    後: 後.map(h => /書き込みました/.test(h) ? '済' : (/書き込む<\/button>/.test(h) ? '書ける' : (h ? 'その他' : '出ない'))),
+    印の場所: U.groups.map(g => !!g.書き込んだ),
+    Uに印がない: !U.書き込んだ
+  };
+});
+ok('🔴 確認の文は1行だけ（作業内容の履歴と車体番号）',
+   書き.確認の文.length === 1 && /作業内容の履歴と車体番号を書き込みます/.test(書き.確認の文[0]), 書き.確認の文);
+ok('🔴 「原価」「全員に見えます」の文言を出さない',
+   !/原価|全員に見え/.test(書き.確認の文.join('')), 書き.確認の文);
+ok('押す前は3つのQとも書ける', JSON.stringify(書き.前) === '["書ける","書ける","書ける"]', 書き.前);
+ok('🔴🔴 Q1に書いても、Q2・Q3は**まだ書ける**（Qごと）',
+   書き.後[0] === '済' && 書き.後[1] === '書ける' && 書き.後[2] === '書ける', 書き.後);
+ok('🔴 済んだ印は「その組」に付く', JSON.stringify(書き.印の場所) === '[true,false,false]', 書き.印の場所);
+ok('🔴 画面（U）には印を置かない', 書き.Uに印がない === true);
+
+console.log('\n── ⏳ 読み込み中は Q1〜Q4 の箱にも古い数字を出さない ──');
+const 箱 = await p.evaluate(async () => {
+  const U = window._insp.q;
+  const 前 = window.pitQuarterHtml();
+  U.busy = '残してある結果を読んでいます…';
+  const 中 = window.pitQuarterHtml();
+  U.busy = '';
+  return {
+    前に数字がある: /q-pq-d">このPDF|に実施/.test(前),
+    中は読み込み中だけ: /q-pq is-load/.test(中)
+      && !/このPDF \d+枚/.test(中) && !/残 <b>/.test(中) && !/に実施/.test(中),
+    押せない: (中.match(/q-pq is-load" disabled/g) || []).length >= 4
+  };
+});
+ok('（くらべる元）ふだんは箱に数字が出ている', 箱.前に数字がある === true);
+ok('🔴🔴 読み込み中は箱に数字を1つも出さない', 箱.中は読み込み中だけ === true, 箱);
+ok('🔴 読み込み中は箱を押せない', 箱.押せない === true, 箱);
+
 console.log('\n── 🗓 月を変えたら前の月を捨てる ──');
 const 月 = await p.evaluate(() => {
   window.pitQClearForMonth('2026-07');
@@ -271,11 +330,11 @@ console.log('\n── 🧭 まわり ──');
   /* 🔴 版くらべは**数で**。文字のままだと '2.10.0' < '2.9.6' になって落ちる
      （2026-08-25 に踏んだ。2.9 の次が 2.10 になった瞬間、見張りが全部赤くなった）。 */
   const vn = (String(ver).match(/\d+/g) || []).map(Number);
-  const need = '2.10.0'.split('.').map(Number);
+  const need = '2.10.1'.split('.').map(Number);
   const ge = (a, b) => (a[0]||0) !== (b[0]||0) ? (a[0]||0) > (b[0]||0)
                      : (a[1]||0) !== (b[1]||0) ? (a[1]||0) > (b[1]||0)
                      : (a[2]||0) >= (b[2]||0);
-  ok('版が v2.10.0 以降', ge(vn, need), ver);
+  ok('版が v2.10.1 以降', ge(vn, need), ver);
 }
 
 await b.close();
