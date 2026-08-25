@@ -63,8 +63,12 @@ console.log('\n── 🔍 決めごとがコードに入っているか ──'
      /w\.pitQCollect\(\{ from: from, to: to \}\)/.test(view));
   ok('🔴 一覧に無くても書類があれば開く', !/var has = \(U\.list \|\| \[\]\)\.some/.test(view));
   ok('✅ チェック済みの枠がある（doneBox）', /function doneBox\(/.test(view));
-  ok('✅ チェック済みは qmarks 1か所だけを読む',
-     /function doneRows\(U\)\{?[\s\S]{0,200}w\._pitQMarks/.test(view));
+  ok('✅ 片づいた行を箱から抜く口がある（splitDone）', /function splitDone\(R\)/.test(view));
+  ok('🔴 片づいたかの判定は quarter-fix.js の1本（pitQRowDone）',
+     /w\.pitQRowDone\s*=/.test(fix) && /w\.pitQRowDone \|\| function/.test(view));
+  ok('🔴 チェック済みは走らせた直後と同じカードで描く（専用の行を作らない）',
+     /oneCard\(item\.x, item\.k\)/.test(view) && /card\(item\.p\)/.test(view));
+  ok('✅ 何をしたかは qmarks 1か所だけを読む（pitQRowMarks）', /w\.pitQRowMarks\s*=/.test(fix));
 
   ok('✅ 直した記録を残す口がある（pitQDid）', /w\.pitQDid\s*=/.test(fix));
   ok('✅ 直した記録の鍵は印とぶつからない（DID|）', /'DID\|'/.test(fix));
@@ -245,36 +249,88 @@ ok('🔴 書き込みの帯が「伝票の中身は残していない」と断�
    honest.帯 === '' || /伝票の中身は残していない/.test(honest.帯), honest.帯.slice(0, 200));
 
 /* ---- チェック済みの枠 ---- */
-console.log('\n── ✅ チェック済み ──');
+console.log('\n── ✅ チェック済み（元のカードのまま・灰色） ──');
 const done = await p.evaluate(async () => {
   const U = window._insp.q;
   const before = window.pitQuarterHtml();
   const p0 = (U.res.結びついた || []).filter(x => window.pitQFixKinds(x).length)[0];
   const 番号 = window.pitQRowNo(p0);
-  await window.pitQDid('金額', p0, '確定金額を 100,000円 → 120,000円 にした');
-  await window.pitQMark('売上日', p0.soft, p0.pit, true);
+  const 前の箱 = window.pitQGroupOf(p0);
+  /* ① 印を全部押す＝直さずに「このままでよい」と決めた行 */
+  const kinds = window.pitQFixKinds(p0).concat(window.pitQKeepKinds(p0));
+  for (const k of kinds) await window.pitQMark(k.kind, p0.soft, p0.pit, true);
   const after = window.pitQuarterHtml();
+  /* 「金額がちがう」の箱の中身（この行が居た箱） */
+  U.tab = 前の箱 === 'money' ? 'money' : 前の箱 === 'data' ? 'data' : 前の箱 === 'ok' ? 'ok' : 'date';
+  const 箱 = window.pitQuarterHtml();
+  const 枠 = (after.match(/<details class="q-done">[\s\S]*?<\/details>/) || [''])[0];
   return {
     前に出ていない: !/q-done/.test(before),
+    片づいた: !!window.pitQRowDone(p0),
     出る: /class="q-done"/.test(after),
-    直したが出る: after.includes('確定金額を 100,000円 → 120,000円 にした'),
-    このままでよいが出る: /q-done-r kept/.test(after),
-    お客様が出る: after.includes(p0.soft.顧客名),
-    番号: 番号,
+    元のカードで出る: /class="q-done-i"><div class="q-c/.test(枠),
+    灰色の包み: /class="q-done-i"/.test(枠),
+    何をしたかが出る: /q-done-what/.test(枠) && /このままでよい/.test(枠),
+    お客様が出る: 枠.includes(p0.soft.顧客名),
     畳んである: /<details class="q-done">/.test(after) && !/<details class="q-done" open>/.test(after),
-    数字が動いていない:
-      (before.match(/<div class="q-sum">[\s\S]*?<\/div><\/div>/) || [''])[0]
-      === (after.match(/<div class="q-sum">[\s\S]*?<\/div><\/div>/) || [''])[0],
-    印の数: (window._pitQMarks || []).length
+    /* 🔴 いちばん大事：**元の箱から消えている**（ゆうた「あけぼのが移動してない」） */
+    /* ⚠ チェック済みの枠は q-body の**あと**に付くので、そこで切ってから見る */
+    箱から消えた: !((箱.split('<div class="q-body">')[1] || '').split('<details class="q-done"')[0]
+                     .includes(p0.soft.伝票)),
+    前の箱: 前の箱,
+    /* 🔴 動いてはいけないのは**金額**（PDFが言っている事実）。
+       ⚠ 「まだ合っていない N件」は**減って正しい**（押したぶん残りが減る）ので別に見る。 */
+    金額: [before, after].map(h => (h.match(/q-y">[^<]*/g) || []).join('|')),
+    残り: [before, after].map(h => +(((h.match(/まだ合っていない<\/span><b>(\d+)<\/b>/) || [])[1]) || -1)),
+    検算にチェック済みと書く: /＋チェック済みを足すと/.test(after)
   };
 });
 ok('何もしていない時は出ない（0件をシンプルに）', done.前に出ていない === true);
-ok('🔴 直したら「チェック済み」が出る', done.出る === true);
-ok('🔴 何を直したかが書いてある', done.直したが出る === true);
-ok('🔴 「このままでよい」も同じ枠に並ぶ', done.このままでよいが出る === true);
+ok('🔴 印を全部押したら「片づいた」になる', done.片づいた === true);
+ok('🔴 チェック済みの枠が出る', done.出る === true);
+ok('🔴🔴 元の箱（' + done.前の箱 + '）から**消えている**（＝移動する）', done.箱から消えた === true);
+ok('🔴 中身は走らせた直後と**同じカード**（専用の行を作らない）', done.元のカードで出る === true);
+ok('🔴 灰色は包みに着せる（カードの中は変えない）', done.灰色の包み === true);
+ok('🔴 何をしたかがカードの下に出る', done.何をしたかが出る === true);
 ok('誰の車かが分かる', done.お客様が出る === true);
 ok('🔴 ふだんは畳んである（押すと開く）', done.畳んである === true);
-ok('🔴🔴 チェック済みが増えても、合計・差の数字は1ミリも動かない', done.数字が動いていない === true);
+ok('🔴🔴 チェック済みが増えても、**金額は1円も動かない**（PDFが言っている事実）',
+   done.金額[0] === done.金額[1], done.金額);
+ok('🔴 「まだ合っていない」件数は、押したぶん減る',
+   done.残り[1] >= 0 && done.残り[1] < done.残り[0], done.残り);
+ok('🔴 足し算が変わったことを検算の1行に書く（＋チェック済み）',
+   done.検算にチェック済みと書く === true);
+
+/* ---- 実際に直した行も、チェック済みに残る ---- */
+console.log('\n── ✅ 実際に直した行（fixKinds が空になる行） ──');
+const fixed = await p.evaluate(async () => {
+  const U = window._insp.q;
+  const p1 = (U.res.結びついた || []).filter(x => window.pitQFixKinds(x).length)[0]
+          || (U.res.結びついた || [])[0];
+  /* 直した記録だけを置く（fixKinds が空でも拾えるかを見る） */
+  const clean = (U.res.結びついた || []).filter(x => !window.pitQFixKinds(x).length
+                                                  && !window.pitQKeepKinds(x).length)[0];
+  if (!clean) return { スキップ: true };
+  const 前 = window.pitQRowDone(clean);
+  await window.pitQDid('売上日', clean, '売上日を （なし） → 2026-08-03 にした');
+  const 後 = window.pitQRowDone(clean);
+  U.tab = 'ok';
+  const h = window.pitQuarterHtml();
+  const 枠 = (h.match(/<details class="q-done">[\s\S]*?<\/details>/) || [''])[0];
+  return { 前: 前, 後: 後,
+           OKの箱から消えた: !((h.split('<div class="q-body">')[1] || '').split('<details')[0]
+                                .includes(clean.soft.伝票)),
+           枠に出る: 枠.includes(clean.soft.伝票),
+           直したの札: /q-done-b fixed/.test(枠) };
+});
+if (fixed.スキップ) { ok('（直すところが無い行が無かったので飛ばす）', true); }
+else {
+  ok('直す前は「片づいた」ではない', fixed.前 === false, fixed);
+  ok('🔴 直した記録があれば「片づいた」になる（fixKinds が空でも拾う）', fixed.後 === true, fixed);
+  ok('🔴 OK の箱からも消える（1件は1か所にしか出ない）', fixed.OKの箱から消えた === true, fixed);
+  ok('🔴 チェック済みの枠に出る', fixed.枠に出る === true, fixed);
+  ok('🔴 「直した」の札が付く', fixed.直したの札 === true, fixed);
+}
 
 /* ---- 上書き・消去でチェックごと消える（ゆうた指定） ---- */
 console.log('\n── 🧹 上書き／消去 ──');
@@ -314,7 +370,7 @@ console.log('\n── 🧭 まわり ──');
 {
   ok('エラーなし', errs.length === 0, errs.slice(0, 3));
   const ver = await p.evaluate(() => (document.querySelector('meta[name=app-version]') || {}).content || '');
-  ok('版が v2.9.8 以降', ver >= '2.9.8', ver);
+  ok('版が v2.9.9 以降', ver >= '2.9.9', ver);
 }
 
 await b.close();
