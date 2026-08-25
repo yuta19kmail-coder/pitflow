@@ -380,6 +380,44 @@ console.log('\n── 💴 伝票の金額の言い方 ──');
      r.税不明.length === 1 && /売上（税抜）.*10,000/.test(r.税不明[0]), r.税不明);
 }
 
+/* ================================================================
+   📐 v2.12.6 高さは伝票ごとに変えない（ゆうた）
+   🗣「ハイトを伝票ごとに変えないで。最大サイズにして、空いてる部分は素直に空欄でいい」
+   🗣「長いのは勿論スクロールね」
+   ================================================================ */
+console.log('\n── 📐 高さは伝票ごとに変わらない ──');
+{
+  const r = await p.evaluate(async () => {
+    const cu = state.customers[0], v = cu.vehicles[0];
+    v.plate = '検証 000 あ 0002';
+    const 明細 = n => Array.from({length:n}, (_,i) => (
+      { 種:'部品', 名:'部品'+i, 区分:'部品', 数量:1, 単価:1000, 金額:1000, 原価:500 }));
+    v.伝票 = [
+      { 予約番号:'', 伝票番号:'H1', 売上日:'2026-08-10', 金額:60000, 原価:30000,
+        消費税:6000, 伝票計:66000, 法定:[], 明細:明細(60) },      /* 長い */
+      { 予約番号:'', 伝票番号:'H2', 売上日:'2026-08-09', 金額:1000, 原価:500,
+        消費税:100, 伝票計:1100, 法定:[], 明細:明細(1) }          /* 短い */
+    ];
+    custHistory(cu.id, v.id);
+    await new Promise(r => setTimeout(r, 350));
+    const box = () => Math.round(document.querySelector('.cm-box.ch-box').getBoundingClientRect().height);
+    const main = () => document.querySelector('.ch-main');
+    const bs = [].slice.call(document.querySelectorAll('.ch-ix'));
+    bs[0].click(); await new Promise(r => setTimeout(r, 180));
+    const 長 = { h: box(), scroll: main().scrollHeight > main().clientHeight + 1 };
+    bs[1].click(); await new Promise(r => setTimeout(r, 180));
+    const 短 = { h: box(), scroll: main().scrollHeight > main().clientHeight + 1 };
+    return { 長, 短, 画面に収まる: 長.h <= window.innerHeight,
+             目次の高さ: Math.round(document.querySelector('.ch-side').getBoundingClientRect().height) };
+  });
+  ok('🔴🔴 長い伝票と短い伝票で**高さが同じ**', r.長.h === r.短.h, r);
+  ok('🔴 長い伝票は中がスクロールする（箱は伸びない）', r.長.scroll === true, r.長);
+  ok('🔴 短い伝票はスクロールしない（空いた所は空欄）', r.短.scroll === false, r.短);
+  ok('🔴 画面からはみ出さない', r.画面に収まる === true, r);
+  ok('🔖 目次の高さも変わらない（右の中身に引きずられない）',
+     r.目次の高さ > 300 && Math.abs(r.目次の高さ - r.長.h) < 120, r);
+}
+
 console.log('\n── 🧭 まわり ──');
 {
   ok('エラーなし', errs.length === 0, errs.slice(0, 3));
