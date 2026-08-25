@@ -327,6 +327,83 @@ console.log('\n── 🔘 v2.8.5 直すボタンは「全部のカード」に�
   ok('🔴 走らせた直後に「もう一度PDFを読ませて」を出さない', r.カードを開く === 0, r);
 }
 
+console.log('\n── 🧾 v2.9.1 返車が先・伝票があと（QP-415514） ──');
+/* 🗣「板金に近いが、返車が先で伝票があとのパターン。今後は無くすようにするが
+   　　実際リアルパターンとして少数ある。**これはQまたぎと同じような扱いにしてほしい**」
+   実データ：V48797 有限会社 小松園芸／キャンター／82,470円
+   　　　　　PitFlow の実績日 8/03（Q1）／伝票 8/20（Q3）・0685 */
+{
+  const 判定 = (o) => p.evaluate((x) => {
+    const pair = { 期間の外:true, 同じ車:x.同じ車 !== false, 金額一致:x.金額一致 !== false,
+      日付:{ kind:x.日付kind }, 売上日差:{ kind:x.売上日差kind },
+      pit:{ 数える日:x.実績日, 売上日:x.カード売上日 || '', 保険:false },
+      soft:{ 売上日:x.伝票日 } };
+    return { 正常: window.pitQCrossOnly(pair), 言い方: window.pitQCrossWhy(pair) };
+  }, o);
+
+  const 素 = { 実績日:'2026-08-03', 伝票日:'2026-08-20', カード売上日:'',
+               日付kind:'crossQ', 売上日差kind:'none' };
+  let r = await 判定(素);
+  ok('🔴 返車が先・伝票があと＝お知らせ扱い', r.正常 === true, r);
+  ok('　言い方が専用になる', /返したあとに伝票/.test(r.言い方), r.言い方);
+  ok('　両方の日を出す', /2026-08-03/.test(r.言い方) && /2026-08-20/.test(r.言い方), r.言い方);
+
+  r = await 判定(Object.assign({}, 素, { 実績日:'2026-08-20', 伝票日:'2026-08-03' }));
+  ok('🔴 逆（伝票が先・返車があと）は拾わない', r.正常 === false, r);
+
+  r = await 判定(Object.assign({}, 素, { 日付kind:'crossMonth' }));
+  ok('🔴🔴 月をまたいだら**やはりNG**（2026-08-08 の決めごと）', r.正常 === false, r);
+
+  r = await 判定(Object.assign({}, 素, { 金額一致:false }));
+  ok('金額が合っていなければNG', r.正常 === false, r);
+  r = await 判定(Object.assign({}, 素, { 同じ車:false }));
+  ok('別の車かもならNG', r.正常 === false, r);
+
+  /* 🔴 カードに売上日が**入っている**なら、そちらは確かめられるので厳しく見る */
+  r = await 判定(Object.assign({}, 素, { カード売上日:'2026-08-11' }));
+  ok('🔴 カードの売上日が伝票とちがえばNG（確かめられるので）', r.正常 === false, r);
+  r = await 判定(Object.assign({}, 素, { カード売上日:'2026-08-20' }));
+  ok('　カードの売上日が伝票と同じならOK', r.正常 === true, r);
+}
+
+console.log('\n── 🗂 別のQで結ばれた車は「データがちがう」ではなく OK に置く ──');
+{
+  const h = await p.evaluate(() => {
+    const R = {
+      グループ:{ データ:[], 金額:[], 日付:[], OK:[] },
+      整備ソフトだけ:[],
+      PitFlowだけ:[
+        { 顧客名:'有限会社 小松園芸', ナンバー:'松戸 800 さ 453', 車種:'キャンター',
+          数える日:'2026-08-03', 確定金額:82470, 予約番号:'V48797', フロント担当:'蓮沼',
+          生:{ id:'card-v' }, 別のQ:'伝票は 8月 第3クォーター（2026-08-20・0685）にあります', 別のQ確定:true },
+        { 顧客名:'木村 亮', ナンバー:'習志野 300 か 77-77', 車種:'ハスラー',
+          数える日:'2026-08-06', 確定金額:88000, 予約番号:'R-2411', フロント担当:'蓮沼',
+          生:{ id:'card-k' }, 別のQ:'', 別のQ確定:false }
+      ],
+      内訳:{ 整備ソフトだけ:{台数:0,金額:0}, PitFlowだけ:{台数:2,金額:-170470},
+             期間の外:{台数:0,金額:0}, 金額ちがい:{台数:0,金額:0} },
+      検算:{ 合う:true }, 差:{ 台数:-2, 金額:-170470 },
+      整備ソフト:{ 枚数:0, 金額:0 }, PitFlow:{ 台数:2, 金額:170470 }
+    };
+    const U=(window._insp=window._insp||{}); U.q=U.q||{};
+    Object.assign(U.q,{ res:R, saved:null, savedId:'', pdf:{}, soft:[], from:'2026-08-01', to:'2026-08-07',
+      tab:'data', groups:[], list:[] });
+    const data = window.pitQuarterHtml();
+    U.q.tab='ok';
+    const okh = window.pitQuarterHtml();
+    return { data, okh };
+  });
+  ok('🔴 「データがちがう」は1件だけ（別のQ確定は外れる）',
+     /データがちがう<\/span><span class="q-grb-n">1</.test(h.data),
+     (h.data.match(/データがちがう<\/span><span class="q-grb-n">\d+</) || [])[0]);
+  ok('🔴 OK が1件になる（別のQ確定が入る）',
+     /OK<\/span><span class="q-grb-n">1</.test(h.data),
+     (h.data.match(/OK<\/span><span class="q-grb-n">\d+</) || [])[0]);
+  ok('🔴 データの一覧に小松園芸を出さない', !h.data.includes('小松園芸') || h.data.indexOf('小松園芸') > h.data.indexOf('q-body'), '');
+  ok('🔴 OKの一覧に小松園芸が出る', h.okh.includes('小松園芸'));
+  ok('　もう1台（別のQでない）はデータ側に残る', h.data.includes('木村 亮'));
+}
+
 console.log('\n── 🧭 まわり ──');
 {
   await p.evaluate(() => { try { showView('inspect'); } catch (e) {} });
