@@ -163,6 +163,15 @@ console.log('\n── 🧭 まわり ──');
   ok('🔴 走らせた直後と同じ4つの箱で出る',
      h.includes('データがちがう') && h.includes('金額がちがう') && h.includes('日付がちがう'));
   ok('🔴 昔の8つのタブは出さない', !/pitQSavedTab\('期間の外'\)/.test(h));
+  /* 🧹 v2.8.7 ゆうた「この辺りの表示が出るとややこしいから出さないで」「0件をシンプルに目指すように」 */
+  ok('🔴 内訳は畳んである（押した時だけ開く）', /<details class="q-more"><summary>差額の内訳を見る<\/summary>/.test(h));
+  ok('🔴 内訳より先に「差額の内訳を見る」が来る（本文にいきなり出さない）',
+     h.indexOf('PitFlow に実績が無い') > h.indexOf('差額の内訳を見る'));
+  ok('🔴 まとめ返車も畳みの中',
+     !/まとめて返車済みにした日/.test(h.slice(0, h.indexOf('差額の内訳を見る'))));
+  ok('大きく出るのは「まだ合っていない N件」', /まだ合っていない<\/span><b>\d+<\/b>件/.test(h),
+     (h.match(/まだ合っていない<\/span><b>\d+<\/b>件/) || [])[0]);
+  ok('🔴 昔の長い検算文は出さない', !h.includes('差額の内訳が、実際の差とぴったり合っていました'));
   ok('残してある結果の帯が出る', h.includes('残してある結果'));
   ok('走らせた日時・PDF名が出る', h.includes('売上チェックリスト.pdf'));
   await p.evaluate(() => { try { showView('inspect'); } catch (e) {} });
@@ -171,6 +180,22 @@ console.log('\n── 🧭 まわり ──');
   const ver = await p.evaluate(() => document.querySelector('meta[name=app-version]').content);
   const vn = String(ver || '').split('.').map(Number);
   ok('版が v2.7.0 以降', vn[0] > 2 || (vn[0] === 2 && vn[1] >= 7), ver);
+}
+
+console.log('\n── 🎉 0件＝オールグリーン ──');
+{
+  /* 直すものが1件も無い保存＝残り0。ゆうた「とにかくオールグリーン」 */
+  const z = mkSaved(2);
+  z.直すもの = { 期間の外:[], 月またぎ:[], Qまたぎ:[], 売上日ちがい:[], 担当ちがい:[], 金額ちがい:[],
+                 整備ソフトだけ:[], PitFlowだけ:[] };
+  z.OK台数 = 67;
+  const h = await render(z, 'ok');
+  ok('🔴 オールグリーンと言う', h.includes('オールグリーン'), (h.match(/q-chk[^>]*>[^<]{0,50}/) || [])[0]);
+  ok('　残りが0件と出る', /まだ合っていない<\/span><b>0<\/b>件/.test(h),
+     (h.match(/まだ合っていない<\/span><b>\d+<\/b>件/) || [])[0]);
+  ok('　0件は緑にする', /q-card q-diff zero/.test(h));
+  ok('　内訳はやはり畳んだまま', /<details class="q-more">/.test(h));
+  ok('　OKの件数は残してある数から出る', h.includes('67件'), (h.match(/合っていた <b>\d+件<\/b>/) || [])[0]);
 }
 
 console.log('\n' + (fail === 0 ? '🎉 ' : '⚠ ') + pass + ' OK / ' + fail + ' NG');
