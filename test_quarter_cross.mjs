@@ -182,7 +182,8 @@ console.log('\n── 🃏 ④画面が赤ではなく黄で出す ──');
                         別のQ:'伝票は 8月 第2クォーター（2026-08-10・D-A）にあります' }]
       }
     };
-    Object.assign(U.q, { res:null, pdf:null, saved, savedId:'qrun', savedTab:'PitFlowだけ', list:[], groups:[] });
+    /* 🗂 v2.8.6 残した結果も4つの箱。片方にしか無い車は「データがちがう」の中 */
+    Object.assign(U.q, { res:null, pdf:null, saved, savedId:'qrun', tab:'data', savedTab:'PitFlowだけ', list:[], groups:[] });
     return window.pitQuarterHtml();
   });
   ok('🔴 黄で出る（gone-y）', /gone-y/.test(html));
@@ -235,7 +236,7 @@ console.log('\n── 🔔 v2.8.3 直す先が無いQまたぎは「お知らせ
 
   /* 画面：OK の箱を 0円と決め打ちしていないこと（＝4つを足すと差になる、が崩れない） */
   const view = fs.readFileSync(path.join(process.cwd(), 'js', 'quarter.js'), 'utf8');
-  ok('🔴 OKの箱の金額を 0 と決め打ちしていない', /id:'ok'[\s\S]{0,120}v:\s*eff\(G\.OK\)/.test(view));
+  ok('🔴 OKの箱の金額を 0 と決め打ちしていない', /id:'ok'[\s\S]{0,400}eff\(G\.OK\)/.test(view));
   ok('🔴 画面が自分で判定していない（印を読むだけ）', /p\.正常なQまたぎ/.test(view) && !/kind\s*===\s*'crossMonth'/.test(view));
   ok('カードに「直すところはありません」を出す', /直すところはありません/.test(view));
 
@@ -266,14 +267,16 @@ console.log('\n── 🗄 残した結果でも、走らせた直後と同じ�
   });
   const draw = (saved, tab) => p.evaluate(([sv, tb]) => {
     const U = (window._insp = window._insp || {}); U.q = U.q || {};
-    Object.assign(U.q, { res:null, pdf:null, saved:sv, savedId:'qrun', savedTab:tb, list:[], groups:[] });
+    Object.assign(U.q, { res:null, pdf:null, saved:sv, savedId:'qrun', tab:tb, savedTab:'期間の外', list:[], groups:[] });
     return window.pitQuarterHtml();
   }, [saved, tab]);
 
-  const h = await draw(mk({ 台数:16, 金額:3189447 }), '期間の外');
+  const h = await draw(mk({ 台数:16, 金額:3189447 }), 'date');
   ok('🔴 16台がどこへ行ったかを1行で言う', /このうち[\s\S]{0,40}16台<\/b>/.test(h), (h.match(/このうち[^（]{0,60}/) || [])[0]);
   ok('🔴 「直すところはありません」と書いてある', h.includes('直すところはありません'));
-  ok('🔴 期間の外タブは0件になっている', /期間の外<span>0<\/span>/.test(h), (h.match(/期間の外<span>\d+<\/span>/) || [])[0]);
+  /* 🗂 v2.8.6 昔の「期間の外」タブは無くなった。4つの箱の「日付がちがう」が0件であることを見る */
+  ok('🔴 「日付がちがう」は0件になっている',
+     /日付がちがう<\/span><span class="q-grb-n">0</.test(h), (h.match(/日付がちがう<\/span><span class="q-grb-n">\d+</) || [])[0]);
   ok('　内訳の金額は今までどおり出る（お金は動かしていない）', h.includes('3,189,447'));
 
   const h2 = await draw(mk({ 台数:0, 金額:0 }), '期間の外');

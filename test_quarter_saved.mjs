@@ -104,16 +104,19 @@ const mkSaved = (v) => ({
   }
 });
 
-const render = async (saved, tab) => p.evaluate(([sv, tb]) => {
+/* 🗂 v2.8.6 残した結果も**走らせた直後と同じ4つの箱**（データ／金額／日付／OK）で出す。
+   ＝ 選ぶのは `tab`（4つ）。`savedTab`（昔の8つ）は **`_v` が無い古い保存の道でだけ**使う。 */
+const render = async (saved, tab, oldTab) => p.evaluate(([sv, tb, ot]) => {
   const U = (window._insp = window._insp || {});
   U.q = U.q || {};
-  Object.assign(U.q, { res: null, pdf: null, saved: sv, savedId: 'qrun', savedTab: tb, list: [], groups: [] });
+  Object.assign(U.q, { res: null, pdf: null, saved: sv, savedId: 'qrun',
+                       tab: tb, savedTab: ot || '金額ちがい', list: [], groups: [] });
   return window.pitQuarterHtml();
-}, [saved, tab]);
+}, [saved, tab, oldTab]);
 
 console.log('\n── 🃏 新しい形（_v:2）＝カードで出る ──');
 {
-  const h = await render(mkSaved(2), '金額ちがい');
+  const h = await render(mkSaved(2), 'money');
   ok('🔴 カードで出る（q-c）', /class="q-c[ "]/.test(h));
   ok('🔴 昔の表（q-t）では出ない', !/class="q-t"/.test(h));
   ok('お客様の名前が出る', h.includes('井上 健'), h.slice(0, 0));
@@ -131,12 +134,12 @@ console.log('\n── 🃏 新しい形（_v:2）＝カードで出る ──');
 
 console.log('\n── 🚗 片側だけの1件もカードで出る ──');
 {
-  const hs = await render(mkSaved(2), '整備ソフトだけ');
+  const hs = await render(mkSaved(2), 'data');
   ok('整備ソフトだけ＝カードで出る', /class="q-c[ "]/.test(hs) && !/class="q-t"/.test(hs));
   ok('　中身が出る（お客様・車種）', hs.includes('大野 里美') && hs.includes('フィット'));
   ok('　カードは有るので黄色あつかい', /gone-y/.test(hs), hs.match(/gone-?y?/g));
 
-  const hp = await render(mkSaved(2), 'PitFlowだけ');
+  const hp = await render(mkSaved(2), 'data');
   ok('PitFlowだけ＝カードで出る', /class="q-c[ "]/.test(hp) && !/class="q-t"/.test(hp));
   ok('　中身が出る（お客様・車種）', hp.includes('木村 亮') && hp.includes('ハスラー'));
   ok('　赤あつかい（伝票が無い）', /gone/.test(hp));
@@ -145,7 +148,7 @@ console.log('\n── 🚗 片側だけの1件もカードで出る ──');
 console.log('\n── 🗄 古い形（_v なし）＝今までの表のまま ──');
 {
   const old = mkSaved(2); delete old._v;
-  const h = await render(old, '金額ちがい');
+  const h = await render(old, 'money', '金額ちがい');
   ok('🔴 古い保存は表で出る（消さない）', /class="q-t"/.test(h));
   ok('🔴 なぜ表なのかを1行で言う', h.includes('古い形で残した結果'));
   ok('中身は読める', h.includes('井上 健'));
@@ -153,8 +156,13 @@ console.log('\n── 🗄 古い形（_v なし）＝今までの表のまま �
 
 console.log('\n── 🧭 まわり ──');
 {
-  const h = await render(mkSaved(2), '期間の外');
-  ok('0件のタブは「0件です」', h.includes('0件です'));
+  const h = await render(mkSaved(2), 'ok');
+  ok('🔴 OKは「合っていた行は残していません」と言う（0件ですと嘘をつかない）',
+     h.includes('残していません') && !h.includes('0件です'), h.slice(0, 0));
+  /* 🗂 v2.8.6 顔がひとつになったこと＝4つの箱で出て、昔の8つのタブは出ない */
+  ok('🔴 走らせた直後と同じ4つの箱で出る',
+     h.includes('データがちがう') && h.includes('金額がちがう') && h.includes('日付がちがう'));
+  ok('🔴 昔の8つのタブは出さない', !/pitQSavedTab\('期間の外'\)/.test(h));
   ok('残してある結果の帯が出る', h.includes('残してある結果'));
   ok('走らせた日時・PDF名が出る', h.includes('売上チェックリスト.pdf'));
   await p.evaluate(() => { try { showView('inspect'); } catch (e) {} });
