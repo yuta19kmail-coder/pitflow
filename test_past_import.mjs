@@ -185,11 +185,14 @@ const 履歴 = await p.evaluate(async () => {
   if (window.custHistory) window.custHistory(cu.id, cu.vehicles[0].id);
   await new Promise(r => setTimeout(r, 500));
   const h = document.body.innerHTML;
-  return { 行: document.querySelectorAll('.ch-item, .ch-row').length,
+  /* 🔖 v2.12.5 右は1件ずつ。並ぶのは**左の目次**のほう */
+  return { 目次: document.querySelectorAll('.ch-ix').length,
+           右: document.querySelectorAll('.ch-item').length,
            前の札: /PitFlow を始める前/.test(h),
            生タグが出ていない: !/&lt;i data-ic|<i data-ic=[a-z]+ data-ics=\d+><\/i>\s*[^<]*data-ic/.test(h) };
 });
-ok('過去の伝票が作業履歴に並ぶ', 履歴.行 >= 2, 履歴);
+ok('過去の伝票が作業履歴の目次に並ぶ', 履歴.目次 >= 2, 履歴);
+ok('🔴 右に出るのは1件だけ', 履歴.右 === 1, 履歴);
 ok('🔴「PitFlow を始める前」と分かる札が付く', 履歴.前の札 === true, 履歴);
 
 /* ── 🧭 まわり ─────────────────────────────────────────────── */
