@@ -159,6 +159,52 @@ console.log('\n── 🔢 版くらべのけた（受信箱の並び） ──'
   ok('🔴 受信箱ぜんぶが版の新しい順', cmp.崩れ === null, cmp);
 }
 
+/* ================================================================
+   ✂️ v2.13.1 支払い（現金・カード…）を丸ごと外した（ゆうた 2026-08-25）
+   🗣「カード詳細の支払い（現金 カード）などが選べる部分は**丸ごとカット**してほしい。
+   　　多分今どこかにデータを使ってはいないと思う」
+   🔴🔴 名前の似た **入金日（paymentDate / paymentSeparate）は別物。残っていること**まで見る。
+        あれは保険の実績化の要（insurance-pit.js）。ここを一緒に消すと保険が壊れる。
+   ================================================================ */
+console.log('\n── ✂️ 支払い（現金・カード）を外した ──');
+{
+  const cv = bare('js/card-view.js');
+  const cd = bare('js/card-detail.js');
+  const st = bare('js/state.js');
+  ok('✂️ 選ぶ行が無い（画面）', !/pickRow\('支払い'/.test(cv));
+  ok('✂️ 一覧を作る所も無い（payMethods）', !/function payMethods/.test(cv));
+  ok('✂️ 書き込む所も無い（c.payment =）', !/_c\.payment = val/.test(cv));
+  ok('✂️ 記録の表からも外した（ARCH_W の pay）', !/pay:'支払い'/.test(cv));
+  ok('✂️ 死んでいた paymentSelect を消した', !/function paymentSelect/.test(cd));
+  ok('✂️ マスターも消した（state.paymentMethods）', !/paymentMethods: \[/.test(st));
+  /* 🔴 ここが本丸。入金日は保険の実績化に使っている＝1バイトも触らない */
+  ok('🔴🔴 入金日は残っている（paymentDate）', /c\.paymentDate/.test(cv), 'card-view');
+  ok('🔴🔴 売掛（入金日を分ける）も残っている', /paymentSeparate/.test(cv));
+  const ins = bare('js/insurance-pit.js');
+  ok('🔴 保険は入金日を見たまま', /c\.paymentDate/.test(ins));
+
+  const r = await p.evaluate(async () => {
+    const 済 = (window.state.cards || []).find(c => c && c.status === 'returned');
+    const 未 = (window.state.cards || []).find(c => c && c.status !== 'returned');
+    const 開く = async (c) => { window.pitOpenCardDetail(c.id);
+      await new Promise(r => setTimeout(r, 500)); return document.body.innerText; };
+    const a = await 開く(未);
+    const b = await 開く(済);
+    let arch = '';
+    try { if (window.cvArchEdit){ window.cvArchEdit(); await new Promise(r => setTimeout(r, 400));
+          arch = document.body.innerText; } } catch (e) { arch = 'ERR ' + e; }
+    return { 予約中に支払い: /支払い/.test(a), 返車済みに支払い: /支払い/.test(b),
+             アーカイブ編集に支払い: /支払い/.test(arch),
+             入金の欄がある: /入金/.test(b),
+             マスターが残っていない: !window.state.paymentMethods };
+  });
+  ok('🔴 予約中のカードに「支払い」が出ない', r.予約中に支払い === false, r);
+  ok('🔴 返車済みのカードにも出ない', r.返車済みに支払い === false, r);
+  ok('🔴 完了アーカイブの編集にも出ない（＝開いても落ちない）', r.アーカイブ編集に支払い === false, r);
+  ok('🔴🔴 入金の欄はそのまま出る', r.入金の欄がある === true, r);
+  ok('✂️ 画面にもマスターが残っていない', r.マスターが残っていない === true, r);
+}
+
 console.log('\n── 🧭 まわり ──');
 ok('エラーなし', errs.length === 0, errs.slice(0, 3));
 

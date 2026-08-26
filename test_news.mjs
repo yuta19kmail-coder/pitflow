@@ -43,13 +43,20 @@ console.log('\n── 📦 お知らせ本体がコードにある ──');
       n: L.length,
       dupe: ids.size !== L.length,
       missing: L.filter(x => !x.id || !x.version || !x.date || !x.title || !x.body).map(x => x.id || '(id無し)'),
-      html: L.every(x => /<p>|<ul>/.test(x.body)),
+      /* 🔴 v2.13.1 body は**関数でも書ける**（マスターから組み立てるお知らせ）。
+         中身を見るときは、必ず**呼んでから**見る。 */
+      html: L.every(x => {
+        const b = (typeof x.body === 'function') ? x.body() : x.body;
+        return /<p>|<ul>/.test(String(b || ''));
+      }),
       newest: L[0] && L[0].version,
-      /* 版がいちばん新しいもの（先頭に足す決まりが守られているか） */
-      top: L.map(x => x.version).sort((a, b) => {
-        const n = v => String(v).split('.').map(Number).reduce((s, x, i) => s + x * [10000, 100, 1][i], 0);
-        return n(b) - n(a);
-      })[0]
+      /* 版がいちばん新しいもの（先頭に足す決まりが守られているか）
+         🔴🔴 v2.13.1 **式を書き写さない。** 前はここに
+            `[10000, 100, 1]` と写してあって、**アプリ側のけたバグごと写っていた**
+            （＝ v1.185.0 が v2.13.0 より新しい、を「正しい」と見張っていた）。
+            版くらべは `pitNewsVerNum` 1本に聞く。 */
+      top: L.map(x => x.version)
+            .sort((a, b) => window.pitNewsVerNum(b) - window.pitNewsVerNum(a))[0]
     };
   });
   /* ⚠ 件数は増える（リリースのたびに1件足す決まり）。数を決め打ちしない。 */
@@ -85,7 +92,8 @@ console.log('\n── 📥 受信箱＝版が新しい順・全部未読で始�
   await p.waitForTimeout(700);
   const r = await p.evaluate(() => {
     const items = [...document.querySelectorAll('#news-body .nw-item')];
-    const vn = v => { const q = String(v).split('.').map(Number); return q[0] * 10000 + q[1] * 100 + q[2]; };
+    /* 🔴 v2.13.1 ここも式を書き写さない（けたのバグごと写っていた）。1本に聞く。 */
+    const vn = v => window.pitNewsVerNum(v);
     const vers = items.map(x => (x.querySelector('.nw-ver') || {}).textContent || '');
     let desc = true;
     for (let i = 1; i < vers.length; i++) if (vn(vers[i - 1].slice(1)) < vn(vers[i].slice(1))) desc = false;
