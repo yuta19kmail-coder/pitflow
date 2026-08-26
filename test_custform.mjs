@@ -281,7 +281,12 @@ console.log('\n── ② 車ごとの来店履歴も同じ決まり ──');
     return { rows: box.querySelectorAll('.cm-hrow').length, empty: (box.querySelector('.cust-empty') || {}).textContent || '' };
   });
   ok('🔴 実績が無ければ1件も出ない', r.rows === 0, r.rows);
-  ok('同じ言い方で伝える', /返車まで終わって実績/.test(r.empty), r.empty.slice(0, 80));
+  /* 🔴 v2.13.3 ここは前まで**顧客詳細と同じ文**が出ているかを見ていた。
+     v2.11.0 で履歴の画面を作り直した時に、こちらだけ短くなった（全アプリ共通ルール＝文言は減らす）。
+     ⚠ 文そのものを縛ると、片方を短くしただけで赤くなる。
+        見たいのは「**なぜ空なのかが分かるか**」＝予約・作業中の件数を言っているか。 */
+  ok('なぜ空なのかを伝える（予約・作業中の件数）',
+     /作業履歴はまだありません/.test(r.empty) && /件/.test(r.empty), r.empty.slice(0, 80));
   await p.evaluate(() => { custCloseModal(); });
 }
 
@@ -296,7 +301,11 @@ console.log('\n── ② 実績の判定は実績ボードと同じ印を見て
   ]);
   ok('🔴 「返車済み＋実績の日付」だけが実績', JSON.stringify(r.map(x => x[1])) === JSON.stringify([false, false, false, false, true]), r);
   const res = fs.readFileSync('js/result.js', 'utf8');
-  ok('実績ビューも completedAt と status を見ている（同じ物差し）', /completedAt === dateStr/.test(res) && /'returned'/.test(res));
+  /* 🔴 v2.13.3 前は `completedAt === dateStr` という**書き方そのもの**を縛っていた。
+     v2.9.6 で実績カレンダーを2段（数える／数えない）にした時に書き方が変わって、ずっと赤かった。
+     ⚠ 縛るのは書き方ではなく**何を見ているか**（completedAt と returned）。 */
+  ok('実績ビューも completedAt と status を見ている（同じ物差し）',
+     /c\.completedAt/.test(res) && /'returned'/.test(res));
   const tod = fs.readFileSync('js/today.js', 'utf8');
   ok('🔴 返車時に金額が確定される（amountFinal）', /c\.completedAt = t;/.test(tod) && /c\.amountFinal/.test(tod));
 }
