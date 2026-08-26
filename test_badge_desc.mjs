@@ -205,6 +205,65 @@ console.log('\n── ✂️ 支払い（現金・カード）を外した ─�
   ok('✂️ 画面にもマスターが残っていない', r.マスターが残っていない === true, r);
 }
 
+/* ================================================================
+   🗑 v2.13.2 もう無い機能の記録を、画面に出さない（ゆうた 2026-08-25）
+   🗣「支払方法に関してはアーカイブも含めて既存の表示も消したい」→「画面で隠す」
+   🔴 **記録そのものは消さない。** 出さないだけ。
+   ⚠ 巻き添えを見張る＝洗車・入金日・売掛は今までどおり出ること。
+   ================================================================ */
+console.log('\n── 🗑 もう無い機能の記録を隠す ──');
+{
+  const sh = bare('js/pit-share.js');
+  ok('🗑 見分けが1本ある（pitLogGone）', /w\.pitLogGone = pitLogGone/.test(sh));
+  const ct = bare('js/card-tabs.js'), cv2 = bare('js/card-view.js'), op = bare('js/oplog-pit.js');
+  ok('🔴 出す所は3つとも同じものに聞く（フロー2つ＋操作ログ）',
+     /pitLogGone\(/.test(ct) && /pitLogGone\(/.test(cv2) && /pitLogGone\(/.test(op));
+
+  const r = await p.evaluate(async () => {
+    const g = window.pitLogGone;
+    const 物差し = {
+      フロー:   g('完了アーカイブを直した：支払い 現金 → カード'),
+      操作ログ: g('完了アーカイブを直した：高橋 様 / ゴルフ　支払い 現金 → カード'),
+      空から:   g('完了アーカイブを直した：支払い （空） → 振込'),
+      洗車:     g('完了アーカイブを直した：洗車 要 → 不要'),
+      入金日:   g('入金日を入れた：2026-08-20'),
+      売掛:     g('売掛にした（入金日を分ける）'),
+      ただの文: g('お支払いのご相談あり')
+    };
+    const c = (window.state.cards || []).find(x => x && x.status === 'returned');
+    c.payment = 'cash';
+    c.log = (c.log || []).concat([
+      { label:'完了アーカイブを直した：支払い 現金 → カード', at: Date.now() - 90000, staff:'菅谷' },
+      { label:'完了アーカイブを直した：洗車 要 → 不要',       at: Date.now() - 80000, staff:'菅谷' }
+    ]);
+    window.pitOpenCardDetail(c.id);
+    await new Promise(r => setTimeout(r, 700));
+    const tab = [].slice.call(document.querySelectorAll('button,a,div'))
+      .find(x => /^フロー/.test((x.textContent || '').trim()));
+    if (tab) tab.click();
+    await new Promise(r => setTimeout(r, 600));
+    const t = document.body.innerText;
+    return { 物差し, 支払いが出ない: !/支払い[^→]*→/.test(t), 洗車は出る: /洗車 要/.test(t),
+             記録は残っている: (c.log || []).some(x => /支払い/.test(x.label || '')),
+             値も残っている: c.payment };
+  });
+  ok('🔴 支払いの記録を見分ける（フロー・操作ログ・空からの両方）',
+     r.物差し.フロー && r.物差し.操作ログ && r.物差し.空から, r.物差し);
+  ok('🔴🔴 巻き添えにしない（洗車・入金日・売掛・ただの文）',
+     !r.物差し.洗車 && !r.物差し.入金日 && !r.物差し.売掛 && !r.物差し.ただの文, r.物差し);
+  ok('🔴 フローに支払いの行が出ない', r.支払いが出ない === true, r);
+  ok('🔴 同じ枠の洗車の記録はちゃんと出る', r.洗車は出る === true, r);
+  ok('🔴🔴 記録そのものは消えていない', r.記録は残っている === true, r);
+  ok('🔴🔴 c.payment の値も消えていない', r.値も残っている === 'cash', r);
+
+  /* ✂️ 残っていた4か所の文言 */
+  ok('✂️ 社内車両の説明から外した', !/完TEL・支払い・洗車/.test(cv2));
+  ok('✂️ 管理者アラートから外した', !/完TEL・支払い・洗車・お礼LINE・車販依頼）を直せる/.test(cv2));
+  const ec = bare('js/errcode-pit.js'), sp = bare('js/sample-patterns.js');
+  ok('✂️ エラー番号一覧（PF-0021）から外した', !/完TEL・支払い/.test(ec));
+  ok('✂️ サンプル画面から外した', !/支払/.test(sp));
+}
+
 console.log('\n── 🧭 まわり ──');
 ok('エラーなし', errs.length === 0, errs.slice(0, 3));
 
