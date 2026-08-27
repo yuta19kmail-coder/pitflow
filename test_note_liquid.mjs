@@ -109,8 +109,14 @@ async function look(theme){
       var el = document.querySelector('.bn-card.bn-color-' + c);
       if (!el) return;
       var cs = getComputedStyle(el), bf = getComputedStyle(el, '::before');
+      /* 🔴 タブが「カードの中へ入り込んでいないか」。
+         top / height は **padding box（枠の内側）** が基準なので、
+         `top + height` が 0 より大きい＝**枠を越えて中に入っている**（2026-08-27 ゆうた指摘）。 */
+      var into = parseFloat(bf.top) + parseFloat(bf.height);
       r[c] = { bg: cs.backgroundColor, bgImg: cs.backgroundImage, border: cs.borderTopColor,
                shadow: cs.boxShadow, tabBg: bf.backgroundColor, tabW: bf.width, tabH: bf.height,
+               中へ: isFinite(into) ? Math.round(into * 100) / 100 : null,
+               左: parseFloat(bf.left) + parseFloat(cs.borderLeftWidth),
                text: getComputedStyle(el).color };
     });
     return r;
@@ -128,6 +134,13 @@ console.log('\n── 🌙 ダーク・リキッド ──');
     ok('「' + c + '」に発光（box-shadow）が乗っている', m[c] && /rgba?\(/.test(m[c].shadow) && m[c].shadow !== 'none', m[c] && m[c].shadow);
   });
   ok('🔴 カードの文字が明るい（ガラスに黒文字が沈まない）', m.red && m.red.text === 'rgb(238, 242, 247)', m.red && m.red.text);
+  /* 🔴 2026-08-27 ゆうた「タブがちょっとだけ中にはみ出てる」
+     枠 1.5px を前提に `top:-12.5px` で置いていたが、枠は端末によって 1px に丸められるので
+     そのぶんタブが中へ入り込んでいた。`bottom:100%` で枠の内側にピタッと止める。 */
+  ['red','orange','yellow','green','blue'].forEach(function(c){
+    ok('🔴 「' + c + '」のタブがカードの中へ入り込んでいない', m[c] && m[c].中へ <= 0.5, m[c] && m[c].中へ);
+    ok('「' + c + '」のタブが左へはみ出していない', m[c] && m[c].左 >= -0.01, m[c] && m[c].左);
+  });
 }
 
 console.log('\n── 💎 ライト・リキッド ──');
@@ -151,11 +164,11 @@ console.log('\n── 🧭 まわり ──');
   ok('エラーなし', errs.length === 0, errs.slice(0, 3));
   const ver = await p.evaluate(() => (document.querySelector('meta[name=app-version]') || {}).content || '');
   const vn = (String(ver).match(/\d+/g) || []).map(Number);
-  const need = '2.16.0'.split('.').map(Number);
+  const need = '2.16.1'.split('.').map(Number);
   const ge = (a, b2) => (a[0]||0) !== (b2[0]||0) ? (a[0]||0) > (b2[0]||0)
                       : (a[1]||0) !== (b2[1]||0) ? (a[1]||0) > (b2[1]||0)
                       : (a[2]||0) >= (b2[2]||0);
-  ok('版が v2.16.0 以降', ge(vn, need), ver);
+  ok('版が v2.16.1 以降', ge(vn, need), ver);
 }
 
 await b.close();
