@@ -144,9 +144,12 @@ ok('🔴 課の1本（pitDivisionLabel / pitDivisionColorOr）が pit-share.js �
    ================================================================== */
 console.log('\n── ③ 棚卸し：色と「1課／2課」の直書きは増やさない ──');
 
+/* 🔴 v2.21.1 `pit-share.js` の 2 は **物差しそのもの**（`pitTeamColor`）＝寄せ先。
+   ここだけは 0 にしない。他は全部ここを呼ぶ形にして減らしていく。 */
 const BASE_COLOR = {
+  'pit-share.js': 2,
   'avail.js': 4, 'board-line.js': 2, 'card-detail.js': 9, 'card-view.js': 2,
-  'coreflow-presence.js': 1, 'customers.js': 3, 'dashboard.js': 3, 'launcher.js': 2,
+  'coreflow-presence.js': 1, 'customers.js': 2, 'dashboard.js': 3, 'launcher.js': 2,
   'loaner.js': 3, 'maintdash.js': 2, 'mech-summary.js': 3, 'mydash.js': 5,
   'parking.js': 1, 'pit-floor.js': 6, 'reserve.js': 9, 'result.js': 2,
   'return.js': 4, 'rules.js': 4, 'sales.js': 21, 'search.js': 2, 'settings.js': 2,
@@ -182,7 +185,7 @@ const nowDiv   = census(/'1課'|'2課'|>1課<|>2課</g);
 const cSum = check('国産の緑・輸入のピンク', nowColor, BASE_COLOR);
 const dSum = check('「1課」「2課」という字', nowDiv, BASE_DIV);
 
-console.log('\n  🎯 棚卸しの目標＝どちらも 0（設定の表から引くだけにする）。いま 色 ' + cSum + ' ／ 課 ' + dSum);
+console.log('\n  🎯 棚卸しの目標＝色は pit-share.js の 2 だけ・課は 0（設定の表から引くだけにする）。いま 色 ' + cSum + ' ／ 課 ' + dSum);
 
 /* ==================================================================
    ④ 「◯年◯月◯日」を決め打ちしない

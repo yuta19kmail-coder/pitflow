@@ -100,10 +100,22 @@ console.log('\n── 📋 今日のリスト ──');
   ok('LINEお断りの人は出ない', ids.indexOf('TX-4') < 0, ids);
   ok('売上なしの車は出ない', ids.indexOf('TX-5') < 0, ids);
   ok('まだ返していない車は出ない', ids.indexOf('TX-6') < 0, ids);
-  ok('🔴 昨日の未送は「まだ送っていない」に出る（TX-7）', ids.indexOf('TX-7') >= 0, ids);
-  ok('昨日でも送信済は出ない（TX-8）', ids.indexOf('TX-8') < 0, ids);
+  ok('🔴 昨日の未送は「前の3日ぶん」に出る（TX-7）', ids.indexOf('TX-7') >= 0, ids);
+  /* 🔴 v2.21.1（ゆうた）「**お礼LINEは消えないで。チェックで打ち消し線グレーアウトで**」 */
+  ok('🔴 昨日の送信済も消えずに残る（TX-8）', ids.indexOf('TX-8') >= 0, ids);
+  {
+    const st = await p.$$eval('.thx-back .thx-row', els => els.map(e => ({
+      id: ((e.getAttribute('onclick') || '').match(/TX-\d+/) || [''])[0],
+      on: e.classList.contains('on'),
+      op: +getComputedStyle(e).opacity,
+      line: getComputedStyle(e.querySelector('.md-row-m')).textDecorationLine })));
+    const sent = st.find(x => x.id === 'TX-8') || {};
+    ok('🔴 送信済は打ち消し線', sent.line === 'line-through', st);
+    ok('🔴 送信済はグレーアウト（薄い）', sent.op > 0 && sent.op < 0.8, st);
+    ok('未送が先・送信済は下にたまる', st.map(x => (x.on ? 1 : 0)).join('') === st.map(x => (x.on ? 1 : 0)).sort().join(''), st);
+  }
   const backH = await p.$$eval('.thx-back-h', els => els.map(e => e.textContent));
-  ok('「まだ送っていない」の見出しに件数が出る', backH.length === 1 && backH[0].indexOf('1件') >= 0, backH);
+  ok('「前の3日ぶん」の見出しに未送の件数が出る', backH.length === 1 && backH[0].indexOf('まだ 1件') >= 0, backH);
   const bar = await p.$eval('.thx-bar', e => e.textContent);
   ok('日付の切り替えが出ていて、はじめは今日', bar.indexOf('（今日）') >= 0, bar);
   ok('今日を見ている間は「今日へ」を出さない', (await p.$$('.thx-today')).length === 0);

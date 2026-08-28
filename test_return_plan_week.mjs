@@ -54,13 +54,28 @@ console.log('\n── 🧭 物差しは1本か ──');
   ok('日のずらし方が1本（mdShift）', /function mdShift/.test(body) && /mdShift\(C\.tStr, i\)/.test(body));
   ok('休みは共通の PitCal で見ている', /PitCal\.isClosed/.test(body));
   ok('チェックボックスは付けていない', !/rp-[a-z]*chk|type="checkbox"[\s\S]{0,80}rp-/.test(body));
+  /* 🔴 v2.21.1 「これまで培ってきたもの」に合わせた＝色も札もホバーも**借りて**くる */
+  ok('🔴 左ラインの色は共通の1本（pitTeamColor）', /pitTeamColor/.test(body) && !/#ec4899/.test(rp), rp.match(/#ec4899/g));
+  ok('作業種別の札は共通の1本（wtChip）', /wtChip\(c\)/.test(rp));
+  ok('ホバー情報カード用に data-card-id を付けている', /data-card-id="/.test(rp));
+  ok('🔴 このBOX用の別 tooltip を作っていない', !/title="[^"]*様/.test(rp));
+  {
+    const hv = fs.readFileSync(path.join(process.cwd(), 'js', 'card-hover.js'), 'utf8');
+    ok('🔴 ホバーの出し所は card-hover.js の1行に足しただけ', /HOVER_SEL[^;]*\.rp-car/.test(hv));
+  }
   const css = fs.readFileSync(path.join(process.cwd(), 'css', 'mydash.css'), 'utf8');
   ok('CSS に斜線（.rp-cell.past）がある', /\.rp-cell\.past/.test(css));
   ok('CSS に今日（.rp-cell.today）がある', /\.rp-cell\.today/.test(css));
   ok('CSS に休み（.rp-cell.closed）がある', /\.rp-cell\.closed/.test(css));
+  ok('CSS に細い帯（.rp-cell.slim）がある', /\.rp-cell\.slim/.test(css));
   const ix = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
-  ok('版が3か所そろっている（2.21.0）',
-     (ix.match(/2\.21\.0/g) || []).length >= 3, (ix.match(/2\.21\.0/g) || []).length);
+  {
+    /* 📌 版の数字は直書きしない（2026-08-28）。**3か所が同じか**だけ見る */
+    const v = [ (ix.match(/name="app-version"[^>]*content="v?([\d.]+)"/) || [])[1],
+                (ix.match(/class="login-ver"[^>]*>\s*v?([\d.]+)/) || [])[1],
+                (ix.match(/class="ver"[^>]*>\s*v?([\d.]+)/) || [])[1] ];
+    ok('版が3か所そろっている', !!v[0] && v.every(x => x === v[0]), v);
+  }
   ok('触った mydash.js / mydash.css に ?v= が付いている',
      /js\/mydash\.js\?v=\d+/.test(ix) && /css\/mydash\.css\?v=\d+/.test(ix));
 }
@@ -138,7 +153,7 @@ const V = await p.evaluate(() => {
     today: e.classList.contains('today'),
     closed: e.classList.contains('closed'),
     names: [...e.querySelectorAll('.rp-n')].map(x => x.textContent.trim()),
-    cars: [...e.querySelectorAll('.rp-c')].map(x => x.textContent.trim()),
+    cars: [...e.querySelectorAll('.rp-c')].map(x => (x.firstChild ? x.firstChild.textContent : '').trim()),
     more: (e.querySelector('.rp-more') || {}).textContent || ''
   }));
   const host = box.closest('.md-box') || box.parentElement;
@@ -146,12 +161,13 @@ const V = await p.evaluate(() => {
     heads: heads, cells: cells,
     text: (host.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 120),
     chk: host.querySelectorAll('input[type=checkbox]').length,
-    title: !!(host.textContent || '').match(/今週の返車予定/)
+    title: !!(host.textContent || '').match(/今週の暫定返車予定（確定返車以外）/)
   };
 });
 
 console.log('\n── 🗓 かたち ──');
 ok('BOX が出ている', !V.none && V.title, V.text);
+ok('タイトルが「今週の暫定返車予定（確定返車以外）」', V.title, V.text.slice(0, 40));
 ok('曜日は 月火水木金土日 で固定', JSON.stringify(V.heads) === JSON.stringify(['月','火','水','木','金','土','日']), V.heads);
 ok('マスは7つ', V.cells.length === 7, V.cells.length);
 {
@@ -226,6 +242,90 @@ console.log('\n── 🧹 かさ（s は数だけ） ──');
     return { cal: !!document.querySelector('#mydash-flow .rp-cal'), t: (host.textContent || '').replace(/\s+/g, ' ').trim() };
   });
   ok('s は数だけ（カレンダーは出さない）', !s.cal && /\d+\s*台/.test(s.t), s.t.slice(0, 60));
+}
+
+console.log('\n── 🎨 v2.21.1 これまで培ってきた見た目を借りているか ──');
+{
+  await p.evaluate(() => { if (window.closeDetail) closeDetail(); });   /* 前の節で開いたカードを閉じる */
+  await p.waitForTimeout(300);
+  const D = await p.evaluate(() => {
+    const ymdL = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const sh = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymdL(d); };
+    state.cards = [];
+    const mk = (id, name, car, day, imp, lo) => state.cards.push({ id: id, resNo: id, customer: name, car: car,
+      plate: '習志野 300 あ 12-34', reserveDate: sh(-3), returnDate: sh(day), status: 'partsWait',
+      boardId: imp ? 'import' : 'default', workType: 'shaken', workTypes: ['shaken'], needLoaner: !!lo });
+    mk('K1', '国産 一郎', 'CAR-K', 0, false, true);
+    mk('K2', '輸入 二郎', 'CAR-I', 0, true, false);
+    state.settings.myDash = { v: 2, active: 0, presets: [{ name: '試験', layout: [{ e: 'returnPlanWeek', s: 'l' }] }] };
+    renderMyDash();
+    const cal = document.querySelector('#mydash-flow .rp-cal');
+    const car = id => [...cal.querySelectorAll('.rp-car')].find(e => e.dataset.cardId === id);
+    const cs = e => getComputedStyle(e).borderLeftColor;
+    return {
+      dom: !!car('K1') && !!car('K2'),
+      kokusan: car('K1') ? cs(car('K1')) : '',
+      yunyu:   car('K2') ? cs(car('K2')) : '',
+      lo:      car('K1') ? car('K1').querySelectorAll('.rp-lo').length : -1,
+      loNone:  car('K2') ? car('K2').querySelectorAll('.rp-lo').length : -1,
+      wt:      car('K1') ? car('K1').querySelectorAll('.md-wt').length : -1,
+      cid:     car('K1') ? car('K1').dataset.cardId : ''
+    };
+  });
+  ok('駒が2台とも出ている', D.dom, D);
+  ok('🔴 国産は左ラインがグリーン（#1db97a）', D.kokusan === 'rgb(29, 185, 122)', D.kokusan);
+  ok('🔴 輸入は左ラインがピンク（#ec4899）', D.yunyu === 'rgb(236, 72, 153)', D.yunyu);
+  ok('代車ありに「代」が付く', D.lo === 1, D.lo);
+  ok('代車なしには付かない', D.loNone === 0, D.loNone);
+  ok('作業種別の札が出る', D.wt === 1, D.wt);
+  ok('data-card-id が付いている', D.cid === 'K1', D.cid);
+
+  /* ホバー情報カード＝card-hover.js のものがそのまま出る（別物を作っていない） */
+  await p.hover('#mydash-flow .rp-car');
+  await p.waitForTimeout(700);
+  const H = await p.evaluate(() => {
+    const e = document.getElementById('pit-hovercard');
+    return { show: !!(e && e.classList.contains('show')), t: (e ? e.textContent : '').replace(/\s+/g, ' ') };
+  });
+  ok('🔴 マウスを乗せると車両情報カードが出る', H.show, H.t.slice(0, 40));
+  ok('中身は既存のもの（ナンバー・預かり日数が入っている）',
+     /習志野/.test(H.t) && /預かり/.test(H.t), H.t.slice(0, 80));
+}
+
+console.log('\n── 🧵 定休日の細い帯（ゆうた「隙間は空けなくてOK」） ──');
+{
+  const S = await p.evaluate(() => {
+    const ymdL = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    const sh = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymdL(d); };
+    /* 窓の7日から「休みの日」を探す。無ければ試験できないので closedDay:null を返す */
+    let closed = null;
+    for (let i = -1; i <= 5; i++) { const d = sh(i); if (window.PitCal && PitCal.isClosed(d)) { closed = d; break; } }
+    if (!closed) return { none: true };
+    state.cards = [];
+    renderMyDash();
+    const cell = () => {
+      const cal = document.querySelector('#mydash-flow .rp-cal');
+      const dd = String(+closed.split('-')[2]);
+      return [...cal.querySelectorAll('.rp-cell')].find(e => ((e.querySelector('.rp-d') || {}).textContent || '').replace(/[今休]/g,'').trim() === dd);
+    };
+    const empty = cell();
+    const r1 = { slim: empty.classList.contains('slim'), w: Math.round(empty.getBoundingClientRect().width) };
+    /* 同じ休みの日に暫定の車を1台置くと、細くしない（隠さない） */
+    state.cards.push({ id: 'SL1', resNo: 'SL1', customer: '休みに返る', car: 'CAR-SL', plate: '習志野 300 あ 12-34',
+      reserveDate: sh(-3), returnDate: closed, status: 'partsWait', boardId: 'default', workType: 'shaken', workTypes: ['shaken'] });
+    renderMyDash();
+    const filled = cell();
+    const r2 = { slim: filled.classList.contains('slim'), w: Math.round(filled.getBoundingClientRect().width),
+                 has: !!filled.querySelector('.rp-car') };
+    const other = [...document.querySelectorAll('#mydash-flow .rp-cell')].filter(e => !e.classList.contains('slim'));
+    return { none: false, r1: r1, r2: r2, otherW: Math.round(other[0].getBoundingClientRect().width) };
+  });
+  if (S.none) { console.log('  ⏭ 窓の7日に休みが無いので今回は見られない'); }
+  else {
+    ok('🔴 返車の無い定休日は細い帯になる', S.r1.slim && S.r1.w < 40, S.r1);
+    ok('細い帯は他の日よりずっと狭い', S.r1.w * 2 < S.otherW, { slim: S.r1.w, other: S.otherW });
+    ok('🔴 定休日でも車が入っていたら細くしない（隠さない）', !S.r2.slim && S.r2.has && S.r2.w > 40, S.r2);
+  }
 }
 
 console.log('\n── 🧯 JSエラー ──');
