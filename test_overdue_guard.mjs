@@ -219,6 +219,106 @@ console.log('\n── 📝 記録をもっと細かく（ゆうた「自動系�
   ok('🔴 操作ログを予約番号で絞り込める', S.shown > 0 && S.shown <= S.total, S);
 }
 
+console.log('\n── 📝 予約カードの中身を直した記録（ゆうた「予約カード内部の操作も履歴に残る？」） ──');
+{
+  const E = await p.evaluate(() => {
+    try { localStorage.removeItem('pitflow_oplog_v1'); } catch (e) {}
+    state.cards = [{ id: 'ED-1', resNo: 'C77001', customer: '編集 太郎', kana: 'ヘンシュウ タロウ',
+      car: 'タント', tel: '090-1111-2222', plate: '習志野 300 あ 12-34', reserveDate: '2026-12-01',
+      status: 'parts', boardId: 'default', workType: 'shaken', workTypes: ['shaken'],
+      actualInAt: '2026-12-01', amountOrder: 120000, frontStaff: '', log: [] }];
+    const c = state.cards[0];
+    openDetail(c.id);                     /* ここで開いた時の姿を控える */
+    c.customer = '編集 次郎';
+    c.amountOrder = 150000;
+    c.frontStaff = '小林';
+    c.needWash = true;
+    closeDetail();                        /* ここで見くらべて記録する */
+    const op = JSON.parse(localStorage.getItem('pitflow_oplog_v1') || '[]');
+    return { lines: (c.log || []).map(x => x.label), auto: (c.log || []).map(x => !!x.auto),
+             op: op.map(x => ({ a: x.action, l: x.label, u: x.userName })) };
+  });
+  ok('🔴 欄を直すとフローに残る（前は0行だった）', E.lines.length === 4, E.lines);
+  ok('何を何に変えたかが分かる（受注金額）',
+     E.lines.some(x => /受注金額 120000 → 150000/.test(x)), E.lines);
+  ok('欄の名前は人が読める言葉（フロント担当）',
+     E.lines.some(x => /フロント担当 （空） → 小林/.test(x)), E.lines);
+  ok('押した／押していないも残る（洗車 なし → あり）',
+     E.lines.some(x => /洗車 なし → あり/.test(x)), E.lines);
+  ok('人が直した記録なので「自動」の印は立たない', E.auto.every(x => x === false), E.auto);
+  {
+    const row = E.op.find(x => /予約を編集/.test(x.a || ''));
+    ok('🔴 操作ログにもまとめて1行', !!row, E.op);
+      ok('何か所直したかが出る', row && /\d+か所/.test(row.a), row && row.a);
+    ok('🔴 予約番号が入る（番号で追える）', row && /\[C77001\]/.test(row.l), row && row.l);
+  }
+  const D = await p.evaluate(() => {
+    /* すでに自分の記録を持っている欄は、二重に残さない */
+    const skip = ['completedAt', 'returnDateFinal', 'salesDate', 'returnDate', 'returnTime'];
+    const before = { completedAt: '', returnDate: '', salesDate: '', amountOrder: 1 };
+    const after  = { completedAt: '2026-12-02', returnDate: '2026-12-03', salesDate: '2026-12-04', amountOrder: 2 };
+    return { keys: pitCardDiff(before, after).map(x => x.key), skip: skip };
+  });
+  ok('🔴 すでに記録がある欄は二重に残さない',
+     D.skip.every(k => D.keys.indexOf(k) < 0) && D.keys.indexOf('amountOrder') >= 0, D.keys);
+  const N = await p.evaluate(() => {
+    /* 何も直さずに開いて閉じただけ＝1行も足さない */
+    const c = state.cards.find(x => x.id === 'ED-1');
+    const n0 = (c.log || []).length;
+    openDetail(c.id); closeDetail();
+    return { n0: n0, n1: (c.log || []).length };
+  });
+  ok('🔴 開いて閉じただけでは1行も増えない', N.n0 === N.n1, N);
+}
+
+console.log('\n── 🪜 フローは節目が主役、あいだは畳む（ゆうた指定） ──');
+{
+  const G = await p.evaluate(() => {
+    const c = state.cards.find(x => x.id === 'ED-1');
+    c.log = [];
+    logPhaseMove(c, 'check', 'estim');
+    logFlow(c, '編集：受注金額 （空） → 120000');
+    logFlow(c, 'PIT配置図：枠の外 → 1PIT');
+    logPhaseMove(c, 'estim', 'parts');
+    logFlow(c, '編集：フロント担当 （空） → 小林');
+    const g = pitFlowGroup(c.log);
+    return { n: g.length, heads: g.map(x => (x.head ? (x.head.type === 'phase' ? 'phase' : x.head.label) : null)),
+             kids: g.map(x => x.kids.length),
+             major: { phase: pitFlowIsMajor({ type: 'phase' }),
+                      edit:  pitFlowIsMajor({ label: '編集：受注金額 （空） → 1' }),
+                      bay:   pitFlowIsMajor({ label: 'PIT配置図：枠の外 → 1PIT' }),
+                      intake:pitFlowIsMajor({ label: '入庫（点検待ちへ）' }) } };
+  });
+  ok('🔴 フェーズ移動は節目', G.major.phase === true, G.major);
+  ok('🔴 欄の書き換えは細かい（畳む側）', G.major.edit === false, G.major);
+  ok('PIT配置図の出し入れも細かい', G.major.bay === false, G.major);
+  ok('入庫は節目', G.major.intake === true, G.major);
+  ok('節目ごとに束になる（2束）', G.n === 2, G);
+  ok('あいだの記録が束にぶら下がる（2件・1件）', JSON.stringify(G.kids) === '[2,1]', G.kids);
+
+  await p.evaluate(() => { openDetail('ED-1'); });
+  await p.waitForTimeout(400);
+  await p.evaluate(() => {
+    const t = [...document.querySelectorAll('#md-body-modal [onclick]')].find(e => /フロー/.test(e.textContent));
+    if (t) t.click();
+  });
+  await p.waitForTimeout(400);
+  const V = await p.evaluate(() => ({
+    rows: document.querySelectorAll('#md-body-modal .cv-frow').length,
+    more: [...document.querySelectorAll('#md-body-modal .cv-fmore')].map(e => e.textContent.trim())
+  }));
+  ok('畳んでいる時は節目だけ出る', V.rows === 2, V);
+  ok('🔴 畳んでいても「何件あるか」は見える', V.more.length === 2 && V.more.every(x => /\d件/.test(x)), V.more);
+  await p.evaluate(() => { const b = document.querySelector('#md-body-modal .cv-fmore'); if (b) b.click(); });
+  await p.waitForTimeout(300);
+  const V2 = await p.evaluate(() => ({
+    rows: document.querySelectorAll('#md-body-modal .cv-frow').length,
+    kids: document.querySelectorAll('#md-body-modal .cv-fkids .cv-frow').length
+  }));
+  ok('🔴 開くと中の記録が出る（1行も捨てていない）', V2.kids > 0 && V2.rows === 2 + V2.kids, V2);
+  await p.evaluate(() => { if (window.closeDetail) closeDetail(); });
+}
+
 console.log('\n── 🧯 JSエラー ──');
 ok('画面のエラー 0', errs.length === 0, errs.slice(0, 3));
 
