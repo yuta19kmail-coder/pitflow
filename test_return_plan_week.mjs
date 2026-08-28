@@ -18,8 +18,10 @@
         ⚠ 「日付があれば暫定」と mydash.js に書き写さないこと（v1.153.0 の線引きが崩れる）。
      ・曜日の見出しは **月火水木金土日 で固定**。そこへ **昨日〜5日先の7日**を入れる
        ＝ 7日はちょうど全曜日に1つずつ入るので、日付だけが日々ずれていく。
-     ・**昨日のマスは斜線（.past）で無効扱い。ただし中の車は消さない**
-       （過ぎたのに約束のままの車＝いちばん見たいもの）。
+     ・**昨日のマスは斜線＋からっぽ**（v2.21.2 🗣「**前日を空白にする**」）。
+       曜日を7つそろえるための**場所取り**。車も出さないし、**総件数にも数えない**
+       ＝ 数えているのは「**今日〜5日先の6日**」。
+     ・**定休日のマスは他の日と同じ広さ**（v2.21.2 🗣「定休日は元の広さで」／v2.21.1 の細い帯はやめた）。
      ・休みの日は 休（.closed）。今日は .today。
      ・上に総件数（○台）。チェックボックスは付けない。
 
@@ -56,18 +58,27 @@ console.log('\n── 🧭 物差しは1本か ──');
   ok('チェックボックスは付けていない', !/rp-[a-z]*chk|type="checkbox"[\s\S]{0,80}rp-/.test(body));
   /* 🔴 v2.21.1 「これまで培ってきたもの」に合わせた＝色も札もホバーも**借りて**くる */
   ok('🔴 左ラインの色は共通の1本（pitTeamColor）', /pitTeamColor/.test(body) && !/#ec4899/.test(rp), rp.match(/#ec4899/g));
-  ok('作業種別の札は共通の1本（wtChip）', /wtChip\(c\)/.test(rp));
-  ok('ホバー情報カード用に data-card-id を付けている', /data-card-id="/.test(rp));
-  ok('🔴 このBOX用の別 tooltip を作っていない', !/title="[^"]*様/.test(rp));
+  /* 🔴 v2.21.2 🗣「カードの表示は**予約の月ビューと同じもの**を使ってほしい」
+     ＝ 1行の形は pit-share.js の `pitMonthRow` 1本。呼ぶだけで、自分では組み立てない。 */
+  ok('🔴 1行の形は共通の1本（pitMonthRow）を呼ぶだけ', /pitMonthRow\(c,/.test(rp));
+  ok('🔴 自分で行を組み立てていない', !/rml-ev|rme-wt|rme-loaner|data-card-id=/.test(rp), rp.match(/rml-ev|rme-wt/g));
   {
+    const ps = fs.readFileSync(path.join(process.cwd(), 'js', 'pit-share.js'), 'utf8');
+    ok('pit-share.js が `pitMonthRow` を出している', /w\.pitMonthRow\s*=/.test(ps));
+    /* 🔴 予約の月ビュー・返車の月ビューも同じ1本を通っているか（写しが残っていないか） */
+    const rv = fs.readFileSync(path.join(process.cwd(), 'js', 'reserve.js'), 'utf8');
+    const rt = fs.readFileSync(path.join(process.cwd(), 'js', 'return.js'), 'utf8');
+    ok('🔴 予約の月ビューも同じ1本を通る', /pitMonthRow\(c,/.test(rv) && !/'<div class="rml-ev/.test(rv));
+    ok('🔴 返車の月ビューも同じ1本を通る', /pitMonthRow\(c,/.test(rt) && !/'<div class="rml-ev/.test(rt));
     const hv = fs.readFileSync(path.join(process.cwd(), 'js', 'card-hover.js'), 'utf8');
-    ok('🔴 ホバーの出し所は card-hover.js の1行に足しただけ', /HOVER_SEL[^;]*\.rp-car/.test(hv));
+    ok('ホバーは card-hover.js が見ている（.rml-ev か .rp-car）', /HOVER_SEL[^;]*(\.rml-ev|\.rp-car)/.test(hv));
   }
   const css = fs.readFileSync(path.join(process.cwd(), 'css', 'mydash.css'), 'utf8');
   ok('CSS に斜線（.rp-cell.past）がある', /\.rp-cell\.past/.test(css));
   ok('CSS に今日（.rp-cell.today）がある', /\.rp-cell\.today/.test(css));
   ok('CSS に休み（.rp-cell.closed）がある', /\.rp-cell\.closed/.test(css));
-  ok('CSS に細い帯（.rp-cell.slim）がある', /\.rp-cell\.slim/.test(css));
+  ok('🔴 細い帯（.rp-cell.slim）は残っていない', !/^\.rp-cell\.slim/m.test(css));
+  ok('🔴 マスの幅を JS で決めていない（7等分のまま）', !/grid-template-columns/.test(body));
   const ix = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
   {
     /* 📌 版の数字は直書きしない（2026-08-28）。**3か所が同じか**だけ見る */
@@ -152,8 +163,8 @@ const V = await p.evaluate(() => {
     past: e.classList.contains('past'),
     today: e.classList.contains('today'),
     closed: e.classList.contains('closed'),
-    names: [...e.querySelectorAll('.rp-n')].map(x => x.textContent.trim()),
-    cars: [...e.querySelectorAll('.rp-c')].map(x => (x.firstChild ? x.firstChild.textContent : '').trim()),
+    names: [...e.querySelectorAll('.rp-car')].map(x => x.textContent.trim()),
+    ids: [...e.querySelectorAll('.rp-car')].map(x => x.dataset.cardId || ''),
     more: (e.querySelector('.rp-more') || {}).textContent || ''
   }));
   const host = box.closest('.md-box') || box.parentElement;
@@ -185,22 +196,26 @@ ok('マスは7つ', V.cells.length === 7, V.cells.length);
   const tCol = (new Date(T.today + 'T00:00:00').getDay() + 6) % 7;
   ok('今日のマスだけ today', V.cells.filter(c => c.today).length === 1 && V.cells[tCol].today, V.cells.map(c => c.today));
   ok('今日のマスに「今」が付く', /今/.test(V.cells[tCol].d), V.cells[tCol].d);
-  ok('昨日の車は消えていない（斜線でも残す）', V.cells[ydCol].cars.indexOf('CAR-Y') >= 0, V.cells[ydCol].cars);
+  /* 🔴 v2.21.2 ゆうた「前日を空白にする」 */
+  ok('🔴 昨日のマスはからっぽ（車を出さない）', V.cells[ydCol].ids.length === 0 && !V.cells[ydCol].more,
+     { ids: V.cells[ydCol].ids, more: V.cells[ydCol].more });
+  ok('昨日のマス自体は残る（曜日を7つそろえる場所取り）', !!V.cells[ydCol].d, V.cells[ydCol].d);
 }
 
 console.log('\n── 🔎 拾い方（暫定だけ） ──');
 {
-  const all = V.cells.flatMap(c => c.cars);
+  const all = V.cells.flatMap(c => c.ids);
   const has = x => all.indexOf(x) >= 0;
-  ok('暫定は出る（昨日・今日×2・明日・5日先）',
-     ['CAR-Y','CAR-T1','CAR-T2','CAR-P1','CAR-P5'].every(has), all);
-  ok('🔴 確定は出ない', !has('CAR-FIXED'), all);
-  ok('🔴 未完は出ない', !has('CAR-PEND'), all);
-  ok('🔴 待・当は出ない', !has('CAR-SAME'), all);
-  ok('🔴 未定は出ない', !has('CAR-TBD'), all);
-  ok('売上なしは出ない', !has('CAR-NOSALE'), all);
-  ok('おとといは窓の外', !has('CAR-OUT1'), all);
-  ok('6日先は窓の外', !has('CAR-OUT2'), all);
+  ok('暫定は出る（今日×2・明日・5日先）',
+     ['RPW-t1','RPW-t2','RPW-p1','RPW-p5'].every(has), all);
+  ok('🔴 昨日の暫定は出さない（前日は空白）', !has('RPW-y'), all);
+  ok('🔴 確定は出ない', !has('RPW-fixed'), all);
+  ok('🔴 未完は出ない', !has('RPW-pend'), all);
+  ok('🔴 待・当は出ない', !has('RPW-same'), all);
+  ok('🔴 未定は出ない', !has('RPW-tbd'), all);
+  ok('売上なしは出ない', !has('RPW-nosale'), all);
+  ok('おとといは窓の外', !has('RPW-out1'), all);
+  ok('6日先は窓の外', !has('RPW-out2'), all);
 }
 
 console.log('\n── 🧮 総件数 ──');
@@ -210,9 +225,10 @@ console.log('\n── 🧮 総件数 ──');
     const m = (host.textContent || '').replace(/\s+/g, ' ').match(/(\d+)\s*台/);
     return m ? +m[1] : -1;
   });
-  const shown = V.cells.reduce((a, c) => a + c.names.length + (+(c.more.match(/\d+/) || [0])[0]), 0);
+  const shown = V.cells.reduce((a, c) => a + c.ids.length + (+(c.more.match(/\d+/) || [0])[0]), 0);
   ok('上に総件数（○台）が出ている', N > 0, N);
   ok('総件数 = マスの中の台数の合計', N === shown, { N, shown });
+  ok('🔴 総件数に昨日は入っていない（今日〜5日先の6日分）', N === 4, N);
   ok('チェックボックスは無い', V.chk === 0, V.chk);
 }
 
@@ -220,7 +236,7 @@ console.log('\n── 👆 押したら開くか ──');
 {
   const r = await p.evaluate(() => {
     const car = [...document.querySelectorAll('#mydash-flow .rp-car')]
-      .find(e => /CAR-T1/.test(e.textContent));
+      .find(e => e.dataset.cardId === 'RPW-t1');
     if (!car) return 'no-car';
     car.click();
     return 'clicked';
@@ -228,7 +244,7 @@ console.log('\n── 👆 押したら開くか ──');
   await p.waitForTimeout(500);
   const open = await p.evaluate(() => {
     const m = document.getElementById('modal-detail');
-    return !!(m && m.classList.contains('show')) && /CAR-T1/.test((m.textContent || '') + (document.getElementById('card-title-modal') || {}).textContent);
+    return !!(m && m.classList.contains('show')) && /今日 一郎|CAR-T1/.test((m.textContent || '') + ((document.getElementById('card-title-modal') || {}).textContent || ''));
   });
   ok('車を押すとカードが開く', r === 'clicked' && open, { r, open });
 }
@@ -266,9 +282,12 @@ console.log('\n── 🎨 v2.21.1 これまで培ってきた見た目を借り
       dom: !!car('K1') && !!car('K2'),
       kokusan: car('K1') ? cs(car('K1')) : '',
       yunyu:   car('K2') ? cs(car('K2')) : '',
-      lo:      car('K1') ? car('K1').querySelectorAll('.rp-lo').length : -1,
-      loNone:  car('K2') ? car('K2').querySelectorAll('.rp-lo').length : -1,
-      wt:      car('K1') ? car('K1').querySelectorAll('.md-wt').length : -1,
+      lo:      car('K1') ? car('K1').querySelectorAll('.rme-loaner').length : -1,
+      loNone:  car('K2') ? car('K2').querySelectorAll('.rme-loaner').length : -1,
+      wt:      car('K1') ? car('K1').querySelectorAll('.rme-wt').length : -1,
+      isMv:    car('K1') ? car('K1').classList.contains('rml-ev') : false,
+      noTime:  car('K1') ? car('K1').querySelectorAll('b').length : -1,
+      ell:     car('K1') ? getComputedStyle(car('K1')).textOverflow : '',
       cid:     car('K1') ? car('K1').dataset.cardId : ''
     };
   });
@@ -279,6 +298,9 @@ console.log('\n── 🎨 v2.21.1 これまで培ってきた見た目を借り
   ok('代車なしには付かない', D.loNone === 0, D.loNone);
   ok('作業種別の札が出る', D.wt === 1, D.wt);
   ok('data-card-id が付いている', D.cid === 'K1', D.cid);
+  ok('🔴 札そのものが予約の月ビューのもの（.rml-ev）', D.isMv, D);
+  ok('狭いので時刻は出さない', D.noTime === 0, D.noTime);
+  ok('はみ出しは「…」で切る（ゆうた指定）', D.ell === 'ellipsis', D.ell);
 
   /* ホバー情報カード＝card-hover.js のものがそのまま出る（別物を作っていない） */
   await p.hover('#mydash-flow .rp-car');
@@ -292,39 +314,32 @@ console.log('\n── 🎨 v2.21.1 これまで培ってきた見た目を借り
      /習志野/.test(H.t) && /預かり/.test(H.t), H.t.slice(0, 80));
 }
 
-console.log('\n── 🧵 定休日の細い帯（ゆうた「隙間は空けなくてOK」） ──');
+console.log('\n── 🧵 定休日のマス（v2.21.2 元の広さに戻した） ──');
 {
   const S = await p.evaluate(() => {
     const ymdL = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     const sh = n => { const d = new Date(); d.setDate(d.getDate() + n); return ymdL(d); };
-    /* 窓の7日から「休みの日」を探す。無ければ試験できないので closedDay:null を返す */
     let closed = null;
-    for (let i = -1; i <= 5; i++) { const d = sh(i); if (window.PitCal && PitCal.isClosed(d)) { closed = d; break; } }
+    for (let i = 0; i <= 5; i++) { const d = sh(i); if (window.PitCal && PitCal.isClosed(d)) { closed = d; break; } }
     if (!closed) return { none: true };
     state.cards = [];
     renderMyDash();
-    const cell = () => {
-      const cal = document.querySelector('#mydash-flow .rp-cal');
-      const dd = String(+closed.split('-')[2]);
-      return [...cal.querySelectorAll('.rp-cell')].find(e => ((e.querySelector('.rp-d') || {}).textContent || '').replace(/[今休]/g,'').trim() === dd);
-    };
-    const empty = cell();
-    const r1 = { slim: empty.classList.contains('slim'), w: Math.round(empty.getBoundingClientRect().width) };
-    /* 同じ休みの日に暫定の車を1台置くと、細くしない（隠さない） */
-    state.cards.push({ id: 'SL1', resNo: 'SL1', customer: '休みに返る', car: 'CAR-SL', plate: '習志野 300 あ 12-34',
-      reserveDate: sh(-3), returnDate: closed, status: 'partsWait', boardId: 'default', workType: 'shaken', workTypes: ['shaken'] });
-    renderMyDash();
-    const filled = cell();
-    const r2 = { slim: filled.classList.contains('slim'), w: Math.round(filled.getBoundingClientRect().width),
-                 has: !!filled.querySelector('.rp-car') };
-    const other = [...document.querySelectorAll('#mydash-flow .rp-cell')].filter(e => !e.classList.contains('slim'));
-    return { none: false, r1: r1, r2: r2, otherW: Math.round(other[0].getBoundingClientRect().width) };
+    const cells = [...document.querySelectorAll('#mydash-flow .rp-cell')];
+    const dd = String(+closed.split('-')[2]);
+    const cell = cells.find(e => ((e.querySelector('.rp-d') || {}).textContent || '').replace(/[今休]/g, '').trim() === dd);
+    const other = cells.filter(e => e !== cell);
+    return { none: false, slim: cell.classList.contains('slim'),
+             closed: cell.classList.contains('closed'),
+             w: Math.round(cell.getBoundingClientRect().width),
+             ow: Math.round(other[0].getBoundingClientRect().width),
+             all: [...new Set(cells.map(e => Math.round(e.getBoundingClientRect().width)))] };
   });
-  if (S.none) { console.log('  ⏭ 窓の7日に休みが無いので今回は見られない'); }
+  if (S.none) { console.log('  ⏭ 今日〜5日先に休みが無いので今回は見られない'); }
   else {
-    ok('🔴 返車の無い定休日は細い帯になる', S.r1.slim && S.r1.w < 40, S.r1);
-    ok('細い帯は他の日よりずっと狭い', S.r1.w * 2 < S.otherW, { slim: S.r1.w, other: S.otherW });
-    ok('🔴 定休日でも車が入っていたら細くしない（隠さない）', !S.r2.slim && S.r2.has && S.r2.w > 40, S.r2);
+    ok('🔴 定休日も他の日と同じ広さ', S.w === S.ow, S);
+    ok('🔴 7マスの幅が全部そろっている', S.all.length === 1, S.all);
+    ok('定休日の印（.closed）は残っている', S.closed, S);
+    ok('細い帯は付かない', !S.slim, S);
   }
 }
 
