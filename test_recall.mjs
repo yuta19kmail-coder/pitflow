@@ -319,9 +319,12 @@ console.log('\n── ⏱ 速さ（数は1件も減らさない） ──');
   ok('🔴 画面の外の行は組み立てを後回し（マスター検索）', /\.psr-row[\s\S]{0,600}?content-visibility:\s*auto/.test(c1), '');
   ok('🔴 同じ手を呼び出しにも', /\.cf-recall-item\{[\s\S]{0,400}?content-visibility:auto/.test(c2), '');
   const ix = fs.readFileSync('index.html', 'utf8');
+  /* 🔴 v2.17.0 直し：**番号そのものを見張らない**（上げるたびに落ちて、やがて誰も見なくなる）。
+     守りたいのは「直したファイルにキャッシュ番号が**付いていること**」。
+     ⚠ ここは v1.177.0 当時の番号を打ち込んでいたので、以後ずっと赤いままだった。 */
   ok('直したファイルにキャッシュ番号が付いている',
-     /search\.js\?v=18/.test(ix) && /customers\.js\?v=51/.test(ix) && /mydash\.js\?v=18/.test(ix)
-     && /card-detail\.js\?v=138/.test(ix) && /search\.css\?v=8/.test(ix) && /polish\.css\?v=212/.test(ix), '');
+     /search\.js\?v=\d+/.test(ix) && /customers\.js\?v=\d+/.test(ix) && /mydash\.js\?v=\d+/.test(ix)
+     && /card-detail\.js\?v=\d+/.test(ix) && /search\.css\?v=\d+/.test(ix) && /polish\.css\?v=\d+/.test(ix), '');
 }
 
 await b.close();
