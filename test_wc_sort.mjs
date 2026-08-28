@@ -74,6 +74,25 @@ async function dragTo(grp, fromText, toText){
   await p.waitForTimeout(80);
 }
 
+/* ラベル（組の見出し）をつまんで、別のラベルの真ん中まで運んで離す（実際のマウス操作・v2.19.0） */
+async function dragGroup(fromLabel, toLabel){
+  const box = await p.evaluate(([a, b]) => {
+    const host = document.getElementById('wc-groups');
+    const find = t => Array.from(host.querySelectorAll('.wc-s-gh')).find(e => e.textContent.indexOf(t) >= 0);
+    const ra = find(a).getBoundingClientRect(), rb = find(b).getBoundingClientRect();
+    return { ax: ra.left + 40, ay: ra.top + ra.height / 2, bx: rb.left + 40, by: rb.top + rb.height / 2 };
+  }, [fromLabel, toLabel]);
+  await p.mouse.move(box.ax, box.ay);
+  await p.mouse.down();
+  await p.mouse.move(box.ax, box.ay + 8, { steps: 3 });      /* 4px のしきい値を越える */
+  await p.mouse.move(box.bx, box.by, { steps: 14 });
+  await p.mouse.up();
+  await p.waitForTimeout(80);
+}
+const groupLabels = () => p.evaluate(() => window.__cfg().chipGroups.map(g => g.label));
+const shownLabels = () => p.evaluate(() => Array.from(document.querySelectorAll('#wc-groups .wc-s-gh'))
+  .map(e => e.textContent.replace('＋ 追加', '').trim()));
+
 console.log('\n── ① 出来上がりの形 ──');
 ok('部位のカプセルにグループの印が付いている',
    await p.evaluate(() => !!document.querySelector('.wc-s-chips[data-wc-grp="parts"]')));
@@ -135,6 +154,66 @@ console.log('\n── ⑤ 触っただけでは動かない／×は今までど�
 }
 ok('掴んでいる印は残っていない', await p.evaluate(() => !document.querySelector('.wc-s-drag') && !document.body.classList.contains('wc-s-dragging')));
 
+console.log('\n── ⑤' + "'" + ' ラベルごと（組ごと）並び替え（v2.19.0・ゆうた指定） ──');
+{
+  const G0 = await groupLabels();
+  console.log('    もとの並び:', JSON.stringify(G0));
+  ok('🔴 組は5つ（作業・依頼〜車両情報）', G0.length === 5, G0);
+  ok('ラベルに掴む所（つまみ）が付いている',
+     await p.evaluate(() => document.querySelectorAll('#wc-groups .wc-s-gh .wc-s-grip').length === 5));
+  ok('組に番号が入っている',
+     await p.evaluate(() => document.querySelector('#wc-groups .wc-s-grp').getAttribute('data-wc-gi') === '0'));
+
+  const items0 = await p.evaluate(() => window.__cfg().chipGroups.map(g => g.items.join('|')));
+
+  /* 🚗車両情報（いちばん下）を、🔧作業・依頼（いちばん上）の所へ運ぶ */
+  await dragGroup('車両情報', '作業・依頼');
+  const G1 = await groupLabels();
+  console.log('    あとの並び:', JSON.stringify(G1));
+  ok('🔴 車両情報が先頭に来た', G1[0].indexOf('車両情報') >= 0, G1);
+  ok('🔴 組は増えても減ってもいない', G1.length === G0.length && G0.every(x => G1.indexOf(x) >= 0), G1);
+  ok('🔴 中身（チップ）は1つも変わっていない',
+     JSON.stringify(await p.evaluate(() => window.__cfg().chipGroups.map(g => g.items.join('|')).sort()))
+     === JSON.stringify(items0.slice().sort()));
+  ok('設定として保存された', (await p.evaluate(() => window.__saves)) >= 1);
+  ok('画面の並びも同じ', (await shownLabels())[0].indexOf('車両情報') >= 0, await shownLabels());
+
+  /* 下へも動く（車両情報 → 預かり期間の所へ） */
+  await dragGroup('車両情報', '預かり期間');
+  const G2 = await groupLabels();
+  ok('🔴 下へも動く', G2[0].indexOf('車両情報') < 0 && G2.some(x => x.indexOf('車両情報') >= 0), G2);
+
+  /* 触っただけでは動かない */
+  const before = await groupLabels();
+  await p.evaluate(() => {
+    const el = document.querySelector('#wc-groups .wc-s-gh');
+    const r = el.getBoundingClientRect();
+    el.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true, clientX:r.left+40, clientY:r.top+8, button:0 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { bubbles:true, clientX:r.left+41, clientY:r.top+8 }));
+    window.dispatchEvent(new PointerEvent('pointerup',   { bubbles:true, clientX:r.left+41, clientY:r.top+8 }));
+  });
+  await p.waitForTimeout(50);
+  ok('1pxだけ動かしても並びは変わらない', JSON.stringify(await groupLabels()) === JSON.stringify(before));
+
+  /* ＋追加のボタンの上から始めても動かさない（押したいのに動くと困る） */
+  const before2 = await groupLabels();
+  await p.evaluate(() => {
+    const btn = document.querySelector('#wc-groups .wc-s-gh .wc-s-add');
+    const r = btn.getBoundingClientRect();
+    btn.dispatchEvent(new PointerEvent('pointerdown', { bubbles:true, clientX:r.left+4, clientY:r.top+4, button:0 }));
+    window.dispatchEvent(new PointerEvent('pointermove', { bubbles:true, clientX:r.left+60, clientY:r.top+120 }));
+    window.dispatchEvent(new PointerEvent('pointerup',   { bubbles:true, clientX:r.left+60, clientY:r.top+120 }));
+  });
+  await p.waitForTimeout(60);
+  ok('🔴 ＋追加の上から始めても組は動かない', JSON.stringify(await groupLabels()) === JSON.stringify(before2));
+
+  /* 部位・症状の見出しは今までどおり動かない */
+  ok('🔴 部位・症状の見出しはつまめない（wc-s-gh が付いていない）',
+     await p.evaluate(() => Array.from(document.querySelectorAll('.wc-s-h')).filter(e => e.classList.contains('wc-s-gh')).length === 5));
+  ok('掴んでいる印は残っていない',
+     await p.evaluate(() => !document.querySelector('.wc-s-gdrag') && !document.body.classList.contains('wc-s-dragging')));
+}
+
 console.log('\n── ⑥ 本体との食い違い（配線チェック） ──');
 const js  = fs.readFileSync(path.join(dir, 'js', 'work-content.js'), 'utf8');
 const css = fs.readFileSync(path.join(dir, 'css', 'work-content.css'), 'utf8');
@@ -142,6 +221,11 @@ const idx = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
 ok('work-content.js が pointer で作られている（HTML5のドラッグではない）',
    /addEventListener\('pointerdown', _wcDown\)/.test(js) && !/draggable="true"/.test(js));
 ok('配線は入れ物側に1回だけ（_wcSortBound）', /_wcSortBound/.test(js));
+ok('🔴 組ごとの並びを書き戻す口が1本ある（_wcCommitGroups）', /function _wcCommitGroups/.test(js));
+ok('🔴 組を入れ替えても items は触っていない（中身を組み立て直していない）',
+   !/_wcCommitGroups[\s\S]{0,400}items\s*=/.test(js));
+ok('ラベルの掴む所に touch-action:none がある', /\.wc-s-gh\{[^}]*touch-action:\s*none/.test(css));
+ok('＋追加のボタンだけは押せる', /\.wc-s-gh \.wc-s-add\{[^}]*touch-action:\s*auto/.test(css));
 ok('work-content.css に touch-action:none がある（タブレットでスクロールに取られない）',
    /\.wc-s-chips\[data-wc-grp\][^{]*\{[^}]*touch-action:\s*none/.test(css));
 ok('×ボタンだけは今までどおり押せる', /\.wc-s-chip button\{[^}]*touch-action:\s*auto/.test(css));
