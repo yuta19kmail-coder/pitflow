@@ -9,20 +9,22 @@
      　　**今回みたいな時の緊急対応に。**」
      🗣（ヘルプの行き先）→ **「電源のメニューに入れる」を選択**
      🗣（2026-08-29 追加）「特定のアカウント、例えば**Aさんのログイン端末を全部更新する**、はできる？」
+     🗣（2026-08-29 直し）「**アカウント選択の部分でスクロールが効かずに閉じちゃう**」
+     🗣（2026-08-29 直し）「特定の人間も**全アプリか開いてるこのアプリか**で、全員のタイプと合わせて**計4機能**に」
 
    ◎この見張りが守るもの
      🔴 ① 右上が [アバター][名前][同期][⏻] になっている（？とログアウトの文字が消えている）
      🔴 ② 押すとメニューが出る＝更新／画面を閉じる／ヘルプ／ログアウト
      🔴 ③ **ふつうの人にはマスターの2つを出さない**
-     🔴 ④ **マスターの時だけ**「このアプリを全端末で更新」「全アプリを全端末で更新」が出る
+     🔴 ④ **マスターの時だけ**「全員の この画面」「全員の 全アプリ」が出る
      🔴 ⑤ ログアウトは**必ず1回聞く**（いきなり出ていかない）
      🔴 ⑥ 「はい」で**アプリ本来のログアウト**が動く（＝動きを奪えている）
      🔴 ⑦ ヘルプを押すと**アプリ本来のヘルプ**が開く
      🔴 ⑧ 外側クリック・Esc で閉じる
      🔴 ⑨ 「画面を閉じる」が効かない時、**黙らずに案内を出す**
-     🔴 ⑩ **決めた人の端末だけ更新**がマスターにだけ出る（2026-08-29 追加）
-     🔴 ⑪ 名簿から選べる／しぼれる／もどれる
-     🔴 ⑫ 合図に **uid とメールの両方**が入る（名簿のIDが uid とは限らないため）
+     🔴 ⑩ マスターだけに **4つ**出る＝「誰を（全員／決めた人）」×「何を（この画面／全アプリ）」
+     🔴 ⑪ 名簿から選べる／しぼれる／**一覧をスクロールしても閉じない**／もどれる
+     🔴 ⑫ 合図に **uid とメールの両方**が入る（名簿のIDが uid とは限らないため）＋ 4通りの当て先
      🔴🔴 ⑬ 受け取る側が、**自分あての合図でだけ**開き直す
      🔴 ⑭ JSエラー0
 
@@ -149,8 +151,8 @@ console.log('\n── 🔴🔴 ④マスターの時だけ、強制更新が出�
     };
   });
   ok('🔴 マスターだと分かる', r.マスター判定, r);
-  ok('🔴🔴 このアプリを全端末で更新 が出る', r.項目.indexOf('fr-app') >= 0, r.項目);
-  ok('🔴🔴 全アプリを全端末で更新 が出る', r.項目.indexOf('fr-all') >= 0, r.項目);
+  ok('🔴🔴 全員の この画面 が出る', r.項目.indexOf('fr-app') >= 0, r.項目);
+  ok('🔴🔴 全員の 全アプリ が出る', r.項目.indexOf('fr-all') >= 0, r.項目);
   ok('「マスターのみ」の見出しが付く', /マスター/.test(r.見出し), r.見出し);
 
   /* 戻す＝ふつうの人 */
@@ -251,7 +253,7 @@ console.log('\n── 🔴 ⑧強制更新も1回聞く ──');
 }
 
 /* ================= ⑩ 決めた人の端末だけ更新（マスターだけ） ================= */
-console.log('\n── 🔴🔴 ⑩「決めた人の端末だけ更新」はマスターだけ ──');
+console.log('\n── 🔴🔴 ⑩マスターだけに4つ（誰を × 何を） ──');
 {
   const r = await p.evaluate(() => {
     window.fb = window.fb || {};
@@ -259,38 +261,81 @@ console.log('\n── 🔴🔴 ⑩「決めた人の端末だけ更新」はマ�
     CFPower.open(false); CFPower.open(true);
     return [...document.querySelectorAll('#cf-power-menu [data-do]')].map(e => e.getAttribute('data-do'));
   });
-  ok('🔴🔴 ふつうの人には出さない', r.indexOf('fr-one') < 0, r);
+  ok('🔴🔴 ふつうの人には1つも出さない', !r.some(x => /^fr-/.test(x)), r);
 
   const r2 = await p.evaluate(() => {
     window.fb.currentUser = { uid: window.CFPower.MASTER_UID, displayName: 'マスター', email: 'yuta@kobamo.jp' };
     CFPower.open(false); CFPower.open(true);
     return [...document.querySelectorAll('#cf-power-menu [data-do]')].map(e => e.getAttribute('data-do'));
   });
-  ok('🔴🔴 マスターには出る', r2.indexOf('fr-one') >= 0, r2);
+  /* 🔴 「誰を（全員／決めた人）」×「何を（この画面／全アプリ）」＝ 2×2 の4つがそろっていること */
+  for (const [k, 名] of [['fr-app', '全員の この画面'], ['fr-all', '全員の 全アプリ'],
+                          ['fr-one-app', '決めた人の この画面'], ['fr-one-all', '決めた人の 全アプリ']]) {
+    ok('🔴🔴 ' + 名 + ' が出る', r2.indexOf(k) >= 0, r2);
+  }
+  ok('🔴 4つちょうど（増えても減ってもいない）', r2.filter(x => /^fr-/.test(x)).length === 4, r2);
 }
 
 /* ================= ⑪ 名簿から選ぶ ================= */
-console.log('\n── 🔴 ⑪名簿から選べる／しぼれる／もどれる ──');
+console.log('\n── 🔴 ⑪名簿から選べる／しぼれる／スクロールしても閉じない／もどれる ──');
 {
   const r = await p.evaluate(async () => {
-    CFPower._setMembers([
+    /* 🔴 一覧をはみ出させて、本当にスクロールが要る状態にする（20人） */
+    const 名 = ['田中 太郎', '鈴木 花子', '佐藤 次郎'];
+    const list = [
       { id: 'u_a', uid: 'u_a', name: '田中 太郎', email: 'A.Tanaka@Example.com', dept: '整備' },
       { id: 'invite_9', name: '鈴木 花子', email: 'suzuki@example.com', dept: 'フロント' },
       { id: 'u_c', uid: 'u_c', name: '佐藤 次郎', email: 'sato@example.com' }
-    ]);
+    ];
+    for (let i = 0; i < 17; i++) list.push({ id: 'u_x' + i, uid: 'u_x' + i, name: '社員' + i, email: 'x' + i + '@example.com' });
+    CFPower._setMembers(list);
     CFPower.open(true);
-    document.querySelector('#cf-power-menu [data-do=fr-one]').click();
+    document.querySelector('#cf-power-menu [data-do=fr-one-all]').click();
     await new Promise(r => setTimeout(r, 250));
     return {
       まだ開いている: document.getElementById('cf-power').classList.contains('on'),
       人数: document.querySelectorAll('#cf-power-menu [data-uid]').length,
       しぼる欄: !!document.getElementById('cf-power-find'),
-      もどる: !!document.querySelector('#cf-power-menu [data-do=pick-back]')
+      もどる: !!document.querySelector('#cf-power-menu [data-do=pick-back]'),
+      見出し: (document.querySelector('#cf-power-menu .cf-power-head') || {}).textContent || ''
     };
   });
-  ok('🔴 押しても閉じずに、名簿の一覧に変わる', r.まだ開いている && r.人数 === 3, r);
+  ok('🔴 押しても閉じずに、名簿の一覧に変わる', r.まだ開いている && r.人数 === 20, r);
   ok('しぼる欄がある', r.しぼる欄, r);
   ok('もどるがある', r.もどる, r);
+  ok('🔴 何を更新するかが見出しに出ている（全アプリ）', /全アプリ/.test(r.見出し), r.見出し);
+
+  /* 🔴🔴 実話（2026-08-29）：一覧を指で送ろうとしただけでメニューが閉じ、下のほうの人を選べなかった。
+     画面ぜんたいのスクロール見張りが、**一覧の中のスクロールまで拾って**いたのが原因。 */
+  const rs = await p.evaluate(async () => {
+    const box = document.querySelector('#cf-power-menu .cf-power-list');
+    const はみ出している = box.scrollHeight > box.clientHeight + 4;
+    box.scrollTop = 60;
+    box.dispatchEvent(new Event('scroll', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 200));
+    return {
+      はみ出している,
+      開いたまま: document.getElementById('cf-power').classList.contains('on'),
+      送れた: box.scrollTop > 0,
+      一覧が残っている: document.querySelectorAll('#cf-power-menu [data-uid]').length === 20
+    };
+  });
+  ok('前提：一覧がはみ出していてスクロールが要る', rs.はみ出している, rs);
+  ok('🔴🔴 一覧をスクロールしても閉じない', rs.開いたまま && rs.一覧が残っている, rs);
+  ok('🔴 ちゃんと送れている', rs.送れた, rs);
+
+  /* 画面そのもののスクロールでは、今までどおり閉じること（閉じなくなったら浮きっぱなしになる） */
+  const rs2 = await p.evaluate(async () => {
+    window.dispatchEvent(new Event('scroll'));
+    await new Promise(r => setTimeout(r, 200));
+    return document.getElementById('cf-power').classList.contains('on');
+  });
+  ok('🔴 画面そのものが動いた時は、今までどおり閉じる', rs2 === false, rs2);
+  await p.evaluate(async () => {
+    CFPower.open(true);
+    document.querySelector('#cf-power-menu [data-do=fr-one-all]').click();
+    await new Promise(r => setTimeout(r, 250));
+  });
 
   const r2 = await p.evaluate(async () => {
     const f = document.getElementById('cf-power-find');
@@ -317,11 +362,19 @@ console.log('\n── 🔴 ⑪名簿から選べる／しぼれる／もどれ�
     };
   });
   ok('🔴 もどるで元のメニューに戻る', r4.開いている && r4.項目.indexOf('fr-app') >= 0, r4);
+
+  /* 「この画面だけ」で開いた時は、見出しもそちらになること */
+  const r5 = await p.evaluate(async () => {
+    document.querySelector('#cf-power-menu [data-do=fr-one-app]').click();
+    await new Promise(r => setTimeout(r, 250));
+    return (document.querySelector('#cf-power-menu .cf-power-head') || {}).textContent || '';
+  });
+  ok('🔴 「この画面」で開くと見出しもそうなる', /この画面/.test(r5), r5);
   await p.evaluate(() => CFPower.open(false));
 }
 
 /* ================= ⑫ 合図の中身（uid とメールの両方） ================= */
-console.log('\n── 🔴🔴 ⑫合図には uid とメールの両方を書く ──');
+console.log('\n── 🔴🔴 ⑫合図には uid とメールの両方を書く＋当て先は4通り ──');
 {
   const r = await p.evaluate(async () => {
     window.__書いた = null;
@@ -329,7 +382,7 @@ console.log('\n── 🔴🔴 ⑫合図には uid とメールの両方を書�
     window.fb.currentCompanyId = 'test';
     window.fb.db = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ set: (o) => { 書いた++; window.__書いた = o; return Promise.resolve(); } }) }) }) }) };
     CFPower.open(true);
-    document.querySelector('#cf-power-menu [data-do=fr-one]').click();
+    document.querySelector('#cf-power-menu [data-do=fr-one-all]').click();
     await new Promise(r => setTimeout(r, 200));
     document.querySelector('#cf-power-menu [data-uid=u_a]').click();
     await new Promise(r => setTimeout(r, 300));
@@ -351,11 +404,27 @@ console.log('\n── 🔴🔴 ⑫合図には uid とメールの両方を書�
   ok('🔴 その人の全アプリあて（app=all）', r2 && r2.app === 'all', r2);
   ok('誰あてか名前も残す', r2 && r2.name === '田中 太郎', r2);
 
+  /* 🔴 4通りめ＝「決めた人の、この画面だけ」。当て先が **このアプリの名前** になること。 */
+  const r2b = await p.evaluate(async () => {
+    window.__書いた = null;
+    CFPower.open(true);
+    document.querySelector('#cf-power-menu [data-do=fr-one-app]').click();
+    await new Promise(r => setTimeout(r, 200));
+    document.querySelector('#cf-power-menu [data-uid=u_a]').click();
+    await new Promise(r => setTimeout(r, 300));
+    const cands = [...document.querySelectorAll('button')].filter(b => /更新する|はい|OK/.test((b.textContent || '').trim()));
+    const yes = cands[cands.length - 1]; if (yes) yes.click();
+    await new Promise(r => setTimeout(r, 400));
+    return { 書いた: window.__書いた, key: (document.querySelector('meta[name=app-key]') || {}).content || '' };
+  });
+  ok('🔴🔴 「決めた人の この画面」は、このアプリあてになる', r2b.書いた && r2b.書いた.app === r2b.key && !!r2b.key, r2b);
+  ok('🔴 その時も uid とメールは入っている', r2b.書いた && r2b.書いた.uid === 'u_a' && r2b.書いた.email === 'a.tanaka@example.com', r2b.書いた);
+
   /* 🔴 招待から入った人＝書類のIDが uid ではない。それでもメールで当てられること。 */
   const r3 = await p.evaluate(async () => {
     window.__書いた = null;
     CFPower.open(true);
-    document.querySelector('#cf-power-menu [data-do=fr-one]').click();
+    document.querySelector('#cf-power-menu [data-do=fr-one-all]').click();
     await new Promise(r => setTimeout(r, 200));
     document.querySelector('#cf-power-menu [data-uid=invite_9]').click();
     await new Promise(r => setTimeout(r, 300));

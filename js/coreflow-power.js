@@ -26,9 +26,11 @@
        ・ヘルプ            （？ボタンがあったアプリだけ）
        ・ログアウト        （必ず1回聞く）
        ─────────────（マスターだけ）
-       ・このアプリを全端末で更新
-       ・全アプリを全端末で更新
-       ・決めた人の端末だけ更新   （2026-08-29 追加）
+       ・全員の この画面を更新
+       ・全員の 全アプリを更新
+       ・決めた人の この画面を更新    （2026-08-29 追加）
+       ・決めた人の 全アプリを更新    （2026-08-29 追加）
+     ＝ 🔴 「**誰を**（全員／決めた人）」×「**何を**（この画面／全アプリ）」の 2×2 ＝ 4通り。
 
    ◎⚠ 「画面を閉じる」は、ブラウザが拒むことがある
      スクリプトで開いた窓しか閉じられないのが原則。**キオスク起動やアプリ化した窓なら閉じられる**。
@@ -199,9 +201,11 @@
     if (isMaster()) {
       h += '<div class="cf-power-sep"></div>';
       h += '<div class="cf-power-head">マスターのみ</div>';
-      h += '<button class="cf-power-item" data-do="fr-app">' + IC.bolt + '<span class="cf-t">このアプリを全端末で更新<small>開いている人の画面が数秒で新しくなります</small></span></button>';
-      h += '<button class="cf-power-item" data-do="fr-all">' + IC.bolt + '<span class="cf-t">全アプリを全端末で更新<small>10アプリぜんぶ。緊急のとき用</small></span></button>';
-      h += '<button class="cf-power-item" data-do="fr-one">' + IC.user + '<span class="cf-t">決めた人の端末だけ更新<small>選んだ人が開いている画面だけ（全アプリ）</small></span></button>';
+      /* 🔴 「誰を（全員／決めた人）」×「何を（このアプリ／全アプリ）」の**4つ**（2026-08-29・ゆうた指定） */
+      h += '<button class="cf-power-item" data-do="fr-app">' + IC.bolt + '<span class="cf-t">全員の この画面を更新<small>いま開いている人ぜんぶ。このアプリだけ</small></span></button>';
+      h += '<button class="cf-power-item" data-do="fr-all">' + IC.bolt + '<span class="cf-t">全員の 全アプリを更新<small>10アプリぜんぶ。緊急のとき用</small></span></button>';
+      h += '<button class="cf-power-item" data-do="fr-one-app">' + IC.user + '<span class="cf-t">決めた人の この画面を更新<small>選んだ人が開いている、このアプリだけ</small></span></button>';
+      h += '<button class="cf-power-item" data-do="fr-one-all">' + IC.user + '<span class="cf-t">決めた人の 全アプリを更新<small>選んだ人が開いている画面ぜんぶ</small></span></button>';
     }
     m.innerHTML = h;
   }
@@ -255,7 +259,7 @@
         合図には uid とメールの両方を書く（受け取る側はどちらか一致で自分ごと）。
      ⚠ 名簿を読めるのは会社の人だけ。この入口はマスターにしか出さないので二重に守られている。
      ============================================================ */
-  var _pick = false, _members = null, _memLoading = false, _memQ = '';
+  var _pick = false, _members = null, _memLoading = false, _memQ = '', _pickScope = 'all';
 
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   /* ⚠ 全角＠・全角英数・大文字小文字・前後の空白を揃えてから比べる（名簿の打ち込みは揺れる） */
@@ -306,7 +310,7 @@
     var h = '';
     h += '<button class="cf-power-item" data-do="pick-back">' + IC.back + 'もどる</button>';
     h += '<div class="cf-power-sep"></div>';
-    h += '<div class="cf-power-head">誰の端末を更新しますか</div>';
+    h += '<div class="cf-power-head">' + (_pickScope === 'all' ? '誰の 全アプリ を更新しますか' : '誰の この画面 を更新しますか') + '</div>';
     h += '<input class="cf-power-find" id="cf-power-find" type="text" placeholder="名前でしぼる" value="' + esc(_memQ) + '">';
     h += '<div class="cf-power-list">';
     if (!_members) h += '<div class="cf-power-empty">名簿を読んでいます…</div>';
@@ -327,8 +331,8 @@
     }
   }
 
-  function openPick() {
-    _pick = true; _memQ = '';
+  function openPick(scope) {
+    _pick = true; _memQ = ''; _pickScope = (scope === 'app') ? 'app' : 'all';
     drawPick(); place();
     loadMembers();
     setTimeout(function () { var f = $('cf-power-find'); if (f) f.focus(); }, 30);
@@ -345,9 +349,11 @@
     var tmail = normMail(人.email);
     /* ⚠ 当てる手がかりが1つも無い人は、出しても**誰にも届かない**。黙って成功に見せない。 */
     if (!tuid && !tmail) { note(名 + 'さんは、当てる手がかり（IDもメール）が名簿にありません。'); return; }
-    ask(名 + 'さんが開いている画面（全アプリ）を更新します。よろしいですか？', { ok: '更新する', cancel: 'やめる' }).then(function (yes) {
+    var 何を = (_pickScope === 'all') ? '開いている画面（全アプリ）' : '開いている この画面';
+    var あて = (_pickScope === 'all') ? 'all' : appKey();
+    ask(名 + 'さんが' + 何を + 'を更新します。よろしいですか？', { ok: '更新する', cancel: 'やめる' }).then(function (yes) {
       if (!yes) return;
-      var body = { at: new Date().toISOString(), app: 'all', uid: tuid, email: tmail, name: 名,
+      var body = { at: new Date().toISOString(), app: あて, uid: tuid, email: tmail, name: 名,
                    by: (w.fb.currentUser && (w.fb.currentUser.displayName || w.fb.currentUser.email)) || '' };
       w.fb.db.collection('companies').doc(c).collection('settings').doc('forceReload').set(body)
         .then(function () { note(名 + 'さんに合図を出しました。その人が開いている画面が数秒で新しくなります。'); })
@@ -441,7 +447,8 @@
       if (u !== null) { open(false); doForceOne(u); return; }
       var k = b.getAttribute('data-do');
       /* 一覧を出す／もどる は、メニューを閉じずに中身だけ入れ替える */
-      if (k === 'fr-one') { openPick(); return; }
+      if (k === 'fr-one-app') { openPick('app'); return; }
+      if (k === 'fr-one-all') { openPick('all'); return; }
       if (k === 'pick-back') { _pick = false; build(); place(); return; }
       open(false);
       if (k === 'reload') doReload();
@@ -455,7 +462,15 @@
     d.addEventListener('keydown', function (e) { if (e.key === 'Escape') open(false); });
     /* 画面が動いたら閉じる（浮いたまま置いていかれないように） */
     w.addEventListener('resize', function () { open(false); });
-    w.addEventListener('scroll', function () { open(false); }, true);
+    /* 🔴 2026-08-29 直し：**メニューの中のスクロールでは閉じない。**
+       名簿の一覧を指で送ろうとしただけで閉じてしまい、下のほうの人を選べなかった。
+       （この見張りは capture＝下から上に伝わる前に拾うので、一覧の中のスクロールも届く） */
+    w.addEventListener('scroll', function (e) {
+      var m = $('cf-power-menu');
+      var t = e && e.target;
+      if (m && t && (t === m || (m.contains && t.nodeType === 1 && m.contains(t)))) return;
+      open(false);
+    }, true);
 
     _wired = true;
     return true;
