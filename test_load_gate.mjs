@@ -74,7 +74,16 @@ function makeCloud(opt) {
     doc: (id) => ({
       __path: col + '/' + id,
       get: () => gated(col, () => docOf(id, col === 'pitSettings' ? settingsDoc : null)),
-      onSnapshot: (cb) => { watchers[col + '/' + id] = cb; gate(col, () => cb(docOf(id, col === 'pitSettings' ? settingsDoc : null))); return () => {}; }
+      /* ⚠ v2.24.0 から、つながり監視が (options, next, err) の形でも呼ぶ。両方受ける。 */
+      onSnapshot: (a, b, c) => {
+        const opt = (typeof a === 'object' && a !== null) ? a : null;
+        const next = opt ? b : a;
+        const 出す = () => { const d0 = docOf(id, col === 'pitSettings' ? settingsDoc : null);
+                             d0.metadata = { fromCache: false }; next(d0); };
+        if (!opt) watchers[col + '/' + id] = next;
+        gate(col, 出す);
+        return () => {};
+      }
     })
   });
 
@@ -277,10 +286,12 @@ console.log('\n── 🔴 ⑥コードの形 ──');
 
   /* 読む箱と見張る箱は、同じ一覧から作ること（片方だけ増やす事故を止める） */
   /* 🔴 棚卸し方式。箱の名前は一覧（_COLS）1か所だけに書く。
-     例外は pitCards の1回だけ＝「いま予約を編集している入庫カードは差し替えない」関門で
-     名指しが要る（v1.56.1・打った内容が消える事故を止めているので消さないこと）。
+     例外は pitCards だけ＝「いま予約を編集している入庫カードは差し替えない」関門で名指しが要る。
+       ・受け取り（_watch）… v1.56.1（打った内容が消える事故を止めている）
+       ・読み直し（_resync）… v2.24.0（同じ関門。2つの道で答えを変えないため）
+     ＝ **2回まで**許す。どちらも消さないこと。
      ⚠ 数が増えたらここが赤くなる。増やすのではなく、一覧をなぞる形に直すこと。 */
-  const 直書き = COLS.map(c => [c, (素.split("'" + c + "'").length - 1) - 1]).filter(([c, n]) => n > (c === 'pitCards' ? 1 : 0));
+  const 直書き = COLS.map(c => [c, (素.split("'" + c + "'").length - 1) - 1]).filter(([c, n]) => n > (c === 'pitCards' ? 2 : 0));
   ok('🔴 箱の名前を一覧の外で直書きしていない（pitCards の関門1つだけ許す）', 直書き.length === 0, 直書き);
   ok('箱は7つ', COLS.every(c => 素.indexOf("'" + c + "'") > 0));
 
@@ -288,7 +299,8 @@ console.log('\n── 🔴 ⑥コードの形 ──');
   const 見張り部 = i < 0 ? '' : 素.slice(i, i + 2600);
   ok('見張りは一覧をなぞって張っている', /Object\.keys\(this\._COLS\)|Object\.keys\(self\._COLS\)/.test(見張り部));
   const j = 素.indexOf('connectCloud: function');
-  const 読み部 = j < 0 ? '' : 素.slice(j, j + 2600);
+  /* ⚠ v2.24.0 で connectCloud が長くなった（try/finally を入れた）ので、見る幅を広げた。 */
+  const 読み部 = j < 0 ? '' : 素.slice(j, j + 3600);
   ok('読み込みも一覧をなぞっている', /Object\.keys\(this\._COLS\)|Object\.keys\(self\._COLS\)/.test(読み部));
   ok('🔴 読み込みの締めで見張りを張っている', /_watch\(\)/.test(読み部));
 }
