@@ -91,7 +91,7 @@ console.log('\n── 🚪 入庫日を過ぎた本予約は「未入庫」へ �
   ok('動かした数を返す', r.moved === 1, r.moved);
 }
 
-console.log('\n── 📤 返車予定日を過ぎた車は「返車日未定」へ ──');
+console.log('\n── 📤 返車予定日を過ぎた車は「返車日未定」へ（日付は消さない・v2.25.0）──');
 {
   const r = await runWith([
     { status: 'workDone', returnStage: 'returnWait', _retd: -2, returnTime: '15:00', returnDateFinal: 'x' },
@@ -101,15 +101,20 @@ console.log('\n── 📤 返車予定日を過ぎた車は「返車日未定�
     { status: 'returned', returnStage: 'returnWait', _retd: -2, completedAt: '2026-01-01' }
   ]);
   const C = r.cards;
-  ok('🔴 過ぎた返車は日付が空になる', C[0].returnDate === '' , C[0]);
-  ok('🔴 時間も確定返車日も外れる', C[0].returnDateFinal == null, C[0]);
-  ok('🔴 「返車日未定」に落ちる', C[0].place === 'dateTbd', C[0]);
-  ok('なぜ動いたかフローに残る', /返車日未定/.test(C[0].logLast), C[0].logLast);
+  /* 🔴🔴🔴 v2.25.0（2026-08-29・ゆうた指定）**ここは中身がひっくり返った。**
+     それまでは「過ぎた返車日を**空にする**」だった。＝人が入れた日を入れた1秒後に消していた
+     （予約 J32544。データチェックは「返車予定日が空」と赤を出し続け、**出口がなかった**）。
+     🗣「返車日が決まる→来ない→**これは残した状態で**また未定に戻る→決める→返す」
+     ＝ いまは **データを1文字も触らず、出す側（pitReturnPlace）が未定の箱に出す。** */
+  ok('🔴🔴 過ぎても返車日は残る（消さない）', C[0].returnDate !== '', C[0]);
+  ok('🔴 確定返車日も残る', C[0].returnDateFinal != null, C[0]);
+  ok('🔴 それでも「返車日未定」の箱に出る', C[0].place === 'dateTbd', C[0]);
+  ok('🔴 カードの記録を汚さない（自動の行を書かない）', !/返車日未定/.test(C[0].logLast || ''), C[0].logLast);
   ok('🔴 今日の返車は動かさない', C[1].returnDate !== '', C[1]);
   ok('🔴 先の返車は動かさない', C[2].returnDate !== '', C[2]);
-  /* ⚠ 完TEL待ちの車は、過ぎた日付を空にはするが**箱は「完TEL待ち」のまま**。
-     まだ完TELをしていないのだから、そこが正しい場所（v1.60.0 の振り分けを崩さない）。 */
-  ok('完TEL待ちの車は、過ぎた日付だけ空にする', C[3].returnDate === '', C[3]);
+  /* ⚠ 完TEL待ちの車も日付を消さない。箱は「完TEL待ち」のまま
+     （まだ完TELをしていないのだから、そこが正しい場所。v1.60.0 の振り分けを崩さない）。 */
+  ok('🔴 完TEL待ちの車も日付を消さない', C[3].returnDate !== '', C[3]);
   ok('🔴 完TEL待ちの箱からは動かさない（まだ電話していないので）', C[3].place === 'callWait', C[3]);
   ok('🔴 もう返した車（実績）は触らない', C[4].returnDate !== '', C[4]);
 }

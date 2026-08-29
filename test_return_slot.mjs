@@ -31,6 +31,19 @@ await p.goto(`http://127.0.0.1:${PORT}/index.html?demo=1&nonews=1`);
 await p.waitForFunction('window.state && window.pitReturnPlace && window.pitReturnSetDateTime && window.pitTimeGuideHtml', null, { timeout: 25000 });
 await p.waitForTimeout(900);
 
+/* 🔴 v2.25.0（2026-08-29）**日付を決め打ちにしない。**
+   ◎なぜ直したか
+     ここは `__T.d20` のような**固定の日**でカードを作っていた。
+     v2.25.0 で「**約束の日を過ぎた車は、日付を残したまま返車日未定に出す**」に変えたので、
+     固定の日はいつか必ず過去になり、**関係ない試験が全部落ちる**（実際この日に落ちた）。
+   ◎やり方
+     今日からの相対で作り、**同じ名前でページの中からも見える**ようにしておく
+     （`__T` は node からも `window.__T` としてブラウザからも引ける）。 */
+const _ymd = d => { const q = n => (n < 10 ? '0' : '') + n; return d.getFullYear() + '-' + q(d.getMonth() + 1) + '-' + q(d.getDate()); };
+const _日 = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return _ymd(d); };
+const __T = { d20: _日(3), d25: _日(8), d26: _日(9), d28: _日(11), 過ぎた: _日(-3) };
+await p.evaluate(t => { window.__T = t; }, __T);
+
 /* テスト用のカードを作る道具 */
 const mk = (id, o) => p.evaluate(([id, o]) => {
   state.cards = state.cards.filter(x => x.id !== id);
@@ -48,28 +61,28 @@ console.log('\n── ① 行き先の物差し（pitReturnPlace）──');
   await mk('RS2', { returnStage: 'returnWait', returnDate: '', returnTime: '' });
   ok('完TEL済で日付なしは「返車日未定」', await place('RS2') === 'dateTbd');
 
-  await mk('RS3', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '' });
+  await mk('RS3', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: '' });
   ok('日付だけ入ったら「返車時間未定」', await place('RS3') === 'timeTbd');
 
-  await mk('RS4', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '未定' });
+  await mk('RS4', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: '未定' });
   ok('🔴 時間が「未定」でも「返車時間未定」に残る', await place('RS4') === 'timeTbd');
 
-  await mk('RS5', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '09:00' });
+  await mk('RS5', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: '09:00' });
   ok('日付＋時間がそろえば「返車カレンダー」', await place('RS5') === 'calendar');
 
-  await mk('RS6', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '決まり次第' });
+  await mk('RS6', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: '決まり次第' });
   ok('🔴 決まり次第は「返車カレンダー」（時刻未定の行に置く）', await place('RS6') === 'calendar');
 
-  await mk('RS7', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: 'レッカー' });
+  await mk('RS7', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: 'レッカー' });
   ok('レッカーも「返車カレンダー」', await place('RS7') === 'calendar');
 
-  await mk('RS8', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '勝手に取る' });
+  await mk('RS8', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: '勝手に取る' });
   ok('🔴 勝手に取るも「返車カレンダー」', await place('RS8') === 'calendar');
 
-  await mk('RS9', { returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '09:00', status: 'returned' });
+  await mk('RS9', { returnStage: 'returnWait', returnDate: __T.d20, returnTime: '09:00', status: 'returned' });
   ok('返車済み（実績）は待ち行列に入れない', await place('RS9') === null);
 
-  await mk('RSA', { returnStage: null, returnDate: '2026-08-20' });
+  await mk('RSA', { returnStage: null, returnDate: __T.d20 });
   ok('まだ作業中（returnStageなし）も待ち行列に入れない', await place('RSA') === null);
 }
 
@@ -78,7 +91,7 @@ console.log('\n── ② 🔴 完TEL待ちに日付＋時間を入れたら、�
   await mk('RSB', { returnStage: 'callWait' });
   const r = await p.evaluate(() => {
     const c = state.cards.find(x => x.id === 'RSB');
-    const a = pitReturnSetDateTime(c, '2026-08-25', undefined);
+    const a = pitReturnSetDateTime(c, __T.d25, undefined);
     const b = pitReturnSetDateTime(c, undefined, '900');
     return { afterDate: a.after, afterTime: b.after, moved: b.moved, stage: c.returnStage, time: c.returnTime, dateFinal: c.returnDateFinal };
   });
@@ -86,12 +99,12 @@ console.log('\n── ② 🔴 完TEL待ちに日付＋時間を入れたら、�
   ok('🔴 時間も入れたら返車カレンダーへ', r.afterTime === 'calendar' && r.moved === true, r);
   ok('完TEL済（returnWait）に上がっている', r.stage === 'returnWait', r);
   ok('900 は 09:00 に整えられる', r.time === '09:00', r);
-  ok('返車確定日にも同じ日が入る', r.dateFinal === '2026-08-25', r);
+  ok('返車確定日にも同じ日が入る', r.dateFinal === __T.d25, r);
 }
 
 console.log('\n── ③ 返車日未定＝日付を空にする（新しい項目は増やさない）──');
 {
-  await mk('RSC', { returnStage: 'returnWait', returnDate: '2026-08-25', returnTime: '09:00' });
+  await mk('RSC', { returnStage: 'returnWait', returnDate: __T.d25, returnTime: '09:00' });
   const r = await p.evaluate(() => {
     const c = state.cards.find(x => x.id === 'RSC');
     const a = pitReturnSetDateTime(c, '', undefined);
@@ -108,7 +121,7 @@ console.log('\n── ④ 返車未定ビューが3ブロック（＋入金待�
     state.cards = state.cards.filter(x => !/^RS/.test(x.id));
     state.cards.push({ id: 'RV1', resNo: 'R-RV1', status: 'workDone', customer: '待ち 一郎', car: 'ノート', returnStage: 'callWait', log: [] });
     state.cards.push({ id: 'RV2', resNo: 'R-RV2', status: 'workDone', customer: '日 二郎', car: 'タント', returnStage: 'returnWait', returnDate: '', log: [] });
-    state.cards.push({ id: 'RV3', resNo: 'R-RV3', status: 'workDone', customer: '時 三郎', car: 'フィット', returnStage: 'returnWait', returnDate: '2026-08-20', returnTime: '', log: [] });
+    state.cards.push({ id: 'RV3', resNo: 'R-RV3', status: 'workDone', customer: '時 三郎', car: 'フィット', returnStage: 'returnWait', returnDate: __T.d20, returnTime: '', log: [] });
     state.returnRange = 'tbd';
     renderReturnTbd();
     const heads = [...document.querySelectorAll('#return-tbd .ret-tbd-h')].map(x => x.textContent.replace(/\s+/g, ''));
@@ -131,7 +144,7 @@ console.log('\n── ④ 返車未定ビューが3ブロック（＋入金待�
 console.log('\n── ⑤ 返車時間未定の車は、返車カレンダーの「時刻未定」にも出る ──');
 {
   const r = await p.evaluate(() => {
-    state.returnDate = new Date('2026-08-20T00:00:00');
+    state.returnDate = new Date(__T.d20 + 'T00:00:00');
     state.returnRange = 'day';
     renderReturn();
     const un = [...document.querySelectorAll('#return-day-list .reserve-slot')]
@@ -188,7 +201,7 @@ console.log('\n── ⑧ 返車ポップアップの見た目（チェック・
 
   const r2 = await p.evaluate(() => {
     const cb = document.getElementById('rp-datetbd'), d = document.getElementById('rp-date');
-    d.value = '2026-08-28'; PitReturnPopup.onDate();
+    d.value = __T.d28; PitReturnPopup.onDate();
     const a = { cb: cb.checked, dis: d.disabled };
     cb.checked = true; PitReturnPopup.onDateTbd(cb);
     const b = { val: d.value, dis: d.disabled };
@@ -228,7 +241,7 @@ console.log('\n── ⑨ ホバーの完TEL/返車入力（同じガイド＋�
   const r2 = await p.evaluate(async () => {
     const hp = document.getElementById('pit-hovercard');
     const d = hp.querySelector('.ph-rt-date');
-    d.disabled = false; d.value = '2026-08-26';
+    d.disabled = false; d.value = __T.d26;
     d.dispatchEvent(new Event('change', { bubbles: true }));
     const mid = pitReturnPlace(state.cards.find(x => x.id === 'HV1'));
 
