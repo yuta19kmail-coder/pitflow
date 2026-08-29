@@ -452,7 +452,10 @@ console.log('\n── 🔴🔴🔴 ⑬自分あての合図でだけ開き直す
   });
   ok('見張りを張れた', 仕込み);
 
+  /* ⚠ 本物は「1回の読み込みで読み直すのは1回まで」。試験では毎回そこを戻してから流す。
+     （「1回まで」そのものは、下の ⑬-2 で別に確かめる） */
   const 流す = async (v) => p.evaluate(async (v) => {
+    window.CFPower._busyReset();
     window.__cb({ exists: true, data: () => v });
     await new Promise(r => setTimeout(r, 1800));
     return window.__reloads;
@@ -478,8 +481,99 @@ console.log('\n── 🔴🔴🔴 ⑬自分あての合図でだけ開き直す
 
   const n6 = await 流す({ at: 't6', app: 'all', uid: 'u_a' });
   ok('🔴 同じ時刻の合図を二度は拾わない', n6 === 3, n6);
+}
 
-  await p.evaluate(() => CFPower._setReload(null));
+/* ========== ⑬-2 1回の読み込みで、読み直すのは1回まで ========== */
+/* 🔴 PitFlow が自前で持っていた守り（force-reload-pit.js の③）を、畳む時にこちらへ持ってきた。
+   合図が続けて来ても暴れないこと。 */
+console.log('\n── 🔴🔴 ⑬-2 1回の読み込みで、読み直すのは1回まで ──');
+{
+  const r = await p.evaluate(async () => {
+    window.CFPower._busyReset();
+    window.__reloads = 0;
+    window.__cb({ exists: true, data: () => ({ at: 'w1', app: 'all' }) });
+    await new Promise(r => setTimeout(r, 1800));
+    const 一回目 = window.__reloads;
+    window.__cb({ exists: true, data: () => ({ at: 'w2', app: 'all' }) });
+    window.__cb({ exists: true, data: () => ({ at: 'w3', app: 'all' }) });
+    await new Promise(r => setTimeout(r, 1800));
+    return { 一回目, 最後: window.__reloads };
+  });
+  ok('🔴 1回目はちゃんと読み直す', r.一回目 === 1, r);
+  ok('🔴🔴 続けて合図が来ても、二度は読み直さない', r.最後 === 1, r);
+}
+
+/* ========== ⑬-3 打ち込み中は待つ（最大60秒） ========== */
+/* 🔴 これも PitFlow の守り（④）。**打ち込みの最中に画面を飛ばさない。**
+   ⚠ そして「黙って待たない」＝待っていることを画面に出す（何も起きないように見えるのが一番こわい）。 */
+console.log('\n── 🔴🔴 ⑬-3 打ち込み中は待つ（黙らずに待つ） ──');
+{
+  const r = await p.evaluate(async () => {
+    window.CFPower._busyReset();
+    window.__reloads = 0;
+    const inp = document.createElement('input');
+    inp.id = '__testtype'; inp.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(inp); inp.focus();
+    window.__cb({ exists: true, data: () => ({ at: 'k1', app: 'all' }) });
+    await new Promise(r => setTimeout(r, 1900));
+    const n = document.getElementById('cf-power-note');
+    return { 打ち込み中は飛ばない: window.__reloads === 0, 案内: n ? n.textContent : '' };
+  });
+  ok('🔴🔴 打ち込み中は画面を飛ばさない', r.打ち込み中は飛ばない, r);
+  ok('🔴 黙って待たずに、待っていることを出す', /手が空いたら/.test(r.案内), r.案内);
+
+  const r2 = await p.evaluate(async () => {
+    document.getElementById('__testtype').blur();
+    document.getElementById('__testtype').remove();
+    await new Promise(r => setTimeout(r, 4200));   /* 2秒ごとに見に来る＋1.5秒待って読み直す */
+    return window.__reloads;
+  });
+  ok('🔴🔴 手が空いたら、ちゃんと読み直す', r2 === 1, r2);
+  await p.evaluate(() => { CFPower._setReload(null); CFPower._busyReset(); });
+}
+
+/* ========== ⑬-4 会社IDの置き場がバラバラでも死なない ========== */
+/* 🔴🔴 2026-08-29 に見つけた穴：`fb.currentCompanyId` を入れているアプリと、
+   `const COMPANY_ID = …` を script の中で宣言しているだけのアプリがある（const は window に乗らない）。
+   後者（CoreMembers・MHS・CoreTemplate）では、そのままだと強制更新が**黙って死ぬ**。 */
+console.log('\n── 🔴🔴 ⑬-4 会社IDが fb に入っていない画面でも、合図は出せる ──');
+{
+  const r = await p.evaluate(async () => {
+    window.__書いた = null;
+    window.fb.currentUser = { uid: window.CFPower.MASTER_UID, displayName: 'マスター' };
+    window.fb.currentCompanyId = null;          /* ← MHS・CoreMembers・CoreTemplate と同じ状態 */
+    window.fb.db = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({
+      set: (o) => { window.__書いた = o; return Promise.resolve(); } }) }) }) }) };
+    CFPower.force('app');
+    await new Promise(r => setTimeout(r, 300));
+    const cands = [...document.querySelectorAll('button')].filter(b => /更新する|はい|OK/.test((b.textContent || '').trim()));
+    const yes = cands[cands.length - 1]; if (yes) yes.click();
+    await new Promise(r => setTimeout(r, 400));
+    const n = document.getElementById('cf-power-note');
+    return { 書いた: window.__書いた, 案内: n ? n.textContent : '' };
+  });
+  ok('🔴🔴 会社IDが fb に無くても、合図をちゃんと書く', !!r.書いた, r);
+  ok('🔴 「繋がっていません」で黙って終わらない', !/繋がっていない/.test(r.案内), r.案内);
+  ok('🔴 外から呼べる入口（CFPower.force）が生きている', !!r.書いた && r.書いた.app === 'pitflow', r.書いた);
+}
+
+/* ========== ⑬-5 PitFlow の自前の強制更新は畳んだ（二重に持たない） ========== */
+console.log('\n── 🔴 ⑬-5 自前の強制更新は畳んで、共通の1本にした ──');
+{
+  const ix = fs.readFileSync('index.html', 'utf8');
+  ok('🔴 force-reload-pit.js を読み込んでいない', !/force-reload-pit\.js/.test(ix));
+  ok('🔴 本体のファイルが残っていない', !fs.existsSync('js/force-reload-pit.js'));
+  const st = fs.readFileSync('js/settings.js', 'utf8');
+  ok('🔴 設定ページのボタンは共通の入口を呼ぶ', /CFPower\.force\(/.test(st), '');
+  ok('🔴 設定ページに自前の呼び出しが残っていない', !/pitForceReload/.test(st));
+  const db = fs.readFileSync('js/db-pit.js', 'utf8');
+  ok('🔴 db-pit.js からも配線が消えている', !/pitForceReload/.test(db));
+  const r = await p.evaluate(() => ({
+    自前が残っていない: !window.pitForceReloadCheck && !window.pitForceReloadFire,
+    共通の入口がある: !!(window.CFPower && typeof window.CFPower.force === 'function')
+  }));
+  ok('🔴🔴 画面の中にも自前の仕掛けが残っていない', r.自前が残っていない, r);
+  ok('🔴 共通の入口がある', r.共通の入口がある, r);
 }
 
 /* ================= ⑭ JSエラー ================= */

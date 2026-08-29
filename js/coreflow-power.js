@@ -53,9 +53,16 @@
      🔴 **開いた瞬間の値では開き直さない**（開くたびに開き直す無限ループになる）。
      🔴 ルールは触っていない＝既存の「設定」の決まり（読むのは社員・書くのは設定権限）にそのまま収まる。
 
-   ◎⚠ PitFlow は前から自前の強制更新を持っている（`settings.forceReloadAt`）。
-     こちらとは別もの。**どちらを押しても効く**が、二重に持っている状態なので、
-     落ち着いたらPitFlow側を畳んでこちらに寄せてよい。
+   ◎🔴 2026-08-29：PitFlow が自前で持っていた強制更新（`force-reload-pit.js`）を**畳んでここに1本化した。**
+     ただし**畳む時に、向こうの守りをこちらへ持ってきている**。向こうのほうが慎重だったため：
+       ③ **1回の読み込みで読み直すのは1回まで**（合図が続けて来ても暴れない）
+       ④ **打ち込み中は待つ**（入力欄・選択・contenteditable にカーソル／窓が開いている／`__appBusy`）。
+          ⚠ ただし**待つのは最大60秒**。そもそも「全部止まっている」時に押す物なので、
+             そこから先は業務より復旧を優先する。
+     🔴 向こうの ①②（見た合図を localStorage に控える／控えられない端末では何もしない）は**要らない**。
+        こちらは **開いた瞬間の値では動かない**作りなので、読み直した先の画面では合図が
+        「開いた瞬間の値」になり、二度は反応しない＝**輪にならない**。
+        控えを使わないぶん、**プライベートモードの端末でも効く**（向こうは丸ごと止まっていた）。
 
    ⚠ 直す時は `_shared\coreflow-power.js` を直して `sync-shared.ps1` を走らせること。
       アプリ側の `js\coreflow-power.js` を直しても、次の配布で消えます。
@@ -73,7 +80,23 @@
   function appKey() { try { return (d.querySelector('meta[name=app-key]') || {}).content || ''; } catch (e) { return ''; } }
   function meUid() { try { return (w.fb && w.fb.currentUser && w.fb.currentUser.uid) || ''; } catch (e) { return ''; } }
   function isMaster() { return meUid() === MASTER_UID; }
-  function cid() { try { return (w.fb && w.fb.currentCompanyId) || ''; } catch (e) { return ''; } }
+  /* 🔴🔴 2026-08-29 に見つけた穴：**会社IDの置き場がアプリごとにバラバラ。**
+     `fb.currentCompanyId` を入れているのは PitFlow / CarFlow / StockFlow / CoreNote / CoreBoard / CoreTools だけ。
+     **CoreMembers・MHS・CoreTemplate は `const COMPANY_ID = …` を script の中で宣言しているだけ**で、
+     const は window に乗らない＝外からは**どこにも見えない**。
+     ＝ そのままだと、この4アプリでは電源メニューの強制更新が
+        「見張りも張られない・押しても『繋がっていません』」と**黙って死ぬ**。
+        しかも押した側には出したように見えないだけなので、気づくのは事故のあと。
+     🔴 なので順に探して、**最後は決め打ちで落とす**（うちは会社が1つしかない）。
+     ⚠ 会社が増えたら、ここではなく**各アプリが `fb.currentCompanyId` を入れる**ように直すこと。 */
+  var CID_FALLBACK = 'kobayashi_motors';
+  function cid() {
+    try {
+      var c = (w.fb && w.fb.currentCompanyId) || w.COMPANY_ID || w.companyId || '';
+      if (c) return String(c);
+    } catch (e) {}
+    return CID_FALLBACK;
+  }
 
   /* ---------- 見た目（このファイルの中に持つ＝配るのは1本だけで済む） ---------- */
   function css() {
@@ -363,6 +386,41 @@
 
   /* ---------- 合図の見張り ---------- */
   var _seen = null, _watching = false;
+  var _reloaded = false;            /* ③ 1回の読み込みで読み直すのは1回まで */
+  var _waitT = 0, _waitSince = 0;   /* ④ 打ち込み中は待つ（最大60秒） */
+  var _WAIT_MAX = 60000, _WAIT_TICK = 2000;
+
+  /* ④ いま読み直しても人の手を止めないか（auto-update.js と同じ考え方）
+     ⚠ 「打ち込み中かどうか」の物差しはここ1本。アプリごとに持たせない。 */
+  function 手が空いている() {
+    try {
+      if (w.__appBusy) return false;
+      var ae = d.activeElement;
+      if (ae) {
+        var tag = (ae.tagName || '').toUpperCase();
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || ae.isContentEditable) return false;
+      }
+      var dlg = d.querySelector('[role="dialog"], .modal, #modal, .modal-backdrop, .overlay, .crop-box');
+      if (dlg && dlg.offsetParent !== null) return false;
+    } catch (e) {}
+    return true;
+  }
+
+  /* 合図を受け取ってから、実際に読み直すまで。**判断はここ1本。** */
+  function 読み直しを予約する() {
+    if (_reloaded) return;
+    if (!_waitSince) _waitSince = Date.now();
+    if (手が空いている() || (Date.now() - _waitSince) > _WAIT_MAX) {
+      _reloaded = true;
+      if (_waitT) { clearInterval(_waitT); _waitT = 0; }
+      note('新しい版が出ました。画面を更新します…');
+      setTimeout(doReload, 1500);
+      return;
+    }
+    /* 打ち込み中＝手が空くまで待つ。⚠ 黙って待たない（何も起きないように見えるのが一番こわい） */
+    note('新しい版が出ました。手が空いたら画面を更新します…');
+    if (!_waitT) _waitT = setInterval(読み直しを予約する, _WAIT_TICK);
+  }
   function watch() {
     if (_watching) return;
     var c = cid(); if (!w.fb || !w.fb.db || !c) return;
@@ -386,8 +444,7 @@
           }
           var 対象 = String(v.app || '');
           if (対象 !== 'all' && 対象 !== appKey()) return;
-          note('新しい版が出ました。画面を更新します…');
-          setTimeout(doReload, 1500);
+          読み直しを予約する();
         }, function (e) { console.warn('[power] 強制更新の見張りを張れませんでした', e); _watching = false; });
     } catch (e) { _watching = false; }
   }
@@ -488,10 +545,14 @@
   setInterval(function () { if (!_watching) watch(); }, 4000);
 
   /* 見張り（テスト）から触る継ぎ目。ふつうは使わない。 */
+  /* 🔴 外から呼べる入口。PitFlow の設定ページの「全端末を今すぐ更新する」がこれを呼ぶ。
+     ＝ アプリ側に**判断を1行も持たせない**（持たせると必ず片方だけ直る）。 */
   w.CFPower = { wire: wire, open: open, isMaster: isMaster, _handlers: _handlers,
+                force: doForce,
                 _force: doForce, _forceOne: doForceOne, _pickOpen: openPick, _place: place,
                 _close: doClose, _watch: watch, MASTER_UID: MASTER_UID,
                 _setMembers: function (a) { _members = a; if (_pick) { drawPick(); place(); } },
                 _members: function () { return _members; },
-                _setReload: function (f) { _reloadHook = f || null; } };
+                _setReload: function (f) { _reloadHook = f || null; },
+                _busyReset: function () { _reloaded = false; _waitSince = 0; if (_waitT) { clearInterval(_waitT); _waitT = 0; } } };
 })(window, document);
