@@ -8,6 +8,7 @@
      🗣「マスターの俺だけには 全端末の強制更新／全端末全アプリの強制更新 が使えるように。
      　　**今回みたいな時の緊急対応に。**」
      🗣（ヘルプの行き先）→ **「電源のメニューに入れる」を選択**
+     🗣（2026-08-29 追加）「特定のアカウント、例えば**Aさんのログイン端末を全部更新する**、はできる？」
 
    ◎この見張りが守るもの
      🔴 ① 右上が [アバター][名前][同期][⏻] になっている（？とログアウトの文字が消えている）
@@ -19,7 +20,11 @@
      🔴 ⑦ ヘルプを押すと**アプリ本来のヘルプ**が開く
      🔴 ⑧ 外側クリック・Esc で閉じる
      🔴 ⑨ 「画面を閉じる」が効かない時、**黙らずに案内を出す**
-     🔴 ⑩ JSエラー0
+     🔴 ⑩ **決めた人の端末だけ更新**がマスターにだけ出る（2026-08-29 追加）
+     🔴 ⑪ 名簿から選べる／しぼれる／もどれる
+     🔴 ⑫ 合図に **uid とメールの両方**が入る（名簿のIDが uid とは限らないため）
+     🔴🔴 ⑬ 受け取る側が、**自分あての合図でだけ**開き直す
+     🔴 ⑭ JSエラー0
 
    ◎使い方
      python3 -m http.server 8979 --directory . &
@@ -245,8 +250,171 @@ console.log('\n── 🔴 ⑧強制更新も1回聞く ──');
   ok('いつ出したかが入っている', !!(r2.書いた && r2.書いた.at), r2.書いた);
 }
 
-/* ================= ⑨ JSエラー ================= */
-console.log('\n── ⑨JSエラー ──');
+/* ================= ⑩ 決めた人の端末だけ更新（マスターだけ） ================= */
+console.log('\n── 🔴🔴 ⑩「決めた人の端末だけ更新」はマスターだけ ──');
+{
+  const r = await p.evaluate(() => {
+    window.fb = window.fb || {};
+    window.fb.currentUser = { uid: 'dareka', email: 'x@y.jp' };
+    CFPower.open(false); CFPower.open(true);
+    return [...document.querySelectorAll('#cf-power-menu [data-do]')].map(e => e.getAttribute('data-do'));
+  });
+  ok('🔴🔴 ふつうの人には出さない', r.indexOf('fr-one') < 0, r);
+
+  const r2 = await p.evaluate(() => {
+    window.fb.currentUser = { uid: window.CFPower.MASTER_UID, displayName: 'マスター', email: 'yuta@kobamo.jp' };
+    CFPower.open(false); CFPower.open(true);
+    return [...document.querySelectorAll('#cf-power-menu [data-do]')].map(e => e.getAttribute('data-do'));
+  });
+  ok('🔴🔴 マスターには出る', r2.indexOf('fr-one') >= 0, r2);
+}
+
+/* ================= ⑪ 名簿から選ぶ ================= */
+console.log('\n── 🔴 ⑪名簿から選べる／しぼれる／もどれる ──');
+{
+  const r = await p.evaluate(async () => {
+    CFPower._setMembers([
+      { id: 'u_a', uid: 'u_a', name: '田中 太郎', email: 'A.Tanaka@Example.com', dept: '整備' },
+      { id: 'invite_9', name: '鈴木 花子', email: 'suzuki@example.com', dept: 'フロント' },
+      { id: 'u_c', uid: 'u_c', name: '佐藤 次郎', email: 'sato@example.com' }
+    ]);
+    CFPower.open(true);
+    document.querySelector('#cf-power-menu [data-do=fr-one]').click();
+    await new Promise(r => setTimeout(r, 250));
+    return {
+      まだ開いている: document.getElementById('cf-power').classList.contains('on'),
+      人数: document.querySelectorAll('#cf-power-menu [data-uid]').length,
+      しぼる欄: !!document.getElementById('cf-power-find'),
+      もどる: !!document.querySelector('#cf-power-menu [data-do=pick-back]')
+    };
+  });
+  ok('🔴 押しても閉じずに、名簿の一覧に変わる', r.まだ開いている && r.人数 === 3, r);
+  ok('しぼる欄がある', r.しぼる欄, r);
+  ok('もどるがある', r.もどる, r);
+
+  const r2 = await p.evaluate(async () => {
+    const f = document.getElementById('cf-power-find');
+    f.value = '鈴木'; f.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 150));
+    return [...document.querySelectorAll('#cf-power-menu [data-uid]')].map(e => e.getAttribute('data-uid'));
+  });
+  ok('🔴 名前でしぼれる', r2.length === 1 && r2[0] === 'invite_9', r2);
+
+  /* しぼっている最中に外側の閉じるに食われないこと（入力欄を押しただけで閉じたら使えない） */
+  const r3 = await p.evaluate(async () => {
+    document.getElementById('cf-power-find').click();
+    await new Promise(r => setTimeout(r, 150));
+    return document.getElementById('cf-power').classList.contains('on');
+  });
+  ok('🔴 しぼる欄を押しても閉じない', r3);
+
+  const r4 = await p.evaluate(async () => {
+    document.querySelector('#cf-power-menu [data-do=pick-back]').click();
+    await new Promise(r => setTimeout(r, 200));
+    return {
+      開いている: document.getElementById('cf-power').classList.contains('on'),
+      項目: [...document.querySelectorAll('#cf-power-menu [data-do]')].map(e => e.getAttribute('data-do'))
+    };
+  });
+  ok('🔴 もどるで元のメニューに戻る', r4.開いている && r4.項目.indexOf('fr-app') >= 0, r4);
+  await p.evaluate(() => CFPower.open(false));
+}
+
+/* ================= ⑫ 合図の中身（uid とメールの両方） ================= */
+console.log('\n── 🔴🔴 ⑫合図には uid とメールの両方を書く ──');
+{
+  const r = await p.evaluate(async () => {
+    window.__書いた = null;
+    let 書いた = 0;
+    window.fb.currentCompanyId = 'test';
+    window.fb.db = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({ set: (o) => { 書いた++; window.__書いた = o; return Promise.resolve(); } }) }) }) }) };
+    CFPower.open(true);
+    document.querySelector('#cf-power-menu [data-do=fr-one]').click();
+    await new Promise(r => setTimeout(r, 200));
+    document.querySelector('#cf-power-menu [data-uid=u_a]').click();
+    await new Promise(r => setTimeout(r, 300));
+    return { いきなり書いていない: 書いた === 0, 窓: [...document.querySelectorAll('button')].some(b => /更新する/.test(b.textContent || '')) };
+  });
+  ok('🔴🔴 押しただけでは合図を書かない（1回聞く）', r.いきなり書いていない, r);
+  ok('🔴 誰あてか分かる窓が出る', r.窓, r);
+
+  const r2 = await p.evaluate(async () => {
+    const cands = [...document.querySelectorAll('button')].filter(b => /更新する|はい|OK/.test((b.textContent || '').trim()));
+    const yes = cands[cands.length - 1];
+    if (yes) yes.click();
+    await new Promise(r => setTimeout(r, 400));
+    return window.__書いた;
+  });
+  ok('🔴 「はい」で合図を1枚書く', !!r2, r2);
+  ok('🔴🔴 uid が入っている', r2 && r2.uid === 'u_a', r2);
+  ok('🔴🔴 メールが入っている（小文字にそろえて）', r2 && r2.email === 'a.tanaka@example.com', r2);
+  ok('🔴 その人の全アプリあて（app=all）', r2 && r2.app === 'all', r2);
+  ok('誰あてか名前も残す', r2 && r2.name === '田中 太郎', r2);
+
+  /* 🔴 招待から入った人＝書類のIDが uid ではない。それでもメールで当てられること。 */
+  const r3 = await p.evaluate(async () => {
+    window.__書いた = null;
+    CFPower.open(true);
+    document.querySelector('#cf-power-menu [data-do=fr-one]').click();
+    await new Promise(r => setTimeout(r, 200));
+    document.querySelector('#cf-power-menu [data-uid=invite_9]').click();
+    await new Promise(r => setTimeout(r, 300));
+    const cands = [...document.querySelectorAll('button')].filter(b => /更新する|はい|OK/.test((b.textContent || '').trim()));
+    const yes = cands[cands.length - 1]; if (yes) yes.click();
+    await new Promise(r => setTimeout(r, 400));
+    return window.__書いた;
+  });
+  ok('🔴🔴 名簿のIDが uid でない人でも、メールで当てられる', r3 && r3.email === 'suzuki@example.com', r3);
+}
+
+/* ================= ⑬ 受け取る側：自分あての時だけ開き直す ================= */
+console.log('\n── 🔴🔴🔴 ⑬自分あての合図でだけ開き直す ──');
+{
+  const 仕込み = await p.evaluate(() => {
+    window.__reloads = 0;
+    CFPower._setReload(() => { window.__reloads++; });
+    window.fb.currentUser = { uid: 'u_a', email: 'A.Tanaka@Example.com' };
+    window.fb.currentCompanyId = 'test';
+    window.__cb = null;
+    window.fb.db = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => ({
+      onSnapshot: (f) => { window.__cb = f; return () => {}; } }) }) }) }) };
+    CFPower._watch();
+    return !!window.__cb;
+  });
+  ok('見張りを張れた', 仕込み);
+
+  const 流す = async (v) => p.evaluate(async (v) => {
+    window.__cb({ exists: true, data: () => v });
+    await new Promise(r => setTimeout(r, 1800));
+    return window.__reloads;
+  }, v);
+
+  const n0 = await 流す({ at: 't1', app: 'all' });
+  ok('🔴 開いた瞬間の値では開き直さない', n0 === 0, n0);
+
+  const n1 = await 流す({ at: 't2', app: 'all', uid: 'u_b', email: 'b@example.com' });
+  ok('🔴🔴 よその人あての合図では開き直さない', n1 === 0, n1);
+
+  const n2 = await 流す({ at: 't3', app: 'all', uid: 'u_a', email: '' });
+  ok('🔴🔴 自分あて（uid 一致）なら開き直す', n2 === 1, n2);
+
+  const n3 = await 流す({ at: 't4', app: 'all', uid: '', email: 'a.tanaka@example.com' });
+  ok('🔴🔴 自分あて（メール一致・大文字小文字は問わない）なら開き直す', n3 === 2, n3);
+
+  const n4 = await 流す({ at: 't5', app: 'all' });
+  ok('🔴 誰あてでもない（全員あて）なら開き直す', n4 === 3, n4);
+
+  const n5 = await 流す({ at: 't6', app: 'mhs', uid: 'u_a' });
+  ok('🔴 自分あてでも、よそのアプリの合図なら開き直さない', n5 === 3, n5);
+
+  const n6 = await 流す({ at: 't6', app: 'all', uid: 'u_a' });
+  ok('🔴 同じ時刻の合図を二度は拾わない', n6 === 3, n6);
+
+  await p.evaluate(() => CFPower._setReload(null));
+}
+
+/* ================= ⑭ JSエラー ================= */
+console.log('\n── ⑭JSエラー ──');
 ok('🔴 最後までJSエラー0', errs.length === 0, errs.slice(0, 3));
 
 console.log('\n────────────────────────────');

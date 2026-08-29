@@ -28,6 +28,7 @@
        ─────────────（マスターだけ）
        ・このアプリを全端末で更新
        ・全アプリを全端末で更新
+       ・決めた人の端末だけ更新   （2026-08-29 追加）
 
    ◎⚠ 「画面を閉じる」は、ブラウザが拒むことがある
      スクリプトで開いた窓しか閉じられないのが原則。**キオスク起動やアプリ化した窓なら閉じられる**。
@@ -35,9 +36,18 @@
         少し待って**まだ開いていたら「Alt+F4 で閉じてください」と出す。**
 
    ◎⚠ 強制更新の合図の置き場
-     `companies/{会社}/settings/forceReload` に `{ at, app }` を1枚書くだけ。
+     `companies/{会社}/settings/forceReload` に `{ at, app, uid, email }` を1枚書くだけ。
      ・`app` が `'all'` なら全アプリ、アプリの名前（app-key）ならそのアプリだけ
+     ・`uid` / `email` が入っていたら**その人の端末だけ**（空なら全員）
      ・各アプリはこの1枚を見張っていて、**前に見た時刻と変わったら**開き直す
+
+   ◎🔴 「決めた人だけ」の当てかた ── uid と メールの**両方**で見る（2026-08-29・ゆうた指定）
+     🗣「特定のアカウント、例えばAさんのログイン端末を全部更新する、はできる？」
+     名簿（portalMembers）の**書類の名前が uid とは限らない**（招待から作った人は別のIDになる）。
+     ＝ uid だけで当てると、招待から入った人には**永遠に届かない**のに、
+        出した側には「出しました」としか見えない＝いちばんたちが悪い外し方。
+     🔴 なので合図には uid と メールの**両方**を書き、受け取る側は**どちらか一致で自分ごと**とみなす。
+     ⚠ メールは大文字小文字・全角を揃えてから比べる（名簿の打ち込みとGoogleの表記が違うことがある）。
      🔴 **開いた瞬間の値では開き直さない**（開くたびに開き直す無限ループになる）。
      🔴 ルールは触っていない＝既存の「設定」の決まり（読むのは社員・書くのは設定権限）にそのまま収まる。
 
@@ -95,6 +105,15 @@
       '.cf-power-head{font-size:10.5px;font-weight:800;color:var(--text3,#79839a);padding:4px 11px 2px;letter-spacing:.03em}',
       '.cf-power-item .cf-t{display:block;min-width:0}',
       '.cf-power-item small{display:block;font-size:10.5px;font-weight:600;color:var(--text3,#79839a);margin-top:2px;line-height:1.45}',
+      /* 「決めた人だけ更新」の名簿一覧（2026-08-29） */
+      '.cf-power-find{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:9px;font-family:inherit;font-size:12.5px;',
+      '  border:1px solid var(--border,#2a2f3a);background:var(--bg3,#1f232c);color:var(--text,#e7eaf0)}',
+      '.cf-power-find:focus{outline:none;border-color:var(--accent,#3b82f6)}',
+      '.cf-power-list{max-height:min(46vh,320px);overflow:auto;overscroll-behavior:contain}',
+      '.cf-power-empty{padding:12px 11px;font-size:12px;color:var(--text3,#79839a);font-weight:700}',
+      '.cf-power-av{width:22px;height:22px;flex:0 0 22px;border-radius:50%;overflow:hidden;display:inline-flex;',
+      '  align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#0e1117;background:#26314a}',
+      '.cf-power-av img{width:100%;height:100%;object-fit:cover;display:block}',
       '.cf-power-note{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:100000;',
       '  background:var(--bg2,#171a21);color:var(--text,#e7eaf0);border:1px solid var(--border2,var(--border,#2a2f3a));',
       '  border-left:3px solid var(--red,#ef4444);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:700;',
@@ -110,7 +129,9 @@
     close: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
     help: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.4"/><path d="M12 17h.01"/></svg>',
     out: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>',
-    bolt: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>'
+    bolt: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+    user: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    back: '<svg class="cf-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>'
   };
 
   /* ---------- 1回聞く（純正の confirm は使わない＝全アプリ共通の決めごと） ---------- */
@@ -147,10 +168,17 @@
     var 出す = (on === undefined) ? !box.classList.contains('on') : !!on;
     box.classList.toggle('on', 出す);
     m.classList.toggle('on', 出す);
-    if (!出す) return;
+    if (!出す) { _pick = false; return; }
+    _pick = false;
     build();
+    place();
+  }
+  /* 🔴 位置決めは別にしておく＝**中身が入れ替わっても置き直せる**
+     （名簿の一覧に切り替えると背が伸びるので、そのままだと画面からはみ出す） */
+  function place() {
+    var m = $('cf-power-menu'), btn = $('cf-power-btn'); if (!m || !btn) return;
     /* ボタンの真下・右そろえ。画面からはみ出さないように寄せる */
-    var b = $('cf-power-btn').getBoundingClientRect();
+    var b = btn.getBoundingClientRect();
     m.style.visibility = 'hidden'; m.style.left = '0px'; m.style.top = '0px';
     var w2 = m.offsetWidth || 236, h2 = m.offsetHeight || 200;
     var left = Math.max(8, Math.min(b.right - w2, (w.innerWidth || 1200) - w2 - 8));
@@ -173,12 +201,20 @@
       h += '<div class="cf-power-head">マスターのみ</div>';
       h += '<button class="cf-power-item" data-do="fr-app">' + IC.bolt + '<span class="cf-t">このアプリを全端末で更新<small>開いている人の画面が数秒で新しくなります</small></span></button>';
       h += '<button class="cf-power-item" data-do="fr-all">' + IC.bolt + '<span class="cf-t">全アプリを全端末で更新<small>10アプリぜんぶ。緊急のとき用</small></span></button>';
+      h += '<button class="cf-power-item" data-do="fr-one">' + IC.user + '<span class="cf-t">決めた人の端末だけ更新<small>選んだ人が開いている画面だけ（全アプリ）</small></span></button>';
     }
     m.innerHTML = h;
   }
 
   /* ---------- それぞれの動き ---------- */
-  function doReload() { try { w.location.reload(); } catch (e) {} }
+  /* ⚠ 見張り（テスト）だけが差し替える継ぎ目。本物のブラウザで「開き直す」を試すと
+     テストの画面ごと消えてしまうため、開き直したことだけを数えられるようにしてある。
+     ふつうの動きでは _reloadHook は必ず null。 */
+  var _reloadHook = null;
+  function doReload() {
+    if (_reloadHook) { try { _reloadHook(); } catch (e) {} return; }
+    try { w.location.reload(); } catch (e) {}
+  }
 
   /* ⚠ ブラウザは「スクリプトで開いた窓」しか閉じさせてくれないことがある。
      キオスク起動・アプリ化した窓なら閉じられる。閉じられなかったら黙らずに言う。 */
@@ -212,6 +248,113 @@
     });
   }
 
+  /* ============================================================
+     🔴 決めた人の端末だけ更新（2026-08-29・ゆうた指定）
+       🗣「特定のアカウント、例えばAさんのログイン端末を全部更新する、はできる？」
+     ⚠ 名簿は companies/{会社}/portalMembers。**書類の名前が uid とは限らない**ので、
+        合図には uid とメールの両方を書く（受け取る側はどちらか一致で自分ごと）。
+     ⚠ 名簿を読めるのは会社の人だけ。この入口はマスターにしか出さないので二重に守られている。
+     ============================================================ */
+  var _pick = false, _members = null, _memLoading = false, _memQ = '';
+
+  function esc(v) { return String(v == null ? '' : v).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  /* ⚠ 全角＠・全角英数・大文字小文字・前後の空白を揃えてから比べる（名簿の打ち込みは揺れる） */
+  function normMail(v) { try { return String(v || '').normalize('NFKC').toLowerCase().trim(); } catch (e) { return String(v || '').toLowerCase().trim(); } }
+  function meMail() { try { return normMail((w.fb && w.fb.currentUser && w.fb.currentUser.email) || ''); } catch (e) { return ''; } }
+
+  function loadMembers() {
+    if (_members || _memLoading) return;
+    var c = cid(); if (!w.fb || !w.fb.db || !c) return;
+    _memLoading = true;
+    w.fb.db.collection('companies').doc(c).collection('portalMembers').get()
+      .then(function (snap) {
+        var out = [];
+        snap.forEach(function (docu) {
+          var m = docu.data() || {}; m.id = docu.id;
+          if (m.active === false) return;                 /* 退職・停止の人は出さない */
+          out.push(m);
+        });
+        out.sort(function (a, b) {
+          var sa = (typeof a.sortOrder === 'number') ? a.sortOrder : 999999;
+          var sb = (typeof b.sortOrder === 'number') ? b.sortOrder : 999999;
+          if (sa !== sb) return sa - sb;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'ja');
+        });
+        _members = out; _memLoading = false;
+        if (_pick) { drawPick(); place(); }
+      })
+      .catch(function (e) {
+        console.error('[power] 名簿を読めませんでした', e);
+        _members = []; _memLoading = false;
+        if (_pick) { drawPick(); place(); }
+      });
+  }
+
+  function avatarHtml(m) {
+    if (m.photo) return '<span class="cf-power-av"><img src="' + esc(m.photo) + '" alt=""></span>';
+    var ini = esc(m.ini || String(m.name || m.email || '？').trim().charAt(0) || '？');
+    return '<span class="cf-power-av" style="background:' + esc(m.color || '#26314a') + '">' + ini + '</span>';
+  }
+
+  function drawPick() {
+    var m = $('cf-power-menu'); if (!m) return;
+    var q = normMail(_memQ);
+    var list = _members && _members.filter(function (x) {
+      if (!q) return true;
+      return normMail(x.name).indexOf(q) >= 0 || normMail(x.email).indexOf(q) >= 0 || normMail(x.dept).indexOf(q) >= 0;
+    });
+    var h = '';
+    h += '<button class="cf-power-item" data-do="pick-back">' + IC.back + 'もどる</button>';
+    h += '<div class="cf-power-sep"></div>';
+    h += '<div class="cf-power-head">誰の端末を更新しますか</div>';
+    h += '<input class="cf-power-find" id="cf-power-find" type="text" placeholder="名前でしぼる" value="' + esc(_memQ) + '">';
+    h += '<div class="cf-power-list">';
+    if (!_members) h += '<div class="cf-power-empty">名簿を読んでいます…</div>';
+    else if (!list.length) h += '<div class="cf-power-empty">' + (_memQ ? '見つかりませんでした' : '名簿が空です') + '</div>';
+    else list.forEach(function (x) {
+      var 名 = x.name || x.email || x.id;
+      var 下 = x.dept || x.title || x.email || '';
+      h += '<button class="cf-power-item" data-uid="' + esc(x.id) + '">' + avatarHtml(x) +
+           '<span class="cf-t">' + esc(名) + (下 ? '<small>' + esc(下) + '</small>' : '') + '</span></button>';
+    });
+    h += '</div>';
+    m.innerHTML = h;
+    var f = $('cf-power-find');
+    if (f) {
+      f.addEventListener('input', function () { _memQ = f.value || ''; var pos = f.selectionStart; drawPick(); var g = $('cf-power-find'); if (g) { g.focus(); try { g.setSelectionRange(pos, pos); } catch (e) {} } });
+      /* 🔴 一覧の中で Esc を押した時は、メニューごと閉じずに**もどる**だけにしたいので、ここで止める */
+      f.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); _pick = false; build(); place(); } });
+    }
+  }
+
+  function openPick() {
+    _pick = true; _memQ = '';
+    drawPick(); place();
+    loadMembers();
+    setTimeout(function () { var f = $('cf-power-find'); if (f) f.focus(); }, 30);
+  }
+
+  /* 🔴 その人あての合図を1枚書く。app は 'all'＝その人が開いている画面はぜんぶ。 */
+  function doForceOne(id) {
+    var c = cid();
+    var 人 = (_members || []).filter(function (x) { return x.id === id; })[0];
+    if (!人) { note('その人が名簿から見つかりませんでした。'); return; }
+    if (!w.fb || !w.fb.db || !c) { note('いまはクラウドに繋がっていないので、強制更新は出せません。'); return; }
+    var 名 = 人.name || 人.email || 人.id;
+    var tuid = String(人.uid || 人.id || '');
+    var tmail = normMail(人.email);
+    /* ⚠ 当てる手がかりが1つも無い人は、出しても**誰にも届かない**。黙って成功に見せない。 */
+    if (!tuid && !tmail) { note(名 + 'さんは、当てる手がかり（IDもメール）が名簿にありません。'); return; }
+    ask(名 + 'さんが開いている画面（全アプリ）を更新します。よろしいですか？', { ok: '更新する', cancel: 'やめる' }).then(function (yes) {
+      if (!yes) return;
+      var body = { at: new Date().toISOString(), app: 'all', uid: tuid, email: tmail, name: 名,
+                   by: (w.fb.currentUser && (w.fb.currentUser.displayName || w.fb.currentUser.email)) || '' };
+      w.fb.db.collection('companies').doc(c).collection('settings').doc('forceReload').set(body)
+        .then(function () { note(名 + 'さんに合図を出しました。その人が開いている画面が数秒で新しくなります。'); })
+        .catch(function (e) { console.error('[power] 強制更新の合図を出せませんでした', e); note('強制更新の合図を出せませんでした（権限か通信）。'); });
+    });
+  }
+
   /* ---------- 合図の見張り ---------- */
   var _seen = null, _watching = false;
   function watch() {
@@ -227,6 +370,14 @@
           if (_seen === null) { _seen = at; return; }
           if (!at || at === _seen) return;
           _seen = at;
+          /* 🔴 誰あてか（uid かメールのどちらか一致で自分ごと）。両方 空 なら全員あて。
+             ⚠ 名簿の書類の名前が uid とは限らないので、**片方だけで判定しない**。 */
+          var tu = String(v.uid || ''), te = normMail(v.email);
+          if (tu || te) {
+            var mu = meUid(), mm = meMail();
+            var 自分ごと = (tu && mu && mu === tu) || (te && mm && mm === te);
+            if (!自分ごと) return;
+          }
           var 対象 = String(v.app || '');
           if (対象 !== 'all' && 対象 !== appKey()) return;
           note('新しい版が出ました。画面を更新します…');
@@ -282,9 +433,17 @@
 
     $('cf-power-btn').addEventListener('click', function (ev) { ev.stopPropagation(); open(); });
     $('cf-power-menu').addEventListener('click', function (ev) {
-      var b = ev.target.closest && ev.target.closest('[data-do]'); if (!b) return;
-      ev.stopPropagation(); open(false);
+      /* 🔴 メニューの中の押しは**必ずここで止める**。
+         名簿をしぼる入力欄を触っただけで、下の「外側を押したら閉じる」に食われるため。 */
+      ev.stopPropagation();
+      var b = ev.target.closest && ev.target.closest('[data-do],[data-uid]'); if (!b) return;
+      var u = b.getAttribute('data-uid');
+      if (u !== null) { open(false); doForceOne(u); return; }
       var k = b.getAttribute('data-do');
+      /* 一覧を出す／もどる は、メニューを閉じずに中身だけ入れ替える */
+      if (k === 'fr-one') { openPick(); return; }
+      if (k === 'pick-back') { _pick = false; build(); place(); return; }
+      open(false);
       if (k === 'reload') doReload();
       else if (k === 'close') doClose();
       else if (k === 'help') { if (_handlers.help) { try { _handlers.help(); } catch (e) {} } }
@@ -315,5 +474,9 @@
 
   /* 見張り（テスト）から触る継ぎ目。ふつうは使わない。 */
   w.CFPower = { wire: wire, open: open, isMaster: isMaster, _handlers: _handlers,
-                _force: doForce, _close: doClose, _watch: watch, MASTER_UID: MASTER_UID };
+                _force: doForce, _forceOne: doForceOne, _pickOpen: openPick, _place: place,
+                _close: doClose, _watch: watch, MASTER_UID: MASTER_UID,
+                _setMembers: function (a) { _members = a; if (_pick) { drawPick(); place(); } },
+                _members: function () { return _members; },
+                _setReload: function (f) { _reloadHook = f || null; } };
 })(window, document);
