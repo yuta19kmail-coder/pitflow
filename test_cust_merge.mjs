@@ -264,7 +264,12 @@ console.log('\n── 🖥 ⑥ 窓の組み立てと、押した時の道 ──
 console.log('\n── 🧭 ⑦ 決めごと ──');
 {
   const cus = JS('customers.js'), cm = JS('cust-merge.js');
-  ok('🔴 入口は顧客一覧（件数の下）にある', /cust-mergebtn[\s\S]{0,160}PitCustMerge\.open\(\)/.test(cus));
+  ok('🔴 入口は顧客一覧（件数の下）に**アイコンだけ**', /cust-mergeico[\s\S]{0,200}PitCustMerge\.open\(\)/.test(cus));
+  ok('🔴 言葉は並べない（アイコンだけ・title で伝える）',
+     /cust-mergeico[\s\S]{0,240}<\/i><\/button>/.test(cus) && cus.indexOf('お客様をまとめる</button>') < 0);
+  /* 🔴 v2.36.1 打っている間に窓を描き直さない（IMEが飛ぶ） */
+  ok('🔴 打っている間は候補の並びだけ差し替える', /q: *function\(n, v\)[\s\S]{0,120}_paint\(n\)/.test(cm));
+  ok('🔴 入力欄は id を持って据え置かれる', /id="um-q' \+ n \+ '"/.test(cm) && /id="um-list' \+ n \+ '"/.test(cm));
   ok('🔴 吸収された人は引き当ての相手にしない', /pitCustMerged\(x\)/.test(cus));
   ok('🔴 ②は消さずアーカイブ', /archiveCust/.test(cm) && cm.indexOf('splice(') > 0);
   ok('🔴 連絡先の既定は「どっちも」', /連絡先: *'both'/.test(cm));
