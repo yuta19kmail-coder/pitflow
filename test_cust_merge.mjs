@@ -234,7 +234,8 @@ console.log('\n── 🖥 ⑥ 窓の組み立てと、押した時の道 ──
   ok('🔴 カードに車種が出る', /ミニF54/.test(H));
   ok('🔴 カードにカルテNoが出る', /カルテ K-1/.test(H));
   ok('🔴 カードに連絡先が出る', /047-000-0000/.test(H) && /自宅/.test(H));
-  ok('🔴 カードにLINEの状態が出る', /LINE 登録済/.test(H));
+  /* 🔴 v2.37.3 Lステップの番号に URL が入っていても、札は「Lステップ」で出す（URL を並べない） */
+  ok('🔴 カードにLINEの状態が出る', /LINE 登録済|Lステップ/.test(H));
   ok('🔴 カードに来店回数と最終入庫が出る', /来店 /.test(H) && /最終 |まだ来店なし/.test(H));
   ok('🔴 どちらが残ってどちらが片付くか、言葉で出る', /残す/.test(H) && /アーカイブへ/.test(H));
   ok('ここで初めて「まとめる」が出る', /PitCustMerge\.go\(\)/.test(H));
@@ -255,6 +256,9 @@ console.log('\n── 🖥 ⑥ 窓の組み立てと、押した時の道 ──
   ok('🔴 確認の窓に予約の番号が出る', (ctx.聞かれた[0].opt.detail||[]).some(x => /W0003/.test(x)),
      ctx.聞かれた[0].opt.detail);
   ok('🔴 「はい」なら本当にまとまる', (客(S,'cuA').vehicles||[]).length === 2, (客(S,'cuA').vehicles||[]).length);
+  /* 🔴 v2.37.3（ゆうた指定）まとめたら**検索画面に戻る**（つぎつぎ行きたい） */
+  ok('🔴 まとめたあとは検索画面に戻る', (H.match(/um-input/g)||[]).length === 2 && H.indexOf('um-one on1') < 0,
+     (H.match(/um-input/g)||[]).length);
 }
 {
   /* 「いいえ」なら1文字も動かない */
@@ -270,6 +274,20 @@ console.log('\n── 🖥 ⑥ 窓の組み立てと、押した時の道 ──
 /* =====================================================================
    ⑦ 決めごとを守っているか（ソースを見る）
    ===================================================================== */
+console.log('\n── 🔗 ⑥-2 Lステップの札（URL を並べない） ──');
+{
+  const ctx = boot(); const S = ctx.state;
+  客(S,'cuB').lstepId = 'https://lstep.example.com/user/98765';
+  ctx.pitLstepUrl = (v) => String(v).indexOf('http')===0 ? String(v) : ('https://lstep.example.com/user/'+v);
+  let H = '';
+  ctx.custShowModal = (h) => { H = h; };
+  ctx.PitCustMerge.open('cuA', 'cuB');
+  /* ⚠ 見たいのは「**文字として** URL が並んでいないか」。href に入っているのは正しい。 */
+  ok('🔴 URL を文字として並べない', !/>\s*https?:\/\//.test(H), (H.match(/>\s*https?:\/\/[^<]*/)||[])[0]);
+  ok('🔴 「Lステップ」と番号で出す', /Lステップ 98765/.test(H), (H.match(/Lステップ[^<]*/)||[])[0]);
+  ok('押すと開けるリンクになっている', /um-lstep[^>]*href="https/.test(H));
+}
+
 console.log('\n── 🧭 ⑦ 決めごと ──');
 {
   const cus = JS('customers.js'), cm = JS('cust-merge.js');

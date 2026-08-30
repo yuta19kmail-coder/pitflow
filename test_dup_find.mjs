@@ -73,7 +73,10 @@ const 種 = [
                { id:'v21', plate:'成田 300 わ 1', maker:'トヨタ', car:'ハイエース', vin:'REN-1' } ] },
   { id:'c11', name:'株式会社 Japan Campers', kana:'', contacts:[{tel:'090-9999-9999',primary:true}],
     vehicles:[ { id:'v22', plate:'', maker:'トヨタ', car:'ハイエース' },
-               { id:'v23', plate:'成田 300 わ 2', maker:'トヨタ', car:'ハイエース' } ] }
+               { id:'v23', plate:'成田 300 わ 2', maker:'トヨタ', car:'ハイエース' } ] },
+  { id:'c12', name:'小林モータース株式会社', kana:'', contacts:[{tel:'047-000-1111',primary:true}],
+    vehicles:[ { id:'v24', plate:'', maker:'トヨタ', car:'ハイエース' },
+               { id:'v25', plate:'野田 300 あ 99', maker:'トヨタ', car:'ハイエース' } ] }
 ];
 
 console.log('\n── 🔎 ① 同じ車体番号＝100%ダブり ──');
@@ -118,6 +121,7 @@ console.log('\n── 🙅 ③-2 特例で外すお客様 ──');
     R.人.map(x => x.客.map(c => c.name)).flat());
   ok('🙅 ANDRZEJ SCHMIDT は洗い出しに出ない', !名.some(n => /ANDRZEJ/.test(n)), 名);
   ok('🙅 株式会社 Japan Campers も出ない', !名.some(n => /Japan Campers/.test(n)));
+  ok('🙅 小林モータース株式会社（自社）も出ない', !名.some(n => /小林モータース/.test(n)), 名);
   ok('🔴 車体番号が同じでも（REN-1）出さない', !R.車体番号.some(x => x.vin === 'REN-1'), R.車体番号.map(x => x.vin));
   ok('🔴 同じ電話でも（090-9999-9999）人の候補に出さない',
      !R.人.some(x => /9999/.test(x.値||'')), R.人.map(x => x.値));
@@ -131,12 +135,37 @@ console.log('\n── 🙅 ③-2 特例で外すお客様 ──');
   ok('🔵 設定に足せば、あとから増やせる', !ctx2.PitDupFind.scan().車体番号.some(x => x.vin === 'WMW-111'));
 }
 
-console.log('\n── 🔒 ④ 読むだけ（1文字も書かない） ──');
+console.log('\n── 🔒 ④ 探すだけでは1文字も書かない ──');
 {
   const ctx = boot(種);
   const 前 = JSON.stringify(ctx.state);
   ctx.PitDupFind.scan(); ctx.PitDupFind.scan();
   ok('🔴 探しても、データは1文字も変わらない', JSON.stringify(ctx.state) === 前);
+}
+
+console.log('\n── ✅ ④-2 「これでOK」＝次から出さない（v2.37.3） ──');
+{
+  const ctx = boot(種); const M = ctx.PitDupFind;
+  ctx.custShowModal = () => {};        /* 窓は開かない（ここで見たいのは印の付き方） */
+  const 前 = M.scan();
+  const x = 前.車体番号.find(v => v.vin === 'WMW-111');
+  ok('はじめは OK 印が付いていない', x.ok === false && !!x.key, x.key);
+  M.ok(x.key, x.ids.join(','), 0);
+  const 後 = M.scan();
+  const y = 後.車体番号.find(v => v.vin === 'WMW-111');
+  ok('🔴 OK にすると印が付く', y.ok === true);
+  ok('🔴 印はお客様のレコードに残る（設定に貯めない）',
+     (ctx.state.customers.find(c => c.id === 'c1').dupOk || []).length === 1,
+     ctx.state.customers.find(c => c.id === 'c1').dupOk);
+  ok('🔴 中身は触っていない（車も名前もそのまま）',
+     ctx.state.customers.find(c => c.id === 'c1').vehicles.length === 2 &&
+     ctx.state.customers.find(c => c.id === 'c1').name === '一 太郎');
+  M.ok(x.key, x.ids.join(','), 1);
+  ok('🔴 やっぱり出す＝印が外れる', M.scan().車体番号.find(v => v.vin === 'WMW-111').ok === false);
+  /* 人の組は、関わる2人ともに印が付く（どちらから見ても出ない） */
+  const 人 = 前.人[0];
+  M.ok(人.key, 人.ids.join(','), 0);
+  ok('人の組は2人ともに印が付く', 人.ids.every(id => (ctx.state.customers.find(c => c.id === id).dupOk||[]).length === 1));
 }
 
 console.log('\n── 🖥 ⑤ 窓と飛び先 ──');
@@ -170,6 +199,19 @@ console.log('\n── 🖥 ⑤ 窓と飛び先 ──');
   ctx.PitDupFind.tab('cust'); ctx.PitDupFind.toggle('cu0');
   ok('🔴 人の候補は2人ぶん並べて開く', /df-cards two/.test(H) && (H.match(/um-one plain/g)||[]).length === 2);
 
+  /* ✅ v2.37.3 展開の中に「これでOK」ボタンがある／押すと次から出ない */
+  ctx.PitDupFind.tab('vin'); ctx.PitDupFind.toggle('vin0');
+  ok('🔴 展開の中に「これでOK」がある', /これでOK（もう出さない）/.test(H));
+  ok('あとから戻せる、と書いてある', /あとから戻せます/.test(H));
+  const key = (H.match(/PitDupFind\.ok\('([^']+)'/) || [])[1];
+  const ids = (H.match(/PitDupFind\.ok\('[^']+','([^']+)'/) || [])[1];
+  ctx.PitDupFind.ok(key, ids, 0);
+  ok('🔴 押すと、その組は一覧から消える', H.indexOf('WMW-111') < 0, H.length);
+  ok('🔴 「OKにしたもの」タブの数が増える', /OKにしたもの <b>1<\/b>/.test(H));
+  ctx.PitDupFind.tab('ok');
+  ok('OKにしたものタブに出る', /WMW-111/.test(H));
+  ok('そこから「やっぱり出す」で戻せる', /やっぱり出す/.test(H));
+
   /* 飛び先が本当につながっている（①②を決め打ちで開ける） */
   let 開いた = '';
   ctx.custShowModal = (h) => { 開いた = h; };
@@ -184,7 +226,10 @@ console.log('\n── 🧭 ⑥ 決めごと（ソースを見る） ──');
   const cus = JS('customers.js'), df = JS('dup-find.js');
   ok('🔴 入口は顧客一覧の統合の隣に**アイコンだけ**',
      /cust-mergeico[\s\S]{0,260}PitDupFind\.open\(\)[\s\S]{0,120}<\/i><\/button>/.test(cus));
-  ok('🔴 洗い出し側は保存しない（PitDB.save を持たない）', df.indexOf('PitDB.save') < 0);
+  /* ⚠ v2.37.3 で「これでOK」の印だけは書くようになった。**書くのは印だけ**を見張る。 */
+  ok('🔴 書くのは「OKの印」だけ（車・人・カードの中身は触らない）',
+     /c\.dupOk/.test(df) && !/\.vehicles\s*=/.test(df) && !/\.customerId\s*=/.test(df) && !/\.plate\s*=/.test(df));
+  ok('🔴 保存を呼ぶのは印を付ける所だけ（1か所）', (df.match(/PitDB\.save/g)||[]).length === 1);
   const idx = fs.readFileSync('index.html', 'utf8');
   ok('🔴 index.html に `?v=` 付きで載っている', /js\/dup-find\.js\?v=\d+/.test(idx));
   const meta = (idx.match(/app-version" content="([\d.]+)"/)||[])[1];
