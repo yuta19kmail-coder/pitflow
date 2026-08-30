@@ -66,7 +66,14 @@ const 種 = [
                { id:'v10', plate:'柏 300 む 9', maker:'日産', car:'ノート' },
                { id:'v11', plate:'', maker:'日産', car:'ノート', archived:true } ] },
   { id:'c9', name:'七 七郎', kana:'ナナ シチロウ', mergedInto:'c1', archived:true,
-    contacts:[{tel:'090-0000-0001',primary:true}], vehicles:[] }
+    contacts:[{tel:'090-0000-0001',primary:true}], vehicles:[] },
+  /* 🙅 特例で外すお客様（レンタカー屋さん・この姿が本当の状態） */
+  { id:'c10', name:'ANDRZEJ SCHMIDT', kana:'', contacts:[{tel:'090-9999-9999',primary:true}],
+    vehicles:[ { id:'v20', plate:'', maker:'トヨタ', car:'ハイエース', vin:'REN-1' },
+               { id:'v21', plate:'成田 300 わ 1', maker:'トヨタ', car:'ハイエース', vin:'REN-1' } ] },
+  { id:'c11', name:'株式会社 Japan Campers', kana:'', contacts:[{tel:'090-9999-9999',primary:true}],
+    vehicles:[ { id:'v22', plate:'', maker:'トヨタ', car:'ハイエース' },
+               { id:'v23', plate:'成田 300 わ 2', maker:'トヨタ', car:'ハイエース' } ] }
 ];
 
 console.log('\n── 🔎 ① 同じ車体番号＝100%ダブり ──');
@@ -102,6 +109,28 @@ console.log('\n── 👥 ③ 同じ電話・同じカナ ──');
   ok('🔴 電話で出した組を、カナでもう一度出さない', !kana.some(x => x.客.some(c => c.id === 'c4')));
 }
 
+console.log('\n── 🙅 ③-2 特例で外すお客様 ──');
+{
+  const ctx = boot(種); const R = ctx.PitDupFind.scan();
+  const 名 = [].concat(
+    R.車体番号.map(x => x.件.map(k => k.客.name)).flat(),
+    R.ナンバーなし.map(x => x.客.name),
+    R.人.map(x => x.客.map(c => c.name)).flat());
+  ok('🙅 ANDRZEJ SCHMIDT は洗い出しに出ない', !名.some(n => /ANDRZEJ/.test(n)), 名);
+  ok('🙅 株式会社 Japan Campers も出ない', !名.some(n => /Japan Campers/.test(n)));
+  ok('🔴 車体番号が同じでも（REN-1）出さない', !R.車体番号.some(x => x.vin === 'REN-1'), R.車体番号.map(x => x.vin));
+  ok('🔴 同じ電話でも（090-9999-9999）人の候補に出さない',
+     !R.人.some(x => /9999/.test(x.値||'')), R.人.map(x => x.値));
+  ok('物差しは1つ（pitDupSkipped）', typeof ctx.pitDupSkipped === 'function'
+     && ctx.pitDupSkipped({ name:'ANDRZEJ SCHMIDT' }) === true
+     && ctx.pitDupSkipped({ name:'一 太郎' }) === false);
+  ok('⚠ 外しているだけで、隠してはいない（顧客一覧には居る）',
+     ctx.state.customers.some(c => c.id === 'c10'));
+  /* あとから増やせる（設定に足せば、ここを触らずに増える） */
+  const ctx2 = boot(種); ctx2.state.settings = { dupSkip:['一 太郎'] };
+  ok('🔵 設定に足せば、あとから増やせる', !ctx2.PitDupFind.scan().車体番号.some(x => x.vin === 'WMW-111'));
+}
+
 console.log('\n── 🔒 ④ 読むだけ（1文字も書かない） ──');
 {
   const ctx = boot(種);
@@ -127,6 +156,19 @@ console.log('\n── 🖥 ⑤ 窓と飛び先 ──');
   ctx.PitDupFind.tab('cust');
   ok('③のタブに切り替わる', /同じ電話番号/.test(H) || /同じカナ/.test(H));
   ok('⚠ 家族・同姓同名は別の方、と断ってある', /ご家族・同姓同名は別の方/.test(H));
+  ok('🙅 外しているお客様を、黙らずに書いてある', /洗い出しから外しているお客様/.test(H) && /ANDRZEJ SCHMIDT/.test(H));
+
+  /* 🔎 v2.37.1 行を押すと下に顧客の中身が開く（まとめる窓と同じカード） */
+  ctx.PitDupFind.tab('vin');
+  ok('はじめは閉じている', H.indexOf('df-open') < 0);
+  ctx.PitDupFind.toggle('vin0');
+  ok('🔴 押すと下に開く', /df-open/.test(H));
+  ok('🔴 顧客カードがそのまま出る（車種・ナンバーまで）', /um-one plain/.test(H) && /ミニF54/.test(H) && /野田 300 あ 1/.test(H));
+  ok('連絡先も出る', /090-0000-0001/.test(H));
+  ctx.PitDupFind.toggle('vin0');
+  ok('もう一度押すと閉じる', H.indexOf('df-open') < 0);
+  ctx.PitDupFind.tab('cust'); ctx.PitDupFind.toggle('cu0');
+  ok('🔴 人の候補は2人ぶん並べて開く', /df-cards two/.test(H) && (H.match(/um-one plain/g)||[]).length === 2);
 
   /* 飛び先が本当につながっている（①②を決め打ちで開ける） */
   let 開いた = '';
