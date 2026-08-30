@@ -20,12 +20,25 @@
    ◎使い方
      python3 -m http.server 8998      ← 別ウィンドウ
      PORT=8998 node test_errcode.mjs                                     */
-import { chromium } from 'playwright';
+/* 🔴 v2.38.1（2026-08-30）**ブラウザが無い所でも、一覧表だけは作り直せるようにした。**
+   ◎なぜ
+     台帳（errcode-pit.js）に番号を足しても、**一覧表を作り直すのに playwright が要る**ため、
+     ブラウザの無い環境では**一覧に載らないまま**になっていた（PF-6004〜6008 が実際にそうなった）。
+     現場は「一覧に無い番号」を渡されても引けない。
+   🔴 直し＝**playwright は動的に読む**。無ければ **②（実物で動くか）だけ飛ばして**、
+     ①（台帳とコードが合っているか）と③（一覧表の作り直し）は**今までどおり走る**。
+   ⚠ **一覧を作る処理は増やさない**（写しを作らない）。ここ1本のまま。
+   ⚠ 飛ばした時は**黙って通さない**＝飛ばしたことを画面に出す（全アプリ共通の決めごと）。 */
 import fs from 'fs';
 
 const PORT = process.env.PORT || 8998;
 const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
             '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
+/* playwright が入っていない／chromium が無い時は、②を飛ばす */
+let chromium = null, 飛ばした理由 = '';
+try { ({ chromium } = await import('playwright')); } catch (e) { 飛ばした理由 = 'playwright が入っていません'; }
+if (chromium && !cp) 飛ばした理由 = 'chromium が見つかりません';
+if (String(process.argv[2] || '') === '--html-only') 飛ばした理由 = '--html-only が付いています';
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log('  ✅ ' + n); } else { fail++; console.log('  ❌ ' + n + (x !== '' ? '  → ' + JSON.stringify(x) : '')); } };
 
@@ -81,7 +94,13 @@ ok('成功のお知らせに番号を付けていない', leaked.length === 0, l
 
 /* ================= ② 実物で動くか ================= */
 console.log('\n── 🖥 実物（デモ版）で ──');
-const b = await chromium.launch({ executablePath: cp });
+if (飛ばした理由) {
+  console.log('  ⚠ \x1b[33m実物での確認は飛ばしました（' + 飛ばした理由 + '）\x1b[0m');
+  console.log('    → ブラウザのある環境で `PORT=8998 node test_errcode.mjs` を1回まわすこと。');
+}
+const b = 飛ばした理由 ? null : await chromium.launch({ executablePath: cp });
+if (b) { await 実物で(b); }
+async function 実物で(b) {
 const p = await b.newPage({ viewport: { width: 1400, height: 950 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
@@ -148,6 +167,7 @@ await p.evaluate(() => UI.close());
 
 ok('JSエラーが出ていない', errs.length === 0, errs.slice(0, 3));
 await b.close();
+}
 
 /* ================= ③ 一覧表を作り直す ================= */
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -186,6 +206,7 @@ ${rows}
 </html>`;
 fs.writeFileSync('../PitFlow_エラー番号一覧.html', html);
 console.log('\n📄 一覧表を作り直しました：PitFlow_エラー番号一覧.html（' + ledger.length + '件）');
+if (飛ばした理由) console.log('⚠ \x1b[33m実物での確認は飛ばしています（' + 飛ばした理由 + '）。ブラウザのある環境で1回まわすこと。\x1b[0m');
 
 console.log('\n合計：' + pass + ' OK / ' + fail + ' NG');
 process.exit(fail ? 1 : 0);

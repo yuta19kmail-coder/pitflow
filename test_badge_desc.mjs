@@ -119,15 +119,18 @@ console.log('\n── 🖱 新規予約の画面で、押す前に読める ─�
 
 console.log('\n── 📣 お知らせ ──');
 {
+  /* 🔴 2026-08-30 直した＝**「先頭」を当てにしない。**
+     お知らせは増えるものなので、先頭前提にすると**新しいお知らせを1件足すたびに赤くなる**
+     （実際、8/30 に2件足して赤くなった）。**id で名指しして探す。** */
   const r = await p.evaluate(() => {
-    const a = (window.PIT_NEWS || [])[0];
+    const a = (window.PIT_NEWS || []).find(x => x && x.id === 'n-20260825-badges-v2130') || {};
     const el = document.createElement('div');
     el.innerHTML = (typeof a.body === 'function') ? a.body() : (a.body || '');
     return { id: a.id, 版: a.version, 日: a.date, 題: a.title,
              関数で書いてある: typeof a.body === 'function',
              文字: el.textContent.replace(/\s+/g, ' ') };
   });
-  ok('📣 先頭が今回のお知らせ', r.id === 'n-20260825-badges-v2130' && r.版 === '2.13.0', r.id);
+  ok('📣 バッジのお知らせが台帳にある', r.id === 'n-20260825-badges-v2130' && r.版 === '2.13.0', r.id);
   ok('🔴 中身はマスターから組み立てている（関数）', r.関数で書いてある === true);
   const 抜け = IDS.filter(k => r.文字.indexOf(意味[k]) < 0);
   ok('🔴🔴 14個ぜんぶの意味がお知らせに載る', 抜け.length === 0, 抜け);
@@ -146,8 +149,14 @@ console.log('\n── 🔢 版くらべのけた（受信箱の並び） ──'
     return [].slice.call(document.querySelectorAll('.nw-item .nw-ver, .nw-item'))
       .slice(0, 3).map(x => (x.textContent.match(/v[\d.]+/) || [''])[0]);
   });
-  /* 🔴🔴 前は major*10000 + minor*100 で、v1.185.0 が v2.13.0 より大きくなっていた */
-  ok('🔴🔴 いちばん新しい版が先頭に来る（v2.13.0）', r[0] === 'v2.13.0', r);
+  /* 🔴🔴 前は major*10000 + minor*100 で、v1.185.0 が v2.13.0 より大きくなっていた
+     ⚠ 2026-08-30 直した＝**版を決め打ちにしない**（お知らせを足すたびに赤くなるため）。
+        「いちばん新しい版が先頭」という**筋だけ**を見る。 */
+  const 最新 = await p.evaluate(() => {
+    const n = v => { const q = String(v).split('.').map(Number); return (q[0]||0)*1e8 + (q[1]||0)*1e4 + (q[2]||0); };
+    return (window.PIT_NEWS || []).map(x => x.version).sort((a, b) => n(b) - n(a))[0];
+  });
+  ok('🔴🔴 いちばん新しい版が先頭に来る（v' + 最新 + '）', r[0] === 'v' + 最新, { 先頭:r[0], 最新:'v'+最新 });
   const cmp = await p.evaluate(() => {
     const el = [].slice.call(document.querySelectorAll('.nw-item'))
       .map(x => (x.textContent.match(/v([\d.]+)/) || [0,'0'])[1]);

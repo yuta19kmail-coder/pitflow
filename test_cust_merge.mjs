@@ -44,6 +44,7 @@ function boot(opt) {
   ctx.聞かれた = 聞かれた; ctx.出た札 = 出た札;
   ctx.window = ctx;
   vm.createContext(ctx);
+  vm.runInContext(JS('search.js'), ctx, { filename:'search.js' });     /* 探し方の物差し（旧字→新字もここ） */
   vm.runInContext(JS('customers.js'), ctx, { filename:'customers.js' });
   vm.runInContext(JS('veh-merge.js'), ctx, { filename:'veh-merge.js' });
   vm.runInContext(JS('cust-merge.js'), ctx, { filename:'cust-merge.js' });
@@ -79,6 +80,16 @@ console.log('\n── 🔎 ① 2本の検索で①②を選ぶ ──');
   ok('電話でも当たる', M.探す('090-1111').length === 1);
   ok('ナンバーでも当たる', M.探す('船橋 312').length === 1);
   ok('漢字でも当たる', M.探す('溝口').length === 1);
+
+  /* 🔤 v2.39.0 旧字・異体字でも探せる（本番の名簿は 6,322人中 436人が該当） */
+  const c2 = boot(); const M2 = c2.PitCustMerge;
+  c2.state.customers[1].name = '髙橋 花子';        /* 旧字の「髙」で登録されている人 */
+  ok('🔤 新字「高橋」で探すと、旧字「髙橋」が出る', M2.探す('高橋').length === 1, M2.探す('高橋').map(x => x.name));
+  ok('🔤 旧字「髙橋」で探しても出る', M2.探す('髙橋').length === 1);
+  c2.state.customers[1].name = '澤田 花子';
+  ok('🔤 沢／澤 も同じ', M2.探す('沢田').length === 1 && M2.探す('澤田').length === 1);
+  c2.state.customers[1].name = '山﨑 花子';
+  ok('🔤 崎／﨑（互換漢字）も同じ', M2.探す('山崎').length === 1 && M2.探す('山﨑').length === 1);
 }
 
 /* =====================================================================
@@ -186,7 +197,8 @@ console.log('\n── ↩️ ⑤ 取り消し ──');
   const ctx = boot({ PitArchive:管理者じゃない }); const M = ctx.PitCustMerge;
   const 記録 = M.apply('cuB', 'cuA', { 欄:{}, 連絡先:'both' });
   ok('🔴 管理者でなければ取り消せない', M.undo(記録.id) === false);
-  ok('番号つきで知らせている（PF-6006）', ctx.出た札.some(x => x.code === 'PF-6006'));
+  /* 🔴 v2.38.1 番号は車の統合と使い回さない＝人には人の番号（PF-6009） */
+  ok('番号つきで知らせている（PF-6009）', ctx.出た札.some(x => x.code === 'PF-6009'), ctx.出た札.map(x => x.code));
 }
 {
   const ctx = boot(); const M = ctx.PitCustMerge; const S = ctx.state;
@@ -307,7 +319,22 @@ console.log('\n── 🧭 ⑦ 決めごと ──');
   const 画面 = (idx.match(/class="ver">v([\d.]+)</)||[])[1];
   const ログイン = (idx.match(/class="login-ver">v([\d.]+)</)||[])[1];
   ok('🔴 版が3か所そろっている', meta && meta === 画面 && meta === ログイン, { meta, 画面, ログイン });
-  ok('台帳に PF-6008 が載っている', JS('errcode-pit.js').indexOf("['PF-6008'") >= 0);
+  ['PF-6008','PF-6009','PF-6010'].forEach(function(c){
+    ok('台帳に ' + c + ' が載っている', JS('errcode-pit.js').indexOf("['" + c + "'") >= 0);
+  });
+  /* 🔴 v2.39.0 **寄せるのは探す時だけ。**決める側（引き当て）は寄せない＝別姓が混ざるため */
+  ok('🔤 探す物差しは search.js 1本（写しを作っていない）',
+     /pitSearchNorm/.test(JS('customers.js')) && /pitSearchNorm/.test(JS('cust-merge.js')));
+  {
+    /* ⚠ 関数の中身だけを切り出して見る（近くにある別の関数を巻き込まないため） */
+    const cus = JS('customers.js');
+    const i = cus.indexOf('function _findPerson');
+    const 本文 = cus.slice(i, cus.indexOf('\n  }', i));
+    ok('🔴 引き当て（_findPerson）は旧字を寄せない',
+       i > 0 && 本文.indexOf('pitSearchNorm') < 0 && 本文.indexOf('snorm') < 0, 本文.length);
+  }
+  ok('🔴 車の統合と番号を使い回していない',
+     JS('cust-merge.js').indexOf('PF-6006') < 0 && JS('cust-merge.js').indexOf('PF-6007') < 0);
 }
 
 console.log('\n' + (fail ? '❌ ' : '✅ ') + pass + ' 件が緑／' + fail + ' 件が赤\n');

@@ -240,7 +240,7 @@ console.log('\n── ② 🔴 来店履歴は「実績になったもの」だ�
   await p.waitForTimeout(400);
   const r = await p.evaluate(() => {
     const box = document.getElementById('cust-modal');
-    const rows = [...box.querySelectorAll('.cd-hist .cd-hrow')];
+    const rows = [...box.querySelectorAll('.cd-hist:not(.cd-nowlist) .cd-hrow:not(.cd-now)')];
     return {
       rows: rows.length, txt: rows.map(x => x.textContent).join(' | '),
       stat: [...box.querySelectorAll('.cd-stat b')].map(x => x.textContent),
@@ -267,7 +267,7 @@ console.log('\n── ② 1件も実績が無い人は「まだありません�
     const sec = secs.find(x => (x.querySelector('.cd-sect') || {}).textContent && x.querySelector('.cd-sect').textContent.indexOf('来店履歴') >= 0);
     return sec ? ((sec.querySelector('.cd-empty') || {}).textContent || '') : '';
   });
-  ok('🔴 履歴は0件になる', (await p.evaluate(() => document.querySelectorAll('#cust-modal .cd-hist .cd-hrow').length)) === 0);
+  ok('🔴 履歴は0件になる', (await p.evaluate(() => document.querySelectorAll('#cust-modal .cd-hist:not(.cd-nowlist) .cd-hrow:not(.cd-now)').length)) === 0);
   ok('「返車まで終わって実績になった入庫だけ」と伝える', /返車まで終わって実績/.test(t), t.slice(0, 80));
   ok('予約・作業中の件数も伝える', /4件/.test(t), t.slice(0, 120));
 }
