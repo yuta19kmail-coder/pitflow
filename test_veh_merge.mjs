@@ -62,12 +62,19 @@ const サブ = () => ({ id:'vs', plate:'野田 500 か 2222', maker:'トヨタ',
                       boardId:'import', division:'d2', frontStaff:'林',
                       伝票:[{ 伝票番号:'A1', 売上日:'2026-05-01', 金額:10000 },
                             { 伝票番号:'B2', 売上日:'2026-06-01', 金額:20000 }] });
+/* ⚠ 日付は決め打ちにしない（見張りの決めごと）。「終わっている」の形だけ作れればよい。 */
+const 前に済んだ日 = new Date(Date.now() - 86400000 * 30).toISOString().slice(0, 10);
 const データ = () => ({
   customers: [{ id:'cu1', name:'見張り 太郎', kana:'ミハリ タロウ', contacts:[], vehicles:[主(), サブ()] }],
   cards: [
-    { id:'c1', plate:'野田 500 か 2222', customerId:'cu1', status:'returned' },
-    { id:'c2', plate:'',                 customerId:'cu1', vehId:'vs', status:'reserved' },
-    { id:'c3', plate:'野田 300 あ 1111', customerId:'cu1', status:'returned' }
+    /* c1＝**終わった実績**（サブのナンバー） */
+    { id:'c1', plate:'野田 500 か 2222', customerId:'cu1', status:'returned', completedAt:前に済んだ日 },
+    /* c2＝まだ終わっていない・車の紐づけだけ持っている */
+    { id:'c2', plate:'',                 customerId:'cu1', vehId:'vs', status:'reserved', resNo:'R0002' },
+    /* c3＝主の、終わった実績 */
+    { id:'c3', plate:'野田 300 あ 1111', customerId:'cu1', status:'returned', completedAt:前に済んだ日 },
+    /* 🔴 c4＝**サブのナンバーで、まだ終わっていない予約**（ゆうた「予約自体も見失わないように」） */
+    { id:'c4', plate:'野田 500 か 2222', customerId:'cu1', status:'reserved', resNo:'R0004' }
   ]
 });
 const 車 = (S, id) => S.customers[0].vehicles.find(v => v.id === id);
@@ -87,7 +94,11 @@ console.log('\n── 🔎 ① まとめる前に、何が動くかを出す ─
   ok('食い違う欄（カルテNo）は「主を残す」が既定', k('karteNo') && k('karteNo').既定 === 'main', k('karteNo'));
   ok('国産／輸入も出る', !!k('boardId'));
   ok('🔴 重なっている伝票は足さない（足す1・重なり1）', P.伝票.足す === 1 && P.伝票.重なり === 1, P.伝票);
-  ok('関わるカードを数えている（ナンバー1・紐づけ1）', P.カード.ナンバー === 1 && P.カード.紐づけ === 1, P.カード);
+  ok('関わるカードを数えている（ナンバー2・紐づけ1）', P.カード.ナンバー === 2 && P.カード.紐づけ === 1, P.カード);
+  ok('🔴 かかっている予約を、番号つきで名指しできている', P.予約.length === 2 &&
+     P.予約.every(r => ['R0002', 'R0004'].indexOf(r.resNo) >= 0), P.予約);
+  ok('🔴 終わった実績は「予約」に混ぜない', !P.予約.some(r => r.id === 'c1' || r.id === 'c3'), P.予約.map(r => r.id));
+  ok('ナンバーを直す予約が分かる（R0004）', (P.予約.find(r => r.resNo === 'R0004') || {}).直す === true, P.予約);
   ok('🔴 両方が本物のナンバー＝扱いを選ばせる', P.ナンバーを選ぶ === true);
 }
 
@@ -123,7 +134,10 @@ let 記録id = '';
   ok('伝票は売上日の新しい順', m.伝票[0].売上日 === '2026-06-01', m.伝票.map(x => x.売上日));
   ok('🔴 旧ナンバーを持たせた', (m.oldPlates || []).length === 1 && m.oldPlates[0] === '野田 500 か 2222', m.oldPlates);
   ok('🔴 引き当てのナンバーが2つになった（pitVehPlates）', ctx.pitVehPlates(m).length === 2, ctx.pitVehPlates(m));
-  ok('🔴 過去のカードのナンバーは書き換えていない', S.cards.find(c => c.id === 'c1').plate === '野田 500 か 2222');
+  ok('🔴 終わった実績のナンバーは書き換えていない（当時の伝票と合わせる）',
+     S.cards.find(c => c.id === 'c1').plate === '野田 500 か 2222');
+  ok('🔴🔴 まだ終わっていない予約は、主のナンバーに直した（予約を見失わない）',
+     S.cards.find(c => c.id === 'c4').plate === '野田 300 あ 1111', S.cards.find(c => c.id === 'c4').plate);
   ok('車の紐づけ（vehId）は主を指す', S.cards.find(c => c.id === 'c2').vehId === 'vm');
   ok('🔴🔴 サブを消していない', !!s);
   ok('サブはアーカイブ済み', !!s.archived);
@@ -145,7 +159,8 @@ console.log('\n── ✏️ ④ 登録間違い（ナンバーは捨てる） �
   M.apply('cu1', 'vm', 'vs', { 欄: {}, ナンバー: '捨てる' });
   const m = 車(S, 'vm');
   ok('旧ナンバーは残していない', !(m.oldPlates || []).length, m.oldPlates);
-  ok('🔴 そのナンバーのカードを主のナンバーに直した', S.cards.find(c => c.id === 'c1').plate === '野田 300 あ 1111');
+  ok('🔴 登録間違いの時は、終わった実績も主のナンバーに直す', S.cards.find(c => c.id === 'c1').plate === '野田 300 あ 1111');
+  ok('もちろん予約も直る', S.cards.find(c => c.id === 'c4').plate === '野田 300 あ 1111');
   ok('もともと主のカードは触っていない', S.cards.find(c => c.id === 'c3').plate === '野田 300 あ 1111');
   ok('🔴 どちらの道でも履歴は主から引ける', (m.伝票 || []).length === 2);
 }
@@ -199,6 +214,7 @@ console.log('\n── ↩️ ⑥ 取り消したら元どおり ──');
   ok('もともと主にあった伝票は消していない', m.伝票[0].伝票番号 === 'A1');
   ok('旧ナンバーが外れた', !(m.oldPlates || []).length);
   ok('カードの紐づけが戻った', S.cards.find(c => c.id === 'c2').vehId === 'vs');
+  ok('🔴 予約のナンバーも元に戻った', S.cards.find(c => c.id === 'c4').plate === '野田 500 か 2222');
   ok('サブがアーカイブから戻った', !s.archived && !s.mergedInto);
   ok('控えを片づけた', !(m.mergeLog || []).length);
 }
@@ -232,8 +248,10 @@ console.log('\n── 🧭 ⑦ 決めごとを守っているか（ソースを�
   ok('🔴 その人のカードの引き当ても通っている', /const plates=\[\][\s\S]{0,300}pitVehPlates/.test(cus));
   ok('🔴 吸収された車はナンバーから引かない', /pitVehMerged\(v\)\) continue/.test(cus));
   ok('🔴 履歴の車の一覧にも出さない（履歴がまた2つに割れない）', /_histCars[\s\S]{0,220}pitVehMerged/.test(cus));
-  ok('車カードに「まとめる」の入口がある', /PitVehMerge\.open\(/.test(cus));
-  ok('取り消しは canRestore を通る所にだけ出す', /canR\) \? '<span class="cd-vb cd-vb-restore"/.test(cus));
+  /* 🔴 ゆうた指定（2026-08-30）＝入口は**顧客情報の編集の横**に1つだけ。車のカードには置かない。 */
+  ok('🔴 入口は上のバー（編集の横）にある', /cd-ico-merge[\s\S]{0,220}PitVehMerge\.open\(/.test(cus));
+  ok('🔴 車のカードには入口を置いていない', !/cd-vacts[\s\S]{0,700}PitVehMerge/.test(cus));
+  ok('相手が居ない時は出さない（2台以上のときだけ）', /_mergeOK[\s\S]{0,260}length >= 2/.test(cus));
 
   const idx = fs.readFileSync('index.html', 'utf8');
   ok('🔴 index.html に `?v=` 付きで載っている', /js\/veh-merge\.js\?v=\d+/.test(idx));
@@ -259,33 +277,79 @@ console.log('\n── 🖥 ⑧ 窓の組み立てと、押した時の道 ──
   D.customers[0].vehicles.push({ id:'v3', plate:'野田 800 さ 3333', maker:'日産', car:'ノート' });
   const { M, S, ctx } = boot(D);
   let 出たHTML = '';
+  let 聞かれた = null;
   ctx.custShowModal = (h) => { 出たHTML = h; };
   ctx.custCloseModal = () => {};
   ctx.custOpen = () => {};
-  ctx.pitAsk = () => Promise.resolve(true);
+  ctx.pitAsk = (msg, opt) => { 聞かれた = { msg, opt }; return Promise.resolve(true); };
 
-  M.open('cu1', 'vm');
-  ok('相手が2台以上なら、まず相手を選ばせる', /vm-pick/.test(出たHTML) && /PitVehMerge\.pick/.test(出たHTML));
-  /* ⚠ 見出しには主のナンバーが出る（それは正しい）。**候補の並びの中に**主が居ないことを見る。 */
-  const 候補 = (出たHTML.split('vm-pick">')[1] || '');
-  ok('相手の候補に主は出さない', 候補.indexOf('野田 300 あ 1111') < 0);
-  ok('相手の候補は2台（サブとv3）', (候補.match(/vm-pickrow/g) || []).length === 2, (候補.match(/vm-pickrow/g) || []).length);
+  M.open('cu1');
+  ok('専用の窓が開く（車が3台とも並ぶ）', (出たHTML.match(/vm-car /g) || []).length + (出たHTML.match(/vm-car"/g) || []).length >= 3, 出たHTML.length);
+  ok('はじめは①も②も付いていない', 出たHTML.indexOf('on1') < 0 && 出たHTML.indexOf('on2') < 0);
+  ok('次に何を押すか書いてある', /①＝残す車を押してください/.test(出たHTML));
+  ok('この時点では「まとめる」は出さない', 出たHTML.indexOf('PitVehMerge.go()') < 0);
 
-  M.pick('vs');
-  ok('選ぶと、まとめる窓になる', /vm-sum/.test(出たHTML));
+  M.tap('vm');
+  ok('🔴 1つ目を押すと①が付く', /vm-car on1/.test(出たHTML));
+  ok('次は②だと書いてある', /②＝寄せる車を押してください/.test(出たHTML));
+  M.tap('vs');
+  ok('🔴 2つ目を押すと②が付く', /vm-car on2/.test(出たHTML));
+  ok('🔴 何と何がくっつくか、帯で見える', /vm-pair/.test(出たHTML));
+  ok('ここで初めて「まとめる」が出る', /PitVehMerge\.go\(\)/.test(出たHTML));
+  ok('🔴 かかっている予約を、番号のまま画面に出している', /R0004/.test(出たHTML) && /R0002/.test(出たHTML));
   ok('🔴 ナンバーの扱いを2つとも出している', /旧として残す/.test(出たHTML) && /捨てる/.test(出たHTML));
-  ok('どちらもまだ選ばれていない', 出たHTML.indexOf('vm-pl on') < 0);
+
+  M.tap('vs');
+  /* ⚠ 帯（vm-pair）の中の番号にも on2 が付く。**車の行**から外れたかを見る。 */
+  ok('もう一度押すと②が外れる', !/vm-car on2/.test(出たHTML) && /vm-car on1/.test(出たHTML));
+  ok('②が外れたら「まとめる」も引っ込む', 出たHTML.indexOf('PitVehMerge.go()') < 0);
+  M.tap('v3');
+  M.tap('vs');
+  ok('3台目を押したら②が差し替わる（①はそのまま）', (出たHTML.match(/vm-car on2/g) || []).length === 1);
+
+  M.swap();
+  ok('①②を入れ替えられる', /vm-car on2/.test(出たHTML));
+  M.swap();
 
   M.setPlate('旧として残す');
   ok('選んだ方に印が付く', /vm-pl on/.test(出たHTML));
   M.setField('karteNo', 'sub');
   ok('欄の選び直しも効く', /vm-opt on/.test(出たHTML));
 
+  /* 🔴 ゆうた「本当にいいのかポップアップも頼む」 */
+  ctx.pitAsk = (msg, opt) => { 聞かれた = { msg, opt }; return Promise.resolve(false); };
+  M.go();
+  await new Promise(r => setTimeout(r, 5));
+  ok('🔴 押したらまず確認の窓が出る', !!聞かれた && /よろしいですか/.test(聞かれた.msg), 聞かれた && 聞かれた.msg);
+  ok('確認の窓に①と②がどれか書いてある', (聞かれた.opt.detail || []).some(x => /^① 残す/.test(x)) &&
+     (聞かれた.opt.detail || []).some(x => /^② 寄せる/.test(x)), 聞かれた.opt.detail);
+  ok('🔴 確認の窓に、かかっている予約の番号が出る', (聞かれた.opt.detail || []).some(x => /R0004/.test(x)), 聞かれた.opt.detail);
+  ok('🔴 「いいえ」なら1文字も動かない', (車(S, 'vm').伝票 || []).length === 1 && !車(S, 'vs').archived);
+
+  ctx.pitAsk = () => Promise.resolve(true);
   M.go();
   await new Promise(r => setTimeout(r, 5));
   const m = 車(S, 'vm');
-  ok('🔴 押したら本当にまとまる', (m.伝票 || []).length === 2 && m.karteNo === 'K999', { 伝票:(m.伝票||[]).length, karteNo:m.karteNo });
-  ok('まとめたあとも、まだ1台残っている（v3）', S.customers[0].vehicles.filter(v => !v.mergedInto && !v.archived).length === 2);
+  ok('🔴 「はい」なら本当にまとまる', (m.伝票 || []).length === 2 && m.karteNo === 'K999', { 伝票:(m.伝票||[]).length, karteNo:m.karteNo });
+  ok('まとめたあとも窓は開いたまま、記録が並ぶ', /vm-logs/.test(出たHTML));
+  ok('①②は外れて、次の1組を選べる状態に戻る', 出たHTML.indexOf('vm-car on1') < 0);
+  ok('管理者なら取り消しボタンが出る', /PitVehMerge\.undoAsk\(/.test(出たHTML));
+  ok('まとめたあとも、まだ2台残っている', S.customers[0].vehicles.filter(v => !v.mergedInto && !v.archived).length === 2);
+  ok('閉じる道がある（顧客詳細へ戻る）', /PitVehMerge\.back\(\)/.test(出たHTML));
+}
+
+{
+  /* 管理者でなければ、取り消しボタンそのものを出さない */
+  const 管理者じゃない = { canArchive: () => true, canRestore: () => false,
+                          archiveVeh: () => true, restoreVeh: () => true,
+                          vehSelfArchived: (v) => !!(v && v.archived) };
+  const { M, ctx } = boot(データ(), { PitArchive: 管理者じゃない });
+  let 出たHTML = '';
+  ctx.custShowModal = (h) => { 出たHTML = h; };
+  ctx.pitAsk = () => Promise.resolve(true);
+  M.open('cu1'); M.tap('vm'); M.tap('vs'); M.setPlate('旧として残す'); M.go();
+  await new Promise(r => setTimeout(r, 5));
+  ok('🔴 管理者でなければ取り消しボタンを出さない', 出たHTML.indexOf('PitVehMerge.undoAsk(') < 0 && /vm-lock/.test(出たHTML));
 }
 
 console.log('\n' + (fail ? '❌ ' : '✅ ') + pass + ' 件が緑／' + fail + ' 件が赤\n');
