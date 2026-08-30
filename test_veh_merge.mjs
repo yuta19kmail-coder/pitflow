@@ -252,6 +252,9 @@ console.log('\n── 🧭 ⑦ 決めごとを守っているか（ソースを�
   ok('🔴 入口は上のバー（編集の横）にある', /cd-ico-merge[\s\S]{0,220}PitVehMerge\.open\(/.test(cus));
   ok('🔴 車のカードには入口を置いていない', !/cd-vacts[\s\S]{0,700}PitVehMerge/.test(cus));
   ok('相手が居ない時は出さない（2台以上のときだけ）', /_mergeOK[\s\S]{0,260}length >= 2/.test(cus));
+  /* 🔴 v2.32.1 実機で見つけた穴＝アーカイブの「戻す」を押すと中途半端に戻る */
+  ok('🔴 統合でまとめた車に「戻す」を出さない（統合の記録へ案内する）',
+     /pitVehMerged\(v\)\)[\s\S]{0,320}統合の記録へ[\s\S]{0,320}custVehRestore/.test(cus));
 
   const idx = fs.readFileSync('index.html', 'utf8');
   ok('🔴 index.html に `?v=` 付きで載っている', /js\/veh-merge\.js\?v=\d+/.test(idx));
@@ -280,7 +283,8 @@ console.log('\n── 🖥 ⑧ 窓の組み立てと、押した時の道 ──
   let 聞かれた = null;
   ctx.custShowModal = (h) => { 出たHTML = h; };
   ctx.custCloseModal = () => {};
-  ctx.custOpen = () => {};
+  let 戻った = '';
+  ctx.custOpen = (id) => { 戻った = id; };
   ctx.pitAsk = (msg, opt) => { 聞かれた = { msg, opt }; return Promise.resolve(true); };
 
   M.open('cu1');
@@ -331,11 +335,16 @@ console.log('\n── 🖥 ⑧ 窓の組み立てと、押した時の道 ──
   await new Promise(r => setTimeout(r, 5));
   const m = 車(S, 'vm');
   ok('🔴 「はい」なら本当にまとまる', (m.伝票 || []).length === 2 && m.karteNo === 'K999', { 伝票:(m.伝票||[]).length, karteNo:m.karteNo });
-  ok('まとめたあとも窓は開いたまま、記録が並ぶ', /vm-logs/.test(出たHTML));
-  ok('①②は外れて、次の1組を選べる状態に戻る', 出たHTML.indexOf('vm-car on1') < 0);
-  ok('管理者なら取り消しボタンが出る', /PitVehMerge\.undoAsk\(/.test(出たHTML));
+  /* 🔴 ゆうた指定（2026-08-30）＝終わったら窓に居座らない。顧客詳細まで戻る */
+  ok('🔴 終わったら顧客詳細へ戻る', 戻った === 'cu1', 戻った);
   ok('まとめたあとも、まだ2台残っている', S.customers[0].vehicles.filter(v => !v.mergedInto && !v.archived).length === 2);
-  ok('閉じる道がある（顧客詳細へ戻る）', /PitVehMerge\.back\(\)/.test(出たHTML));
+
+  /* 開き直すと、記録が並んでいて取り消せる */
+  M.open('cu1');
+  ok('開き直すと「まとめた記録」が並ぶ', /vm-logs/.test(出たHTML));
+  ok('管理者なら取り消しボタンが出る', /PitVehMerge\.undoAsk\(/.test(出たHTML));
+  ok('①②は付いていない（次の1組を選べる）', 出たHTML.indexOf('vm-car on1') < 0);
+  ok('顧客詳細へ戻る道がある', /PitVehMerge\.back\(\)/.test(出たHTML));
 }
 
 {
@@ -347,8 +356,10 @@ console.log('\n── 🖥 ⑧ 窓の組み立てと、押した時の道 ──
   let 出たHTML = '';
   ctx.custShowModal = (h) => { 出たHTML = h; };
   ctx.pitAsk = () => Promise.resolve(true);
+  ctx.custOpen = () => {};
   M.open('cu1'); M.tap('vm'); M.tap('vs'); M.setPlate('旧として残す'); M.go();
   await new Promise(r => setTimeout(r, 5));
+  M.open('cu1');
   ok('🔴 管理者でなければ取り消しボタンを出さない', 出たHTML.indexOf('PitVehMerge.undoAsk(') < 0 && /vm-lock/.test(出たHTML));
 }
 
