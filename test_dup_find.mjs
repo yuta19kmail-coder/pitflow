@@ -1,0 +1,155 @@
+/* PitFlow ── 🔎 **ダブりを洗い出す**（ブラウザは使わない）
+   ===================================================================
+   ◎ゆうた指定（2026-08-30）「進めて。ボタンは顧客統合の隣にアイコンだけでOK」
+   ◎ここで見張ること
+     🔴 **1文字も書かない**（読むだけの窓）
+     🔴 ① 同じ車体番号＝**100%ダブり**として言い切れる（同じ人／別の人 で飛び先が変わる）
+     🔴 ② 同じ人の「ナンバーなし × 本物のナンバー」＝疑わしい（**車種まで同じならほぼ黒**）
+     🔴 ③ 同じ電話・同じカナの人＝顧客の統合の受け皿（**家族・同姓同名もここに出る**＝人が決める）
+     🔴 都度車両変動・アーカイブ済み・統合で吸収済みは相手にしない
+     🔴 数だけで終わらせない＝**どれとどれか**を名指しして、まとめる窓へ飛ばす
+   ◎使い方  node test_dup_find.mjs
+   =================================================================== */
+import fs from 'fs';
+import path from 'path';
+import vm from 'vm';
+
+let pass = 0, fail = 0;
+const ok = (n, c, x = '') => {
+  if (c) { pass++; console.log('  ✅ ' + n); }
+  else { fail++; console.log('  ❌ ' + n + (x !== '' ? '\n       → ' + (typeof x === 'string' ? x : JSON.stringify(x)) : '')); }
+};
+const JS = (f) => fs.readFileSync(path.join(process.cwd(), 'js', f), 'utf8');
+
+function boot(customers, cards) {
+  const ctx = {
+    console, setTimeout, clearTimeout,
+    document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
+                addEventListener: () => {}, createElement: () => ({ style:{}, classList:{ add(){}, remove(){} } }) },
+    state: { customers: JSON.parse(JSON.stringify(customers||[])), cards: JSON.parse(JSON.stringify(cards||[])),
+             divisions: [], staff: [], loaners: [] },
+    PitDB: { save(){} }, pitToast: () => {}, pitOpLog: () => {}, pitCurrentStaffName: () => 'チーフ'
+  };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(JS('customers.js'), ctx, { filename:'customers.js' });
+  vm.runInContext(JS('veh-merge.js'), ctx, { filename:'veh-merge.js' });
+  vm.runInContext(JS('cust-merge.js'), ctx, { filename:'cust-merge.js' });
+  vm.runInContext(JS('dup-find.js'), ctx, { filename:'dup-find.js' });
+  return ctx;
+}
+
+const 種 = [
+  /* 同じ人の中で車体番号が同じ＝100%ダブり */
+  { id:'c1', name:'一 太郎', kana:'ハジメ タロウ', contacts:[{tel:'090-0000-0001',primary:true}],
+    vehicles:[ { id:'v1', plate:'野田 300 あ 1', maker:'MINI', car:'ミニF54', vin:'WMW-111' },
+               { id:'v2', plate:'柏 500 か 2',   maker:'MINI', car:'ミニF54', vin:'WMW-111' } ] },
+  /* 同じ人の中で ナンバーなし × 本物（車種まで同じ＝ほぼ黒） */
+  { id:'c2', name:'二 次郎', kana:'ニ ジロウ', contacts:[{tel:'090-0000-0002',primary:true}],
+    vehicles:[ { id:'v3', plate:'', maker:'MINI', car:'ミニF55' },
+               { id:'v4', plate:'船橋 312 ち 127', maker:'MINI', car:'ミニF55', karteNo:'K-9' } ] },
+  /* 同じ人の中で ナンバーなし × 本物（車種は違う＝疑わしい） */
+  { id:'c3', name:'三 三郎', kana:'サン サブロウ', contacts:[{tel:'090-0000-0003',primary:true}],
+    vehicles:[ { id:'v5', plate:'', maker:'トヨタ', car:'アクア' },
+               { id:'v6', plate:'野田 500 さ 3', maker:'ホンダ', car:'フィット' } ] },
+  /* 別の人どうしで車体番号が同じ＝人のダブりの可能性 */
+  { id:'c4', name:'四 四郎', kana:'ヨン シロウ', contacts:[{tel:'090-0000-0004',primary:true}],
+    vehicles:[ { id:'v7', plate:'習志野 300 た 4', maker:'BMW', car:'ミニR56', vin:'WBA-444' } ] },
+  { id:'c5', name:'', kana:'ヨン シロウ', contacts:[{tel:'090-0000-0004',primary:true}],
+    vehicles:[ { id:'v8', plate:'', maker:'BMW', car:'ミニR56', vin:'WBA-444' } ] },
+  /* 同じカナだが電話は別＝別人かもしれない（出すが、決めない） */
+  { id:'c6', name:'五 五郎', kana:'ゴ ゴロウ', contacts:[{tel:'090-0000-0006',primary:true}], vehicles:[] },
+  { id:'c7', name:'五 悟',   kana:'ゴ ゴロウ', contacts:[{tel:'090-0000-0007',primary:true}], vehicles:[] },
+  /* 触ってはいけないもの＝都度車両変動・アーカイブ済みの車・統合で吸収済みの人 */
+  { id:'c8', name:'六 六郎', kana:'ロク ロクロウ', contacts:[{tel:'090-0000-0008',primary:true}],
+    vehicles:[ { id:'v9', plate:'', perVisit:true, karteNo:'K-P' },
+               { id:'v10', plate:'柏 300 む 9', maker:'日産', car:'ノート' },
+               { id:'v11', plate:'', maker:'日産', car:'ノート', archived:true } ] },
+  { id:'c9', name:'七 七郎', kana:'ナナ シチロウ', mergedInto:'c1', archived:true,
+    contacts:[{tel:'090-0000-0001',primary:true}], vehicles:[] }
+];
+
+console.log('\n── 🔎 ① 同じ車体番号＝100%ダブり ──');
+{
+  const ctx = boot(種); const R = ctx.PitDupFind.scan();
+  ok('2件見つかる（同じ人・別の人）', R.車体番号.length === 2, R.車体番号.map(x => x.vin));
+  const 同 = R.車体番号.find(x => x.vin === 'WMW-111');
+  const 別 = R.車体番号.find(x => x.vin === 'WBA-444');
+  ok('🔴 同じ人の中のダブりと分かる', 同 && 同.同じ人 === true);
+  ok('🔴 別の人にまたがるダブりと分かる', 別 && 別.同じ人 === false);
+  ok('どの車かを名指しできている', 同.件.length === 2 && 同.件[0].車.id === 'v1' && 同.件[1].車.id === 'v2');
+}
+
+console.log('\n── ⚠ ② ナンバーなし × 本物のナンバー ──');
+{
+  const ctx = boot(種); const R = ctx.PitDupFind.scan();
+  ok('2人ぶん見つかる', R.ナンバーなし.length === 2, R.ナンバーなし.map(x => x.客.id));
+  ok('🔴 車種まで同じなら「ほぼ黒」', R.ナンバーなし[0].同車種 === true && R.ナンバーなし[0].度 === 'ほぼ黒', R.ナンバーなし[0].度);
+  ok('🔴 車種が違えば「疑わしい」', R.ナンバーなし[1].同車種 === false && R.ナンバーなし[1].度 === '疑わしい');
+  ok('強い方が上に来る', R.ナンバーなし[0].客.id === 'c2');
+  ok('🔴 都度車両変動は相手にしない', !R.ナンバーなし.some(x => x.なし.perVisit || x.なし.id === 'v9'));
+  ok('🔴 アーカイブ済みの車は相手にしない', !R.ナンバーなし.some(x => x.なし.id === 'v11'));
+}
+
+console.log('\n── 👥 ③ 同じ電話・同じカナ ──');
+{
+  const ctx = boot(種); const R = ctx.PitDupFind.scan();
+  const tel = R.人.filter(x => x.理由 === '同じ電話番号');
+  const kana = R.人.filter(x => x.理由 === '同じカナ');
+  ok('同じ電話の組が出る（四 四郎）', tel.length === 1 && tel[0].客.length === 2, tel.map(x => x.客.map(c => c.id)));
+  ok('🔴 統合で吸収済みの人は数えない', !R.人.some(x => x.客.some(c => c.id === 'c9')));
+  ok('同じカナの組も出る（五）', kana.length === 1 && kana[0].客.length === 2, kana.map(x => x.客.map(c => c.id)));
+  ok('🔴 電話で出した組を、カナでもう一度出さない', !kana.some(x => x.客.some(c => c.id === 'c4')));
+}
+
+console.log('\n── 🔒 ④ 読むだけ（1文字も書かない） ──');
+{
+  const ctx = boot(種);
+  const 前 = JSON.stringify(ctx.state);
+  ctx.PitDupFind.scan(); ctx.PitDupFind.scan();
+  ok('🔴 探しても、データは1文字も変わらない', JSON.stringify(ctx.state) === 前);
+}
+
+console.log('\n── 🖥 ⑤ 窓と飛び先 ──');
+{
+  const ctx = boot(種); let H = '';
+  ctx.custShowModal = (h) => { H = h; };
+  ctx.custCloseModal = () => {};
+  ctx.PitDupFind.open();
+  ok('窓が開く', /ダブりを洗い出す/.test(H));
+  ok('3つのタブが出る', (H.match(/df-tab/g) || []).length >= 3);
+  ok('🔴 同じ人のダブりは「車をまとめる」へ飛ぶ', /PitDupFind\.toVeh\('c1'\)/.test(H));
+  ok('🔴 別の人にまたがるダブりは「お客様をまとめる」へ飛ぶ', /PitDupFind\.toCust\('c4','c5'\)/.test(H));
+  ok('車体番号を名指ししている', /WMW-111/.test(H));
+  ctx.PitDupFind.tab('plate');
+  ok('②のタブに切り替わる', /ほぼ黒/.test(H) && /船橋 312 ち 127/.test(H));
+  ok('車種まで同じ、と書いてある', /車種まで同じ/.test(H));
+  ctx.PitDupFind.tab('cust');
+  ok('③のタブに切り替わる', /同じ電話番号/.test(H) || /同じカナ/.test(H));
+  ok('⚠ 家族・同姓同名は別の方、と断ってある', /ご家族・同姓同名は別の方/.test(H));
+
+  /* 飛び先が本当につながっている（①②を決め打ちで開ける） */
+  let 開いた = '';
+  ctx.custShowModal = (h) => { 開いた = h; };
+  ctx.PitDupFind.toCust('c4', 'c5');
+  ok('🔴 お客様をまとめる窓が、①②入りで開く', /um-one on1/.test(開いた) && /um-one on2/.test(開いた));
+  ctx.PitDupFind.toVeh('c1');
+  ok('🔴 車をまとめる窓が開く', /車をまとめる/.test(開いた));
+}
+
+console.log('\n── 🧭 ⑥ 決めごと（ソースを見る） ──');
+{
+  const cus = JS('customers.js'), df = JS('dup-find.js');
+  ok('🔴 入口は顧客一覧の統合の隣に**アイコンだけ**',
+     /cust-mergeico[\s\S]{0,260}PitDupFind\.open\(\)[\s\S]{0,120}<\/i><\/button>/.test(cus));
+  ok('🔴 洗い出し側は保存しない（PitDB.save を持たない）', df.indexOf('PitDB.save') < 0);
+  const idx = fs.readFileSync('index.html', 'utf8');
+  ok('🔴 index.html に `?v=` 付きで載っている', /js\/dup-find\.js\?v=\d+/.test(idx));
+  const meta = (idx.match(/app-version" content="([\d.]+)"/)||[])[1];
+  const 画面 = (idx.match(/class="ver">v([\d.]+)</)||[])[1];
+  const ログ = (idx.match(/class="login-ver">v([\d.]+)</)||[])[1];
+  ok('🔴 版が3か所そろっている', meta && meta === 画面 && meta === ログ, { meta, 画面, ログ });
+}
+
+console.log('\n' + (fail ? '❌ ' : '✅ ') + pass + ' 件が緑／' + fail + ' 件が赤\n');
+process.exit(fail ? 1 : 0);
