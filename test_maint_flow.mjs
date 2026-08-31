@@ -35,16 +35,21 @@ const ok = (n, c, x = '') => {
 const JS = (f) => fs.readFileSync(path.join(process.cwd(), 'js', f), 'utf8');
 const tick = () => new Promise(r => setTimeout(r, 0));
 function bend(name, src) {
+  /* ⚠ v2.49.0 保存先がカードに変わったので、**壊す場所も付け替えた。**
+     わざと壊すモードが空振りすると、見張りが効いていないのに緑に見える（いちばん危ない状態）。 */
   if (BREAK === '1' && name === 'maint-pit.js')
-    return src.replace("    r.stage = 'fixed'; r.started = true;",
-      "    r.stage = 'fixed'; r.started = true;\n    w.state.fleetEvents = arr(w.state.fleetEvents).filter(function(x){ return !(x.maint && x.groupId === r.groupId && x.id !== r.id); });");
+    return src.replace("    c.maintFixSid = sp.sid;\n    sp.from = td;",
+      "    c.maintSpans = [sp];\n    c.maintFixSid = sp.sid;\n    sp.from = td;");   /* 入庫の時点で残りを消す */
+  if (BREAK === '2' && name === 'pit-share.js')
+    return src.replace("if ((c.maintSkipped || []).indexOf(ds) >= 0) return null;", "");
   if (BREAK === '3' && name === 'maint-pit.js')
     return src.replace('w.flMaintCellMenu = function(vehId, ds, to){', 'w.flMaintCellMenu = function(vehId, ds){')
               .replace('to = to || ds;', '');
-  if (BREAK === '4' && name === 'maint-pit.js')
-    return src.replace('      if (r.started) return;', '');
-  if (BREAK === '2' && name === 'maint-pit.js')
-    return src.replace("      if (arr(r.skipped).indexOf(ds) >= 0) return;      /* 「今日はやらない」を押した日 */", "");
+  /* ⚠ v2.49.0 「入庫したら消える」は **status が進むこと**で起きるようになった
+     （前は自前の `started` の印を見ていた）。だから壊す場所もそこ。 */
+  if (BREAK === '4' && name === 'pit-share.js')
+    return src.replace("if (c.status !== 'reserved') return null;      /* 入庫済み以降はここには出ない */", "")
+              .replace("if (c.actualInAt) return null;", "");
   return src;
 }
 
@@ -62,13 +67,16 @@ const 顧客 = [
   { id:'cu1', name:'小林モータース株式会社', kana:'', contacts:[{tel:'047-000-1111',primary:true}],
     vehicles:[ { id:'v1', plate:'野田 580 あ 12-34', maker:'ダイハツ', car:'タント', karteNo:'K-777' } ] }
 ];
-/* 候補2本＝今日〜+2 と +5〜+7（飛び地） */
-const 枠 = [
-  { id:'mc1', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g1',
-    fromDate:TODAY, toDate:add(2), skipped:[] },
-  { id:'mc2', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g1',
-    fromDate:add(5), toDate:add(7), skipped:[] }
+/* 🔧🔧 v2.49.0 候補2本＝今日〜+2 と +5〜+7（飛び地）。**カードは1枚**。 */
+const 整備カード = [
+  { id:'mcard1', internKind:'loanercar', status:'reserved', intakeTbd:true, customer:'自社代車',
+    boardId:'default', car:'タント', maker:'ダイハツ', plate:'野田 580 あ 12-34',
+    maintVehId:'l1', maintYm:TODAY.slice(0,7), workType:'shaken',
+    maintFixSid:'', maintSkipped:[],
+    maintSpans:[ { sid:'sp1', from:TODAY, to:add(2) }, { sid:'sp2', from:add(5), to:add(7) } ] }
 ];
+/* 旧テストが使っていた「レコードid」に当たるもの＝カードid#候補の鍵 */
+const R1 = 'mcard1#sp1', R2 = 'mcard1#sp2';
 
 function node0(){
   const n = { innerHTML:'', style:{setProperty(){}}, classList:{add(){},remove(){},toggle(){},contains(){return false;}},
@@ -90,8 +98,8 @@ function boot(form, answer){
     innerHeight:900,
     state:{ loaners:JSON.parse(JSON.stringify(代車)), companyCars:[],
             customers:JSON.parse(JSON.stringify(顧客)),
-            loanerAssigns:[], fleetEvents:JSON.parse(JSON.stringify(枠)),
-            cards:[], staff:[], settings:{},
+            loanerAssigns:[], fleetEvents:[],
+            cards:JSON.parse(JSON.stringify(整備カード)), staff:[], settings:{},
             workTypes:[{id:'shaken',label:'車検',color:'#ef4444'},{id:'12pt',label:'12点',color:'#f97316'},
                        {id:'general',label:'一般',color:'#84cc16'},{id:'bp',label:'B.P',color:'#a855f7'}] },
     PitDB:{ saved:0, save(){ this.saved++; } },
@@ -103,39 +111,60 @@ function boot(form, answer){
   };
   ctx.window = ctx; ctx.asked = asked; ctx.els = els;
   vm.createContext(ctx);
+  vm.runInContext(bend('pit-share.js', JS('pit-share.js')), ctx, { filename:'pit-share.js' });
   vm.runInContext(JS('loaner-free.js'), ctx, { filename:'loaner-free.js' });
   vm.runInContext(JS('loaner.js'), ctx, { filename:'loaner.js' });
   vm.runInContext(JS('intern-pit.js'), ctx, { filename:'intern-pit.js' });
   vm.runInContext(bend('maint-pit.js', JS('maint-pit.js')), ctx, { filename:'maint-pit.js' });
   return ctx;
 }
-const rec = (c, id) => c.state.fleetEvents.filter(x => x.id === id)[0];
-const cands = (c) => c.state.fleetEvents.filter(x => x.maint && (x.stage||'candidate') === 'candidate');
+const mcard = (c) => c.state.cards.filter(x => x.id === 'mcard1')[0];
+const rec  = (c, id) => c.pitMaintRecs ? c.pitMaintRecs().filter(x => x.id === id)[0] : null;
+const spans = (c) => (mcard(c) ? mcard(c).maintSpans : []);
+const cands = (c) => spans(c).filter(x => x.sid !== (mcard(c).maintFixSid || ''));
 
 /* ================================================================= */
 console.log('\n── ① 日ビューから候補を置く／確定にする／取り消す ──');
 {
   const c = boot({ 'mbp-from':add(10), 'mbp-to':add(12) });
-  const before = cands(c).length;
-  c.flMaintPlaceSave('g1', 'l1', 'candidate', '', 'shaken');
-  ok('🔴 候補が1本増える', cands(c).length === before + 1);
-  const nu = c.state.fleetEvents.filter(x => String(x.id).indexOf('mc') === 0 && x.groupId === 'g1' && x.fromDate === add(10))[0];
-  ok('同じ整備予定に束ねられる', !!nu && nu.groupId === 'g1');
-  ok('🔴 作業タイプは呼ぶ側から渡る（引き直して黙って「一般」に落ちない）', nu.work === 'shaken');
+  const before = spans(c).length, cardsBefore = c.state.cards.length;
+  c.flMaintPlaceSave('mcard1', 'l1', 'candidate', '', 'shaken', TODAY.slice(0,7));
+  ok('🔴 候補が1本増える', spans(c).length === before + 1);
+  ok('🔴🔴 カードは増えない（1作業＝1カード・予約カレンダーが代車で埋まらない）',
+     c.state.cards.length === cardsBefore, 'カード ' + c.state.cards.length + ' 枚');
+  const nu = spans(c).filter(x => x.from === add(10))[0];
+  ok('同じカードの候補として束ねられる', !!nu && !!nu.sid);
+  ok('🔴 候補は並び順ではなく鍵（sid）で指す（1本消しても他がずれない）',
+     spans(c).every(x => x.sid) && new Set(spans(c).map(x => x.sid)).size === spans(c).length);
+  ok('🔴 作業タイプは呼ぶ側から渡る（引き直して黙って「一般」に落ちない）', mcard(c).workType === 'shaken');
   /* 🔴 渡ってこず、引き直しても分からない時は**黙って作らない**（一般に落とさない） */
   const c9 = boot({ 'mbp-from':add(10), 'mbp-to':add(12) });
-  c9.flMaintPlaceSave('gzz', 'l1', 'candidate', '', '');
+  const n9 = c9.state.cards.length;
+  c9.flMaintPlaceSave('', 'l1', 'candidate', '', '', '');
   ok('🔴 作業が分からない時は止まる', c9.asked.length === 1 && c9.asked[0].code === 'PF-3056');
-  ok('その時は1本も作らない', c9.state.fleetEvents.filter(x => String(x.id).indexOf('mc') === 0 && x.groupId === 'gzz').length === 0);
+  ok('その時はカードも候補も作らない', c9.state.cards.length === n9);
+  /* 🔴 まだカードが無い車に置いたら、その時に1枚生まれる（＝予約番号もここで振る） */
+  const c8 = boot({ 'mbp-from':add(10), 'mbp-to':add(12) });
+  c8.flMaintPlaceSave('', 'l2', 'candidate', '', '12pt', TODAY.slice(0,7));
+  const born = c8.state.cards.filter(x => x.maintVehId === 'l2')[0];
+  ok('🔴 まだカードが無ければ、候補を置いた時に1枚生まれる', !!born && born.maintSpans.length === 1);
+  ok('🔴 生まれた時に予約番号を振る（ゆうた確定）', !!born && typeof born.resNo === 'string');
+  ok('🔴 生まれたカードは未定（予約カレンダーには乗らない）', !!born && born.intakeTbd === true && !born.reserveDate);
   ok('保存が呼ばれる', c.PitDB.saved === 1);
-  c.flMaintFix(nu.id);
-  ok('🔴 確定にできる', rec(c, nu.id).stage === 'fixed');
-  c.flMaintDelRec(nu.id);
-  ok('🔴 取り消せる', !rec(c, nu.id));
+  const nuId = 'mcard1#' + nu.sid;
+  c.flMaintFix(nuId);
+  ok('🔴 確定にできる', mcard(c).maintFixSid === nu.sid);
+  ok('🔴🔴 確定＝ふつうの予約に変わる（reserveDate が入って未定が外れる）',
+     mcard(c).reserveDate === add(10) && mcard(c).intakeTbd === false);
+  c.flMaintDelRec(nuId);
+  ok('🔴 取り消せる', !spans(c).some(x => x.sid === nu.sid));
+  ok('🔴 確定を取り消したら未定に戻る（予約カレンダーからも消える）',
+     !mcard(c).reserveDate && mcard(c).intakeTbd === true);
+  ok('⚠ 最後の1本を取り消してもカードは消さない（消える道を増やさない）', !!mcard(c));
 }
 {
   const c = boot({ 'mbp-from':add(12), 'mbp-to':add(10) });
-  c.flMaintPlaceSave('g1', 'l1', 'candidate', '', 'shaken');
+  c.flMaintPlaceSave('mcard1', 'l1', 'candidate', '', 'shaken', TODAY.slice(0,7));
   ok('「まで」が前なら止まる', c.asked.length === 1 && c.asked[0].code === 'PF-3054');
 }
 {
@@ -153,14 +182,15 @@ console.log('\n── ②③④ 当日ビュー（1日ずつ・未入庫に溜�
   ok('🔴 枠と枠のあいだ（+3・+4）は出ない', c.pitMaintToday(add(3)).length === 0 && c.pitMaintToday(add(4)).length === 0);
   ok('次の枠（+5）でまた出る', c.pitMaintToday(add(5)).length === 1);
   ok('枠の外（+8）は出ない', c.pitMaintToday(add(8)).length === 0);
-  ok('🔴🔴 出しても未入庫に溜まらない（カードは1枚もできていない）', c.state.cards.length === 0);
+  ok('🔴🔴 出しても未入庫に溜まらない（カードは1枚のまま・増えない）', c.state.cards.length === 1);
+  ok('🔴 そのカードは未定＝予約カレンダーにも乗っていない', mcard(c).intakeTbd === true && !mcard(c).reserveDate);
   /* 「今日はやらない」＝その日だけ */
-  c.pitMaintSkip('mc1', TODAY);
+  c.pitMaintSkip(R1, TODAY);
   ok('🔴 今日は消える', c.pitMaintToday(TODAY).length === 0);
   ok('🔴 明日は残る（その日ぶんだけ）', c.pitMaintToday(add(1)).length === 1);
   ok('🔴 別の枠（+5）も残る', c.pitMaintToday(add(5)).length === 1);
-  ok('枠そのものは消えていない', !!rec(c, 'mc1'));
-  ok('押した日が記録に残る', rec(c, 'mc1').skipped.join() === TODAY);
+  ok('枠そのものは消えていない', !!rec(c, R1));
+  ok('押した日が記録に残る', rec(c, R1).skipped.join() === TODAY);
   /* 見た目＝既存のカードに寄せる（ゆうた指定の3つ） */
   const h = c.pitMaintTodayHtml(add(1));
   ok('🔴 名前＝自社代車', h.indexOf('自社代車') >= 0);
@@ -175,11 +205,12 @@ console.log('\n── ②③④ 当日ビュー（1日ずつ・未入庫に溜�
 console.log('\n── ⑤ 入庫＝社内区分「代車」のカードが点検待ちで起きる ──');
 {
   const c = boot();
-  c.pitMaintIntake('mc1');
+  c.pitMaintIntake(R1);
   await tick();
   const card = c.state.cards[0];
   ok('🔴 押す前に1回聞く', c.asked.length === 1 && c.asked[0].kind === 'ask');
-  ok('🔴 カードが1枚起きる', c.state.cards.length === 1);
+  ok('🔴🔴 カードは**作られない**（もう在るカードの status が進むだけ）',
+     c.state.cards.length === 1 && card.id === 'mcard1');
   ok('🔴🔴 社内区分は「代車」（売上・突合から外れる受け皿＝v2.6.0）', card.internKind === 'loanercar');
   ok('🔴 いきなり点検待ち（＝タスクボード）', card.status === 'check');
   ok('実入庫日が入る', card.actualInAt === TODAY);
@@ -187,25 +218,29 @@ console.log('\n── ⑤ 入庫＝社内区分「代車」のカードが点検
   ok('🔴 ナンバーでお客様を引けている', card.customer === '小林モータース株式会社' && card.customerId === 'cu1');
   ok('カルテNoも拾う', card.karteNo === 'K-777');
   ok('車種・ナンバーが入る', card.car === 'タント' && card.plate === '野田 580 あ 12-34');
+  ok('🔴 未定が外れて入庫日が入る（ふつうの車と同じ階段）',
+     card.intakeTbd === false && card.reserveDate === TODAY);
   ok('🔴 代車マスタに結び先を覚える', c.state.loaners[0].custId === 'cu1' && c.state.loaners[0].custVehId === 'v1');
-  ok('🔴 枠が「確定・作業中」になる', rec(c,'mc1').stage === 'fixed' && rec(c,'mc1').started === true);
-  ok('カードと枠がつながっている', card.maintGroupId === 'g1' && card.maintRecId === 'mc1');
+  ok('🔴 枠が「確定・作業中」になる', rec(c,R1).stage === 'fixed' && rec(c,R1).started === true);
+  ok('🔴 カードと枠は**同じもの**（つなぐ鍵がもう要らない）',
+     card.maintVehId === 'l1' && Array.isArray(card.maintSpans));
   ok('🔴 金額は持たない（社内車両）', !('amountFinal' in card) || !card.amountFinal);
-  ok('🔴🔴 入庫しただけでは残りの候補を消さない（消すのは完TEL）', !!rec(c, 'mc2'));
+  ok('🔴🔴 入庫しただけでは残りの候補を消さない（消すのは完TEL）', !!rec(c, R2));
   ok('当日ビューからは消える（確定になったので入庫待ちではない）',
-     c.pitMaintToday(TODAY).filter(x => x.rec.id === 'mc1' && !x.fixed).length === 0);
+     c.pitMaintToday(TODAY).filter(x => x.rec.id === R1 && !x.fixed).length === 0);
 }
 {
   const c = boot(null, false);   /* 「いいえ」 */
-  c.pitMaintIntake('mc1');
+  c.pitMaintIntake(R1);
   await tick();
-  ok('🔴 「いいえ」なら1文字も動かない', c.state.cards.length === 0 && rec(c,'mc1').stage === 'candidate');
+  ok('🔴 「いいえ」なら1文字も動かない',
+     mcard(c).status === 'reserved' && !mcard(c).actualInAt && !mcard(c).maintFixSid);
 }
 
 console.log('\n── ⑥⑦ 完TELを通った時 ──');
 {
   const c = boot();
-  c.pitMaintIntake('mc1');
+  c.pitMaintIntake(R1);
   await tick();
   const card = c.state.cards[0];
   ok('この時点ではまだ候補が残っている', cands(c).length === 1);
@@ -214,9 +249,9 @@ console.log('\n── ⑥⑦ 完TELを通った時 ──');
   await tick();
   ok('🔴 実績になる', card.status === 'returned');
   ok('🔴🔴 残りの候補がまとめて消える', cands(c).length === 0);
-  ok('やった枠は残る（記録）', !!rec(c,'mc1') && rec(c,'mc1').done === true);
-  ok('🔴 本黄色は実際に合わせる（返した日まで）', rec(c,'mc1').toDate === (card.returnDate || card.completedAt));
-  ok('始まりは入庫した日のまま', rec(c,'mc1').fromDate === TODAY);
+  ok('やった枠は残る（記録）', !!rec(c,R1) && rec(c,R1).done === true);
+  ok('🔴 本黄色は実際に合わせる（返した日まで）', rec(c,R1).toDate === (card.returnDate || card.completedAt));
+  ok('始まりは入庫した日のまま', rec(c,R1).fromDate === TODAY);
 }
 {
   /* 完TELの関門は1か所だけ＝ここに条件を書き写していない */
@@ -246,21 +281,21 @@ console.log('\n── ⑨ 入庫したら当日ビューから消える・見た
 {
   const c = boot();
   const before = c.pitMaintToday(TODAY);
-  ok('入庫する前は当日ビューに出る', before.length === 1 && before[0].rec.id === 'mc1');
-  c.pitMaintIntake('mc1');
+  ok('入庫する前は当日ビューに出る', before.length === 1 && before[0].rec.id === R1);
+  c.pitMaintIntake(R1);
   await tick();
   ok('入庫でカードが1枚できた', c.state.cards.length === 1);
   ok('🔴🔴 入庫したら当日ビューから消える', c.pitMaintToday(TODAY).length === 0,
      '残り ' + c.pitMaintToday(TODAY).length + ' 件');
   /* 🔴 前は行が残っていたので、もう一度押せてカードが2枚できた */
   const n0 = c.asked.length;
-  c.pitMaintIntake('mc1'); await tick();
+  c.pitMaintIntake(R1); await tick();
   ok('🔴🔴 もう一度押してもカードは増えない（二重入庫できない）', c.state.cards.length === 1,
      'カード ' + c.state.cards.length + ' 枚');
   ok('🔴 行を隠すだけでなく、実行する所（pitMaintIntake）でも止めている',
      c.asked.slice(n0).some(a => a.kind === 'alert' && a.code === 'PF-3058'));
   ok('⚠ 飛び地の次の候補はちゃんと残る（消したのは今日の分だけ）',
-     c.state.fleetEvents.some(x => x.id === 'mc2'));
+     spans(c).some(x => x.sid === 'sp2'));
   const h = c.pitMaintTodayHtml(TODAY);
   ok('入庫したあとは行そのものが出ない', h === '');
 
@@ -274,7 +309,7 @@ console.log('\n── ⑨ 入庫したら当日ビューから消える・見た
   /* 🔴 意味の違うタグを借りない（前は「確定」に預かりの緑＝tag-drop-drop を借りていた） */
   ok('🔴 受付タイプ（預かり／待ち／当日）のタグを借りていない', !/tag-drop-/.test(h2));
   ok('候補は「候補」と文字で言う', /候補 /.test(h2));
-  const c3 = boot(); rec(c3, 'mc1').stage = 'fixed';
+  const c3 = boot(); mcard(c3).maintFixSid = 'sp1';
   ok('確定は「で確定」と文字で言う（タグではなく文字）', /で確定/.test(c3.pitMaintTodayHtml(TODAY)));
   const css = fs.readFileSync(path.join(process.cwd(), 'css', 'polish.css'), 'utf8');
   ok('🔴 網掛け（repeating-linear-gradient）をやめた',
@@ -292,6 +327,51 @@ console.log('\n── ⑨ 入庫したら当日ビューから消える・見た
      /ta-sheet/.test(JS('today.js')));
   ok('主ボタンは「入庫済みにする」（ふつうの車と同じ言葉）', /入庫済みにする/.test(tap));
   ok('「今日はやらない」は未入庫に溜めないと書いてある', /未入庫には溜めません/.test(tap));
+}
+
+console.log('\n── ⑩ カードに引っ越した（v2.49.0）・未定BOX・MHS連動 ──');
+{
+  const c = boot();
+  /* 🔴 保存先がカードになった＝fleetEvents に整備の枠を書く所がもう無い */
+  const mp = bend('maint-pit.js', JS('maint-pit.js'));
+  ok('🔴🔴 整備の枠を fleetEvents に書く所がもう無い', !/state\.fleetEvents\.push/.test(mp));
+  ok('🔴 loaner-free.js も fleetEvents の maint を拾わない',
+     /if \(e\.maint\) return;/.test(JS('loaner-free.js')));
+  /* 🔴 未定タブに「代車・自社車両」BOX がある＝隠す例外ではなく振り分け */
+  const und = JS('undetermined.js');
+  ok('🔴 未定タブに「代車・自社車両」BOX がある', /代車・自社車両/.test(und));
+  ok('🔴 ふつうの未定BOXからは外れる（振り分け）', /!_intern\(c\)/.test(und));
+  ok('🔴 振り分けの物差しは pitCardIntern 1本（新しい隠しフラグを作っていない）',
+     /pitCardIntern/.test(und));
+  ok('BOXのボタンは「日を決める」（候補が飛び地なので日付ピッカー1つでは決められない）',
+     /日を決める/.test(und));
+  /* 🔴 確定日を過ぎたら未定へ戻る（ゆうた確定「落ちずに未定に戻る」） */
+  const ov = JS('overdue-pit.js');
+  ok('🔴🔴 確定日を過ぎた代車は未入庫ではなく「未定」へ戻す', /未定へ戻す/.test(ov));
+  ok('⚠ 自動でやったことも記録に残す（v2.22.0 の決めごと）',
+     /未定へ戻す\(c, td\)/.test(ov) && /代車の整備を未定へ戻した（自動）/.test(ov));
+  ok('⚠ 実入庫日がある車は動かさない関門を通っている（v2.22.0）',
+     /if \(!pitIntakeOverdue\(c, td\)\) return;/.test(ov));
+  /* 🔴 MHS は PitFlow と同じ物差しを借りる（写しを作らない） */
+  const mhs = fs.readFileSync(path.join(process.cwd(), '..', '..', 'MHS', 'index.html'), 'utf8');
+  ok('🔴🔴 MHS の Today ボードが代車の整備を出す', /pitMaintCardsOn/.test(mhs));
+  ok('🔴 MHS は判断を写さず PitFlow の物差しを借りる（条件を書いていない）',
+     !/maintSpans/.test(mhs));
+  ok('⚠ MHS は物差しが届いていなければ何も足さない',
+     /window\.pitMaintCardsOn \? window\.pitMaintCardsOn\(all, bStr\) : \[\]/.test(mhs));
+  ok('⚠ 確定して reserveDate が入ったものを二重に出さない', /intake\.indexOf\(x\.card\) >= 0/.test(mhs));
+  /* 🔴 引っ越しは人が押した時だけ・元を消さない */
+  ok('🔴 引っ越しは自動で走らない（設定のボタンから）', /pitMaintMigrateGo/.test(mp));
+  ok('🔴 引っ越しても元のデータは消さない（印を付けるだけ）',
+     /e\.migrated = true/.test(mp) && !/fleetEvents = arr\(w\.state\.fleetEvents\)\.filter/.test(mp));
+  c.state.fleetEvents.push({ id:'old1', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate',
+                             groupId:'gOld', fromDate:add(20), toDate:add(22), skipped:[] });
+  const n0 = c.state.cards.length;
+  const r = c.pitMaintMigrate();
+  ok('🔴 引っ越すとカードが1枚できる', r.cards === 1 && c.state.cards.length === n0 + 1);
+  ok('🔴 元のレコードは残る（済みの印だけ）',
+     c.state.fleetEvents.filter(x => x.id === 'old1')[0].migrated === true);
+  ok('2回押しても増えない（済みの印を見ている）', c.pitMaintMigrate().cards === 0);
 }
 
 console.log('\n─────────────────────────────');

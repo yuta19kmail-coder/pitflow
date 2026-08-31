@@ -431,6 +431,63 @@ w.pitDivisionColor = pitDivisionColor;
   w.pitCardNoSaleMarked = pitCardNoSaleMarked;
 
   /* ===================================================================
+     🔧 v2.49.0 **代車・自社車両の整備の予定＝ふつうの予約カード**（ゆうた確定 2026-08-31）
+     -------------------------------------------------------------------
+     🗣「というか表示しているのは代車作業予定ボード。という扱いにはできない？」
+     🗣「候補日範囲指定と繰り返しの飛び地候補にはどう対応できる？」
+
+     ◎形（v2.48.0 までは state.fleetEvents の別レコードだった。**カードに引っ越した。**）
+       カード1枚 ＝ 作業1本（例：ハイゼットの車検）
+         internKind : 'loanercar'（社内区分「代車」・v2.6.0 のまま）
+         maintVehId : どの代車・社用車か
+         maintYm    : どの月の目標に対するものか
+         maintSpans : [{ sid, from, to }, …]  ← **飛び地の候補ぜんぶ。1枚に何本でも**
+         maintFixSid: 確定した候補の sid（確定＝reserveDate が入って intakeTbd:false）
+         maintSkipped: ['2026-08-31', …]      ← 「今日はやらない」を押した日
+       ⚠ **カードは増やさない。**候補を3本置いてもカードは1枚＝予約カレンダーが代車で埋まらない。
+
+     🔴 **「その日に出すか」の物差しはここ1本。** PitFlow の当日ビューも MHS の Today ボードも
+        これを借りる（MHS は pit-share.js をそのまま読み込んでいる＝写しを作らない）。
+     =================================================================== */
+  function pitCardMaint(c){ return !!(c && c.internKind === 'loanercar' && Array.isArray(c.maintSpans)); }
+  w.pitCardMaint = pitCardMaint;
+
+  /* この整備カードは、その日に「まだ入っていないもの」として出すか。
+     ◎出す条件
+       ・整備カードである
+       ・入庫していない（actualInAt が無い＝ふつうの予約と同じ見方）
+       ・その日が候補（または確定）の期間に入っている
+       ・その日を「今日はやらない」で見送っていない
+     ⚠ 確定していても**期間で見る**（確定＝reserveDate はその期間の初日でしかない）。 */
+  function pitMaintSpanOn(c, ds){
+    if (!pitCardMaint(c)) return null;
+    if (c.status !== 'reserved') return null;      /* 入庫済み以降はここには出ない */
+    if (c.actualInAt) return null;                 /* 🔴 入庫した実績があるものは動かさない（v2.22.0 の決めごと） */
+    if ((c.maintSkipped || []).indexOf(ds) >= 0) return null;
+    var sp = null;
+    (c.maintSpans || []).forEach(function(x){
+      if (!x || !x.from || !x.to) return;
+      if (x.from <= ds && ds <= x.to && !sp) sp = x;
+    });
+    if (!sp) return null;
+    return { span: sp, fixed: !!(c.maintFixSid && c.maintFixSid === sp.sid) };
+  }
+  w.pitMaintSpanOn = pitMaintSpanOn;
+
+  /* その日に出す整備カードを全部（PitFlow の当日ビューと MHS が同じ並びで使う）。
+     ⚠ 並び＝確定が先・急ぎが先（見る人がまず知りたい順）。 */
+  function pitMaintCardsOn(cards, ds){
+    var out = [];
+    (cards || []).forEach(function(c){
+      var hit = pitMaintSpanOn(c, ds);
+      if (hit) out.push({ card: c, span: hit.span, fixed: hit.fixed, urgent: !!c.urgent });
+    });
+    out.sort(function(a, b){ return (b.fixed - a.fixed) || (b.urgent - a.urgent); });
+    return out;
+  }
+  w.pitMaintCardsOn = pitMaintCardsOn;
+
+  /* ===================================================================
      🗑 v2.13.2 **もう無い機能の記録は、画面に出さない**（ゆうた 2026-08-25）
      -------------------------------------------------------------------
      🗣「支払方法に関してはアーカイブも含めて既存の表示も消したいんだけど」

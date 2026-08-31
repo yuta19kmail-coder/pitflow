@@ -48,14 +48,16 @@ const 代車 = [
   { id:'l2', name:'代車2', number:2, model:'アクア',   category:'normal', shakenDate:'2027-03-20' },
   { id:'l3', name:'代車3', number:3, model:'ハイゼット', category:'commercial', shakenDate:'2026-08-20' }  /* 満了超過 */
 ];
-/* 🔧 整備の枠は fleetEvents に `maint:true` で入れる（箱を増やさない） */
+/* 🔧🔧 v2.49.0 整備の枠は **ふつうの予約カード**（fleetEvents ではもう無い）。
+   カード1枚＝作業1本、候補（飛び地）は maintSpans の配列。形は pit-share.js の pitCardMaint。 */
 const 枠 = [
-  { id:'m1', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g1',
-    fromDate:'2026-10-04', toDate:'2026-10-06', label:'車検の候補' },
-  { id:'m2', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g1',
-    fromDate:'2026-10-12', toDate:'2026-10-16', label:'車検の候補', skipped:['2026-10-12'] },
-  { id:'m3', vehicleId:'l2', maint:true, work:'fix', stage:'fixed', groupId:'g2', urgent:true,
-    fromDate:'2026-09-02', toDate:'2026-09-03', label:'修理（確定）' }
+  { id:'mc1', internKind:'loanercar', status:'reserved', intakeTbd:true, customer:'自社代車',
+    maintVehId:'l1', maintYm:'2026-10', workType:'shaken', maintFixSid:'', maintSkipped:['2026-10-12'],
+    maintSpans:[ { sid:'s1', from:'2026-10-04', to:'2026-10-06' },
+                 { sid:'s2', from:'2026-10-12', to:'2026-10-16' } ] },
+  { id:'mc2', internKind:'loanercar', status:'reserved', intakeTbd:false, customer:'自社代車', urgent:true,
+    maintVehId:'l2', maintYm:'2026-09', workType:'general', maintFixSid:'s3', reserveDate:'2026-09-02',
+    maintSkipped:[], maintSpans:[ { sid:'s3', from:'2026-09-02', to:'2026-09-03' } ] }
 ];
 const 予定 = [
   { id:'e1', vehicleId:'l1', type:'shakenIn', label:'車検入庫', fromDate:'2026-12-01', toDate:'2026-12-02' }
@@ -77,14 +79,15 @@ function boot(extra){
       querySelector(){ return null; }, querySelectorAll(){ return []; }, addEventListener(){}, removeEventListener(){} },
     innerHeight:900,
     state:{ loaners:JSON.parse(JSON.stringify(代車)), loanerAssigns:[],
-            fleetEvents:JSON.parse(JSON.stringify(枠.concat(予定, extra || []))),
-            companyCars:[], cards:[], customers:[], staff:[], settings:{} },
+            fleetEvents:JSON.parse(JSON.stringify(予定.concat(extra || []))),
+            companyCars:[], cards:JSON.parse(JSON.stringify(枠)), customers:[], staff:[], settings:{} },
     PitDB:{ saved:0, save(){ this.saved++; } }, pitAlert(){}, pitAsk(){ return Promise.resolve(true); }, pitLog(){},
     ymd:(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
     addDays:(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
   };
   ctx.window = ctx;
   vm.createContext(ctx);
+  vm.runInContext(JS('pit-share.js'), ctx, { filename:'pit-share.js' });
   vm.runInContext(bend('loaner-free.js', JS('loaner-free.js')), ctx, { filename:'loaner-free.js' });
   vm.runInContext(JS('fleet.js'), ctx, { filename:'fleet.js' });
   vm.runInContext(JS('loaner.js'), ctx, { filename:'loaner.js' });
@@ -100,7 +103,7 @@ console.log('\n── ① 整備の枠が返る ──');
   ok('🔴 候補が返る', d.maints.length === 1 && d.maints[0].stage === 'candidate');
   ok('種類は maint（予定とは別）', d.maints[0].kind === 'maint');
   ok('作業タイプが分かる', d.maints[0].work === 'shaken');
-  ok('同じ整備予定どうしが束ねられる', d.maints[0].groupId === 'g1');
+  ok('同じ整備予定どうしが束ねられる（＝カード1枚）', d.maints[0].groupId === 'mc1');
   const d0 = c.pitLoanerDay('l1', '2026-10-04'), d2 = c.pitLoanerDay('l1', '2026-10-06');
   ok('初日が分かる', d0.maints[0].isStart === true && d0.maints[0].isEnd === false);
   ok('最終日が分かる', d2.maints[0].isEnd === true && d2.maints[0].isStart === false);
@@ -132,14 +135,12 @@ console.log('\n── ③ 案内（最短入庫日）は候補も避ける ─�
   ok('🔴 確定の日ももちろん避ける', c.pitLoanerAvoidOn(L(c,'l2'), '2026-09-02') === true);
   ok('何も無い日は避けない', c.pitLoanerAvoidOn(L(c,'l1'), '2026-10-09') === false);
   /* 3台とも候補で埋めたら、案内できる日が無くなる */
-  const c2 = boot([
-    { id:'m9', vehicleId:'l2', maint:true, work:'shaken', stage:'candidate', groupId:'g9',
-      fromDate:'2099-10-01', toDate:'2099-10-31' },
-    { id:'m10', vehicleId:'l3', maint:true, work:'shaken', stage:'candidate', groupId:'g10',
-      fromDate:'2099-10-01', toDate:'2099-10-31' },
-    { id:'m11', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g11',
-      fromDate:'2099-10-01', toDate:'2099-10-31' }
-  ]);
+  const c2 = boot();
+  ['l1','l2','l3'].forEach(function(v, i){
+    c2.state.cards.push({ id:'mz'+i, internKind:'loanercar', status:'reserved', intakeTbd:true,
+      customer:'自社代車', maintVehId:v, maintYm:'2099-10', workType:'shaken',
+      maintFixSid:'', maintSkipped:[], maintSpans:[{ sid:'z'+i, from:'2099-10-01', to:'2099-10-31' }] });
+  });
   ok('🔴 3台とも候補で埋まったら、1週間の案内は出せない', c2.pitLoanerPlanOk('2099-10-10', null) === false);
   ok('候補の外なら案内できる', c2.pitLoanerPlanOk('2099-11-10', null) === true);
   /* ⚠ ただし「実際に貸せるか」は今までどおり */
@@ -161,9 +162,9 @@ console.log('\n── ④ 満了を過ぎても貸出は止めない（生命線
 console.log('\n── ⑤ 月の目標は計算（保存しない）──');
 {
   const c = boot();
-  const before = c.state.fleetEvents.length, saved = c.PitDB.saved;
+  const before = c.state.cards.length, saved = c.PitDB.saved;
   const plans = c.pitLoanerMaintPlans(L(c,'l1'), TODAY);
-  ok('🔴 レコードが増えない', c.state.fleetEvents.length === before);
+  ok('🔴 カードが増えない', c.state.cards.length === before);
   ok('🔴 保存も呼ばれない（開いただけでクラウドに書かない）', c.PitDB.saved === saved);
   const sk = plans.find(x => x.work === 'shaken');
   ok('車検の目標が出る', !!sk && sk.dueDate === '2026-10-31');

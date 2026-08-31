@@ -58,16 +58,21 @@ const 代車 = [
   { id:'l4', name:'代車4', number:4, model:'ノート',   shakenDate:'2028-05-10' }    /* まだ先 */
 ];
 const 社用車 = [ { id:'c1', name:'ハイエース', model:'ハイエース', shakenDate:'2026-10-15' } ];
+/* 🔧🔧 v2.49.0 整備の枠は**ふつうの予約カード**（1作業1枚・候補は maintSpans の配列） */
 const 保存 = [
-  { id:'mA', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate',
-    groupId:'mg_l1_shaken_2026-10', fromDate:'2026-10-04', toDate:'2026-10-06' },
-  { id:'mB', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate',
-    groupId:'mg_l1_shaken_2026-10', fromDate:'2026-10-12', toDate:'2026-10-16' },
-  /* 手で入れた修理の月の目標（急ぎ） */
-  { id:'mC', vehicleId:'l2', maint:true, work:'general', stage:'month', ym:'2026-09',
-    urgent:true, memo:'エアコンが効かない', fromDate:'2026-09-01', toDate:'2026-09-30' },
-  /* 代車自身の予定（青帯）＝混ざってはいけない */
+  /* 代車自身の予定（青帯）＝混ざってはいけない。ここだけ fleetEvents に残る */
   { id:'e1', vehicleId:'l1', type:'shakenIn', label:'車検入庫', fromDate:'2026-12-01', toDate:'2026-12-02' }
+];
+const 整備カード = [
+  /* 車検の候補が飛び地で2本＝**カードは1枚** */
+  { id:'mcA', internKind:'loanercar', status:'reserved', intakeTbd:true, customer:'自社代車',
+    maintVehId:'l1', maintYm:'2026-10', workType:'shaken', maintFixSid:'', maintSkipped:[],
+    maintSpans:[ { sid:'a1', from:'2026-10-04', to:'2026-10-06' },
+                 { sid:'a2', from:'2026-10-12', to:'2026-10-16' } ] },
+  /* 手で入れた修理の月の目標（急ぎ）＝候補がまだ1本も無いカード */
+  { id:'mcC', internKind:'loanercar', status:'reserved', intakeTbd:true, customer:'自社代車',
+    maintVehId:'l2', maintYm:'2026-09', workType:'general', urgent:true, memo:'エアコンが効かない',
+    maintFixSid:'', maintSkipped:[], maintSpans:[] }
 ];
 
 function node0(){
@@ -95,7 +100,7 @@ function boot(form){
     innerHeight:900,
     state:{ loaners:JSON.parse(JSON.stringify(代車)), companyCars:JSON.parse(JSON.stringify(社用車)),
             loanerAssigns:[], fleetEvents:JSON.parse(JSON.stringify(保存)),
-            cards:[], customers:[], staff:[], settings:{} },
+            cards:JSON.parse(JSON.stringify(整備カード)), customers:[], staff:[], settings:{} },
     PitDB:{ saved:0, save(){ this.saved++; } },
     pitAlert:(m,o)=>{ asked.push({kind:'alert', code:(o||{}).code}); },
     pitAsk:(m,o)=>{ asked.push({kind:'ask', code:(o||{}).code}); return Promise.resolve(true); },
@@ -105,6 +110,8 @@ function boot(form){
   };
   ctx.window = ctx; ctx.asked = asked; ctx.els = els; ctx.bodyKids = body;
   vm.createContext(ctx);
+  vm.runInContext(JS('pit-share.js'), ctx, { filename:'pit-share.js' });
+  vm.runInContext(JS('intern-pit.js'), ctx, { filename:'intern-pit.js' });
   vm.runInContext(bend('loaner-free.js', JS('loaner-free.js')), ctx, { filename:'loaner-free.js' });
   vm.runInContext(JS('loaner.js'), ctx, { filename:'loaner.js' });          /* pitTenkenFromShaken */
   vm.runInContext(bend('maint-pit.js', JS('maint-pit.js')), ctx, { filename:'maint-pit.js' });
@@ -189,22 +196,27 @@ console.log('\n── ⑤ 手入力は「月の目標」だけ ──');
   const c = boot({ 'mba-veh':'l1', 'mba-work':'fix', 'mba-ym':'2026-10', 'mba-memo':'' });
   c.flMaintSave();
   ok('🔴 メモが空なら止まる', c.asked.length === 1 && c.asked[0].code === 'PF-3051');
-  ok('1件も増えない', c.state.fleetEvents.filter(e => e.id.indexOf('mm') === 0).length === 0);
+  ok('カードが1枚も増えない', c.state.cards.length === 2);
 }
 {
   const c = boot({ 'mba-veh':'l1', 'mba-work':'fix', 'mba-ym':'2026-10', 'mba-memo':'ブレーキから音', '__chk_mba-urgent':true });
   c.flMaintSave();
-  const rec = c.state.fleetEvents.filter(e => String(e.id).indexOf('mm') === 0)[0];
-  ok('🔴 1件だけ増える', !!rec);
-  ok('🔴 status は「月の目標」', rec.stage === 'month');
-  ok('🔴 日は決めていない（月まるごと）', rec.fromDate === '2026-10-01' && rec.toDate === '2026-10-31');
-  ok('急ぎが付く', rec.urgent === true);
+  const card = c.state.cards.filter(x => x.memo === 'ブレーキから音')[0];
+  ok('🔴🔴 カードが1枚だけ増える（fleetEvents ではない）', !!card && c.state.cards.length === 3);
+  ok('🔴 社内区分は「代車」（売上・突合から外れる受け皿）', card.internKind === 'loanercar');
+  ok('🔴 予約カードとして生まれる', card.status === 'reserved');
+  ok('🔴 日はまだ決まっていない（未定＝予約カレンダーに乗らない）',
+     card.intakeTbd === true && !card.reserveDate);
+  ok('🔴 候補はまだ1本も無い', Array.isArray(card.maintSpans) && card.maintSpans.length === 0);
+  ok('🔴 予約番号は候補を置いた時（＝カードが生まれた時）に振る', typeof card.resNo === 'string');
+  ok('月の目標が入る', card.maintYm === '2026-10');
+  ok('急ぎが付く', card.urgent === true);
   ok('保存が呼ばれる', c.PitDB.saved === 1);
-  ok('ボードに出る', c.pitMaintRows(TODAY).some(r => r.plan.manualId === rec.id));
+  ok('ボードに出る', c.pitMaintRows(TODAY).some(r => r.plan.manualId === card.id));
 }
 {
   const c = boot();
-  c.flMaintDrop('mC');
+  c.flMaintDrop('mcC');
   ok('取り下げは1回聞く', c.asked.length === 1 && c.asked[0].code === 'PF-3052');
 }
 
@@ -213,8 +225,14 @@ console.log('\n── ⑥ 月の目標は日の軸に出さない ──');
   const c = boot();
   ok('🔴🔴 日のカレンダーには出てこない（縮尺が違うものを日軸に乗せない）',
      c.pitLoanerDay('l2', '2026-09-15').maints.length === 0);
-  ok('🔴 わざと頼んだ時だけ出る（ボード・月カレンダー用）',
-     c.pitLoanerDay('l2', '2026-09-15', { withMonth:true }).maints.length === 1);
+  /* 🔴 v2.49.0 **`withMonth` という逃げ道が要らなくなった。**
+     月の目標＝候補が1本も無いカード＝日の軸に**出しようがない**（配列が空なので自然に出ない）。
+     前は同じ箱に月と日が混ざっていたので、opt で「今回は月も出して」と頼む必要があった。
+     ⚠ 逃げ道は、要らなくなったら消す。残すと「どっちで呼ぶんだっけ」が ひとつ増える。 */
+  ok('🔴 逃げ道そのものが要らなくなった（条件として使っている所が無い）',
+     !/\(\s*opt\s*&&\s*opt\.withMonth\s*\)/.test(JS('loaner-free.js')));
+  ok('月の目標はボードには出る（日の軸ではなくボードの仕事）',
+     c.pitMaintRows(TODAY).some(r => r.vehicleId === 'l2' && r.work === 'general'));
   ok('日の候補はふつうに出る', c.pitLoanerDay('l1', '2026-10-05').maints.length === 1);
 }
 
