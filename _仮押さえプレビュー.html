@@ -1,3 +1,494 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><title>PitFlow 仮押さえ プレビュー</title>
+<style>/* =========================================================
+   CoreFlow 見た目の基準（全アプリ共通）
+   ---------------------------------------------------------
+   ボタンの大きさ・角の丸み・すき間・アイコンの大きさを、
+   ここ1か所の数字で決める。各アプリの CSS は var(--ui-…) を使う。
+   ⚠ このファイルは <style> より先に読み込むこと。
+      （各アプリ側で上書きしたい時に上書きできるようにするため）
+   ⚠ 直す時は _shared/ の中を直して、sync-shared.ps1 で全アプリに配ること。
+      アプリの js/ css/ に入っているのは配られたコピー。直接直すと次の配布で消える。
+   ========================================================= */
+:root{
+  /* --- ボタン --- */
+  --ui-btn-h: 30px;        /* 文字つきボタンの高さのめやす */
+  --ui-btn-px: 11px;       /* 文字つきボタンの左右の余白 */
+  --ui-btn-py: 5px;        /* 文字つきボタンの上下の余白 */
+  --ui-btn-fs: 12.5px;     /* 文字つきボタンの文字の大きさ */
+  --ui-ib: 32px;           /* アイコンだけのボタン（正方形） */
+  --ui-ib-sm: 26px;        /* 小さいアイコンボタン（一覧の中など） */
+  --ui-tool: 36px;         /* 道具箱のボタン */
+
+  /* --- アイコン --- */
+  --ui-ic: 18px;           /* ふつう */
+  --ui-ic-sm: 15px;        /* 小さい（一覧の中・チップの中） */
+  --ui-ic-lg: 20px;        /* 大きい（道具箱） */
+
+  /* --- 角の丸み --- */
+  --ui-r-sm: 6px;
+  --ui-r: 8px;
+  --ui-r-lg: 12px;
+
+  /* --- すき間 --- */
+  --ui-gap: 6px;           /* アイコンと文字のあいだ */
+  --ui-gap-btn: 6px;       /* ボタンとボタンのあいだ */
+
+  /* --- 帯の高さ --- */
+  --ui-topbar: 48px;       /* 一番上の帯 */
+  --ui-subbar: 48px;       /* 2段目の帯（ノート名の行など）。道具箱がぴったり収まる高さ */
+}
+
+/* アイコンの土台。IC() が返す <svg class="ic"> に効く。
+   ⚠ display は inline のまま。flex の箱の中では自動で block 扱いになるので、
+     文字と並べても、道具箱のように並べても、どちらでも崩れない。 */
+.ic{ flex:none; pointer-events:none; vertical-align:-.18em; }
+
+/* アイコン＋文字のボタン（使いたいアプリだけ使う） */
+.ui-btn{
+  display:inline-flex; align-items:center; gap:var(--ui-gap);
+  padding:var(--ui-btn-py) var(--ui-btn-px);
+  font-size:var(--ui-btn-fs); border-radius:var(--ui-r);
+  line-height:1.4; white-space:nowrap; cursor:pointer;
+}
+.ui-ib{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:var(--ui-ib); height:var(--ui-ib);
+  border-radius:var(--ui-r); cursor:pointer; padding:0;
+}
+
+/* 指で押す端末では、押せる範囲を広げる（見た目は変えない） */
+@media (pointer:coarse){
+  :root{ --ui-btn-py: 7px; --ui-ib: 36px; --ui-tool: 40px; }
+}
+
+/* =========================================================
+   スクロールの棒（全アプリ共通・細くて控えめ）
+   ---------------------------------------------------------
+   ブラウザ既定の太いグレーの棒は、どのアプリでも浮いて見えるので、
+   ここで一度だけ形を決めて全アプリにそろえる。
+   マウスを乗せた時だけ、そのアプリの色（--acc）になる。
+   ⚠ --acc を決めていないアプリでもグレーで出るので、そのまま使える。
+   ========================================================= */
+:root{
+  --ui-sb: 10px;                              /* 棒の太さ */
+  --ui-sb-thumb: rgba(148,163,184,.35);       /* ふだんの色 */
+}
+*{ scrollbar-width: thin; scrollbar-color: var(--ui-sb-thumb) transparent; }
+::-webkit-scrollbar{ width: var(--ui-sb); height: var(--ui-sb); }
+::-webkit-scrollbar-track{ background: transparent; }
+::-webkit-scrollbar-corner{ background: transparent; }
+::-webkit-scrollbar-thumb{
+  background: var(--ui-sb-thumb);
+  border-radius: 8px;
+  border: 2px solid transparent;   /* 棒を細く見せるための余白 */
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover{
+  background: color-mix(in srgb, var(--acc, #94a3b8) 55%, transparent);
+  background-clip: padding-box;
+}
+
+/* 数字の印（1課・2課・順番など。絵文字の 1️⃣2️⃣ の代わり）
+   ⚠ 色は書かない＝文字色をそのまま継ぐ（線画アイコンと同じ考え方）。 */
+.ic-num{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; border:1.6px solid currentColor; border-radius:5px;
+  font-size:11px; font-weight:700; line-height:1; flex:none; vertical-align:-.18em;
+}
+
+/* =========================================================
+   チェックボックス（全アプリ共通・2026-08-02）
+   ---------------------------------------------------------
+   ブラウザ既定の白い箱・青いチェックはどのアプリでも浮くので、
+   MHS v0.81.0 で決めた「枠だけの控えめな四角」をここで標準にした。
+   ふだんは枠線だけ・押すとアプリの色で塗ってチェックが白く出る。
+
+   使い方： <input type="checkbox" class="ui-cb">
+            <input type="checkbox" class="ui-cb sm">   ← 小さい版（一覧の中など）
+
+   ⚠ 色は --acc（無ければ --brand）を使う。どちらも決めていないアプリでも
+      既定のインディゴで出るので、そのまま貼って構わない。
+   ⚠ 文字と並べる時は、囲みの <label> を display:inline-flex; align-items:center に。
+   ========================================================= */
+.ui-cb{
+  appearance:none; -webkit-appearance:none;
+  width:16px; height:16px; flex:0 0 auto; margin:0; padding:0; position:relative;
+  border:1.5px solid var(--text3, #94a3b8); border-radius:5px;
+  background:transparent; opacity:.65; cursor:pointer;
+  transition:opacity .12s, background .12s, border-color .12s;
+}
+.ui-cb:hover{ opacity:1; }
+.ui-cb:checked,.ui-cb:indeterminate{
+  background:var(--acc, var(--brand, #6366f1));
+  border-color:var(--acc, var(--brand, #6366f1));
+  opacity:1;
+}
+.ui-cb:checked::after{
+  content:''; position:absolute; left:4.5px; top:1px; width:3px; height:7.5px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.ui-cb:indeterminate::after{
+  content:''; position:absolute; left:2.5px; top:5.5px; width:8px; height:2px;
+  background:#fff; border-radius:1px;
+}
+.ui-cb:disabled{ opacity:.35; cursor:default; }
+.ui-cb.sm{ width:14px; height:14px; border-radius:4px; }
+.ui-cb.sm:checked::after{ left:3.8px; top:.5px; width:2.5px; height:6.5px; }
+.ui-cb.sm:indeterminate::after{ left:2.2px; top:5px; width:7px; }
+
+/* 指で押す端末では少しだけ大きく（見た目の細さは変えない） */
+@media (pointer:coarse){
+  .ui-cb{ width:18px; height:18px; }
+  .ui-cb:checked::after{ left:5.2px; top:1.5px; width:3.2px; height:8.4px; }
+}
+
+/* ========================================
+   base.css
+   PitFlow - 兄弟感のあるテーマ（CarFlow流用＋ブランド色だけ別）
+   ブランドアクセント: コーポレートグリーン #1f7a4d（自社カラー）／ CarFlow=青 #378ADD ／ StockFlow=紫
+   ======================================== */
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ===== ダークテーマ（デフォルト） ===== */
+:root,
+:root[data-theme="dark"]{
+  --bg:#0f1117;--bg1:#0f1117;--bg2:#1a1d27;--bg3:#222536;--bg4:#2a2e42;
+  --border:#333650;--border2:#444870;
+  --text:#e8eaf6;--text1:#e8eaf6;--text2:#9fa8c7;--text3:#5c6490;
+
+  /* 警告3段（CarFlow と揃える） */
+  --green:#1db97a;--blue:#378ADD;--orange:#f59e0b;--red:#ef4444;
+
+  /* PitFlowブランド色：コーポレートグリーン（自社カラー） */
+  --brand:#26a269;
+  --brand-deep:#1f7a4d;
+  --brand-soft:rgba(38,162,105,.15);
+  --accent:#26a269;
+
+  /* 🔵 v1.74.1 アプリ内ダイアログ（全アプリ共通部品 ui-dialog.js）のボタン色。
+     ⚠ ここで決めておかないと、共通部品の**既定色（ピンク）**のまま出る＝
+        緑のアプリの真ん中にピンクのボタンが出て「バグに見える」。
+        ふきだし・ランプと同じ「部品はアプリのテーマカラーを借りる」決めごとに合わせた。 */
+  --acc:#26a269;
+  --accd:#1f7a4d;
+
+  /* レイアウト変数 */
+  --sidebar:220px;--topbar:54px;--tabs:46px;--action:56px;
+  --r:8px;--r2:12px;
+  --shadow-card:0 3px 12px rgba(0,0,0,.35);
+}
+
+/* ===== ライトテーマ（v1.91.0：いまの CarFlow に合わせた白グレー系） =====
+   🔴 2026-08-13（ゆうた指摘）**PitFlow のライトだけ「旧 CarFlow のベージュ」のままだった。**
+      いまの CarFlow は白グレーの「くっきりSaaS」＝ページ背景を少し濃いグレーにして
+      白いカードを浮かせ、枠線と影で輪郭を立てる作り。**そちらに合わせた。**
+   🔴 **地の色（背景・枠・文字・影）は CarFlow `css/base.css` の `[data-theme="light"]` をそのまま写す。**
+      直す時は CarFlow 側を見て、値をコピーすること。ここで別の色を考えない。
+   🔴 **ブランド色（緑）だけは PitFlow のまま**＝全アプリ共通の決めごと
+      （地の色はそろえる／アクセントはアプリごと）。CarFlow の青を持ってこないこと。 */
+:root[data-theme="light"]{
+  --bg:#EBEEF3;--bg1:#EBEEF3;--bg2:#FFFFFF;--bg3:#E3E7EE;--bg4:#D6DCE5;
+  --border:#D4DAE3;--border2:#B6BFCC;
+  /* 🔴 v1.56.2（ゆうた報告）**--text1 を書き忘れていた。**
+     ライトだけ --text1 が**ダークの値（ほぼ白 #e8eaf6）のまま残り**、明るい背景に白文字＝見えなかった。
+     予約詳細カードの **電話・予約時内容の本文・タブ名・代車の残り日数**、ほか
+     駐車場／付箋／作業内容／検索／顧客詳細まで **全38か所**が同じ穴。
+     ⚠ ダーク（base.css）とリキッド2つ（topbar.css）には元から入っていたので、ライトだけ漏れていた。
+     🔴 **テーマを1つ足したら、--text / --text1 / --text2 / --text3 を必ず4つとも書くこと。**
+        書き忘れても画面は落ちないので、誰も気づかない。 */
+  --text:#1A2230;--text1:#1A2230;--text2:#49535F;--text3:#5C6573;
+
+  /* 警告3段。⚠ ベージュ地に合わせて濃くしてあったが、白グレー地では沈むので CarFlow の値にそろえた。 */
+  --green:#10B981;--blue:#2563EB;--orange:#F59E0B;--red:#EF4444;
+
+  --brand:#1f7a4d;
+  --brand-deep:#155e3a;
+  --brand-soft:rgba(31,122,77,.12);
+  --accent:#1f7a4d;
+
+  /* 🔵 v1.74.1 アプリ内ダイアログのボタン色（上のダークと同じ理由） */
+  --acc:#1f7a4d;
+  --accd:#155e3a;
+
+  --sidebar:220px;--topbar:54px;--tabs:46px;--action:56px;
+  --r:8px;--r2:12px;
+  /* 白カードを浮かせる薄い影（CarFlow と同じ） */
+  --shadow-card:0 1px 3px rgba(16,24,40,.10), 0 1px 2px rgba(16,24,40,.06);
+}
+
+html,body{
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Meiryo",sans-serif;
+  font-size:14px;
+  overflow:hidden;
+}
+
+button{
+  cursor:pointer;
+  font-family:inherit;
+  border:none;
+  background:none;
+  color:inherit;
+}
+
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* スクロールバー */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* ユーティリティ */
+.hidden{display:none !important}
+.flex{display:flex}
+.flex-col{display:flex;flex-direction:column}
+.flex1{flex:1}
+.gap-4{gap:4px}.gap-8{gap:8px}.gap-12{gap:12px}
+.center{display:flex;align-items:center;justify-content:center}
+.muted{color:var(--text2)}
+.tiny{font-size:11px;color:var(--text3)}
+
+/* ===== 日付・時刻の入力欄：カレンダー／時計のボタンをテーマに合わせる（v1.27.0） =====
+   🔴 ブラウザ標準のボタン（📅の絵）は色を直接は指定できない。`color-scheme` で
+      「いまどっち向きの画面か」をブラウザに伝えると、**ダークでは白っぽく・ライトでは黒く**
+      描き分けてくれる。これが無いと常に黒で描かれ、ダークで真っ黒のボタンになる。
+   ⚠ 押して開くカレンダーの中身も同じ向きになる（ダークなら暗い配色）。
+   ⚠ 入力欄だけに付ける＝ページ全体のスクロールバーや他の部品は今までどおり。
+   ・既定（data-theme 未設定）＝ダーク。liquid の2つも同じ扱い。 */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"]{ color-scheme: dark; }
+
+:root[data-theme="light"] input[type="date"],
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="datetime-local"],
+:root[data-theme="light"] input[type="month"],
+:root[data-theme="light"] input[type="week"],
+:root[data-theme="light-liquid"] input[type="date"],
+:root[data-theme="light-liquid"] input[type="time"],
+:root[data-theme="light-liquid"] input[type="datetime-local"],
+:root[data-theme="light-liquid"] input[type="month"],
+:root[data-theme="light-liquid"] input[type="week"]{ color-scheme: light; }
+
+/* ========================================
+   layout.css
+   サイドバー＋トップバー＋ビュー切替の枠組み
+   ======================================== */
+
+#app{
+  display:grid;
+  grid-template-columns:var(--sidebar) 1fr;
+  grid-template-rows:var(--topbar) 1fr;
+  height:100dvh;
+  width:100vw;
+}
+
+/* ===== トップバー ===== */
+#topbar{
+  grid-column:1 / -1;
+  grid-row:1;
+  display:flex;align-items:center;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:0 16px;
+  gap:12px;
+  z-index:10;
+}
+#topbar .logo{
+  display:flex;align-items:center;gap:8px;
+  font-weight:700;
+  font-size:16px;
+}
+#topbar .logo .pit{color:var(--brand)}
+#topbar .ver{
+  font-size:11px;
+  color:var(--text3);
+  background:var(--bg3);
+  padding:2px 8px;
+  border-radius:10px;
+  margin-left:4px;
+}
+#topbar .spacer{flex:1}
+#topbar .tb-btn{
+  padding:6px 12px;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  color:var(--text);
+  font-size:13px;
+}
+#topbar .tb-btn:hover{background:var(--bg4)}
+#topbar .tb-btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+#topbar .tb-btn.primary:hover{background:var(--brand-deep)}
+
+/* テーマ切替ボタン */
+#topbar .theme-toggle{
+  width:34px;height:34px;
+  border-radius:var(--r);
+  background:var(--bg3);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+
+/* ===== サイドバー ===== */
+#sidebar{
+  grid-column:1;
+  grid-row:2;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  padding:12px 0;
+  display:flex;
+  flex-direction:column;
+}
+.si-section-title{
+  font-size:10px;
+  color:var(--text3);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:12px 16px 4px;
+}
+.si-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;
+  cursor:default;
+  font-size:13px;
+  color:var(--text);
+  border-left:3px solid transparent;
+  transition:background .12s;
+}
+.si-item:hover{background:var(--bg3)}
+.si-item.active{
+  background:var(--brand-soft);
+  border-left-color:var(--brand);
+  color:var(--brand);
+  font-weight:600;
+}
+.si-item .icon{
+  font-size:16px;
+  width:22px;
+  text-align:center;
+}
+
+/* ===== サイドバー フライアウト（親をホバー/タップで右に小メニュー・StockFlow流用） ===== */
+.si-flyout{position:relative}
+.si-has-flyout .si-caret{margin-left:auto;color:var(--text3);font-size:11px}
+.si-flyout.open-parent>.si-has-flyout{color:var(--brand)}
+.si-flyout.has-active>.si-has-flyout{color:var(--brand);font-weight:600;border-left-color:var(--brand)}
+.si-flyout-panel{
+  position:fixed;display:none;z-index:200;
+  min-width:212px;
+  background:var(--bg2);
+  border:1px solid var(--brand);
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+.si-flyout-panel.open{display:block;animation:sfPop .14s ease-out}
+@keyframes sfPop{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.si-flyout-panel .si-item{border-left:none;border-radius:6px;padding:8px 10px}
+.si-flyout-panel .si-item:hover{background:var(--bg3)}
+/* 準備中（未実装）バッジ */
+.si-soon{margin-left:auto;font-size:9px;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:0 5px;line-height:15px}
+.si-flyout-panel .si-item .si-soon{margin-left:8px}
+/* 準備中ビューの中央カード */
+.soon-card{max-width:540px;margin:6vh auto 0;text-align:center;background:var(--bg2);border:1px dashed var(--border2);border-radius:14px;padding:34px 28px}
+.soon-card .soon-emoji{font-size:46px;line-height:1}
+.soon-card h3{margin:14px 0 8px;font-size:17px;color:var(--text)}
+.soon-card p{margin:0;color:var(--text2);font-size:13px;line-height:1.8}
+
+/* ===== メイン領域 ===== */
+#main{
+  grid-column:2;
+  grid-row:2;
+  overflow:hidden;
+  position:relative;
+  background:var(--bg);
+}
+.view{
+  position:absolute;
+  inset:0;
+  overflow:auto;
+  padding:16px;
+  display:none;
+}
+.view.active{display:block}
+
+/* ビュー共通：ヘッダー */
+.view-header{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.view-title{
+  font-size:18px;
+  font-weight:700;
+  display:flex;align-items:center;gap:8px;
+}
+.view-title .icon{font-size:22px}
+.view-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.vh-btn{
+  padding:6px 12px;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  color:var(--text);
+  font-size:13px;
+}
+.vh-btn:hover{background:var(--bg4)}
+.vh-btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.vh-btn.primary:hover{background:var(--brand-deep)}
+
+/* ビュー共通：レンジ切替（当日/週/月/2ヶ月） */
+.range-tabs{
+  display:flex;gap:4px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:3px;
+}
+.range-tabs button{
+  padding:6px 12px;
+  font-size:12px;
+  border-radius:6px;
+  color:var(--text2);
+}
+.range-tabs button.active{
+  background:var(--brand);
+  color:#fff;
+}
+
+/* レスポンシブ：スマホ */
+@media (max-width:768px){
+  #app{grid-template-columns:1fr;grid-template-rows:var(--topbar) auto 1fr}
+  #sidebar{
+    grid-column:1;grid-row:2;
+    height:auto;
+    display:flex;
+    overflow-x:auto;
+    padding:0;
+    border-right:none;
+    border-bottom:1px solid var(--border);
+  }
+  .si-section-title{display:none}
+  .si-item{
+    border-left:none;
+    border-bottom:3px solid transparent;
+    padding:10px 12px;
+    white-space:nowrap;
+  }
+  .si-item.active{border-left:none;border-bottom-color:var(--brand)}
+  #main{grid-column:1;grid-row:3}
+}
+
 /* ========================================
    polish.css  -  5ビューの見た目・操作感 底上げ（v0.1.1）
    ----------------------------------------
@@ -2478,3 +2969,8 @@ td.cfs-lg-busy.cfs-lg-hold{ background:repeating-linear-gradient(135deg, rgba(11
 .cfs-lg tr.cfs-lg-band > td.cfs-lg-busy.cfs-lg-hold{ background:repeating-linear-gradient(135deg, rgba(196,140,150,.38) 0 5px, rgba(196,140,150,.12) 5px 10px) !important; }
 /* 車両管理の利用カレンダー＝仮押さえは薄い網掛け */
 .fl-cal-cell.fl-use.fl-hold{ background:repeating-linear-gradient(135deg, rgba(116,152,200,.22) 0 6px, rgba(116,152,200,.06) 6px 12px) !important; }
+</style>
+<style>body{margin:0;padding:16px;} .lo-scroll{height:auto;} .lo-grid{grid-template-columns:64px repeat(4,minmax(96px,112px));}
+ .prev-h{font:700 13px/1.6 system-ui;color:#9fb0c3;margin:0 0 8px}</style></head>
+<body class="dark"><p class="prev-h">🅿 仮押さえ（網掛け）／🚗 予約の貸出（緑の札）／🔧 代車自身の予定（青帯）を1枚に</p>
+<div class="lo-scroll"><div class="lo-grid"><div class="lo-cell lo-head lo-corner">日付</div><div class="lo-cell lo-head"><div class="lo-model">タント</div><div class="lo-no">1</div></div><div class="lo-cell lo-head"><div class="lo-model">アクア</div><div class="lo-no">2</div></div><div class="lo-cell lo-head"><div class="lo-model">MINI</div><div class="lo-no">3</div></div><div class="lo-cell lo-head"><div class="lo-model">ノート</div><div class="lo-no">4</div></div><div class="lo-cell lo-date" data-ld="2026-09-01"><i class="lo-daybg"></i><span class="lo-dtxt"><div class="lo-month">9月</div>9/1 <span>火</span></span></div><div class="lo-cell lo-free" data-lo="l1" data-ld="2026-09-01"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l2" data-ld="2026-09-01"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-01"><i class="lo-daybg"></i></div><div class="lo-cell lo-hold lo-holdday lo-hold-start" data-lo="l4" data-ld="2026-09-01" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span><span class="lo-hold-tag lo-hold-w" title="長いメモも入る：営業の試乗で押さえておく" onclick="loHoldMenu(event,'lh3')"><span class="lo-hold-k">仮</span><span class="lo-hold-memo">長いメモも入る：営業の試乗で押さえておく</span></span></div><div class="lo-cell lo-date" data-ld="2026-09-02"><i class="lo-daybg"></i><span class="lo-dtxt">9/2 <span>水</span></span></div><div class="lo-cell lo-hold lo-holdday lo-hold-start" data-lo="l1" data-ld="2026-09-02" onclick="loHoldMenu(event,'lh1')"><i class="lo-daybg"></i><span class="lo-holdbg"></span><span class="lo-hold-tag lo-hold-w" title="車検の代車で押さえ" onclick="loHoldMenu(event,'lh1')"><span class="lo-hold-k">仮</span><span class="lo-hold-memo">車検の代車で押さえ</span></span></div><div class="lo-cell lo-bk bk-start bk-full" data-lo="l2" data-ld="2026-09-02" style="--lo-team:#1db97a"><i class="lo-daybg"></i><i class="lo-fill"></i><span class="lo-badge full" draggable="true" data-aid="la1" data-card-id="k1" onclick="loBadgeMenu(event,'la1')"><span class="lo-lbl full"><span class="lo-nm">小林 太郎 様</span><span class="lo-car2"><span class="lo-cartxt">アクア</span></span></span></span></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-02"><i class="lo-daybg"></i></div><div class="lo-cell lo-hold lo-holdday" data-lo="l4" data-ld="2026-09-02" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-date" data-ld="2026-09-03"><i class="lo-daybg"></i><span class="lo-dtxt">9/3 <span>木</span></span></div><div class="lo-cell lo-hold lo-holdday" data-lo="l1" data-ld="2026-09-03" onclick="loHoldMenu(event,'lh1')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-bk bk-full" data-lo="l2" data-ld="2026-09-03" style="--lo-team:#1db97a"><i class="lo-daybg"></i><i class="lo-fill"></i></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-03"><i class="lo-daybg"></i></div><div class="lo-cell lo-hold lo-holdday" data-lo="l4" data-ld="2026-09-03" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-date" data-ld="2026-09-04"><i class="lo-daybg"></i><span class="lo-dtxt">9/4 <span>金</span></span></div><div class="lo-cell lo-hold lo-holdday" data-lo="l1" data-ld="2026-09-04" onclick="loHoldMenu(event,'lh1')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-bk bk-full" data-lo="l2" data-ld="2026-09-04" style="--lo-team:#1db97a"><i class="lo-daybg"></i><i class="lo-fill"></i></div><div class="lo-cell lo-hold lo-holdday lo-hold-start lo-hold-end" data-lo="l3" data-ld="2026-09-04" onclick="loHoldMenu(event,'lh2')"><i class="lo-daybg"></i><span class="lo-holdbg"></span><span class="lo-hold-tag" title="臨時" onclick="loHoldMenu(event,'lh2')"><span class="lo-hold-k">仮</span><span class="lo-hold-memo">臨時</span></span></div><div class="lo-cell lo-hold lo-holdday" data-lo="l4" data-ld="2026-09-04" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-date sat" data-ld="2026-09-05"><i class="lo-daybg"></i><span class="lo-dtxt">9/5 <span>土</span></span></div><div class="lo-cell lo-hold lo-holdday lo-hold-end sat" data-lo="l1" data-ld="2026-09-05" onclick="loHoldMenu(event,'lh1')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-bk bk-full sat" data-lo="l2" data-ld="2026-09-05" style="--lo-team:#1db97a"><i class="lo-daybg"></i><i class="lo-fill"></i></div><div class="lo-cell lo-free sat" data-lo="l3" data-ld="2026-09-05"><i class="lo-daybg"></i></div><div class="lo-cell lo-hold lo-holdday sat" data-lo="l4" data-ld="2026-09-05" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-date sun" data-ld="2026-09-06"><i class="lo-daybg"></i><span class="lo-dtxt">9/6 <span>日</span></span></div><div class="lo-cell lo-free sun" data-lo="l1" data-ld="2026-09-06"><i class="lo-daybg"></i></div><div class="lo-cell lo-bk bk-end bk-full sun" data-lo="l2" data-ld="2026-09-06" style="--lo-team:#1db97a"><i class="lo-daybg"></i><i class="lo-fill"></i><span class="lo-end" draggable="true" data-aid="la1" title="下へドラッグで返却日を伸ばせます"></span></div><div class="lo-cell lo-free sun" data-lo="l3" data-ld="2026-09-06"><i class="lo-daybg"></i></div><div class="lo-cell lo-hold lo-holdday sun" data-lo="l4" data-ld="2026-09-06" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-date" data-ld="2026-09-07"><i class="lo-daybg"></i><span class="lo-dtxt">9/7 <span>月</span></span></div><div class="lo-cell lo-bk bk-start bk-full" data-lo="l1" data-ld="2026-09-07" style="--lo-team:#3b82f6"><i class="lo-daybg"></i><i class="lo-fill"></i><span class="lo-badge full" draggable="true" data-aid="la2" onclick="loBadgeMenu(event,'la2')"><span class="lo-lbl full"><span class="lo-nm">佐藤 様</span><span class="lo-car2"><span class="lo-cartxt">フィット</span></span><span class="lo-memo">車販・乗り換え</span></span></span></div><div class="lo-cell lo-free" data-lo="l2" data-ld="2026-09-07"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-07"><i class="lo-daybg"></i></div><div class="lo-cell lo-hold lo-holdday lo-hold-end" data-lo="l4" data-ld="2026-09-07" onclick="loHoldMenu(event,'lh3')"><i class="lo-daybg"></i><span class="lo-holdbg"></span></div><div class="lo-cell lo-date" data-ld="2026-09-08"><i class="lo-daybg"></i><span class="lo-dtxt">9/8 <span>火</span></span></div><div class="lo-cell lo-bk bk-full" data-lo="l1" data-ld="2026-09-08" style="--lo-team:#3b82f6"><i class="lo-daybg"></i><i class="lo-fill"></i></div><div class="lo-cell lo-free lo-evday" data-lo="l2" data-ld="2026-09-08"><i class="lo-daybg"></i><span class="lo-evbg" style="background:#3b82f622;box-shadow:inset 4px 0 0 #3b82f6,inset -4px 0 0 #3b82f6"></span><span class="lo-evt-tag" style="background:#3b82f6"><i data-ic=wrench data-ics=16></i> 車検入庫</span></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-08"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l4" data-ld="2026-09-08"><i class="lo-daybg"></i></div><div class="lo-cell lo-date" data-ld="2026-09-09"><i class="lo-daybg"></i><span class="lo-dtxt">9/9 <span>水</span></span></div><div class="lo-cell lo-bk bk-end bk-full" data-lo="l1" data-ld="2026-09-09" style="--lo-team:#3b82f6"><i class="lo-daybg"></i><i class="lo-fill"></i><span class="lo-end" draggable="true" data-aid="la2" title="下へドラッグで返却日を伸ばせます"></span></div><div class="lo-cell lo-free lo-evday" data-lo="l2" data-ld="2026-09-09"><i class="lo-daybg"></i><span class="lo-evbg" style="background:#3b82f622;box-shadow:inset 4px 0 0 #3b82f6,inset -4px 0 0 #3b82f6"></span></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-09"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l4" data-ld="2026-09-09"><i class="lo-daybg"></i></div><div class="lo-cell lo-date" data-ld="2026-09-10"><i class="lo-daybg"></i><span class="lo-dtxt">9/10 <span>木</span></span></div><div class="lo-cell lo-free" data-lo="l1" data-ld="2026-09-10"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l2" data-ld="2026-09-10"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l3" data-ld="2026-09-10"><i class="lo-daybg"></i></div><div class="lo-cell lo-free" data-lo="l4" data-ld="2026-09-10"><i class="lo-daybg"></i></div></div></div></body></html>
