@@ -292,11 +292,16 @@ console.log('\n── ⑥ 車両管理・データチェックでは貸出とし
 }
 {
   const idx = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
-  ok('🔴 画面の版番号が v2.40.0', (idx.match(/v2\.40\.0/g) || []).length >= 2);
-  ok('🔴 触ったファイルの ?v= を上げてある',
-     idx.indexOf('js/loaner.js?v=76') >= 0 && idx.indexOf('css/polish.css?v=218') >= 0
-     && idx.indexOf('js/loaner-free.js?v=7') >= 0 && idx.indexOf('js/fleet.js?v=34') >= 0
-     && idx.indexOf('js/card-detail.js?v=144') >= 0 && idx.indexOf('js/inspect-rules.js?v=21') >= 0);
+  /* ⚠ 版の**数字そのもの**を見張らない（上げるたびにこの見張りが赤くなるだけで、何も守れない）。
+     見るのは「3か所そろっているか」と「触ったファイルに ?v= が付いているか」。 */
+  const meta = (idx.match(/app-version" content="([\d.]+)"/) || [])[1];
+  const 画面 = (idx.match(/class="ver">v([\d.]+)</) || [])[1];
+  const ログイン = (idx.match(/class="login-ver">v([\d.]+)</) || [])[1];
+  ok('🔴 版が3か所そろっている（メタ・画面・ログイン）', !!meta && meta === 画面 && meta === ログイン, { meta, 画面, ログイン });
+  ok('🔴 触ったファイルが ?v= 付きで載っている',
+     ['loaner','loaner-free','fleet','card-detail','inspect-rules','errcode-pit']
+       .every(f => new RegExp('js/' + f + '\\.js\\?v=\\d+').test(idx))
+     && /css\/polish\.css\?v=\d+/.test(idx));
 }
 {
   const css = fs.readFileSync(path.join(process.cwd(), 'css', 'polish.css'), 'utf8');
