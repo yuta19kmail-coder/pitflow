@@ -20,6 +20,7 @@
        node test_maint_flow.mjs --break=1  … 入庫した時に残りの候補を消す → ⑥が赤
        node test_maint_flow.mjs --break=2  … 「今日はやらない」を無視する → ④が赤
        node test_maint_flow.mjs --break=3  … 選択肢の窓が範囲を受けない形に戻す → ⑧が赤
+       node test_maint_flow.mjs --break=4  … 入庫しても当日ビューから消さない（v2.48.0 前の姿）→ ⑨が赤
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -40,6 +41,8 @@ function bend(name, src) {
   if (BREAK === '3' && name === 'maint-pit.js')
     return src.replace('w.flMaintCellMenu = function(vehId, ds, to){', 'w.flMaintCellMenu = function(vehId, ds){')
               .replace('to = to || ds;', '');
+  if (BREAK === '4' && name === 'maint-pit.js')
+    return src.replace('      if (r.started) return;', '');
   if (BREAK === '2' && name === 'maint-pit.js')
     return src.replace("      if (arr(r.skipped).indexOf(ds) >= 0) return;      /* 「今日はやらない」を押した日 */", "");
   return src;
@@ -237,6 +240,58 @@ console.log('\n── ⑧ 画面のつなぎ ──');
   ok('🔴 選択肢の窓が範囲（から〜まで）を受ける', /flMaintCellMenu = function\(vehId, ds, to\)/.test(mp));
   ok('🔴 なぞった範囲がそのまま窓に入る', /dsTo \|\| ds/.test(mp));
   ok('クリックだけなら1日ぶん', /to = to \|\| ds;/.test(mp));
+}
+
+console.log('\n── ⑨ 入庫したら当日ビューから消える・見た目と窓を本来の形に（v2.48.0 ゆうた指摘）──');
+{
+  const c = boot();
+  const before = c.pitMaintToday(TODAY);
+  ok('入庫する前は当日ビューに出る', before.length === 1 && before[0].rec.id === 'mc1');
+  c.pitMaintIntake('mc1');
+  await tick();
+  ok('入庫でカードが1枚できた', c.state.cards.length === 1);
+  ok('🔴🔴 入庫したら当日ビューから消える', c.pitMaintToday(TODAY).length === 0,
+     '残り ' + c.pitMaintToday(TODAY).length + ' 件');
+  /* 🔴 前は行が残っていたので、もう一度押せてカードが2枚できた */
+  const n0 = c.asked.length;
+  c.pitMaintIntake('mc1'); await tick();
+  ok('🔴🔴 もう一度押してもカードは増えない（二重入庫できない）', c.state.cards.length === 1,
+     'カード ' + c.state.cards.length + ' 枚');
+  ok('🔴 行を隠すだけでなく、実行する所（pitMaintIntake）でも止めている',
+     c.asked.slice(n0).some(a => a.kind === 'alert' && a.code === 'PF-3058'));
+  ok('⚠ 飛び地の次の候補はちゃんと残る（消したのは今日の分だけ）',
+     c.state.fleetEvents.some(x => x.id === 'mc2'));
+  const h = c.pitMaintTodayHtml(TODAY);
+  ok('入庫したあとは行そのものが出ない', h === '');
+
+  const c2 = boot();
+  const h2 = c2.pitMaintTodayHtml(TODAY);
+  /* 🗣「網掛けがはいった変な表示」＝ふつうの入庫行と同じ骨格にする */
+  ok('🔴 ふつうの入庫行と同じ骨格（tr-time / tr-front / tr-main / tr-tags）',
+     /tr-time/.test(h2) && /tr-front/.test(h2) && /tr-main/.test(h2) && /tr-tags/.test(h2));
+  ok('🔴 タグは3スロット（ふつうの行と同じ）', (h2.match(/tr-tag-slot/g) || []).length === 3);
+  ok('🔴 当日ビューに無い入れ物（tr-side）を使っていない', h2.indexOf('tr-side') < 0);
+  /* 🔴 意味の違うタグを借りない（前は「確定」に預かりの緑＝tag-drop-drop を借りていた） */
+  ok('🔴 受付タイプ（預かり／待ち／当日）のタグを借りていない', !/tag-drop-/.test(h2));
+  ok('候補は「候補」と文字で言う', /候補 /.test(h2));
+  const c3 = boot(); rec(c3, 'mc1').stage = 'fixed';
+  ok('確定は「で確定」と文字で言う（タグではなく文字）', /で確定/.test(c3.pitMaintTodayHtml(TODAY)));
+  const css = fs.readFileSync(path.join(process.cwd(), 'css', 'polish.css'), 'utf8');
+  ok('🔴 網掛け（repeating-linear-gradient）をやめた',
+     !/\.today-row\.tod-maint\{[^}]*repeating-linear-gradient/.test(css));
+  ok('⚠ 色は JS から --pit-maint で配る（CSS と JS で別々に綴らない）',
+     /PIT_MAINT_COLOR/.test(JS('maint-pit.js')) && /--pit-maint/.test(css));
+
+  /* 🗣「POPアップの画面も自前出し」＝当日ビュー共通のシートに乗せる */
+  const mp = bend('maint-pit.js', JS('maint-pit.js'));
+  const tap = mp.slice(mp.indexOf('w.pitMaintTodayTap'), mp.indexOf('w.pitMaintGotoFromToday'));
+  ok('🔴🔴 当日ビュー共通のシート（pitTodaySheet）を通す', /pitTodaySheet\(/.test(tap));
+  ok('🔴 代車カレンダー用の自前ポップ（lo-bpop）はもう出さない', tap.indexOf('lo-bpop') < 0);
+  ok('🔴 シートの殻は today.js の1本', /w(indow)?\.pitTodaySheet\s*=\s*function/.test(JS('today.js')));
+  ok('⚠ ふつうの行の窓（pitTodayTap）も同じ殻を使っている（形が2つに割れていない）',
+     /ta-sheet/.test(JS('today.js')));
+  ok('主ボタンは「入庫済みにする」（ふつうの車と同じ言葉）', /入庫済みにする/.test(tap));
+  ok('「今日はやらない」は未入庫に溜めないと書いてある', /未入庫には溜めません/.test(tap));
 }
 
 console.log('\n─────────────────────────────');
