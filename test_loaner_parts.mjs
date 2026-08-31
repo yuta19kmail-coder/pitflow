@@ -102,7 +102,10 @@ console.log('\n── ① 部品が3つの種類をまとめて返す ──');
   ok('初日・最終日が分かる', !!d.lends[0] && d.lends[0].isStart === true && d.lends[0].isEnd === false);
   ok('メモが取れる', ((c.pitLoanerDay('l1','2026-10-12').holds[0])||{}).memo === '隣にずらすかも');
   ok('名前が取れる', ((d.lends[0])||{}).label === '小林 太郎');
-  ok('種類の一覧が外から見える', Object.keys(c.PIT_LOANER_KINDS).join() === 'lend,hold,event');
+  /* ⚠ 種類の**並びと数**を固定で見張らない（増やすたびに赤くなるだけで何も守れない）。
+     見るのは「外から見えるか」と「いまある種類が載っているか」。 */
+  ok('種類の一覧が外から見える',
+     ['lend','hold','event','maint'].every(k => !!c.PIT_LOANER_KINDS[k]), Object.keys(c.PIT_LOANER_KINDS));
   ok('期間で聞ける（月表示用）', c.pitLoanerSpan('l1','2026-10-01','2026-10-31').length === 4);
   ok('種類を選んで聞ける', c.pitLoanerSpan('l1','2026-10-01','2026-10-31',{kinds:['event']}).length === 2);
   ok('自分自身を外せる', c.pitLoanerDay('l1','2026-10-06',{ignoreAssignId:'la1'}).lends.length === 0);
