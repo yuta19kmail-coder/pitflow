@@ -10,7 +10,8 @@
         （列を消すと前後の予定が見えなくなり、この画面の役目が壊れる）
      🔴 ② 絞込＝畳んでも**効いている数が分かる**／クリアで全部戻る
      🔴 ③ 並べ替え＝**ラジオ（1つだけ）**。同じものを選んでも解除されない
-     🔴 ④ 縮尺＝**既定（23）が直す前とまったく同じ px**／端末に覚える／つまんでいる間は描き直さない
+     🔴 ④ 縮尺＝**6段に吸い付く**／既定（真ん中）が直す前とまったく同じ px／
+        **端末に覚えない（開き直したら既定に戻る）**／つまんでいる間は描き直さない
      🔴 ⑤ ？＝開く・閉じる・**下書きの説明が入っている**
      🔴 ⑥ 追加＝いまある3つだけ（**整備の枠はまだ出さない**）
      🔴 ⑦ 上のバーからチップ14個が消えている（畳めていなければ意味が無い）
@@ -18,7 +19,7 @@
    ◎使い方
        node test_loaner_head.mjs
        node test_loaner_head.mjs --break=1  … 検索で列も消すように壊す → ①が赤くなるのが正しい
-       node test_loaner_head.mjs --break=2  … 縮尺の既定をずらす         → ④が赤くなるのが正しい
+       node test_loaner_head.mjs --break=2  … 縮尺の既定の段をずらす     → ④が赤くなるのが正しい
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -34,7 +35,7 @@ const JS = (f) => fs.readFileSync(path.join(process.cwd(), 'js', f), 'utf8');
 
 function bend(src) {
   if (BREAK === '1') return src.replace('    if (byVeh.length) ls = byVeh;', '    ls = byVeh;');
-  if (BREAK === '2') return src.replace('const LO_DAY_MIN = 28, LO_DAY_MAX = 72;', 'const LO_DAY_MIN = 20, LO_DAY_MAX = 72;');
+  if (BREAK === '2') return src.replace('const LO_ZOOM_DEF = 2;', 'const LO_ZOOM_DEF = 3;');
   return src;
 }
 
@@ -175,38 +176,39 @@ console.log('\n── ③ 並べ替え（1つだけ・ラジオ）──');
 }
 
 /* ================================================================= */
-console.log('\n── ④ 縮尺（つまめるスライダー）──');
+console.log('\n── ④ 縮尺（6段に吸い付くスライダー）──');
 {
   const c = boot();
-  c.loZoom(23);
-  ok('🔴🔴 既定（23）＝1日 38px（直す前とまったく同じ）', c.css['--lo-dayh'] === '38px', c.css['--lo-dayh']);
-  ok('🔴🔴 既定（23）＝列 112px（直す前とまったく同じ）',
+  c.loZoom(2);
+  ok('🔴🔴 既定（真ん中＝2段目）＝1日 38px（直す前とまったく同じ）', c.css['--lo-dayh'] === '38px', c.css['--lo-dayh']);
+  ok('🔴🔴 既定＝列 112px（直す前とまったく同じ）',
      (c.els['loaner-grid'].style.gridTemplateColumns || '').indexOf('112px') >= 0, c.els['loaner-grid'].style.gridTemplateColumns);
-  c.loZoom(0);
-  ok('いちばん小さい側', c.css['--lo-dayh'] === '28px');
-  c.loZoom(100);
-  ok('いちばん大きい側', c.css['--lo-dayh'] === '72px');
+  c.loZoom(0); ok('いちばん小さい段', c.css['--lo-dayh'] === '28px');
+  c.loZoom(5); ok('いちばん大きい段', c.css['--lo-dayh'] === '72px');
   ok('列も一緒に広がる', (c.els['loaner-grid'].style.gridTemplateColumns || '').indexOf('166px') >= 0);
-  ok('🔴 端末に覚える', c.store['pitflow_lo_zoom_v1'] === '100');
-  c.loZoom(999); ok('上限を超えない', c.css['--lo-dayh'] === '72px');
-  c.loZoom(-5);  ok('下限を割らない', c.css['--lo-dayh'] === '28px');
+  c.loZoom(9);  ok('上限を超えない', c.css['--lo-dayh'] === '72px');
+  c.loZoom(-3); ok('下限を割らない', c.css['--lo-dayh'] === '28px');
+  /* 🔴 段でしか止まらない＝途中の値を渡しても、いちばん近い段に吸い付く */
+  c.loZoom(2.4); ok('🔴 途中の値は段に吸い付く（2.4→2段目）', c.css['--lo-dayh'] === '38px');
+  c.loZoom(3.6); ok('🔴 途中の値は段に吸い付く（3.6→4段目）', c.css['--lo-dayh'] === '56px');
+  const hs = new Set(); for (let i = 0; i <= 5; i++){ c.loZoom(i); hs.add(c.css['--lo-dayh']); }
+  ok('🔴 段は6つ（重なっていない）', hs.size === 6, [...hs]);
   ok('つまみの位置まで色が付く', (c.els['lo-zoom'].style['--lo-zfill'] || '').indexOf('%') >= 0);
   /* 🔴 つまんでいる間に描き直さない＝重くなるので、CSS変数と列幅だけ書き換えている */
   const c2 = boot();
   let rebuilt = 0; const orig = c2.loRebuild;
   c2.loRebuild = function(){ rebuilt++; return orig.apply(this, arguments); };
-  c2.loZoom(60);
+  c2.loZoom(4);
   ok('🔴 つまんでいる間は描き直さない（指について来なくなるため）', rebuilt === 0);
 }
 {
-  /* 覚えた縮尺を次に開いた時に拾う */
+  /* 🔴 覚えない（ゆうた指定「保存しないで、基本的には読み込みでデフォルトに戻る」） */
   const c = boot();
-  c.store['pitflow_lo_zoom_v1'] = '77';
-  c._loZoomLoad();
-  ok('🔴 次に開いた時、覚えた縮尺で出る', c._loDayH() === Math.round(28 + 44 * 0.77));
+  c.loZoom(5);
+  ok('🔴 端末に何も書かない', Object.keys(c.store).length === 0, c.store);
+  ok('🔴 開き直したら既定に戻る（別のセッション＝新しく開いた形）', boot()._loDayH() === 38);
 }
 
-/* ================================================================= */
 console.log('\n── ⑤ ？ 簡易マニュアル ──');
 {
   const c = boot();
@@ -247,7 +249,8 @@ console.log('\n── ⑦ 画面（畳めているか）──');
   ok('検索BOXがある', head.indexOf('id="lo-q"') >= 0);
   ok('絞込ボタンがある', head.indexOf('loFilterMenu') >= 0 && head.indexOf('id="lo-fcnt"') >= 0);
   ok('並べ替えボタンがある', head.indexOf('loSortMenu') >= 0);
-  ok('🔴 縮尺は段ではなくスライダー', head.indexOf('type="range"') >= 0 && head.indexOf('id="lo-zoom"') >= 0);
+  ok('🔴 縮尺はスライダー', head.indexOf('type="range"') >= 0 && head.indexOf('id="lo-zoom"') >= 0);
+  ok('🔴 6段に吸い付く形になっている', /min="0"\s+max="5"\s+step="1"/.test(head) && head.indexOf('value="2"') >= 0);
   ok('🔴 スライダーの左は小さい A ひとつだけ（AAの両端にしない）', (head.match(/lo-zoom-a/g) || []).length === 1);
   ok('？ボタンがある', head.indexOf('loHelp()') >= 0);
   ok('＋追加がある', head.indexOf('loAddMenu') >= 0);
