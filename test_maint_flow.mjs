@@ -19,6 +19,7 @@
        node test_maint_flow.mjs
        node test_maint_flow.mjs --break=1  … 入庫した時に残りの候補を消す → ⑥が赤
        node test_maint_flow.mjs --break=2  … 「今日はやらない」を無視する → ④が赤
+       node test_maint_flow.mjs --break=3  … 選択肢の窓が範囲を受けない形に戻す → ⑧が赤
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -36,6 +37,9 @@ function bend(name, src) {
   if (BREAK === '1' && name === 'maint-pit.js')
     return src.replace("    r.stage = 'fixed'; r.started = true;",
       "    r.stage = 'fixed'; r.started = true;\n    w.state.fleetEvents = arr(w.state.fleetEvents).filter(function(x){ return !(x.maint && x.groupId === r.groupId && x.id !== r.id); });");
+  if (BREAK === '3' && name === 'maint-pit.js')
+    return src.replace('w.flMaintCellMenu = function(vehId, ds, to){', 'w.flMaintCellMenu = function(vehId, ds){')
+              .replace('to = to || ds;', '');
   if (BREAK === '2' && name === 'maint-pit.js')
     return src.replace("      if (arr(r.skipped).indexOf(ds) >= 0) return;      /* 「今日はやらない」を押した日 */", "");
   return src;
@@ -228,6 +232,11 @@ console.log('\n── ⑧ 画面のつなぎ ──');
   ok('当日ビューが自社代車を出す', /pitMaintTodayHtml/.test(today));
   ok('🔴 当日ビューの件数にも入る', /maintN/.test(today));
   ok('🔴 翌日ビューには出さない（今日だけ）', /isToday\) \? pitMaintTodayHtml/.test(today));
+  /* 🗣「候補日はドラッグでまとまった日を選べるように」＝範囲で受ける */
+  const mp = bend('maint-pit.js', JS('maint-pit.js'));
+  ok('🔴 選択肢の窓が範囲（から〜まで）を受ける', /flMaintCellMenu = function\(vehId, ds, to\)/.test(mp));
+  ok('🔴 なぞった範囲がそのまま窓に入る', /dsTo \|\| ds/.test(mp));
+  ok('クリックだけなら1日ぶん', /to = to \|\| ds;/.test(mp));
 }
 
 console.log('\n─────────────────────────────');

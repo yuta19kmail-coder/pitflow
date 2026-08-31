@@ -22,6 +22,8 @@
        node test_maint_board.mjs
        node test_maint_board.mjs --break=1  … 候補0本でも警告を出さない → ②が赤
        node test_maint_board.mjs --break=2  … バッジを満了月だけにする   → ③が赤
+       node test_maint_board.mjs --break=3  … 元のバッジを月カレンダーに戻す・なぞりを外す
+                                             ・「日を決める」の右寄せを外す → ⑧-2 が赤
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -37,6 +39,11 @@ const JS = (f) => fs.readFileSync(path.join(process.cwd(), 'js', f), 'utf8');
 function bend(name, src) {
   if (BREAK === '1' && name === 'maint-pit.js')
     return src.replace("else if (!live.length && p.inWindow){", "else if (false){");
+  if (BREAK === '3' && name === 'fleet.js')
+    return src.replace('/* 🔧 v2.46.0（ゆうた報告', "h += '<span class=\"fl-bdg shaken\">車検</span>';\n      /* 🔧 v2.46.0（ゆうた報告")
+              .replace('if (_flMode === \'day\') _flBindDayDrag();', '/* なぞりを外した */;');
+  if (BREAK === '3' && name === 'polish.css')
+    return src.replace('.mb-act{ grid-column:3; justify-self:end;', '.mb-act{');
   if (BREAK === '2' && name === 'loaner-free.js')
     return src.replace("months: [_ymAdd(_ym(v.shakenDate), -2), _ymAdd(_ym(v.shakenDate), -1), _ym(v.shakenDate)],",
                        "months: [_ym(v.shakenDate)],");
@@ -171,7 +178,7 @@ console.log('\n── ④ 「日を決める」は日ビューに切り替える
   ok('🔴 日ビューに切り替える', !!zoomed && zoomed.y === 2026 && zoomed.m === 9);
   ok('🔴 その車の行をアクティブにする', zoomed.vid === 'l1');
   ok('🔴🔴 代車カレンダーへは飛ばさない', wentLoaner === false);
-  const fleet = JS('fleet.js');
+  const fleet = bend('fleet.js', JS('fleet.js'));
   ok('日ビュー側に行を光らせる用意がある', /fl-hl/.test(fleet) && /flZoomTo/.test(fleet));
   ok('車両管理がボードを差し込んでいる', /flMaintBoardHtml\(\)/.test(fleet));
   ok('月カレンダーがバッジを差し込んでいる', /pitMaintBadges\(/.test(fleet));
@@ -220,6 +227,32 @@ console.log('\n── ⑦ 満了超過でも貸出は止めない ──');
   /* ⚠ 見るのは**呼び出し**（`pitLoanerUsable(`）。説明文に名前が出るのは構わない。 */
   ok('🔴 ボードは「知らせるだけ」（貸出の可否に手を出していない）',
      !/pitLoanerUsable\s*\(/.test(JS('maint-pit.js')) && !/\.retired\s*=/.test(JS('maint-pit.js')));
+}
+
+console.log('\n── ⑧-2 二重バッジの始末・行の並び・なぞり（v2.46.0 ゆうた報告）──');
+{
+  const fleet = bend('fleet.js', JS('fleet.js'));
+  const mStart = fleet.indexOf('function flMonthCalHtml');
+  const dStart = fleet.indexOf('function flDayCalHtml');
+  const month = fleet.slice(mStart, dStart);
+  const day = fleet.slice(dStart, dStart + 4000);
+  /* 🗣「今元のバッチとダブっちゃってる　まずもとのバッチを消してくれ」 */
+  ok('🔴🔴 月カレンダーから元の「車検」バッジを消した', month.indexOf('fl-bdg shaken') < 0);
+  ok('🔴🔴 月カレンダーから元の「12ヶ月」バッジを消した', month.indexOf('fl-bdg tenken') < 0);
+  ok('🔴 新しいバッジは月カレンダーに出る', /pitMaintBadges\(/.test(month));
+  /* ⚠ 日ビューの「車検」「12ヶ月」は**その日が満了日・点検日**という別の意味＝残す */
+  ok('⚠ 日ビューの「車検」は残っている（意味が違う＝その日が満了日）', day.indexOf('fl-bdg shaken') >= 0);
+  ok('⚠ 日ビューの「12ヶ月」も残っている', day.indexOf('fl-bdg tenken') >= 0);
+  /* 🗣「候補日はドラッグでまとまった日を選べるように」 */
+  ok('🔴 日ビューのマスに車と日の目印が付いている', /data-fv="/.test(day) && /data-fd="/.test(day));
+  ok('🔴 なぞりを繋いでいる（日ビューを描いた後に呼んでいる）', /_flMode === 'day'\) _flBindDayDrag\(\)/.test(fleet));
+  ok('🔴 同じ車の行の中だけで伸びる', /別の車へは伸ばさない/.test(fleet));
+  ok('なぞった所が光る', /fl-pick/.test(fleet));
+  ok('🔴 なぞりは1文字も保存しない', !/PitDB\.save/.test(fleet.slice(fleet.indexOf('function _flBindDayDrag'), fleet.indexOf('function flMonthCalHtml'))));
+  /* 🗣「専務のW212の車検の日を決めるが左に来ちゃってる」 */
+  const css = bend('polish.css', fs.readFileSync(path.join(process.cwd(), 'css', 'polish.css'), 'utf8'));
+  ok('🔴 「日を決める」は3列目に固定して右端へ', /\.mb-act\{[^}]*grid-column:3/.test(css) && /\.mb-act\{[^}]*justify-self:end/.test(css));
+  ok('🔴 真ん中の列が押し出されない（minmax(0,1fr)）', /\.mb-row\{[^}]*minmax\(0,1fr\)/.test(css));
 }
 
 console.log('\n── ⑧ ボードのHTML ──');
