@@ -34,7 +34,7 @@ const ok = (n, c, x = '') => {
 const JS = (f) => fs.readFileSync(path.join(process.cwd(), 'js', f), 'utf8');
 function bend(name, src) {
   if (BREAK === '1' && name === 'loaner-free.js')
-    return src.replace("function _maintBusy(it) { return it && it.status === 'fixed'; }",
+    return src.replace("function _maintBusy(it) { return it && it.stage === 'fixed'; }",
                        "function _maintBusy(it) { return !!it; }");
   if (BREAK === '2' && name === 'loaner-free.js')
     return src.replace("    if (l.retired) return false;",
@@ -50,11 +50,11 @@ const 代車 = [
 ];
 /* 🔧 整備の枠は fleetEvents に `maint:true` で入れる（箱を増やさない） */
 const 枠 = [
-  { id:'m1', vehicleId:'l1', maint:true, work:'shaken', status:'candidate', groupId:'g1',
+  { id:'m1', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g1',
     fromDate:'2026-10-04', toDate:'2026-10-06', label:'車検の候補' },
-  { id:'m2', vehicleId:'l1', maint:true, work:'shaken', status:'candidate', groupId:'g1',
+  { id:'m2', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g1',
     fromDate:'2026-10-12', toDate:'2026-10-16', label:'車検の候補', skipped:['2026-10-12'] },
-  { id:'m3', vehicleId:'l2', maint:true, work:'fix', status:'fixed', groupId:'g2', urgent:true,
+  { id:'m3', vehicleId:'l2', maint:true, work:'fix', stage:'fixed', groupId:'g2', urgent:true,
     fromDate:'2026-09-02', toDate:'2026-09-03', label:'修理（確定）' }
 ];
 const 予定 = [
@@ -97,7 +97,7 @@ console.log('\n── ① 整備の枠が返る ──');
 {
   const c = boot();
   const d = c.pitLoanerDay('l1', '2026-10-05');
-  ok('🔴 候補が返る', d.maints.length === 1 && d.maints[0].status === 'candidate');
+  ok('🔴 候補が返る', d.maints.length === 1 && d.maints[0].stage === 'candidate');
   ok('種類は maint（予定とは別）', d.maints[0].kind === 'maint');
   ok('作業タイプが分かる', d.maints[0].work === 'shaken');
   ok('同じ整備予定どうしが束ねられる', d.maints[0].groupId === 'g1');
@@ -106,7 +106,7 @@ console.log('\n── ① 整備の枠が返る ──');
   ok('最終日が分かる', d2.maints[0].isEnd === true && d2.maints[0].isStart === false);
   ok('途中の日はどちらでもない', d.maints[0].isStart === false && d.maints[0].isEnd === false);
   const f = c.pitLoanerDay('l2', '2026-09-02');
-  ok('🔴 確定が返る', f.maints.length === 1 && f.maints[0].status === 'fixed');
+  ok('🔴 確定が返る', f.maints.length === 1 && f.maints[0].stage === 'fixed');
   ok('急ぎの印が付く', f.maints[0].urgent === true);
   ok('「今日はやらない」を押した日が残る', c.pitLoanerDay('l1','2026-10-13').maints[0].skipped.join() === '2026-10-12');
   ok('飛び地は別々に返る（10/4〜6 と 10/12〜16）',
@@ -133,11 +133,11 @@ console.log('\n── ③ 案内（最短入庫日）は候補も避ける ─�
   ok('何も無い日は避けない', c.pitLoanerAvoidOn(L(c,'l1'), '2026-10-09') === false);
   /* 3台とも候補で埋めたら、案内できる日が無くなる */
   const c2 = boot([
-    { id:'m9', vehicleId:'l2', maint:true, work:'shaken', status:'candidate', groupId:'g9',
+    { id:'m9', vehicleId:'l2', maint:true, work:'shaken', stage:'candidate', groupId:'g9',
       fromDate:'2099-10-01', toDate:'2099-10-31' },
-    { id:'m10', vehicleId:'l3', maint:true, work:'shaken', status:'candidate', groupId:'g10',
+    { id:'m10', vehicleId:'l3', maint:true, work:'shaken', stage:'candidate', groupId:'g10',
       fromDate:'2099-10-01', toDate:'2099-10-31' },
-    { id:'m11', vehicleId:'l1', maint:true, work:'shaken', status:'candidate', groupId:'g11',
+    { id:'m11', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate', groupId:'g11',
       fromDate:'2099-10-01', toDate:'2099-10-31' }
   ]);
   ok('🔴 3台とも候補で埋まったら、1週間の案内は出せない', c2.pitLoanerPlanOk('2099-10-10', null) === false);
