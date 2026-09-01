@@ -923,7 +923,9 @@
     document.head.appendChild(st);
   }
   function appendMigrateBox(){
-    var host = document.getElementById('view-settings-body');
+    /* 🗂 v2.50.0 設定画面がグループに分かれたので、**「道具」の中**に入る。
+       ⚠ 場所が無い版（古い端末・別の並び）でも落ちないように、無ければ今までどおり一番下へ。 */
+    var host = document.getElementById('ps-tools-body') || document.getElementById('view-settings-body');
     var old = document.getElementById('pit-maint-mig');
     if (old && old.parentNode) old.parentNode.removeChild(old);
     if (!host) return;

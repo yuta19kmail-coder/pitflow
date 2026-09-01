@@ -1,3 +1,1634 @@
+<meta charset="utf-8"><title>設定画面 v2.50.0</title>
+<style>/* =========================================================
+   CoreFlow 見た目の基準（全アプリ共通）
+   ---------------------------------------------------------
+   ボタンの大きさ・角の丸み・すき間・アイコンの大きさを、
+   ここ1か所の数字で決める。各アプリの CSS は var(--ui-…) を使う。
+   ⚠ このファイルは <style> より先に読み込むこと。
+      （各アプリ側で上書きしたい時に上書きできるようにするため）
+   ⚠ 直す時は _shared/ の中を直して、sync-shared.ps1 で全アプリに配ること。
+      アプリの js/ css/ に入っているのは配られたコピー。直接直すと次の配布で消える。
+   ========================================================= */
+:root{
+  /* --- ボタン --- */
+  --ui-btn-h: 30px;        /* 文字つきボタンの高さのめやす */
+  --ui-btn-px: 11px;       /* 文字つきボタンの左右の余白 */
+  --ui-btn-py: 5px;        /* 文字つきボタンの上下の余白 */
+  --ui-btn-fs: 12.5px;     /* 文字つきボタンの文字の大きさ */
+  --ui-ib: 32px;           /* アイコンだけのボタン（正方形） */
+  --ui-ib-sm: 26px;        /* 小さいアイコンボタン（一覧の中など） */
+  --ui-tool: 36px;         /* 道具箱のボタン */
+
+  /* --- アイコン --- */
+  --ui-ic: 18px;           /* ふつう */
+  --ui-ic-sm: 15px;        /* 小さい（一覧の中・チップの中） */
+  --ui-ic-lg: 20px;        /* 大きい（道具箱） */
+
+  /* --- 角の丸み --- */
+  --ui-r-sm: 6px;
+  --ui-r: 8px;
+  --ui-r-lg: 12px;
+
+  /* --- すき間 --- */
+  --ui-gap: 6px;           /* アイコンと文字のあいだ */
+  --ui-gap-btn: 6px;       /* ボタンとボタンのあいだ */
+
+  /* --- 帯の高さ --- */
+  --ui-topbar: 48px;       /* 一番上の帯 */
+  --ui-subbar: 48px;       /* 2段目の帯（ノート名の行など）。道具箱がぴったり収まる高さ */
+}
+
+/* アイコンの土台。IC() が返す <svg class="ic"> に効く。
+   ⚠ display は inline のまま。flex の箱の中では自動で block 扱いになるので、
+     文字と並べても、道具箱のように並べても、どちらでも崩れない。 */
+.ic{ flex:none; pointer-events:none; vertical-align:-.18em; }
+
+/* アイコン＋文字のボタン（使いたいアプリだけ使う） */
+.ui-btn{
+  display:inline-flex; align-items:center; gap:var(--ui-gap);
+  padding:var(--ui-btn-py) var(--ui-btn-px);
+  font-size:var(--ui-btn-fs); border-radius:var(--ui-r);
+  line-height:1.4; white-space:nowrap; cursor:pointer;
+}
+.ui-ib{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:var(--ui-ib); height:var(--ui-ib);
+  border-radius:var(--ui-r); cursor:pointer; padding:0;
+}
+
+/* 指で押す端末では、押せる範囲を広げる（見た目は変えない） */
+@media (pointer:coarse){
+  :root{ --ui-btn-py: 7px; --ui-ib: 36px; --ui-tool: 40px; }
+}
+
+/* =========================================================
+   スクロールの棒（全アプリ共通・細くて控えめ）
+   ---------------------------------------------------------
+   ブラウザ既定の太いグレーの棒は、どのアプリでも浮いて見えるので、
+   ここで一度だけ形を決めて全アプリにそろえる。
+   マウスを乗せた時だけ、そのアプリの色（--acc）になる。
+   ⚠ --acc を決めていないアプリでもグレーで出るので、そのまま使える。
+   ========================================================= */
+:root{
+  --ui-sb: 10px;                              /* 棒の太さ */
+  --ui-sb-thumb: rgba(148,163,184,.35);       /* ふだんの色 */
+}
+*{ scrollbar-width: thin; scrollbar-color: var(--ui-sb-thumb) transparent; }
+::-webkit-scrollbar{ width: var(--ui-sb); height: var(--ui-sb); }
+::-webkit-scrollbar-track{ background: transparent; }
+::-webkit-scrollbar-corner{ background: transparent; }
+::-webkit-scrollbar-thumb{
+  background: var(--ui-sb-thumb);
+  border-radius: 8px;
+  border: 2px solid transparent;   /* 棒を細く見せるための余白 */
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover{
+  background: color-mix(in srgb, var(--acc, #94a3b8) 55%, transparent);
+  background-clip: padding-box;
+}
+
+/* 数字の印（1課・2課・順番など。絵文字の 1️⃣2️⃣ の代わり）
+   ⚠ 色は書かない＝文字色をそのまま継ぐ（線画アイコンと同じ考え方）。 */
+.ic-num{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:17px; height:17px; border:1.6px solid currentColor; border-radius:5px;
+  font-size:11px; font-weight:700; line-height:1; flex:none; vertical-align:-.18em;
+}
+
+/* =========================================================
+   チェックボックス（全アプリ共通・2026-08-02）
+   ---------------------------------------------------------
+   ブラウザ既定の白い箱・青いチェックはどのアプリでも浮くので、
+   MHS v0.81.0 で決めた「枠だけの控えめな四角」をここで標準にした。
+   ふだんは枠線だけ・押すとアプリの色で塗ってチェックが白く出る。
+
+   使い方： <input type="checkbox" class="ui-cb">
+            <input type="checkbox" class="ui-cb sm">   ← 小さい版（一覧の中など）
+
+   ⚠ 色は --acc（無ければ --brand）を使う。どちらも決めていないアプリでも
+      既定のインディゴで出るので、そのまま貼って構わない。
+   ⚠ 文字と並べる時は、囲みの <label> を display:inline-flex; align-items:center に。
+   ========================================================= */
+.ui-cb{
+  appearance:none; -webkit-appearance:none;
+  width:16px; height:16px; flex:0 0 auto; margin:0; padding:0; position:relative;
+  border:1.5px solid var(--text3, #94a3b8); border-radius:5px;
+  background:transparent; opacity:.65; cursor:pointer;
+  transition:opacity .12s, background .12s, border-color .12s;
+}
+.ui-cb:hover{ opacity:1; }
+.ui-cb:checked,.ui-cb:indeterminate{
+  background:var(--acc, var(--brand, #6366f1));
+  border-color:var(--acc, var(--brand, #6366f1));
+  opacity:1;
+}
+.ui-cb:checked::after{
+  content:''; position:absolute; left:4.5px; top:1px; width:3px; height:7.5px;
+  border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg);
+}
+.ui-cb:indeterminate::after{
+  content:''; position:absolute; left:2.5px; top:5.5px; width:8px; height:2px;
+  background:#fff; border-radius:1px;
+}
+.ui-cb:disabled{ opacity:.35; cursor:default; }
+.ui-cb.sm{ width:14px; height:14px; border-radius:4px; }
+.ui-cb.sm:checked::after{ left:3.8px; top:.5px; width:2.5px; height:6.5px; }
+.ui-cb.sm:indeterminate::after{ left:2.2px; top:5px; width:7px; }
+
+/* 指で押す端末では少しだけ大きく（見た目の細さは変えない） */
+@media (pointer:coarse){
+  .ui-cb{ width:18px; height:18px; }
+  .ui-cb:checked::after{ left:5.2px; top:1.5px; width:3.2px; height:8.4px; }
+}
+
+/* ========================================
+   base.css
+   PitFlow - 兄弟感のあるテーマ（CarFlow流用＋ブランド色だけ別）
+   ブランドアクセント: コーポレートグリーン #1f7a4d（自社カラー）／ CarFlow=青 #378ADD ／ StockFlow=紫
+   ======================================== */
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+/* ===== ダークテーマ（デフォルト） ===== */
+:root,
+:root[data-theme="dark"]{
+  --bg:#0f1117;--bg1:#0f1117;--bg2:#1a1d27;--bg3:#222536;--bg4:#2a2e42;
+  --border:#333650;--border2:#444870;
+  --text:#e8eaf6;--text1:#e8eaf6;--text2:#9fa8c7;--text3:#5c6490;
+
+  /* 警告3段（CarFlow と揃える） */
+  --green:#1db97a;--blue:#378ADD;--orange:#f59e0b;--red:#ef4444;
+
+  /* PitFlowブランド色：コーポレートグリーン（自社カラー） */
+  --brand:#26a269;
+  --brand-deep:#1f7a4d;
+  --brand-soft:rgba(38,162,105,.15);
+  --accent:#26a269;
+
+  /* 🔵 v1.74.1 アプリ内ダイアログ（全アプリ共通部品 ui-dialog.js）のボタン色。
+     ⚠ ここで決めておかないと、共通部品の**既定色（ピンク）**のまま出る＝
+        緑のアプリの真ん中にピンクのボタンが出て「バグに見える」。
+        ふきだし・ランプと同じ「部品はアプリのテーマカラーを借りる」決めごとに合わせた。 */
+  --acc:#26a269;
+  --accd:#1f7a4d;
+
+  /* レイアウト変数 */
+  --sidebar:220px;--topbar:54px;--tabs:46px;--action:56px;
+  --r:8px;--r2:12px;
+  --shadow-card:0 3px 12px rgba(0,0,0,.35);
+}
+
+/* ===== ライトテーマ（v1.91.0：いまの CarFlow に合わせた白グレー系） =====
+   🔴 2026-08-13（ゆうた指摘）**PitFlow のライトだけ「旧 CarFlow のベージュ」のままだった。**
+      いまの CarFlow は白グレーの「くっきりSaaS」＝ページ背景を少し濃いグレーにして
+      白いカードを浮かせ、枠線と影で輪郭を立てる作り。**そちらに合わせた。**
+   🔴 **地の色（背景・枠・文字・影）は CarFlow `css/base.css` の `[data-theme="light"]` をそのまま写す。**
+      直す時は CarFlow 側を見て、値をコピーすること。ここで別の色を考えない。
+   🔴 **ブランド色（緑）だけは PitFlow のまま**＝全アプリ共通の決めごと
+      （地の色はそろえる／アクセントはアプリごと）。CarFlow の青を持ってこないこと。 */
+:root[data-theme="light"]{
+  --bg:#EBEEF3;--bg1:#EBEEF3;--bg2:#FFFFFF;--bg3:#E3E7EE;--bg4:#D6DCE5;
+  --border:#D4DAE3;--border2:#B6BFCC;
+  /* 🔴 v1.56.2（ゆうた報告）**--text1 を書き忘れていた。**
+     ライトだけ --text1 が**ダークの値（ほぼ白 #e8eaf6）のまま残り**、明るい背景に白文字＝見えなかった。
+     予約詳細カードの **電話・予約時内容の本文・タブ名・代車の残り日数**、ほか
+     駐車場／付箋／作業内容／検索／顧客詳細まで **全38か所**が同じ穴。
+     ⚠ ダーク（base.css）とリキッド2つ（topbar.css）には元から入っていたので、ライトだけ漏れていた。
+     🔴 **テーマを1つ足したら、--text / --text1 / --text2 / --text3 を必ず4つとも書くこと。**
+        書き忘れても画面は落ちないので、誰も気づかない。 */
+  --text:#1A2230;--text1:#1A2230;--text2:#49535F;--text3:#5C6573;
+
+  /* 警告3段。⚠ ベージュ地に合わせて濃くしてあったが、白グレー地では沈むので CarFlow の値にそろえた。 */
+  --green:#10B981;--blue:#2563EB;--orange:#F59E0B;--red:#EF4444;
+
+  --brand:#1f7a4d;
+  --brand-deep:#155e3a;
+  --brand-soft:rgba(31,122,77,.12);
+  --accent:#1f7a4d;
+
+  /* 🔵 v1.74.1 アプリ内ダイアログのボタン色（上のダークと同じ理由） */
+  --acc:#1f7a4d;
+  --accd:#155e3a;
+
+  --sidebar:220px;--topbar:54px;--tabs:46px;--action:56px;
+  --r:8px;--r2:12px;
+  /* 白カードを浮かせる薄い影（CarFlow と同じ） */
+  --shadow-card:0 1px 3px rgba(16,24,40,.10), 0 1px 2px rgba(16,24,40,.06);
+}
+
+html,body{
+  height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Meiryo",sans-serif;
+  font-size:14px;
+  overflow:hidden;
+}
+
+button{
+  cursor:pointer;
+  font-family:inherit;
+  border:none;
+  background:none;
+  color:inherit;
+}
+
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* スクロールバー */
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:var(--border2)}
+
+/* ユーティリティ */
+.hidden{display:none !important}
+.flex{display:flex}
+.flex-col{display:flex;flex-direction:column}
+.flex1{flex:1}
+.gap-4{gap:4px}.gap-8{gap:8px}.gap-12{gap:12px}
+.center{display:flex;align-items:center;justify-content:center}
+.muted{color:var(--text2)}
+.tiny{font-size:11px;color:var(--text3)}
+
+/* ===== 日付・時刻の入力欄：カレンダー／時計のボタンをテーマに合わせる（v1.27.0） =====
+   🔴 ブラウザ標準のボタン（📅の絵）は色を直接は指定できない。`color-scheme` で
+      「いまどっち向きの画面か」をブラウザに伝えると、**ダークでは白っぽく・ライトでは黒く**
+      描き分けてくれる。これが無いと常に黒で描かれ、ダークで真っ黒のボタンになる。
+   ⚠ 押して開くカレンダーの中身も同じ向きになる（ダークなら暗い配色）。
+   ⚠ 入力欄だけに付ける＝ページ全体のスクロールバーや他の部品は今までどおり。
+   ・既定（data-theme 未設定）＝ダーク。liquid の2つも同じ扱い。 */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="week"]{ color-scheme: dark; }
+
+:root[data-theme="light"] input[type="date"],
+:root[data-theme="light"] input[type="time"],
+:root[data-theme="light"] input[type="datetime-local"],
+:root[data-theme="light"] input[type="month"],
+:root[data-theme="light"] input[type="week"],
+:root[data-theme="light-liquid"] input[type="date"],
+:root[data-theme="light-liquid"] input[type="time"],
+:root[data-theme="light-liquid"] input[type="datetime-local"],
+:root[data-theme="light-liquid"] input[type="month"],
+:root[data-theme="light-liquid"] input[type="week"]{ color-scheme: light; }
+
+/* ========================================
+   layout.css
+   サイドバー＋トップバー＋ビュー切替の枠組み
+   ======================================== */
+
+#app{
+  display:grid;
+  grid-template-columns:var(--sidebar) 1fr;
+  grid-template-rows:var(--topbar) 1fr;
+  height:100dvh;
+  width:100vw;
+}
+
+/* ===== トップバー ===== */
+#topbar{
+  grid-column:1 / -1;
+  grid-row:1;
+  display:flex;align-items:center;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:0 16px;
+  gap:12px;
+  z-index:10;
+}
+#topbar .logo{
+  display:flex;align-items:center;gap:8px;
+  font-weight:700;
+  font-size:16px;
+}
+#topbar .logo .pit{color:var(--brand)}
+#topbar .ver{
+  font-size:11px;
+  color:var(--text3);
+  background:var(--bg3);
+  padding:2px 8px;
+  border-radius:10px;
+  margin-left:4px;
+}
+#topbar .spacer{flex:1}
+#topbar .tb-btn{
+  padding:6px 12px;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  color:var(--text);
+  font-size:13px;
+}
+#topbar .tb-btn:hover{background:var(--bg4)}
+#topbar .tb-btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+#topbar .tb-btn.primary:hover{background:var(--brand-deep)}
+
+/* テーマ切替ボタン */
+#topbar .theme-toggle{
+  width:34px;height:34px;
+  border-radius:var(--r);
+  background:var(--bg3);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;
+}
+
+/* ===== サイドバー ===== */
+#sidebar{
+  grid-column:1;
+  grid-row:2;
+  background:var(--bg2);
+  border-right:1px solid var(--border);
+  overflow-y:auto;
+  padding:12px 0;
+  display:flex;
+  flex-direction:column;
+}
+.si-section-title{
+  font-size:10px;
+  color:var(--text3);
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:12px 16px 4px;
+}
+.si-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;
+  cursor:default;
+  font-size:13px;
+  color:var(--text);
+  border-left:3px solid transparent;
+  transition:background .12s;
+}
+.si-item:hover{background:var(--bg3)}
+.si-item.active{
+  background:var(--brand-soft);
+  border-left-color:var(--brand);
+  color:var(--brand);
+  font-weight:600;
+}
+.si-item .icon{
+  font-size:16px;
+  width:22px;
+  text-align:center;
+}
+
+/* ===== サイドバー フライアウト（親をホバー/タップで右に小メニュー・StockFlow流用） ===== */
+.si-flyout{position:relative}
+.si-has-flyout .si-caret{margin-left:auto;color:var(--text3);font-size:11px}
+.si-flyout.open-parent>.si-has-flyout{color:var(--brand)}
+.si-flyout.has-active>.si-has-flyout{color:var(--brand);font-weight:600;border-left-color:var(--brand)}
+.si-flyout-panel{
+  position:fixed;display:none;z-index:200;
+  min-width:212px;
+  background:var(--bg2);
+  border:1px solid var(--brand);
+  border-radius:10px;
+  padding:6px;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+.si-flyout-panel.open{display:block;animation:sfPop .14s ease-out}
+@keyframes sfPop{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.si-flyout-panel .si-item{border-left:none;border-radius:6px;padding:8px 10px}
+.si-flyout-panel .si-item:hover{background:var(--bg3)}
+/* 準備中（未実装）バッジ */
+.si-soon{margin-left:auto;font-size:9px;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:0 5px;line-height:15px}
+.si-flyout-panel .si-item .si-soon{margin-left:8px}
+/* 準備中ビューの中央カード */
+.soon-card{max-width:540px;margin:6vh auto 0;text-align:center;background:var(--bg2);border:1px dashed var(--border2);border-radius:14px;padding:34px 28px}
+.soon-card .soon-emoji{font-size:46px;line-height:1}
+.soon-card h3{margin:14px 0 8px;font-size:17px;color:var(--text)}
+.soon-card p{margin:0;color:var(--text2);font-size:13px;line-height:1.8}
+
+/* ===== メイン領域 ===== */
+#main{
+  grid-column:2;
+  grid-row:2;
+  overflow:hidden;
+  position:relative;
+  background:var(--bg);
+}
+.view{
+  position:absolute;
+  inset:0;
+  overflow:auto;
+  padding:16px;
+  display:none;
+}
+.view.active{display:block}
+
+/* ビュー共通：ヘッダー */
+.view-header{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:16px;
+  flex-wrap:wrap;
+}
+.view-title{
+  font-size:18px;
+  font-weight:700;
+  display:flex;align-items:center;gap:8px;
+}
+.view-title .icon{font-size:22px}
+.view-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.vh-btn{
+  padding:6px 12px;
+  background:var(--bg3);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  color:var(--text);
+  font-size:13px;
+}
+.vh-btn:hover{background:var(--bg4)}
+.vh-btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.vh-btn.primary:hover{background:var(--brand-deep)}
+
+/* ビュー共通：レンジ切替（当日/週/月/2ヶ月） */
+.range-tabs{
+  display:flex;gap:4px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:3px;
+}
+.range-tabs button{
+  padding:6px 12px;
+  font-size:12px;
+  border-radius:6px;
+  color:var(--text2);
+}
+.range-tabs button.active{
+  background:var(--brand);
+  color:#fff;
+}
+
+/* レスポンシブ：スマホ */
+@media (max-width:768px){
+  #app{grid-template-columns:1fr;grid-template-rows:var(--topbar) auto 1fr}
+  #sidebar{
+    grid-column:1;grid-row:2;
+    height:auto;
+    display:flex;
+    overflow-x:auto;
+    padding:0;
+    border-right:none;
+    border-bottom:1px solid var(--border);
+  }
+  .si-section-title{display:none}
+  .si-item{
+    border-left:none;
+    border-bottom:3px solid transparent;
+    padding:10px 12px;
+    white-space:nowrap;
+  }
+  .si-item.active{border-left:none;border-bottom-color:var(--brand)}
+  #main{grid-column:1;grid-row:3}
+}
+
+/* ========================================
+   views.css
+   各ビュー個別のスタイル
+   ======================================== */
+
+/* ===== カード共通（全ビューで使う1台=1カード） ===== */
+.pit-card{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-left:3px solid var(--brand);
+  border-radius:var(--r);
+  padding:8px 10px;
+  cursor:pointer;
+  user-select:none;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  box-shadow:var(--shadow-card);
+  transition:transform .08s, box-shadow .08s;
+}
+.pit-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.pit-card:active{cursor:pointer}
+.pit-card .pc-line1{
+  display:flex;align-items:center;gap:6px;
+  font-size:12px;color:var(--text2);
+}
+.pit-card .pc-time{font-weight:600;color:var(--brand)}
+.pit-card .pc-customer{
+  font-size:13px;font-weight:600;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pit-card .pc-car{
+  font-size:11px;color:var(--text2);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pit-card .pc-tags{
+  display:flex;gap:4px;flex-wrap:wrap;margin-top:2px;
+}
+.pit-card .pc-tag{
+  font-size:10px;
+  padding:1px 6px;
+  border-radius:8px;
+  background:var(--bg3);
+  color:var(--text2);
+  border:1px solid var(--border);
+}
+.pit-card .pc-tag.staff{background:var(--brand-soft);color:var(--brand);border-color:var(--brand)}
+.pit-card .pc-tag.urgent{background:rgba(239,68,68,.15);color:var(--red);border-color:var(--red)}
+
+/* ===== 予約ビュー ===== */
+#view-reserve .reserve-grid{
+  display:grid;
+  grid-template-columns:60px 1fr;
+  gap:0;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+#view-reserve .reserve-time-col{
+  background:var(--bg3);
+  border-right:1px solid var(--border);
+}
+#view-reserve .reserve-time-cell{
+  height:48px;
+  padding:4px 8px;
+  font-size:11px;
+  color:var(--text3);
+  border-bottom:1px solid var(--border);
+}
+#view-reserve .reserve-day-col{
+  position:relative;
+  border-bottom:1px solid var(--border);
+}
+#view-reserve .reserve-day-cell{
+  height:48px;
+  border-bottom:1px solid var(--border);
+  position:relative;
+}
+#view-reserve .reserve-day-cell.closed{
+  background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 10px,var(--bg2) 10px,var(--bg2) 20px);
+  color:var(--text3);
+}
+#view-reserve .reserve-day-cell.cutoff{
+  background:rgba(239,68,68,.05);
+}
+#view-reserve .reserve-event{
+  position:absolute;
+  left:4px;right:4px;
+  background:var(--brand-soft);
+  border-left:3px solid var(--brand);
+  border-radius:4px;
+  padding:4px 6px;
+  font-size:11px;
+  cursor:pointer;
+  overflow:hidden;
+}
+#view-reserve .reserve-event:hover{background:var(--brand)}
+
+/* 予約ビュー：シンプルな日表示モック */
+.reserve-day-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  padding:12px;
+}
+.reserve-slot{
+  display:grid;
+  grid-template-columns:80px 1fr;
+  gap:8px;
+  padding:8px;
+  border-bottom:1px solid var(--border);
+}
+.reserve-slot:last-child{border-bottom:none}
+.reserve-slot-time{
+  color:var(--text3);
+  font-size:12px;
+  padding-top:4px;
+}
+.reserve-slot-cards{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+/* 予約・返車「当日」のカードはタスクボードと同じ204px固定（名前の長短で縮まない・耳/注意タブの被り防止） */
+.reserve-slot-cards .pit-card.pcm{ flex:0 0 204px; width:204px; max-width:204px; }
+.reserve-slot.closed .reserve-slot-time::after{
+  content:" 定休";
+  color:var(--red);
+  font-weight:600;
+}
+
+/* 予約ビュー：週グリッド（7日×時間） */
+.reserve-week{
+  display:grid;
+  grid-template-columns:60px repeat(7, 1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.reserve-week-cell{
+  background:var(--bg2);
+  padding:4px 6px;
+  font-size:11px;
+  min-height:36px;
+  min-width:0;            /* ★週グリッドのセルが中身（長い車種名）で広がらない＝1fr均等固定。はみ出しは…で省略 */
+  overflow:hidden;
+}
+/* 週ビューのミニカードはセル幅に追従＝はみ出さない（名前/車種は .rwk-name/.rwk-car の…で省略） */
+.reserve-week-cell .rwk-card{ max-width:100%; min-width:0; box-sizing:border-box; }
+.reserve-week-head{
+  background:var(--bg3);
+  font-weight:600;
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:6px;
+}
+.reserve-week-head .dow{font-size:10px;color:var(--text3)}
+.reserve-week-head .day{font-size:14px}
+.reserve-week-head.today .day{color:var(--brand)}
+.reserve-week-head.closed{color:var(--red)}
+.reserve-week-time{
+  background:var(--bg3);
+  text-align:right;
+  color:var(--text3);
+  padding-top:6px;
+}
+.reserve-week-cell.closed{
+  background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 8px,var(--bg2) 8px,var(--bg2) 16px);
+}
+.reserve-week-event{
+  background:var(--brand-soft);
+  border-left:2px solid var(--brand);
+  border-radius:3px;
+  padding:2px 4px;
+  font-size:10px;
+  cursor:pointer;
+  margin-bottom:2px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reserve-week-event:hover{background:var(--brand)}
+/* 週ビュー ミニカード（C案）＝列幅に追従。当日タブのタスクカードを縮めた見た目。 */
+.reserve-week-cell{ font-size:11px; }
+.rwk-card{ background:var(--bg2); border:1px solid var(--border2); border-left:4px solid var(--green); border-radius:7px; padding:5px 7px; cursor:pointer; min-width:0; margin-bottom:4px; }
+.rwk-card:last-child{ margin-bottom:0; }
+.rwk-card:active{ cursor:pointer; }
+.rwk-card.rwk-claim{ border-color:#ef4444 !important; box-shadow:0 0 0 1px #ef444455; }
+.rwk-r{ display:flex; align-items:center; gap:5px; min-width:0; }
+.rwk-r + .rwk-r{ margin-top:3px; }
+.rwk-name, .rwk-car{ flex:1 1 auto; min-width:0; font-weight:700; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* v1.34.0 その行の時刻とぴったり同じでない時だけ出す小さな時刻（朝一・09:30・枠外の8:00 など） */
+.rwk-t{ flex:0 0 auto; font-size:10.5px; font-weight:700; color:var(--brand); background:var(--bg3); border:1px solid var(--border2); border-radius:4px; padding:0 4px; line-height:1.5; max-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* v1.34.0 週ビューの「時刻未定」行の見出し */
+.reserve-week-time.rwk-tbd-h{ color:#e0a33a; font-weight:700; }
+.rwk-badges{ flex:0 0 auto; display:flex; gap:3px; align-items:center; }
+.rwk-wb, .rwk-lo{ font-size:9.5px; font-weight:700; padding:0 5px; border-radius:4px; line-height:1.55; white-space:nowrap; border:1px solid; }
+.rwk-lo{ background:rgba(245,158,11,.16); color:#f59e0b; border-color:rgba(245,158,11,.55); }
+.rwk-front{ flex:0 0 auto; font-size:10px; font-weight:700; padding:0 6px; border-radius:5px; line-height:1.6; background:var(--bg3); color:var(--text); border:1px solid var(--border2); white-space:nowrap; }
+.reserve-week-event.urgent{
+  background:rgba(239,68,68,.15);
+  border-left-color:var(--red);
+  color:var(--red);
+}
+
+/* 予約ビュー：月カレンダー */
+.reserve-month{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.reserve-month-cell{
+  background:var(--bg2);
+  min-height:90px;
+  min-width:0;            /* ★長い客名/車種でセル（1fr列）が広がらない＝はみ出しは…で省略 */
+  padding:6px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+/* 日付セル（その月の日）は予約以外をクリックで全件表示＝ポインタ */
+.reserve-month-cell[data-drop]{ cursor:pointer; }
+.reserve-month-cell.dow{
+  background:var(--bg3);
+  min-height:0;
+  text-align:center;
+  padding:6px;
+  font-size:11px;
+  color:var(--text3);
+  font-weight:600;
+}
+.reserve-month-cell.other-month{opacity:.35}
+.reserve-month-cell.today .day-num{
+  background:var(--brand);color:#fff;
+  width:22px;height:22px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:700;
+}
+.reserve-month-cell.closed{
+  background:repeating-linear-gradient(45deg,var(--bg3),var(--bg3) 10px,var(--bg2) 10px,var(--bg2) 20px);
+}
+.reserve-month-cell .day-num{
+  font-size:11px;color:var(--text2);font-weight:600;
+  margin-bottom:2px;
+}
+.reserve-month-cell.sun .day-num{color:var(--red)}
+.reserve-month-cell.sat .day-num{color:var(--blue)}
+.reserve-month-event{
+  display:flex; align-items:center; gap:4px;
+  background:var(--bg3);                 /* 緑ベースをやめて中立色に（左ラインで国産緑/輸入ピンクを表現） */
+  border:1px solid var(--border);        /* ★枠を常時表示（hoverで消えないように） */
+  border-left:3px solid var(--border2);  /* 色はinlineでチーム色を上書き */
+  border-radius:4px;
+  padding:1px 4px 1px 5px;
+  font-size:10px;
+  color:var(--text);
+  cursor:pointer;
+  overflow:hidden;
+}
+.reserve-month-event:hover{ background:var(--bg4); border-color:var(--border2); }   /* 枠は残す */
+.reserve-month-event .rme-txt{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.reserve-month-event .rme-side{ flex:0 0 auto; display:flex; align-items:center; gap:3px; }
+/* 作業(色付き)＋代 のバッジ＝月リスト(.rml-ev)と2ヶ月チップ(.reserve-month-event)で共通 */
+.rme-wt{ font-weight:700; white-space:nowrap; }
+.rme-loaner{ font-weight:800; color:var(--orange); background:rgba(245,158,11,.16); border:1px solid rgba(245,158,11,.5); border-radius:3px; padding:0 3px; line-height:1.4; }
+/* 月リストのチップ右側（代→作業）。rml-evはnowrapのインラインチップなのでinline-flexで寄せる */
+.rml-side{ display:inline-flex; align-items:center; gap:4px; margin-left:6px; vertical-align:middle; }
+.reserve-month-event.urgent{
+  background:rgba(239,68,68,.15);
+  border-left-color:var(--red);
+  color:var(--red);
+}
+.reserve-month-more{
+  font-size:10px;
+  color:var(--text3);
+  text-align:right;
+  padding-right:2px;
+}
+
+/* 予約ビュー：2ヶ月（月カレンダー2連・v0.26.0 縦積みに変更） */
+.reserve-2month{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:20px;
+}
+.reserve-2month .month-block-title{
+  font-size:14px;font-weight:600;
+  margin-bottom:6px;
+  color:var(--text);
+}
+@media (max-width:768px){
+  .reserve-2month{grid-template-columns:1fr}
+}
+
+/* ===== タスクビュー（看板） ===== */
+#view-task .board-tabs{
+  display:flex;gap:4px;
+  margin-bottom:12px;
+  border-bottom:1px solid var(--border);
+}
+#view-task .board-tab{
+  padding:8px 16px;
+  font-size:13px;
+  color:var(--text2);
+  border-bottom:2px solid transparent;
+}
+#view-task .board-tab.active{
+  color:var(--brand);
+  border-bottom-color:var(--brand);
+  font-weight:600;
+}
+/* 看板ビューは縦フレックス＝ヘッダー固定＋看板が残り高さいっぱい
+   → 横スクロールバーがカードの高さでなくウィンドウ下部に固定される */
+#view-task.active, #view-course1.active, #view-course2.active{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.kanban{
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  align-items:flex-start;
+  flex:1 1 auto;
+  min-height:0;
+}
+.kanban-col{
+  flex:0 0 220px;
+  min-width:0;            /* ★中身（長い車種名など）で列が広がらない＝規定220px固定。はみ出しは…で省略 */
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  display:flex;
+  flex-direction:column;
+  max-height:100%;
+}
+.kanban-col-head{
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:6px;
+  font-size:13px;
+  font-weight:600;
+}
+.kanban-col-head .count{
+  margin-left:auto;
+  font-size:11px;
+  color:var(--text3);
+  background:var(--bg3);
+  padding:1px 8px;
+  border-radius:10px;
+}
+.kanban-col-body{
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  overflow-y:auto;
+  flex:1;
+}
+
+/* ===== 作業ビュー（PIT枠にカードがハマる） ===== */
+#view-work .pit-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:16px;
+}
+#view-work .pit-bay{
+  background:var(--bg2);
+  border:2px dashed var(--border2);
+  border-radius:var(--r2);
+  padding:12px;
+  min-height:200px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  position:relative;
+}
+#view-work .pit-bay-head{
+  display:flex;align-items:center;gap:8px;
+  padding-bottom:8px;
+  border-bottom:1px dashed var(--border);
+  font-weight:600;
+}
+#view-work .pit-bay-head .bay-icon{
+  font-size:18px;
+  color:var(--brand);
+}
+#view-work .pit-bay-head .bay-meta{
+  margin-left:auto;
+  font-size:11px;
+  color:var(--text3);
+}
+#view-work .pit-bay-empty{
+  color:var(--text3);
+  font-size:12px;
+  text-align:center;
+  padding:30px 0;
+}
+
+/* ===== 実績ビュー ===== */
+#view-result .result-cal{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+#view-result .result-cell{
+  background:var(--bg2);
+  min-height:100px;
+  padding:6px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+#view-result .result-cell.dow{
+  background:var(--bg3);
+  min-height:0;
+  text-align:center;
+  padding:6px;
+  font-size:11px;
+  color:var(--text3);
+  font-weight:600;
+}
+#view-result .result-cell .day-num{
+  font-size:11px;
+  color:var(--text3);
+  margin-bottom:2px;
+}
+#view-result .result-card{
+  font-size:11px;
+  background:var(--brand-soft);
+  border-left:2px solid var(--brand);
+  padding:2px 4px;
+  border-radius:3px;
+  cursor:pointer;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#view-result .result-card.returned{
+  background:rgba(29,185,122,.15);
+  border-left-color:var(--green);
+}
+
+/* ===== 代車ビュー ===== */
+#view-loaner .loaner-grid{
+  display:grid;
+  grid-template-columns:140px repeat(14,minmax(60px,1fr));
+  gap:1px;
+  background:var(--border);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:auto;
+  font-size:12px;
+}
+#view-loaner .loaner-cell{
+  background:var(--bg2);
+  padding:4px 6px;
+  min-height:36px;
+  position:relative;
+}
+#view-loaner .loaner-head{
+  background:var(--bg3);
+  font-weight:600;
+  text-align:center;
+}
+#view-loaner .loaner-car-name{
+  background:var(--bg3);
+  font-weight:600;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#view-loaner .loaner-bar{
+  background:var(--brand);
+  color:#fff;
+  border-radius:4px;
+  padding:2px 6px;
+  font-size:10px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ===== モーダル（カード詳細） ===== */
+.modal-backdrop{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.5);
+  display:none;
+  align-items:center;justify-content:center;
+  z-index:100;
+}
+.modal-backdrop.show{display:flex}
+/* 月/2ヶ月ビューの「その日の全件」ポップアップ */
+.pdp-box{ background:var(--bg2); border:1px solid var(--border); border-radius:12px; width:min(92vw,380px); max-height:80vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,.5); }
+.pdp-head{ display:flex; align-items:center; gap:8px; padding:12px 14px; border-bottom:1px solid var(--border); font-weight:700; font-size:14px; }
+.pdp-head .pdp-x{ margin-left:auto; background:var(--bg3); border:1px solid var(--border2); color:var(--text2); border-radius:8px; width:28px; height:28px; cursor:pointer; font-size:13px; }
+.pdp-head .pdp-x:hover{ background:var(--bg4); color:var(--text); }
+.pdp-list{ padding:12px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.pdp-list .pit-card.pcm{ width:100%; max-width:100%; box-sizing:border-box; }
+.pdp-empty{ color:var(--text3); text-align:center; padding:24px 0; font-size:13px; }
+.modal-box{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  width:min(640px,92vw);
+  max-height:85dvh;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+}
+.modal-head{
+  padding:14px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.modal-title{font-size:16px;font-weight:700;flex:1}
+.modal-close{
+  width:30px;height:30px;
+  border-radius:6px;
+  background:var(--bg3);
+}
+.modal-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.modal-row{
+  display:grid;grid-template-columns:100px 1fr;gap:8px;
+  font-size:13px;
+}
+.modal-row label{color:var(--text3)}
+
+/* ===== レスポンシブ ===== */
+@media (max-width:768px){
+  .kanban-col{flex:0 0 200px}
+  #view-work .pit-grid{grid-template-columns:1fr}
+  #view-loaner .loaner-grid{grid-template-columns:120px repeat(7,minmax(50px,1fr))}
+}
+
+/* ========================================
+   当日ビュー
+   ======================================== */
+#view-today-body{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* ===== 当日ビュー v0.29.0（時間軸・休憩バー・チーム色） ===== */
+.today-head{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex-wrap:wrap;
+}
+.today-date{ display:flex; align-items:baseline; gap:8px; }
+.today-date .big{ font-size:24px; font-weight:800; }
+.today-date .dow{ font-size:15px; color:var(--text2); }
+.today-badge{
+  font-size:11px; font-weight:800; color:#fff; background:#1db97a;
+  border-radius:999px; padding:2px 10px; margin-left:4px;
+}
+.today-badge.next{ background:#64748b; }
+
+.today-counts{ display:flex; gap:10px; }
+.count-chip{
+  display:flex; align-items:baseline; gap:6px;
+  border:1px solid var(--border); border-radius:var(--r); padding:6px 14px;
+}
+.count-chip.in{ background:rgba(29,185,122,.10); border-color:#1db97a; }
+.count-chip.out{ background:rgba(59,130,246,.10); border-color:#3b82f6; }
+.count-chip .num{ font-size:24px; font-weight:800; line-height:1; }
+.count-chip.in .num{ color:#1db97a; }
+.count-chip.out .num{ color:#3b82f6; }
+.count-chip .lbl{ font-size:11px; color:var(--text2); font-weight:700; }
+.count-chip .rem{ font-size:12px; font-weight:800; color:var(--red); margin-left:2px; }
+
+.today-nav{ margin-left:auto; display:flex; gap:6px; }
+.tnav-btn{
+  font-size:12px; padding:6px 12px; border:1px solid var(--border);
+  background:var(--bg3); color:var(--text); border-radius:var(--r); cursor:pointer;
+}
+.tnav-btn:hover:not(:disabled){ border-color:#1db97a; }
+.tnav-btn:disabled{ opacity:.4; cursor:default; }
+.count-chip + .full-btn, .full-btn{ align-self:stretch; }
+.full-btn.on{ background:#1db97a; color:#fff; border-color:#1db97a; }
+
+.today-cols{ display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:start; }
+.today-col{
+  background:var(--bg2); border:1px solid var(--border); border-radius:var(--r);
+  display:flex; flex-direction:column; overflow:hidden;
+}
+.today-col-head{
+  padding:10px 14px; font-size:14px; font-weight:800;
+  display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border);
+}
+.today-col-head .ic{ font-size:16px; }
+.today-col-head .cnt{
+  margin-left:auto; font-size:11px; background:var(--bg3);
+  padding:2px 10px; border-radius:10px; color:var(--text2);
+}
+.today-col-head.intake{ color:#1db97a; }
+.today-col-head.return{ color:#3b82f6; }
+.today-col-body{ display:flex; flex-direction:column; }
+.today-empty{ padding:30px 16px; text-align:center; color:var(--text3); font-size:12px; }
+
+/* 車検の枠は**当日ビューには出さない**（v1.131.0・ゆうた「ピットの当日は車検はないか」）。
+   v1.130.0 で一度入れた `.today-shk` / `.tshk-*` は**丸ごと取り消した**。
+   車検は「車検予定」の画面と、工場の MHS で見る。ここに足さないこと。 */
+
+/* 行：［チーム色］時間｜担当縦バッジ｜本体｜右タグ（固定幅で全幅揃え） */
+.today-row{
+  display:grid;
+  grid-template-columns:62px 22px 1fr 210px;
+  gap:10px;
+  padding:0 12px 0 14px;
+  height:56px;            /* 固定高さ＝フルビューで左右の行がきっちり揃う */
+  box-sizing:border-box;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background .1s;
+  border-left:6px solid var(--team);
+  align-items:center;
+  overflow:hidden;
+}
+.today-row:hover{ background:var(--bg3); }
+.today-row.is-urgent{ background:rgba(239,68,68,.06); }
+.today-row.in-break{ background:rgba(234,179,8,.05); }
+
+.tr-time{ color:var(--text); font-weight:800; font-size:15px; white-space:nowrap; }
+/* 🔴 v1.104.0（ゆうた指定）時間帯（09:00-10:00）は **3段** に折る。
+   時間の列は 62px しかなく、1行だと右がはみ出て隠れていた。
+   ⚠ 行の高さは 56px 固定なので、3段の時だけ文字を落として収める（1行の時は今までどおり大きいまま）。 */
+/* ⚠ 揃えは**左詰め**（ゆうた指定 2026-08-16）。10:00 のような1行の時と頭がそろう。真ん中寄せにしない。 */
+.tr-time.is-range{ font-size:12.5px; line-height:1.14; text-align:left; }
+.tr-time.is-range .tt-l{ display:block; }
+.tr-time.is-range .tt-sep{ font-size:9.5px; line-height:1; color:var(--text3); font-weight:700; }
+/* 🔴 v1.166.0（ゆうた報告「決まり次第が見切れる」）**長い言葉は2段。**
+   ⚠ 5文字（決まり次第・勝手に取る）は 15px だと 76px 必要で、62px の列から 14px はみ出していた。
+   ⚠ 時間帯（is-range）と違って**どちらの段もふつうの色・同じ大きさ**（片方が「〜」ではないため）。
+   ⚠ 切る場所は pit-share.js の表。CSS は並べるだけ。 */
+.tr-time.is-word2{ font-size:13px; line-height:1.18; text-align:left; }
+.tr-time.is-word2 .tt-l{ display:block; }
+.tr-front{
+  writing-mode:vertical-rl; text-orientation:upright;
+  font-size:11px; font-weight:800; color:#fff; border-radius:5px;
+  padding:3px 1px; text-align:center; letter-spacing:1px; align-self:stretch;
+  display:flex; align-items:center; justify-content:center; min-height:34px;
+}
+.tr-front.empty{ background:transparent; }
+
+.tr-main{ min-width:0; }
+.tr-headline{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.tr-customer{ font-weight:800; font-size:16px; white-space:nowrap; }
+.tr-carname{ font-weight:700; font-size:15px; color:var(--text); white-space:nowrap; }
+.tr-plate{ font-size:12px; color:var(--text2); margin-top:1px; }
+/* ナンバー横の当日メモ（クイック引継ぎ）＝当日ビュー内だけ v0.123.0 */
+.tr-plateline{ display:flex; align-items:center; gap:8px; margin-top:1px; min-width:0; }
+.tr-plateline .tr-plate{ margin-top:0; flex:none; }
+/* 🏷 v1.113.0（ゆうた指定 2026-08-17）ナンバーの場所に出す「初回顧客」「初回車両」。
+   🔴 初回はナンバーが入っていないので、その場所が空欄になっていた。そこに札を出す。
+   ⚠ ナンバーと同じ場所・同じ大きさ。**色と太さだけで見分ける**（行の高さ56pxは変えない）。 */
+.tr-plate.is-first,
+.tr-plate.is-firstcar{ font-weight:800; border-radius:4px; padding:0 5px; border:1px solid; }
+.tr-plate.is-first   { color:#378ADD; background:rgba(55,138,221,.12);  border-color:rgba(55,138,221,.5); }
+.tr-plate.is-firstcar{ color:#8b5cf6; background:rgba(139,92,246,.12);  border-color:rgba(139,92,246,.5); }
+[data-theme="light"] .tr-plate.is-first   { color:#1d4ed8; }
+[data-theme="light"] .tr-plate.is-firstcar{ color:#6d28d9; }
+.tr-note{ flex:1; min-width:0; font-size:12px; font-weight:800; color:var(--orange); background:transparent; border:none; border-radius:5px; padding:1px 4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:text; }
+.tr-note:hover{ background:rgba(255,255,255,.05); }   /* 枠は出さず、ホバー時だけうっすら */
+.tr-note.empty{ color:var(--text3); font-weight:400; opacity:.4; }   /* 未入力は控えめ＝「なにもないエリア」。クリックで入力 */
+.tr-note-input{ flex:1; min-width:0; width:100%; font-size:12px; font-weight:800; color:var(--orange); background:var(--bg2); border:1px solid var(--brand); border-radius:6px; padding:1px 6px; outline:none; font-family:inherit; }
+
+/* 右タグ：固定3スロットで全幅揃え（添え物｜受付タイプ｜作業タイプ）。中身は各スロット幅いっぱい */
+.tr-tags{ display:grid; grid-template-columns:64px 44px 78px; gap:6px; align-items:center; justify-content:end; }/* v0.87.2 受付タイプ枠を30→44px＝「待預」2バッジが詰まらず入る */
+/* 作業バッジ2個（併用）＝1個ぶん幅(78px)の中に横並び。余白・文字を詰めて2段積みにしない。 */
+.tr-tag-work.multi{ flex-wrap:nowrap; gap:2px; overflow:hidden; }
+.tr-tag-work.multi .tag-work{ font-size:10px; padding:1px 4px; flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tr-tag-slot{ display:flex; gap:3px; align-items:center; justify-content:flex-end; min-width:0; }
+.tag-drop{
+  width:100%; height:26px; border-radius:5px;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; color:#fff;
+}
+.tag-drop-wait    {background:#64748b}
+.tag-drop-sameDay {background:#f59e0b}
+.tag-drop-drop    {background:#10b981}
+.tag-work{
+  width:100%; height:26px; font-weight:800; border-radius:5px; border:1px solid;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  overflow:hidden; line-height:1.05;
+}
+.tag-side{
+  position:relative; overflow:visible;
+  font-size:10.5px; font-weight:700; padding:3px 6px; border-radius:5px;
+  background:var(--bg3); color:var(--text2); border:1px solid var(--border); white-space:nowrap;
+}
+.tag-side.consult{ background:rgba(234,179,8,.15); color:#a16207; border-color:#eab308; }
+.tag-side.loaner{ background:rgba(245,158,11,.12); color:#b45309; border-color:#f59e0b; }
+.tag-side.wash{ background:rgba(59,130,246,.1); color:#2563eb; border-color:#3b82f6; }
+/* 洗車 済＝他ビューと同じ赤い「済」スタンプを右上角に v0.123.3 */
+.tag-side.wash.done::after{
+  content:"済"; position:absolute; top:-8px; right:-5px; transform:rotate(-12deg);
+  font-size:9px; font-weight:900; color:#fff; background:#ef4444;
+  border-radius:3px; padding:0 2px; line-height:1.3;
+  box-shadow:0 1px 3px rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.18); pointer-events:none;
+}
+/* 作業タイプ・受付の文字は幅に合わせて自動縮小（長い「コーティング」等でもはみ出さない） */
+.tag-drop{ font-size:14px; }
+/* 🔴 v2.20.1（ゆうた 2026-08-28「待+当返みたいに2つ以上になると凄く小さくなっちゃう」）
+   受付タイプが2つの時は、**枠（44px）を2つで分け合う**。字はほぼ今までの大きさのまま。
+   ⚠ 直す前は共通の `.dbpair>span` が **9px** まで縮めていた（v0.87.2）。
+   　 実測すると 15px＋15px＝31px しか使っておらず、**44px の枠が13px余っていた**。
+   ⚠ 高さ（26px）は触らない＝当日ビューの札は全部そろえてある。 */
+.tr-tag-slot .dbpair{ width:100%; }
+.tr-tag-slot .dbpair > .tag-drop{ flex:1 1 0; min-width:0; width:auto; font-size:13px; }
+.tag-work{ font-size:13px; }
+/* 🚗 v2.7.1（ゆうた指摘で「車販」→「車販依頼」に改名したぶん）
+   4文字のラベルは1行だと枠からはみ出す。**2行に折り返して**入れる。
+   ⚠ 枠の大きさ（26px）は変えない＝当日ビューの札は全部そろえてある。 */
+.tag-work.long{ font-size:10px; line-height:1.02; white-space:normal; word-break:break-word; padding:0 2px; }
+.tr-tag-work.multi .tag-work.long{ font-size:9px; white-space:normal; text-overflow:clip; }
+
+/* 休憩ゾーン：全体が黄色の斜めストライプの連続ブロック。中のカードもその上に乗る。
+   ゾーンの一番下に明るい黄色の点線（休憩の終わりの目印） */
+/* 休憩ゾーン＝ブルーグレー（C-1）。警告色を避け「ひと息つく」トーンに */
+.tod-break{
+  background:repeating-linear-gradient(45deg, rgba(110,140,180,.16), rgba(110,140,180,.16) 10px, rgba(110,140,180,.05) 10px, rgba(110,140,180,.05) 20px);
+  border-top:1px dashed #6b87a8;      /* 上 */
+  border-bottom:1px dashed #6b87a8;   /* 下＝上と同じ点線 */
+}
+.tod-break-bar{
+  color:#3a5273; font-size:12px; font-weight:800; text-align:center;
+  padding:5px 0; border-bottom:1px dashed rgba(110,140,180,.5);
+  background:rgba(110,140,180,.14);
+}
+[data-theme="dark"] .tod-break-bar{ color:#a9c2e0; }
+/* 休憩枠内のカードは背景を透かしてストライプを見せる＝枠の中にいる感じ */
+.tod-break .today-row, .tod-break .today-row.in-break{ background:transparent; }
+.tod-break .today-row:hover{ background:rgba(110,140,180,.12); }
+.tod-break .today-row{ border-bottom:1px dashed rgba(110,140,180,.28); }
+/* 休憩枠内の空き行（相手側にカードがある時に枠を縦に広げる）＝枠と同じストライプ（背景は親が出すので透明）。
+   行間の点線で枠が何台分か分かる。一番下の明るい点線は親(.tod-break)の border-bottom が担当 */
+.tod-break-pad{ height:56px; box-sizing:border-box; border-bottom:1px dashed rgba(110,140,180,.28); background:transparent; }
+.tod-break-pad:last-child{ border-bottom:none; }
+/* セグメントの空き行＝相手カラムにカードがある高さに合わせた余白（午前の入庫スカスカが見える） */
+.tod-seg-pad{ height:56px; box-sizing:border-box; border-bottom:1px solid var(--border); background:repeating-linear-gradient(45deg, transparent, transparent 12px, rgba(128,128,128,.04) 12px, rgba(128,128,128,.04) 24px); }
+/* 休憩枠内のカードも同じ56px固定なので、フルビューで休憩バーが左右ぴったり揃う */
+.tod-break .today-row{ height:56px; }
+
+@media (max-width:768px){
+  .today-cols{grid-template-columns:1fr}
+  .today-nav{margin-left:0}
+}
+
+/* タスクボード：終端列・サイド列のスタイル */
+.kanban-col.terminal{
+  background:var(--bg);
+}
+.kanban-col.terminal .kanban-col-head{
+  color:var(--green);
+  background:linear-gradient(0deg, transparent, rgba(29,185,122,0.06));
+}
+.kanban-col.side{
+  flex:0 0 220px;
+  min-width:0;
+  margin-left:8px;
+  border-color:var(--border2);
+  background:repeating-linear-gradient(45deg,var(--bg2),var(--bg2) 8px,var(--bg) 8px,var(--bg) 16px);
+}
+.kanban-col.side .kanban-col-head{
+  color:var(--text3);
+  background:none;
+}
+.kanban-empty{
+  color:var(--text3);
+  font-size:11px;
+  text-align:center;
+  padding:10px 0;
+}
+
+/* ===== 試運転を「選ぶ」2枠（各フェーズ列の下段・通常/試運転） ===== */
+.kanban-td2{ flex:0 0 auto; margin:2px 8px 8px; display:flex; flex-direction:column; gap:6px; }
+.kanban-td2-box{ border:1.5px dashed var(--border2); border-radius:8px; padding:5px 6px; min-height:40px; display:flex; flex-direction:column; gap:8px; justify-content:center; }
+.kanban-td2-ph{ font-size:10.5px; color:var(--text3); text-align:center; opacity:.6; font-weight:700; letter-spacing:.02em; }
+.kanban-td2-lb{ font-size:10.5px; font-weight:800; color:var(--text3); letter-spacing:.03em; }
+.kanban-td2-test.has{ border-color:var(--orange); background:rgba(245,158,11,.09); }
+.kanban-td2-test.has .kanban-td2-lb{ color:var(--orange); }
+.kanban-td2-box.dnd-over{ border-style:solid; border-color:var(--green); background:rgba(29,185,122,.12); }
+/* 並び替え：このカードの手前に差し込む、を上辺の緑ラインで示す */
+.pit-card.pcm.dnd-over{ box-shadow:inset 0 3px 0 0 var(--green); }
+
+/* ===== side列（廃車・外注）の縦積み ===== */
+.kanban-side-stack{ display:flex; flex-direction:column; gap:8px; flex:0 0 220px; min-width:0; margin-left:8px; align-self:stretch; min-height:0; }
+/* ★2つの箱の高さの決め方（v2.14.0・ゆうた指定）
+   ねらい＝**どちらも入りきらないほど積まれたら、まん中で半分ずつに割る。**
+     flex:1 1 0            高さの取り合いを「中身の量」ではなく **等分** から始める
+     max-height:max-content 中身より大きくはならない
+                           ＝片方が少ない時はその高さで止まり、余りはもう片方が全部もらう
+     min-height:120px      片方が山盛りでも、もう片方が潰れて消えない下限
+   ⚠ max-content を外すと、空の箱が画面いっぱいに伸びる（v2.9.6 で 1 1 auto を避けた理由がこれ）。
+     伸び止めが max-content なので、1 1 0 でも空の箱は「なし」の高さで止まる。
+   ⚠ この2列だけ body を flex:0 1 auto に戻す。flex:1（basis 0）のままだと
+     列の max-content が「中身の高さ」にならず、上の max-content が効かない。
+   （v2.9.6 の 0 1 auto ＋ max-height:100% は、中身の多い側だけが大きくなる＝半分にならなかった） */
+.kanban-side-stack .kanban-col.side{ margin-left:0; flex:1 1 0; min-height:120px; max-height:max-content; }
+.kanban-side-stack .kanban-col.side .kanban-col-body{ min-height:0; flex:0 1 auto; }
+
+/* ===== 外注ビュー（外注先ごとの俯瞰） ===== */
+.os-row{ background:var(--bg2); border:1px solid var(--border); border-radius:10px; margin-bottom:12px; overflow:hidden; }
+.os-rowh{ padding:9px 14px; font-size:13px; font-weight:700; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.os-rowh .os-n{ font-size:11px; font-weight:600; color:var(--text3); background:var(--bg3); border-radius:10px; padding:1px 8px; }
+.os-cards{ display:flex; flex-wrap:wrap; gap:12px; padding:12px; align-items:flex-start; }
+.os-none{ font-size:12px; color:var(--text3); padding:6px 2px; }
+/* タスクボードと同じコンパクトカード＋右側に完了予定・何日目 */
+.os-item{ display:flex; align-items:stretch; }
+.os-item .pit-card.pcm{ width:200px; border-top-right-radius:0; border-bottom-right-radius:0; }
+/* 外注ビューは右側BOXに外注先・日数を出すので、カード下の外注ラベルは隠す（重複回避） */
+.os-item .pcm-out{ display:none; }
+/* 横BOXは「耳（予約番号タブ）」の分だけ下げてカード本体と高さを揃える（耳ありカードは margin-top:9px） */
+.os-item .pit-card.pcm.pcm-tab + .os-side{ margin-top:9px; }
+.os-side{ display:flex; flex-direction:column; justify-content:center; align-items:center; gap:4px; min-width:66px; padding:6px 8px; background:var(--bg4); border:1px solid var(--border2); border-left:none; border-radius:0 8px 8px 0; }
+.os-side-due{ font-size:10px; color:var(--text3); text-align:center; line-height:1.3; }
+.os-side-due b{ font-size:14px; font-weight:800; color:var(--text); }
+.os-side-day{ font-size:11px; font-weight:800; color:#1c1300; background:#f59e0b; border-radius:4px; padding:0 6px; }
+.os-empty{ font-size:13px; color:var(--text3); padding:24px; text-align:center; }
+
+/* 返車ビュー：カレンダー上のイベント色（緑系で入庫と区別） */
+.reserve-month-event.return,
+.reserve-week-event.return{
+  background:rgba(29,185,122,.15);
+  border-left-color:var(--green);
+}
+.reserve-month-event.return:hover,
+.reserve-week-event.return:hover{
+  background:var(--green);
+  color:#fff;
+}
+.pit-card.return{
+  border-left-color:var(--green) !important;
+}
+/* 月＝日付リスト型（rml）でも返車は緑で統一（入庫＝作業色との区別） */
+.rml-ev.return{
+  border-left-color:var(--green) !important;
+  background:rgba(29,185,122,.12);
+}
+.rml-ev.return:hover{
+  background:var(--green);
+  color:#fff;
+}
+
+/* ========================================
+   カード詳細フォーム
+   ======================================== */
+.modal-box{
+  width:min(760px, 94vw) !important;
+  max-height:90dvh !important;
+}
+
+.cf-section{
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  margin-bottom:10px;
+}
+.cf-section-head{
+  padding:8px 12px;
+  font-size:12px;
+  font-weight:600;
+  color:var(--brand);
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  border-radius:var(--r) var(--r) 0 0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.cf-section-body{
+  padding:10px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.cf-row{
+  display:flex;
+  gap:10px;
+  align-items:flex-end;
+}
+.cf-field{
+  flex:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.cf-label{
+  font-size:10px;
+  color:var(--text3);
+  font-weight:600;
+}
+
+.cf-input{
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:6px 8px;
+  font-size:13px;
+  color:var(--text);
+  font-family:inherit;
+  width:100%;
+}
+/* 🔴 v1.54.2 上下の矢印（数字を増減させるつまみ）を出さない印（ゆうた指定）。
+   手で打つ金額欄に付ける。⚠ 付けた欄だけに効く＝ほかの数字欄は今までどおり。 */
+.cf-input[data-nospin]::-webkit-outer-spin-button,
+.cf-input[data-nospin]::-webkit-inner-spin-button{ -webkit-appearance:none; appearance:none; margin:0; }
+.cf-input[data-nospin][type=number]{ -moz-appearance:textfield; appearance:textfield; }
+.cf-input:focus{
+  outline:none;
+  border-color:var(--brand);
+  background:var(--bg);
+}
+.cf-input[type="date"],
+.cf-input[type="number"]{
+  font-family:inherit;
+}
+textarea.cf-input{
+  resize:vertical;
+  min-height:38px;
+}
+select.cf-input{
+  cursor:pointer;
+}
+
+.cf-chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.cf-chip{
+  padding:4px 12px;
+  font-size:12px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  color:var(--text2);
+  cursor:pointer;
+  transition:all .1s;
+  font-family:inherit;
+}
+.cf-chip:hover{
+  background:var(--bg3);
+}
+.cf-chip.active{
+  background:var(--brand);
+  color:#fff;
+  border-color:var(--brand);
+  font-weight:600;
+}
+
+.cf-toggle{
+  display:flex;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:6px;
+  overflow:hidden;
+  width:fit-content;
+}
+.cf-tg{
+  padding:5px 14px;
+  font-size:12px;
+  background:transparent;
+  color:var(--text2);
+  border:none;
+  cursor:pointer;
+  font-family:inherit;
+}
+.cf-tg.active{
+  background:var(--brand);
+  color:#fff;
+  font-weight:600;
+}
+.cf-tg + .cf-tg{
+  border-left:1px solid var(--border);
+}
+
+.cf-loaner-detail{
+  margin-top:6px;
+  padding:8px 10px;
+  background:var(--bg2);
+  border-radius:6px;
+  border-left:3px solid var(--brand);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+@media (max-width:768px){
+  .cf-row{flex-direction:column;align-items:stretch}
+}
+
+/* ===== v1.65.0 返車ビュー・当日の「終日」枠（待ち・当日返しで返車時間がまだ無い車） ===== */
+.reserve-slot.rs-allday .reserve-slot-time{ color:var(--text2); font-weight:800; }
+.reserve-slot.rs-allday .reserve-slot-time small{ display:block; font-size:9.5px; font-weight:600; color:var(--text3); margin-top:1px; }
+
+/* 🔴 v1.98.0 当日ビュー：担当者が入っていない時に出す「課」のバッジ（ゆうた指定）
+   🔴 v1.114.0（2026-08-18 ゆうた）**薄くしない。人の名前と同じ濃さの緑・ピンクで出す。**
+   🗣「フロントが入ってない時の1,2課のバッジが今ちょっと薄い設定だが、
+   　　**他のピンクとグリーンと同じでいい**。**コバモのグレーはそのまま**」
+   ⚠ 「人ではない」ことは、字（1課／2課）と横書きでないところで分かるので、色は落とさない。
+   ⚠ コバモ（自社）のグレーは**課が選ばれていない時の色**（pit-share.js の PIT_DIV_NONE_COLOR）で、
+   　 ここではなく人のバッジ側。今回は触っていない。 */
+.tr-front.is-div{
+  letter-spacing:0;
+}
+
+
+/* ==========================================================================
+   🆕 v1.149.0（ゆうた指定 2026-08-19）＝**未完**
+   　　「盤面にいるまま、確定返車日だけ先に入っている車」の見せ方。
+   🗣「完TELを通ってない以上『未完』ではあるから、未完なりグレーアウトなり、
+   　　終わってるわけではないのは伝えつつ、ただ返車として確定はしてるんだなってのを入れたい」
+   🔄 v1.150.0（ゆうた指摘）＝「**グレーアウトはいい。ただ未完の札だけ色をはっきり入れて視認性を上げて**」
+
+   🔴🔴 だから **カード全体に filter / opacity を掛けない。**
+   　　 親に掛けると **中の「未完」の札まで色が抜けて薄くなる**（＝ゆうた指摘の正体）。
+   　　 CSS の filter と opacity は**中身ごとまとめて**効くので、子で打ち消せない。
+   　　 → **グレーは「色を指定して」作る。札だけは色をそのまま残す。**
+
+   🔴 決めごと
+     ・カードは**グレー**にする＝終わっていないことが一目で分かる
+     ・でも**読めなくしない**（文字は落ち着いた色にするだけ）
+     ・**「未完」の札はハッキリした色**（色だけに頼らず、字でも分かる）
+     ・**つかめない**（ドラッグ不可）＝見えるだけ
+   ⚠ 付けるのは**返車系の画面だけ**。タスクボードのカードには付けない。
+   ========================================================================== */
+
+/* ── 「未完」の札：どの画面でも同じ形・同じ言葉（HTMLは return-slot.js の1本）
+   🔴 グレーの上でいちばん目立つ**塗りつぶしのオレンジ**。字は白。
+   　 （赤＝緊急・クレーム／青＝当日返し と役割がぶつからない色を選んでいる） */
+.ret-pend{
+  display:inline-flex; align-items:center; justify-content:center;
+  font-weight:800; letter-spacing:.5px; white-space:nowrap;
+  background:#f59e0b; color:#fff; border:1px solid #b45309;
+  border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+.ret-pend-mini{ font-size:9.5px; line-height:1; padding:2px 4px; }
+.ret-pend-std { font-size:10.5px; line-height:1; padding:3px 6px; }
+/* 🔄 v1.150.0（ゆうた指摘）当日ビューは**ほかの札と同じ大きさ**にそろえる（.tag-side と同じ寸法） */
+.ret-pend-row { font-size:10.5px; font-weight:800; padding:3px 6px; border-radius:5px; line-height:1.25; }
+
+/* ── カード本体＝グレーへ（filter は使わない） */
+.pit-card.is-retpend,
+.rwk-card.is-retpend,
+.rml-ev.is-retpend,
+.reserve-month-event.is-retpend,
+.today-row.is-retpend{
+  background:rgba(131,144,166,.10);
+  border-color:rgba(131,144,166,.45);
+  border-left-color:var(--pit-div-none,var(--text3)) !important;   /* 左の色（国産緑／輸入ピンク）もグレーへ */
+  border-left-style:dashed;               /* 点線＝「まだ途中」を形でも出す */
+}
+.pit-card.is-retpend:hover,
+.rwk-card.is-retpend:hover,
+.rml-ev.is-retpend:hover,
+.reserve-month-event.is-retpend:hover,
+.today-row.is-retpend:hover{ background:rgba(131,144,166,.18); }
+
+/* 中の文字は落ち着いたグレーに（読めなくはしない） */
+.is-retpend .pcm-name, .is-retpend .pcm-sama, .is-retpend .pcm-car, .is-retpend .pcm-front,
+.is-retpend .pc-customer, .is-retpend .pc-car, .is-retpend .pc-time,
+.is-retpend .rwk-name, .is-retpend .rwk-car, .is-retpend .rwk-front, .is-retpend .rwk-t,
+.is-retpend .tr-customer, .is-retpend .tr-carname, .is-retpend .tr-time,
+.is-retpend .rme-txt{ color:var(--text3) !important; }
+
+/* 色つきの小さなバッジ（作業・代車・受付・洗車 など）は彩度を落とす。
+   ⚠ **「未完」の札は対象にしない**（:not で外す）＝ここが今回のキモ。 */
+.is-retpend .pcm-wt, .is-retpend .pcm-loaner, .is-retpend .pcm-drop, .is-retpend .pcm-wash,
+.is-retpend .rwk-wb, .is-retpend .rwk-lo,
+.is-retpend .rme-wt, .is-retpend .rme-loaner,
+.is-retpend .tag-work, .is-retpend .tag-drop,
+.is-retpend .tag-side:not(.ret-pend){ filter:grayscale(.9); opacity:.72; }
+
+/* 当日ビュー：担当者（課）の縦バッジもグレーへ。左の色帯もグレー */
+/* 🔴 v1.160.0 グレーは pit-share.js の PIT_DIV_NONE_COLOR 1本（JSが --pit-div-none に配る）。
+   ⚠ ここに色を書き写さないこと（v1.150.0 で写して、MHS の見張りに捕まった）。 */
+.today-row.is-retpend{ --team:var(--pit-div-none,var(--text3)); }
+.today-row.is-retpend .tr-front{ background:var(--pit-div-none,var(--text3)) !important; }
+
+/* アクションシート（当日ビューのカードをタップ）の説明文 */
+.ta-note{
+  margin:6px 0 2px; padding:7px 9px;
+  background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.45); border-radius:7px;
+  font-size:11.5px; line-height:1.5; color:var(--text2);
+}
+
+/* 🆕 v1.151.0（ゆうた指定 2026-08-20）「暫定」＝受注のときのお客様への約束の日。
+   🔴 「未完」より**弱い印**にする＝同じオレンジで**枠だけ**。
+      色を増やすより、同じ色の濃淡で「確からしさ」を出す方が読み取りやすい。
+   （車販作業の洗車予定で使う。返車カレンダーには出さない＝あちらは確定だけ） */
+.ret-plan{
+  display:inline-flex; align-items:center; justify-content:center;
+  font-weight:800; letter-spacing:.5px; white-space:nowrap;
+  background:rgba(245,158,11,.14); color:#b45309; border:1px solid #f59e0b;
+  border-radius:5px;
+}
+
+/* 🆕 v1.152.0（ゆうた指摘）「未定」＝完TELまで来たのに返車日が決まっていない車。
+   🔴 別枠に隔離せず、同じ並びに札で混ぜる（枠を分けると下にあるほど軽く見えて、重要度が逆に伝わる）。
+   🔴 同じオレンジの**破線の枠**＝「同じ話の続きだが、日がまだ入っていない」を形でも出す。 */
+.ret-tbd{
+  display:inline-flex; align-items:center; justify-content:center;
+  font-weight:800; letter-spacing:.5px; white-space:nowrap;
+  background:transparent; color:#b45309; border:1px dashed #f59e0b;
+  border-radius:5px;
+}
+
+/* 🛡 v2.9.0 保険＝入金日で実績に乗る、の1行 */
+.cv-insnote{ margin-top:6px; font-size:11.5px; font-weight:700; color:#2563eb;
+  background:rgba(37,99,235,.10); border:1px solid rgba(37,99,235,.32);
+  border-radius:8px; padding:5px 10px; line-height:1.7; }
+
 /* ========================================
    polish.css  -  5ビューの見た目・操作感 底上げ（v0.1.1）
    ----------------------------------------
@@ -2680,3 +4311,12 @@ td.cfs-lg-busy.cfs-lg-hold{ background:repeating-linear-gradient(135deg, rgba(11
 /* 🔧 v2.46.0 日ビューのなぞり（候補日をまとめて選ぶ）。画面の中だけ・1文字も保存しない */
 .fl-cal-cell.fl-day{ cursor:crosshair; user-select:none; }
 .fl-cal-cell.fl-pick{ box-shadow:inset 0 0 0 2px var(--brand); background:var(--brand-soft) !important; }
+</style>
+<style>body{background:#0f151c;color:#e6edf3;font:13px/1.6 system-ui;padding:26px}
+.wrap{max-width:760px;margin:0 auto}
+.pit-mig-box,.pit-reset-box{margin:0;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--bg3)}
+.pit-mig-box h4,.pit-reset-box h4{margin:0 0 6px;font-size:14px}
+.pit-mig-box p,.pit-reset-box p{margin:0;font-size:12.5px;color:var(--text2)}
+.pr-go{margin-top:10px;padding:8px 14px;border-radius:8px;border:1px solid #dc2626;background:#dc2626;color:#fff;font-weight:700;cursor:pointer}
+</style>
+<div class="wrap"><div class="ps-bar"><span class="ps-bar-note">変更すると<b>その場で自動保存</b>されます（この端末のブラウザ内）。</span><span class="ps-status" id="ps-status"></span><button class="vh-btn" onclick="pitSettingsReset()">↩ 初期値に戻す</button></div><div class="ps-sec"><span class="ps-sec-t">① 毎日の設定</span><span class="ps-sec-n">数字とルール</span></div><div class="ps-card" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--text2);line-height:1.7;flex:1;min-width:240px"><i data-ic=download data-ics=16></i> <b>入庫に関する設定（予約枠・売上目標・平均単価・曜日ルールなど）は「<i data-ic=puzzle data-ics=16></i> ルール」ページに集約</b>しました。入庫のアルゴリズムはすべてそちらで調整します。</div><button class="vh-btn primary" onclick="showView('rules')"><i data-ic=puzzle data-ics=16></i> ルールページを開く</button></div><div class="ps-card"><div class="ps-h"><i data-ic=parking data-ics=16></i> 置き場（混雑度の基準）</div><div class="ps-desc">同時に預かれる台数を<b>場所ごとに分けて</b>持ちます。混雑度ゲージ・2週間バー・最短入庫は<b>4つの合計</b>で計算。「緊急＋α」は最悪ここまで使える、の上乗せ分。</div><div class="ps-grid"><label class="ps-lb"><i data-ic=wrench data-ics=16></i> ピット内 <input type="number" class="ps-in ps-num" id="ps-lot-pit" value="4" min="0" max="99" onchange="pitSettingsApply()"><span class="ps-unit">台</span></label><label class="ps-lb"><i data-ic=home data-ics=16></i> 自社敷地 <input type="number" class="ps-in ps-num" id="ps-lot-yard" value="12" min="0" max="99" onchange="pitSettingsApply()"><span class="ps-unit">台</span></label><label class="ps-lb"><i data-ic=parking data-ics=16></i> 駐車場 <input type="number" class="ps-in ps-num" id="ps-lot-park" value="8" min="0" max="99" onchange="pitSettingsApply()"><span class="ps-unit">台</span></label><label class="ps-lb"><i data-ic=warn data-ics=16></i> 緊急＋α <input type="number" class="ps-in ps-num" id="ps-lot-extra" value="4" min="0" max="99" onchange="pitSettingsApply()"><span class="ps-unit">台</span></label><span class="ps-lb">＝ 合計 <b id="ps-lot-sum" style="font-size:17px">28</b><span class="ps-unit">台</span></span></div><div class="ps-grid" style="margin-top:12px"><label class="ps-lb">最短入庫の預かり想定 <input type="number" class="ps-in ps-num" id="ps-hold" value="3" min="1" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></label></div><div class="ps-hint">※「最短で入庫できる日」は、この想定日数ぶん預かっても置き場（合計）が溢れない最初の日を探します。</div><div class="ps-grid" style="margin-top:12px"><span class="ps-lb" style="font-weight:700">空き数字の色分け</span><label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#f97316></i> 超過がここまでオレンジ <input type="number" class="ps-in ps-num" id="ps-over-warn" value="5" min="0" max="98" onchange="pitSettingsApply()"><span class="ps-unit">台</span></label><label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#ef4444></i> ここからは赤 <input type="number" class="ps-in ps-num" id="ps-over-danger" value="10" min="1" max="99" onchange="pitSettingsApply()"><span class="ps-unit">台 以上</span></label></div><div class="ps-hint">※ 空き0台まではずっと<b style="color:#1db97a">緑</b>。ちょい超過は緊急＋α・コインパで吸収できる「普通」なので、赤を安売りして受付が萎縮しないように（間の台数は濃いオレンジ）。</div></div><div class="ps-card"><div class="ps-h"><i data-ic=hourglass data-ics=15></i> 概算預かり日数の初期値（作業タイプ別・国産／輸入）</div><div class="ps-desc">作業タイプを選んだ時にカードへ自動で入る「だいたい何日預かるか」。<b>国産車と輸入車で別々</b>に設定できます。カードごとに後から手で直せます。</div><div class="ps-est2"><div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#ef4444"></span>車検</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-shaken-def" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-shaken-imp" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#3b82f6"></span>B.P</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-bp-def" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-bp-imp" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#84cc16"></span>一般（修理）</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-general-def" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-general-imp" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#64748b"></span>その他</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-default-def" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-est-default-imp" value="5" min="0" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日</span></span></div></div><div class="ps-hint">※ 受付タイプが「待ち」「当日返車」のときは、この表に関係なく <b>0日（置き場を使わない）</b>になります。</div></div><div class="ps-card"><div class="ps-h"><i data-ic=money data-ics=16></i> 概算金額の初期値（作業タイプ別・国産／輸入）</div><div class="ps-desc">作業タイプを選んだ時にカードの「概算金額」へ自動で入る金額。<b>国産車と輸入車で別々</b>に設定できます。いまの値は<b>令和8年1〜6月の実売上999伝票の中央値</b>（税抜・法定費用除く）。<b>平均ではなく中央値</b>なのは、高額修理で上振れしたまま概算を出すとお客様への提示が高くなりすぎるためです。</div><div class="ps-est2 ps-est2-money"><div class="ps-est2-head"><span class="ps-est2-name"></span><span class="ps-est2-cell">国産</span><span class="ps-est2-cell">輸入</span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#ef4444"></span>車検</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-shaken-def" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-shaken-imp" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#3b82f6"></span>B.P</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-bp-def" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-bp-imp" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#84cc16"></span>一般（修理）</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-general-def" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-general-imp" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span></div><div class="ps-est2-row"><span class="ps-est2-name"><span class="ps-est-tag" style="background:#64748b"></span>その他</span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-default-def" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span><span class="ps-est2-cell"><input type="number" class="ps-in ps-num" id="ps-eam-default-imp" value="100000" min="0" max="9999999" onchange="pitSettingsApply()"><span class="ps-unit">円</span></span></div></div><div class="ps-hint">※ 実態に合わせて調整できます。コーティング（1Y／3M）は当時のデータが無いため仮置きです。</div><div class="ps-note-auto"><div class="ps-note-auto-h"><i data-ic=bulb data-ics=16></i> この金額は、いずれ実績から自動計算に切り替えます（暫定運用中）</div><div class="ps-note-auto-b"><b>いまの状態</b>：この表（中央値）は<b>新規予約の概算</b>に使っています。売上 ▸ フロントの「<b>受注の質</b>」で比べている基準値は<b>これとは別の数字</b>で、同じ実売上データの<b>平均</b>を裏に持っています（概算は控えめに、評価は真ん中を当てる、と仕事が違うため）。<br><b>半年ほど運用したら</b>：直近6ヶ月の実績（返車まで終わって確定額が入った台）を作業タイプ × 国産／輸入 のマスごとに集計して、<b>平均＝評価の基準値</b>／<b>中央値＝この概算金額</b>に自動で入れ替える予定です。<br><b>そのとき詰めること</b>：立ち上がりは台数が足りず平均が跳ねる（200万が1台入ると20台のマスで平均が2倍）。ガクッと変わらないよう手入力値からにじり寄らせるか、大玉を内訳で切り出して見せるか、を実データを見てから決めます。</div></div></div><div class="ps-card"><div class="ps-h" style="display:flex;align-items:center;gap:10px"><i data-ic=external data-ics=16></i> 外注先（提携先）<button class="vh-btn" style="margin-left:auto" onclick="pitOsAdd()">＋ 外注先を追加</button></div><div class="ps-desc">カードを「外注」フェーズに移すとき選ぶ提携先リスト。外注ビューの行にもなります（削除しても過去カードのデータは消えません）。</div><div class="ps-wt-row"><input type="text" class="ps-in" style="width:220px" value="[object Object]" onchange="pitOsEdit(0,this.value)"><button class="rl-del" title="削除" onclick="pitOsDel(0)"><i data-ic=trash data-ics=16></i></button></div></div><div class="ps-card"><div class="ps-h">🚫 営業日・営業時間</div><div class="ps-desc">MHS の定休日カレンダーが基準です。</div></div><div class="ps-card"><div class="ps-h">📝 作業内容の型</div><div class="ps-desc">よく使う作業内容の定型文。</div></div><div class="ps-card"><div class="ps-h">🅿 駐車場</div><div class="ps-desc">駐車場の区画。</div></div><div class="ps-card"><div class="ps-h">🔄 設定の引き継ぎ</div><div class="ps-desc">別の端末へ設定を移す。</div></div><div class="ps-sec"><span class="ps-sec-t">② 見え方</span><span class="ps-sec-n">画面の見た目だけ。数字は変わりません</span></div><div class="ps-card"><div class="ps-h"><i data-ic=van data-ics=16></i> 代車リミットの色（残り日数）</div><div class="ps-desc">代車の返却まで残り日数で色が変わります。<b style="color:#1db97a">緑</b>＝余裕／<b style="color:#f59e0b">黄</b>＝注意／<b style="color:#ef4444">赤</b>＝間近／<b style="color:#9fa8c7">黒</b>＝超過（返却日を過ぎた）。</div><div class="ps-grid"><label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#22c55e></i> 緑：残り <input type="number" class="ps-in ps-num" id="ps-loan-green" value="4" min="1" max="60" onchange="pitSettingsApply()"><span class="ps-unit">日 以上</span></label><label class="ps-lb"><i data-ic=dot data-ics=12 style=color:#eab308></i> 黄：残り <input type="number" class="ps-in ps-num" id="ps-loan-amber" value="2" min="1" max="59" onchange="pitSettingsApply()"><span class="ps-unit">日 以上</span></label></div><div class="ps-hint">※ 黄の日数〜緑の手前＝黄、それ未満（当日0日含む）＝赤、返却日を過ぎる＝黒（超過）。</div></div><div class="ps-card"><div class="ps-h"><i data-ic=factory data-ics=16></i> PIT配置図（工場の簡易レイアウト）</div><div class="ps-desc">工場の<b>簡易的な平面図</b>を作ります。専用の編集画面で、PIT枠（平PIT／リフトPIT）をグリッドに沿って並べ、建物・ドア・シャッター・通路も置けます。ここで作った図に、作業中の車（カード）をはめていきます（次の段で「Pitリスト」「PITボード」に表示）。</div><div class="pf-launch"><button class="vh-btn primary" onclick="if(window.PitFloorEditor)PitFloorEditor.open()"><i data-ic=factory data-ics=16></i> PIT配置図を編集する</button><span class="pf-launch-meta">現在のPIT枠：0 個</span></div></div><details class="ps-fold"><summary><i data-ic=wrench data-ics=16></i> 道具 <span class="ps-sec-n">たまに使うもの</span></summary><div class="ps-fold-b"><div id="ps-tools-body"><div class="pit-mig-box done"><h4>🔧 代車の整備の枠を、予約カードに引っ越す</h4><p>引っ越すものはありません。前の形（v2.48.0 まで）の枠が1件も見つかりません。いま整備のカードは <b>0</b> 枚です。</p></div></div></div></details><details class="ps-fold ps-fold-danger"><summary><i data-ic=warn data-ics=16></i> 危ないもの <span class="ps-sec-n">押すと戻せません</span></summary><div class="ps-fold-b"><div id="ps-danger-body"><div class="pit-reset-box"><h4>⚠ 全部消して作り直す</h4><p>お客様・入庫カード・代車の予定を全部消します。元に戻せません。</p><button class="pr-go">初期化する…</button></div></div></div></details></div>
