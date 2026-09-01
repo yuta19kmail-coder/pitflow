@@ -893,23 +893,71 @@
     return { cards: made, recs: list.length };
   };
 
-  /* 設定画面に「引っ越し」の入口を出す（blank-cards.js と同じやり方＝写しを作らない考え方）。
-     ⚠ 引っ越すものが1件も無ければ**何も出さない**（済んだ機能をずっと置かない）。 */
+  /* 設定画面に「引っ越し」の入口を出す。
+     🔴🔴 v2.49.1（ゆうた報告「これがでないよ」）**必ず何か出す。**
+     ◎やってしまったこと
+       v2.49.0 は「引っ越すものが0件なら箱ごと出さない」作りだった。
+       すると **「もう済んでいる」と「読み込めていない・壊れている」の区別がつかない。**
+       押す人は「出ないんだけど」としか言いようがなくなる。
+     🔴 だから**3つの顔を必ず出す**：やることがある／済んでいる／そもそも前の形が無い。
+        ＝ **この箱が1つも出ない＝ v2.49.x が読み込まれていない**、と分かるようにする。
+     ⚠ 見た目は自前で持つ。**他の機能のCSSを借りない**
+        （前は blank-cards.js の `.pit-blank-box` を借りていたので、
+          あちらが出ていない時は**枠も色も付かない裸の文字**になっていた）。 */
+  function migCss(){
+    if (document.getElementById('pit-maint-mig-css')) return;
+    var st = document.createElement('style'); st.id = 'pit-maint-mig-css';
+    st.textContent = [
+      '.pit-mig-box{margin:18px 0;padding:14px 16px;border:1px solid var(--border,rgba(255,255,255,.14));',
+      '  border-radius:12px;background:var(--bg2,#141a22);line-height:1.7}',
+      '.pit-mig-box h4{margin:0 0 8px;font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px}',
+      '.pit-mig-box p{margin:0 0 10px;font-size:12.5px;color:var(--text2,#9aa7b4)}',
+      '.pit-mig-box .pit-mig-n{font-weight:800;color:var(--text,#e6edf3)}',
+      '.pit-mig-box .pit-mig-go{border:1px solid var(--accd);background:var(--accd);color:#fff;',
+      '  border-radius:9px;padding:9px 18px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit}',
+      '.pit-mig-box .pit-mig-go:hover{filter:brightness(1.12)}',
+      '.pit-mig-box.done{opacity:.75}',
+      /* ⚠ 色は必ず変数から。ここに緑やピンクの数字を書かない（test_pit_rules が見張っている） */
+      '.pit-mig-box .pit-mig-ok{font-size:12.5px;color:var(--green);font-weight:700}'
+    ].join('');
+    document.head.appendChild(st);
+  }
   function appendMigrateBox(){
     var host = document.getElementById('view-settings-body');
     var old = document.getElementById('pit-maint-mig');
     if (old && old.parentNode) old.parentNode.removeChild(old);
     if (!host) return;
+    migCss();
+    var all  = arr(w.state && w.state.fleetEvents).filter(function(e){ return e && e.maint; });
+    var done = all.filter(function(e){ return e.migrated; }).length;
     var n = w.pitMaintMigrateCount();
-    if (!n.recs) return;
+    var cards = mcards().length;
+
+    var body;
+    if (n.recs){
+      body = '<p>v2.49.0 から、代車・自社車両の整備の予定は<b>ふつうの予約カード</b>になりました。'
+           + 'それより前に置いた枠が <span class="pit-mig-n">' + n.recs + '</span> 件（作業 '
+           + '<span class="pit-mig-n">' + n.cards + '</span> 本）残っています。<br>'
+           + '押すと<b>作業1本につきカード1枚</b>を作り、候補（飛び地）はそのカードにまとめます。<br>'
+           + '⚠ 元のデータは<b>消しません</b>（済みの印を付けるだけ）。取り違えても元が残ります。</p>'
+           + '<button class="pit-mig-go" onclick="pitMaintMigrateGo()">この ' + n.cards + ' 本を引っ越す…</button>';
+    } else if (done){
+      body = '<p class="pit-mig-ok">✅ 引っ越し済みです（元データ ' + done + ' 件はそのまま残してあります）。</p>'
+           + '<p>いま整備のカードは <span class="pit-mig-n">' + cards + '</span> 枚です。'
+           + '作業予定ボード・当日ビュー・予約▸未定の「代車・自社車両」BOX で見られます。</p>';
+    } else {
+      body = '<p>引っ越すものはありません。<b>前の形（v2.48.0 まで）の枠が1件も見つかりません。</b><br>'
+           + 'いま整備のカードは <span class="pit-mig-n">' + cards + '</span> 枚です。'
+           + (cards ? 'こちらはもう新しい形なので、そのまま使えます。'
+                    : '⚠ 心当たりがあるのに0枚なら、まだクラウドを読み終わっていないか、'
+                      + '前の枠が消えている可能性があります。'
+                      + '画面を開き直しても0枚のままなら、そう伝えてください。')
+           + '</p>';
+    }
     var box = document.createElement('div');
-    box.id = 'pit-maint-mig'; box.className = 'pit-blank-box';
-    box.innerHTML = '<h4><i data-ic=wrench data-ics=16></i> 代車の整備の枠を、予約カードに引っ越す</h4>'
-      + '<p>v2.49.0 から、代車・自社車両の整備の予定は<b>ふつうの予約カード</b>になりました。'
-      + 'それより前に置いた枠が <span class="pb-n">' + n.recs + '</span> 件（作業 ' + n.cards + ' 本）残っています。<br>'
-      + '押すと<b>作業1本につきカード1枚</b>を作り、候補（飛び地）はそのカードにまとめます。<br>'
-      + '⚠ 元のデータは<b>消しません</b>（済みの印を付けるだけ）。取り違えても元が残ります。</p>'
-      + '<button class="pb-go" onclick="pitMaintMigrateGo()">この ' + n.cards + ' 本を引っ越す…</button>';
+    box.id = 'pit-maint-mig';
+    box.className = 'pit-mig-box' + (n.recs ? '' : ' done');
+    box.innerHTML = '<h4><i data-ic=wrench data-ics=16></i> 代車の整備の枠を、予約カードに引っ越す</h4>' + body;
     host.appendChild(box);
     try { if (w.icoBoot) w.icoBoot(box); } catch (e) {}
   }
@@ -927,11 +975,16 @@
       if (w.showView) w.showView('settings');
     });
   };
+  /* ⚠ 掛かったら止める。掛かっていない時だけ待つ（前は掛かったあとも待ち続けていた）。 */
   (function hookSettings(){
-    if (typeof w.renderSettings !== 'function' || w.renderSettings.__pitMaintMig){ setTimeout(hookSettings, 400); return; }
-    var orig = w.renderSettings;
-    var f = function(){ var r = orig.apply(this, arguments); try { appendMigrateBox(); } catch(e){} return r; };
-    f.__pitMaintMig = 1; w.renderSettings = f;
+    if (typeof w.renderSettings === 'function'){
+      if (w.renderSettings.__pitMaintMig) return;                /* もう掛かっている */
+      var orig = w.renderSettings;
+      var f = function(){ var r = orig.apply(this, arguments); try { appendMigrateBox(); } catch(e){} return r; };
+      f.__pitMaintMig = 1; w.renderSettings = f;
+      return;
+    }
+    setTimeout(hookSettings, 400);
   })();
 
   /* 小窓（代車カレンダーのものを借りる） */

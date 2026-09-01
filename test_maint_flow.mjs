@@ -90,7 +90,7 @@ function boot(form, answer){
   const ctx = {
     console, setTimeout, clearTimeout, Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
     localStorage:{ getItem(){ return null; }, setItem(){}, removeItem(){} },
-    document:{ body:{ appendChild(n){ if (n.id) els[n.id] = n; } },
+    document:{ body:{ appendChild(n){ if (n.id) els[n.id] = n; } }, head:node0(),
       documentElement:{ clientWidth:1280, style:{setProperty(){}} },
       getElementById(id){ if (form && (id in form)) return { value:form[id], checked:!!form['__chk_'+id], style:{} }; return els[id] || null; },
       createElement:()=>node0(), querySelector(){return null;}, querySelectorAll(){return [];},
@@ -106,6 +106,7 @@ function boot(form, answer){
     pitAlert:(m,o)=>{ asked.push({kind:'alert',code:(o||{}).code}); },
     pitAsk:(m,o)=>{ asked.push({kind:'ask',title:(o||{}).title,detail:(o||{}).detail}); return Promise.resolve(answer !== false); },
     pitLog(){}, pitToast(){}, renderFleet(){}, renderToday(){}, showView(){}, logFlow(){}, statusLabel(){ return ''; },
+    renderSettings(){},   /* ⚠ maint-pit.js が読まれる時に居ないと、引っ越しの入口が掛からない */
     ymd:(d)=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),
     addDays:(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
   };
@@ -372,6 +373,45 @@ console.log('\n── ⑩ カードに引っ越した（v2.49.0）・未定BOX�
   ok('🔴 元のレコードは残る（済みの印だけ）',
      c.state.fleetEvents.filter(x => x.id === 'old1')[0].migrated === true);
   ok('2回押しても増えない（済みの印を見ている）', c.pitMaintMigrate().cards === 0);
+}
+
+console.log('\n── ⑪ 引っ越しの入口は必ず何か出す（v2.49.1 ゆうた報告「これがでないよ」）──');
+{
+  /* 🔴 0件で箱ごと消すと「済んでいる」と「読み込めていない」の区別がつかない。
+     ＝ 押す人は「出ないんだけど」としか言えなくなる。**必ず3つの顔のどれかを出す。** */
+  const mkHost = () => ({ id:'view-settings-body', kids:[], innerHTML:'', textContent:'',
+    style:{setProperty(){}}, classList:{add(){},remove(){},contains(){return false;}},
+    addEventListener(){}, appendChild(n){ this.kids.push(n); }, removeChild(){}, remove(){},
+    parentNode:null, querySelector(){return null;}, querySelectorAll(){return []; } });
+  function settingsBox(fleetEvents, cards){
+    const host = mkHost();
+    const c = boot();
+    c.document.getElementById = (id) => (id === 'view-settings-body' ? host : null);
+    c.document.createElement = () => mkHost();
+    c.state.fleetEvents = fleetEvents; c.state.cards = cards;
+    c.renderSettings();
+    return host.kids.length ? String(host.kids[0].innerHTML) : '';
+  }
+  const 旧 = [{ id:'m1', vehicleId:'l1', maint:true, work:'shaken', stage:'candidate',
+                groupId:'g1', fromDate:add(20), toDate:add(22) }];
+  const 済 = [Object.assign({}, 旧[0], { migrated:true })];
+  const カ = [{ id:'k1', internKind:'loanercar', status:'reserved', intakeTbd:true,
+               maintVehId:'l1', maintYm:TODAY.slice(0,7), workType:'shaken',
+               maintSpans:[{ sid:'k', from:add(20), to:add(22) }] }];
+  ok('🔴 引っ越すものがある → ボタンが出る', /pitMaintMigrateGo/.test(settingsBox(旧, [])));
+  ok('🔴 引っ越し済み → 済んだと言う（黙って消えない）', /引っ越し済み/.test(settingsBox(済, カ)));
+  ok('🔴 前の形が1件も無い → そう言う', /1件も見つかりません/.test(settingsBox([], カ)));
+  ok('🔴🔴 どちらも0件でも黙らない（何が起きているか言う）',
+     /可能性があります/.test(settingsBox([], [])) && /pit-mig-n">0</.test(settingsBox([], [])));
+  ok('⚠ どの場合でも箱は必ず1つ出る（出ない＝この版が読み込まれていない、と分かる）',
+     [旧, 済, [], []].every((f, i) => settingsBox(f, i === 0 ? [] : カ).length > 0));
+  /* ⚠ 他の機能のCSSを借りない（借りると、あちらが出ていない時に裸の文字になる） */
+  const mp = bend('maint-pit.js', JS('maint-pit.js'));
+  ok('🔴 見た目を自分で持っている（blank-cards の CSS を借りていない）',
+     /pit-mig-box/.test(mp) && !/className = 'pit-blank-box'/.test(mp)
+     && !/class="pit-blank-box"/.test(mp));
+  ok('⚠ 掛け直しは掛かったら止まる（掛かったあとも待ち続けない）',
+     /if \(w\.renderSettings\.__pitMaintMig\) return;/.test(mp));
 }
 
 console.log('\n─────────────────────────────');
