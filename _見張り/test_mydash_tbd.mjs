@@ -100,7 +100,9 @@ try {
   console.log('  返車:', JSON.stringify(retV));
   console.log('  予約:', JSON.stringify(rsvV));
   ok('返車の未定は4カラムある', Object.keys(retV).length === 4, retV);
-  ok('予約の未定は4カラムある', Object.keys(rsvV).length === 4, rsvV);
+  /* ⚠ v2.49.0 で「代車・自社車両」のBOXが増えて**5つ**になった。ここが4のまま赤くなっていた
+     （v2.51.0 の作業より前から赤い）。数を直した。BOXを増やしたらここも直すこと。 */
+  ok('予約の未定は5カラムある', Object.keys(rsvV).length === 5, rsvV);
 
   function findCount(map, word) {
     var k = Object.keys(map).find(function (t) { return t.indexOf(word) >= 0; });

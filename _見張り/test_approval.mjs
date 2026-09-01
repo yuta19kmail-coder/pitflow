@@ -109,8 +109,10 @@ console.log('\n── 🔵 「承」の印が、仮と同じ6か所に出る ─
   ok('① 承認待ちカードは左ボーダーの印が付く（is-approval）', /is-approval/.test(h1));
   ok('① 仮予約のカードには「承」が付かない', !/appr-name/.test(h1k));
   ok('① 仮予約は今までどおり「仮」', /kari-name/.test(h1k));
-  const h2 = await p.evaluate(() => cardHtml(state.cards[0], {}));
-  ok('② 予約標準カードに丸スタンプ（appr-stamp）', /appr-stamp/.test(h2));
+  /* 🗑 v2.51.0（A-2）「予約標準カード（フルカード）」は片づけた。
+     ＝ `cardHtml(c, {})` は**もう何も描かない**。本番でも0枚だった（呼んでいる所が1か所も無かった）。
+     ⚠ ここで丸スタンプを見張っていたが、**見張る相手そのものが無くなった**ので外した。
+     　 承認の印は、コンパクトなカード（上の①）とカード詳細（下）で見張っている。 */
 
   /* ③ 週ビュー ④ 月 ⑤ 2ヶ月 */
   for (const [range, label] of [['week','週'],['month','月'],['2month','2ヶ月'],['day','当日']]){
@@ -139,7 +141,10 @@ console.log('\n── 📦 予約ビュー ▸ 未定タブ の承認待ちBOX �
   await seed(); await p.waitForTimeout(150);
   await p.evaluate(() => { state.reserveRange = 'tbd'; showView('reserve'); });
   await p.waitForTimeout(400);
-  ok('BOXが4つになる（承認待ち／仮予約／未定／未入庫）', await p.locator('#reserve-tbd .ret-tbd-col').count() === 4);
+  /* ⚠ v2.49.0 で「代車・自社車両」のBOXが増えて**5つ**になった。ここが4のまま赤くなっていた
+     （この作業より前から赤い）。数を直した。BOXを増やしたらここも直すこと。 */
+  ok('BOXが5つになる（承認待ち／仮予約／未定／代車・自社車両／未入庫）',
+     await p.locator('#reserve-tbd .ret-tbd-col').count() === 5);
   const first = p.locator('#reserve-tbd .ret-tbd-col').first();
   ok('🔴 承認待ちがいちばん左', /承認待ち/.test(await first.locator('.ret-tbd-h').textContent()));
   ok('件数が出る（1台）', (await first.locator('.und-cnt').textContent()).trim() === '1');

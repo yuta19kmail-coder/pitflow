@@ -54,7 +54,8 @@ console.log('\n── 🧭 物差しは1本か ──');
   const css = rd('css/mydash.css');
   ok('CSS に3段の札がある', /\.ins-lv\.ins-red/.test(css) && /\.ins-lv\.ins-amber/.test(css));
   ok('🔴 1行1規則の縦並びに戻している（題名が切れないように）', /\.ins-row\{[^}]*display:block/.test(css));
-  ok('カタログを作る道具がある', fs.existsSync(path.join(process.cwd(), '_boxcatalog.mjs')));
+  /* ⚠ v2.51.0 の片づけで、アプリ本体の直下から `_見張り/` に移した（本体はアプリだけにするため） */
+  ok('カタログを作る道具がある', fs.existsSync(path.join(process.cwd(), '_見張り', '_boxcatalog.mjs')));
 }
 
 const b = await chromium.launch({ executablePath: cp });

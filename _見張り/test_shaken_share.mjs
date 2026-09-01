@@ -16,7 +16,7 @@ import vm from 'vm';
 const box = {};
 box.window = box; box.globalThis = box; box.console = console;
 vm.createContext(box);
-vm.runInContext(fs.readFileSync(new URL('./js/pit-share.js', import.meta.url), 'utf8'), box);
+vm.runInContext(fs.readFileSync(new URL('../js/pit-share.js', import.meta.url), 'utf8'), box);
 box.PitShare.use({
   divisions: () => [{ id: 'div1', label: '1課', color: '#1db97a' }, { id: 'div2', label: '2課', color: '#ec4899' }],
   estAmount: () => 0, teamKey: () => 'default'

@@ -75,34 +75,19 @@ console.log('\n── 🧰 マスターの中身 ──');
 {
   const m = await p.evaluate(() => (window.PIT_WORK_TYPES || []).map(w => w.id));
   /* ⚠ 作業タイプを足したら、この並びも一緒に直す（＝勝手に増えていないかの見張り） */
-  ok('マスターが8種そろっている', m.length === 8, m);
-  ok('中身が 車検/12点/一般/オイル/B.P/1Y/3M/車販',
-     JSON.stringify(m) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m', 'carsale']), m);
+  ok('マスターが9種そろっている', m.length === 9, m);
+  ok('中身が 車検/12点/一般/オイル/B.P/1Y/3M/車販依頼/物販',
+     JSON.stringify(m) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m', 'carsale', 'goods']), m);
   const same = await p.evaluate(() =>
     JSON.stringify((state.workTypes || []).map(w => w.id)) ===
     JSON.stringify(((state.settings || {}).workTypes || []).map(w => w.id)));
   ok('🔴 settings.workTypes にも同じものが入っている（MHS が読む）', same);
 }
 
-console.log('\n── ⚙ 設定画面（見るだけになっているか） ──');
-{
-  await p.evaluate(() => showView('settings'));
-  await p.waitForTimeout(500);
-  const html = await p.content();
-  ok('「＋ タイプを追加」のボタンが無い', html.indexOf('タイプを追加') < 0);
-  ok('「見るだけ」と出ている', (await p.locator('.ps-ro-tag:visible').count()) >= 1);
-  /* ⚠ .ps-wt-row は外注先の行も使っている。作業タイプの行は .ps-wt-ro（見るだけ）で見る */
-  ok('名前を打ち替える入力が無い', (await p.locator('.ps-wt-ro input[type=text]').count()) === 0);
-  ok('色の四角（input color）が無い', (await p.locator('.ps-wt-ro input[type=color]').count()) === 0);
-  ok('ゴミ箱（削除）が無い', (await p.locator('.ps-wt-ro .rl-del').count()) === 0);
-  ok('そもそも作業タイプの行に入力欄が1つも無い', (await p.locator('.ps-wt-ro input').count()) === 0);
-  ok('一覧は8行出ている', (await p.locator('.ps-wt-ro').count()) === 8,
-     await p.locator('.ps-wt-ro').count());
-  const names = await p.locator('.ps-wt-name').allInnerTexts();
-  ok('名前が読める（車検が居る）', names.indexOf('車検') >= 0, names);
-  const tags = await p.locator('.ps-wt-tag').allInnerTexts();
-  ok('併用可の札が4つ（B.P / 1Y / 3M / 車販）', tags.filter(t => t === '併用可').length === 4, tags);
-}
+/* 🗑 v2.51.0 ここには「設定画面の作業タイプ（見るだけ）」の見張りがあったが、
+   **その画面は v2.50.0 の設定の片づけで外した**（見るだけの一覧なので、設定に置く意味が無かった）。
+   ＝ 見張る相手が無くなっていたので外す。**この作業より前から赤かったもの。**
+   ⚠ 作業タイプの一覧そのものは、すぐ上の「マスターの中身」で見張っている（そちらが本体）。 */
 
 console.log('\n── 🔧 揃え直し（クラウドに古いものが残っていた時） ──');
 {
@@ -125,9 +110,10 @@ console.log('\n── 🔧 揃え直し（クラウドに古いものが残っ�
   });
   ok('🔴 勝手に変えられた名前がコードの名前に戻る', r.shaken && r.shaken.label === '車検', r.shaken);
   ok('🔴 色もコードに戻る', r.shaken && r.shaken.color === '#ef4444', r.shaken);
-  ok('コードの8種が先頭に並ぶ',
-     JSON.stringify(r.ids.slice(0, 8)) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m', 'carsale']), r.ids);
-  ok('🔴 コードに無い型は消さずに末尾に残る', !!r.old && r.ids[8] === 'w1750000000000', r.ids);
+  /* ⚠ 作業タイプを足したら、この数と並びも一緒に直す（v2.51.0 で「物販」を足して 8→9） */
+  ok('コードの9種が先頭に並ぶ',
+     JSON.stringify(r.ids.slice(0, 9)) === JSON.stringify(['shaken', '12pt', 'general', 'oil', 'bp', 'coat1y', 'coat3m', 'carsale', 'goods']), r.ids);
+  ok('🔴 コードに無い型は消さずに末尾に残る', !!r.old && r.ids[9] === 'w1750000000000', r.ids);
   ok('残した型には「旧」の印が付く', !!r.old && r.old.legacy === true, r.old);
   ok('揃え直したので「保存が要る」印が立つ', r.dirty === true);
   ok('🔴 settings.workTypes に書き戻されている（MHS が読む）', r.linked === true);
@@ -143,8 +129,9 @@ console.log('\n── 🧭 まわり ──');
   await p.evaluate(() => { PitDB._applyWorkTypes(); state.cards = []; });
   await p.evaluate(() => showView('settings'));
   await p.waitForTimeout(200);
-  ok('旧の型があると「旧」の札が出る', (await p.locator('.ps-wt-old').count()) === 1,
-     await p.locator('.ps-wt-old').count());
+  /* 🗑 v2.51.0 「旧」の札は**設定画面の作業タイプの一覧**に出るものだったが、
+     その一覧は v2.50.0 の設定の片づけで外した。＝ 見張る相手が無い（この作業より前から赤かった）。
+     ⚠ 「旧」の印そのもの（legacy:true）は、すぐ上の揃え直しの所で見張っている。 */
   for (const v of ['course1', 'today', 'return', 'reserve', 'settings', 'rules']) {
     await p.evaluate(v => { try { showView(v); } catch (e) {} }, v);
     await p.waitForTimeout(160);

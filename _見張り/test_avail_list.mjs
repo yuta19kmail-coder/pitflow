@@ -241,11 +241,13 @@ console.log('\n── ⑤ 「予約キャンセル」と「未入庫」を言い
       reserveDate: ymd(new Date()), reserveTime: '10:00', log: [], maint: {}, office: {} }, extra);
     const a = mk({ status: 'cancelled', cancelled: true });
     const b = mk({ status: 'cancelled' });
-    const html = cardHtml(a, {}) + cardHtml(b, {});
-    const box = document.createElement('div'); box.innerHTML = html; document.body.appendChild(box);
-    const txt = Array.from(box.querySelectorAll('.pc-status')).map(e => e.textContent.trim());
-    box.remove();
-    return { txt, english: /cancelled/i.test(html) };
+    /* 🗑 v2.51.0（A-2）ここは片づけた「予約標準カード（フルカード）」を見ていた。
+       ＝ `cardHtml(c, {})` は**もう何も描かない**（呼んでいる所が1か所も無かった）。
+       🔴 見張りたいのは「予約キャンセル／未入庫を言い分けているか」で、
+       　 その物差しは `pitCardStatusText` **1本**。カードの見た目ではなく、そちらを直接見る。
+       　 ＝ 出す場所が増えても減っても、この見張りは効き続ける。 */
+    const txt = [ pitCardStatusText(a), pitCardStatusText(b) ];
+    return { txt, english: /cancelled/i.test(txt.join()) };
   });
   ok('🔴 予約カードの札が「予約キャンセル」「未入庫」', shown.txt[0] === '予約キャンセル' && shown.txt[1] === '未入庫', shown);
   ok('🔴 英語の「cancelled」が画面に出ていない', shown.english === false, shown);

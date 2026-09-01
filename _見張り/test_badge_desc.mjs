@@ -61,7 +61,10 @@ console.log('\n── 🔍 コードの決めごと ──');
   ok('🔴 お知らせの body は関数でも書ける（BODY で通す）',
      /function BODY\(a\)/.test(nw) && !/\(a\.body \|\| ''\)/.test(nw));
   /* 🔴 作業タイプの一覧を1文字でも変えたら版を上げる決まり（test_worktype_pingpong の相方） */
-  ok('🔧 作業タイプの一覧の版を上げた', /PIT_WORK_TYPES_VER = '2\.13\.0'/.test(st));
+  /* ⚠ ここは**そのときの版を直接書いている**。作業タイプの一覧を1文字でも変えたら、
+     　 state.js の PIT_WORK_TYPES_VER と**この行の両方**を直すこと（片方だけだと赤くなる）。
+     　 v2.51.0 … 物販を足した／車販依頼に hideWhenOthers を付けた */
+  ok('🔧 作業タイプの一覧の版を上げた', /PIT_WORK_TYPES_VER = '2\.51\.0'/.test(st));
 }
 
 const b = await chromium.launch({ executablePath: cp });
@@ -85,8 +88,10 @@ console.log('\n── 🏷 14個の意味 ──');
   const 空 = await p.evaluate(() => [window.pitBadgeDesc(''), window.pitBadgeDesc('しらない印')]);
   ok('🔴 知らない印には何も言わない（空を返す）', 空[0] === '' && 空[1] === '', 空);
   const g = await p.evaluate(() => (window.pitBadgeGroups() || []).map(x => x.名 + ':' + x.items.length));
-  ok('🗂 引き出しは3つ（作業タイプ8・付加3・社内区分3）',
-     g.join() === '作業タイプ:8,付加:3,社内区分:3', g);
+  /* ⚠ 作業タイプを増やしたら、この数も直すこと（v2.51.0 で「物販」を足して 8→9）。
+     　 数を数えているのは「意味（desc）を書き忘れた印が無いか」を確かめるため。 */
+  ok('🗂 引き出しは3つ（作業タイプ9・付加3・社内区分3）',
+     g.join() === '作業タイプ:9,付加:3,社内区分:3', g);
 }
 
 console.log('\n── 🖱 新規予約の画面で、押す前に読める ──');

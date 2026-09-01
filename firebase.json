@@ -12,6 +12,8 @@
       "**/node_modules/**",
       "functions/**",
       "資料/**",
+      "_見張り/**",
+      "_to_delete/**",
       "test_*.mjs",
       "test-*.html",
       "_*.js",
