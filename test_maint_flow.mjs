@@ -405,6 +405,19 @@ console.log('\n── ⑪ 引っ越しの入口は必ず何か出す（v2.49.1 �
      /可能性があります/.test(settingsBox([], [])) && /pit-mig-n">0</.test(settingsBox([], [])));
   ok('⚠ どの場合でも箱は必ず1つ出る（出ない＝この版が読み込まれていない、と分かる）',
      [旧, 済, [], []].every((f, i) => settingsBox(f, i === 0 ? [] : カ).length > 0));
+  /* 🔴🔴 v2.49.2 読み終わる前に「無い」と言わない（v1.2.1「読む前に書かない」と同じ考え方） */
+  {
+    const host = mkHost();
+    const c = boot();
+    c.document.getElementById = (id) => (id === 'view-settings-body' ? host : null);
+    c.document.createElement = () => mkHost();
+    c.PIT_CLOUD = true; c.PitDB._loaded = false;
+    c.state.fleetEvents = []; c.state.cards = [];
+    c.renderSettings();
+    const h = host.kids.length ? String(host.kids[0].innerHTML) : '';
+    ok('🔴🔴 読み終わる前は「1件も見つかりません」と言わない',
+       /読み終わっていません/.test(h) && !/1件も見つかりません/.test(h));
+  }
   /* ⚠ 他の機能のCSSを借りない（借りると、あちらが出ていない時に裸の文字になる） */
   const mp = bend('maint-pit.js', JS('maint-pit.js'));
   ok('🔴 見た目を自分で持っている（blank-cards の CSS を借りていない）',

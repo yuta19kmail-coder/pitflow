@@ -928,6 +928,20 @@
     if (old && old.parentNode) old.parentNode.removeChild(old);
     if (!host) return;
     migCss();
+    /* 🔴🔴 v2.49.2 **読み終わる前に「無い」と言わない。**
+       v1.2.1 の決めごと（読む前に書かない）は、**数えて言い切る時にも同じ**。
+       クラウドを読み終わる前に開くと、まだ空の手元を見て
+       「前の形が1件も見つかりません」と**嘘をつく**（そして押す人はそれを信じる）。 */
+    if (w.PIT_CLOUD && w.PitDB && !w.PitDB._loaded){
+      var wait = document.createElement('div');
+      wait.id = 'pit-maint-mig'; wait.className = 'pit-mig-box done';
+      wait.innerHTML = '<h4><i data-ic=wrench data-ics=16></i> 代車の整備の枠を、予約カードに引っ越す</h4>'
+        + '<p>まだクラウドを読み終わっていません。読み終わったらここに件数が出ます。'
+        + '（この画面を開き直してください）</p>';
+      host.appendChild(wait);
+      try { if (w.icoBoot) w.icoBoot(wait); } catch (e) {}
+      return;
+    }
     var all  = arr(w.state && w.state.fleetEvents).filter(function(e){ return e && e.maint; });
     var done = all.filter(function(e){ return e.migrated; }).length;
     var n = w.pitMaintMigrateCount();
