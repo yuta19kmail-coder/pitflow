@@ -6,7 +6,11 @@
        またドラッグ時には **既存のルール通りのカーソール表示** にする」
 
    ◎決めごと
-     🔴 空いているマスを押す → その枠が「行ける枠」に入る／もう一度押す → 外れる
+     🔴🔴 **v2.54.0（2026-09-02 ゆうた指定）で「押したら行ける枠」は廃止した。**
+        🗣「予定一覧で候補日の修正が出来ないようにする。ただし、車種×日の１セルに対してクリックする事で
+        　　暫定予定として上の決定カードのような形のものを下にも設置できるようにする」
+        ＝ **マスを押す＝暫定予定（仮押さえ）を置く。** 行ける枠の入れ替えは**予約詳細の窓だけ**。
+        ⚠ 暫定そのものの決めごとは `test_shaken_tent.mjs`（node だけで走る）にある。ここは**表の操作**だけ見る。
      🔴 帯（候補）を押しても **決定しない**（押し間違いで陸運局の日が変わらないようにする）
      🔴 決定は **帯を上の「決定」へドラッグ** した時だけ
      🔴 カーソルは **指さし（pointer）1本**（2026-08-16 の全アプリ共通の決めごと）。
@@ -53,7 +57,7 @@ const decided = () => p.evaluate(() => { const s = state.cards[0].inspSchedule||
 /* ===== ① 古い作りが残っていないこと ===== */
 const gone = await p.evaluate(() => ({
   shkFix: typeof window.shkFix, shkPaintStart: typeof window.shkPaintStart,
-  shkPaintMove: typeof window.shkPaintMove, shkSlot: typeof window.shkSlot,
+  shkPaintMove: typeof window.shkPaintMove, shkSlot: typeof window.shkSlot, shkTent: typeof window.shkTent,
   onmousedown: !!document.querySelector('#shakencal-body [onmousedown]'),
   onmouseenter: !!document.querySelector('#shakencal-body [onmouseenter]'),
   paintable: !!document.querySelector('#shakencal-body .paintable')
@@ -63,42 +67,68 @@ ok('押したら決定（shkFix）を廃止した',            gone.shkFix === '
 ok('範囲ドラッグで塗る作りを廃止した',            gone.shkPaintStart === 'undefined' && gone.shkPaintMove === 'undefined', gone);
 ok('表に onmousedown / onmouseenter が残っていない', !gone.onmousedown && !gone.onmouseenter, gone);
 ok('塗り用のマス（paintable）が残っていない',     !gone.paintable);
-ok('押して付け外しする窓口がある（shkSlot）',     gone.shkSlot === 'function', gone.shkSlot);
+ok('🔴 v2.54.0 押して行ける枠を付け外しする窓口は廃止（shkSlot）', gone.shkSlot === 'undefined', gone.shkSlot);
+ok('🅿 v2.54.0 マスを押す窓口は暫定予定（shkTent）',              gone.shkTent === 'function', gone.shkTent);
 
-/* ===== ② 空きマスを押す＝「行ける枠」に入る ===== */
+/* ===== ② 空きマスを押す＝🅿 暫定予定（仮押さえ）が置かれる（v2.54.0）===== */
 const cell1 = await p.evaluate(() => {
   const el = document.querySelector('#shakencal-body .shk-gcar .shk-gsc.slotcell');
-  const m = /押すと (\d+\/\d+)\(.\) (午前|午後)/.exec(el.getAttribute('title') || '');
-  return { title: el.getAttribute('title'), md: m ? m[1] : '', ap: m ? m[2] : '' };
+  return { title: el.getAttribute('title') };
 });
 await p.click('#shakencal-body .shk-gcar .shk-gsc.slotcell');
-await p.waitForTimeout(150);
+await p.waitForTimeout(200);
 const s1 = await slots();
-console.log('\n■ 予定（候補）＝押すだけ');
-ok('空きマスを押すと「行ける枠」が1つ入る',       Object.keys(s1).length === 1 && Object.values(s1)[0].length === 1, s1);
-ok('マスの吹き出しが「押すと〜に入れる」',        /押すと .*（?午前|午後/.test(cell1.title) || /押すと/.test(cell1.title), cell1.title);
+const t1 = await p.evaluate(() => { const s = state.cards[0].inspSchedule||{}; return { tent: s.tent||'', slot: s.tentSlot||'',
+  card: document.querySelectorAll('#shakencal-body .shk-gcar .shk-chip.shk-tent').length }; });
+console.log('\n■ 🅿 マスを押す＝暫定予定（仮押さえ）');
+ok('マスの吹き出しが「押すと〜暫定予定〜」',      /押すと/.test(cell1.title) && /暫定/.test(cell1.title), cell1.title);
 ok('吹き出しの日付に曜日が入っている',            /\(\S\)/.test(cell1.title), cell1.title);
+ok('🅿 押すと暫定が1つ入る',                      t1.tent !== '', t1);
+ok('🅿 下に決定カードと同じ形のカードが出る',     t1.card === 1, t1);
+ok('🔴 「行ける枠」は1つも増えない（この表からは触れない）', Object.keys(s1).length === 0, s1);
+ok('🔴 暫定は決定ではない（決定バンドは空のまま）',
+   (await p.evaluate(() => document.querySelectorAll('#shakencal-body .shk-decell .shk-chip').length)) === 0);
 
-/* 入った枠は帯（shk-bar）になる */
-const barTitle = await p.evaluate(() => (document.querySelector('#shakencal-body .shk-bar')||{}).title || '');
-ok('入れた枠が帯になって出る',                    barTitle !== '', barTitle);
-ok('帯の吹き出しが「押すと外す／ドラッグで決定」', /押すと/.test(barTitle) && /ドラッグ/.test(barTitle) && /決定/.test(barTitle), barTitle);
+/* もう一度同じマス（＝暫定カード）を押すと外れる */
+await p.click('#shakencal-body .shk-gcar .shk-chip.shk-tent');
+await p.waitForTimeout(150);
+await p.evaluate(() => { const b=document.querySelector('#shk-pop .shk-pbtn'); if(b) b.click(); });
+await p.waitForTimeout(200);
+ok('🅿 暫定カードを押す→「この暫定を外す」で外れる',
+   (await p.evaluate(() => (state.cards[0].inspSchedule||{}).tent || '')) === '', await p.evaluate(() => (state.cards[0].inspSchedule||{}).tent));
 
-/* ===== ③ 帯を押しても決定しない（今回の本丸） ===== */
-await p.click('#shakencal-body .shk-bar');
+/* ===== ③ 帯（行ける枠）は見るだけ（v2.54.0）===== */
+await p.evaluate(async () => {
+  /* 行ける枠は予約詳細で入れるもの。ここでは中身を直接置いて「表からは触れない」ことだけ見る */
+  const d = document.querySelector('#shakencal-body .shk-gcar .shk-gsc.slotcell').closest('.shk-gcar');
+  const cells = [...d.querySelectorAll('.shk-gsc')];
+  const iso = new Date().toISOString().slice(0,10);
+  state.cards[0].inspSchedule.slots = {}; state.cards[0].inspSchedule.tent = '';
+  /* 表に出ている最初のマスの日付を使う（休みの日を避けるため、画面から拾う） */
+  const first = cells.find(c => c.getAttribute('onclick'));
+  const m = /shkTent\('[^']+','([^']+)','([^']+)'\)/.exec(first.getAttribute('onclick')||'');
+  state.cards[0].inspSchedule.slots[m ? m[1] : iso] = [m ? m[2] : 'am'];
+  renderShaken();
+});
+await p.waitForTimeout(150);
+const barTitle = await p.evaluate(() => (document.querySelector('#shakencal-body .shk-gsc.slotcell .shk-bar')||{}).parentElement.title || '');
+ok('帯のマスの吹き出しに「入れ替えは予約詳細から」と書いてある', /予約詳細/.test(barTitle), barTitle);
+ok('🔴 帯そのものには吹き出しも押す口も無い',
+   (await p.evaluate(() => { const b=document.querySelector('#shakencal-body .shk-bar'); return !!(b && (b.getAttribute('onclick')||b.getAttribute('title'))); })) === false);
+await p.click('#shakencal-body .shk-gsc.slotcell .shk-bar');
 await p.waitForTimeout(200);
 const d1 = await decided();
 const s2 = await slots();
-console.log('\n■ 帯を押しても決定に飛ばない');
+console.log('\n■ 帯を押しても決定にも「枠外し」にもならない');
 ok('🔴 押しただけでは決定にならない',             d1.decided === '', d1);
-ok('押すとその枠が外れる（付け外しのトグル）',    Object.keys(s2).length === 0, s2);
+ok('🔴 押しても行ける枠は外れない（見るだけ）',   Object.keys(s2).length === 1, s2);
+ok('🅿 帯のマスを押すと暫定が置かれる',
+   (await p.evaluate(() => (state.cards[0].inspSchedule||{}).tent || '')) !== '');
 ok('決定バンドにチップが出ていない',              (await p.evaluate(() => document.querySelectorAll('#shakencal-body .shk-decell .shk-chip').length)) === 0);
 
 /* ===== ④ 決定はドラッグした時だけ ===== */
 const dragged = await p.evaluate(async () => {
-  /* もう一度1枠入れてから、その帯を「決定」の枠へドラッグする */
-  const cell = document.querySelector('#shakencal-body .shk-gcar .shk-gsc.slotcell');
-  cell.click();
+  /* ⚠ v2.54.0 押しても枠は増えない。**枠は中身に直接置いて**から、その帯を「決定」へドラッグする */
   await new Promise(r => setTimeout(r, 120));
   const bar = document.querySelector('#shakencal-body .shk-bar');
   const iso = bar.getAttribute('data-iso'), slot = bar.getAttribute('data-slot');
@@ -126,7 +156,10 @@ const cur = await p.evaluate(async () => {
     customer:'操作2', car:'テスト車2', plate:'',
     inspSchedule:{ mode:'manual', slots:{}, cutBefore:'', history:[] } });
   renderShaken();
-  document.querySelector('#shakencal-body .shk-gcar[data-card-id="OPS2"] .shk-gsc.slotcell').click();
+  /* ⚠ v2.54.0 押しても枠は増えない＝帯を出すには中身に置く */
+  const c2 = document.querySelector('#shakencal-body .shk-gcar[data-card-id="OPS2"] .shk-gsc.slotcell');
+  const m2 = /shkTent\('[^']+','([^']+)','([^']+)'\)/.exec(c2.getAttribute('onclick')||'');
+  if (m2) { state.cards[1].inspSchedule.slots[m2[1]] = [m2[2]]; renderShaken(); }
   await new Promise(r => setTimeout(r, 150));
   const g = el => el ? getComputedStyle(el).cursor : '(なし)';
   return {
