@@ -141,6 +141,9 @@ console.log('\n── ⑤ 🔴 画面の決めごと（車検予定の表）─�
   const hv = JS('card-hover.js');
   ok('🔴 ホバーは一番左だけ（行ぜんぶではない）',
      /\.shk-gut\.gcar/.test(hv) && !/'[^']*\.shk-gcar,/.test(hv));
+  /* 🔴 v2.54.1 ゆうた「予定バーの所でもホバーがでるのはやめてほしい」
+     ＝帯は押すと暫定を置く所。乗せただけで情報カードが出ると、置きたいマスに被る。 */
+  ok('🔴 帯（予定バー）ではホバーを出さない', !/var HOVER_SEL[^;]*\.shk-bar/.test(hv));
 
   const cv = JS('card-view.js');
   ok('予約詳細の再検の窓にも理由の欄がある', /id="cv-shnote"/.test(cv));
