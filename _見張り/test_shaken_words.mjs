@@ -21,6 +21,7 @@
 //     node _見張り/test_shaken_words.mjs --break=2 … 一発合格で印を消さない       → ②が赤
 //     node _見張り/test_shaken_words.mjs --break=3 … 回数に再検合格まで数える     → ③が赤
 //     node _見張り/test_shaken_words.mjs --break=4 … MHSが古い物差しでもボタンを出す → ④が赤
+//     node _見張り/test_shaken_words.mjs --break=5 … 窓を切り替える前に3つを控えない → ⑦が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -42,6 +43,10 @@ function bend(name, src) {
     return src.replace("s.repass = (act === 'repass');", "if (act === 'repass') s.repass = true;");
   if (BREAK === '3' && name === 'pit-share.js')
     return src.replace("if (h[i] && h[i].result === 'recheck') n++;", "if (h[i]) n++;");
+  return src;
+}
+function bendShaken(src) {
+  if (BREAK === '5') return src.replace(/_shkPend=_grabFields\(\);/g, '_shkPend=null;');
   return src;
 }
 function bendMhs(src) {
@@ -126,14 +131,16 @@ console.log('── ③ 落ちた回数は1本でしか数えない ──');
 
 console.log('── ④ 画面が物差しを通っているか（文字で確かめる） ──');
 {
-  const sh = JS('shaken.js');
+  const sh = bendShaken(JS('shaken.js'));
   ok('決定カードは物差しの行を受け取る', /function decChip\(c, kind, row\)/.test(sh));
   ok('決定カードは物差しの字をそのまま出す', /row \? \(row\.mark \|\| ''\)/.test(sh));
   ok('再検合格だけ「再合」に縮める（枠が118px）', /mark = '再合'/.test(sh));
   ok('完了のボタンが3つある',
      sh.indexOf("'done'") > 0 && sh.indexOf("'repass'") > 0 && sh.indexOf("'recheck'") > 0
-     && /完了（一発合格）/.test(sh) && /完了（再検合格）/.test(sh) && /不合格（戻して修理/.test(sh));
-  ok('落ちた所は不合格と再検合格の両方で渡す', /act==='recheck'\|\|act==='repass'/.test(sh));
+     && /完了（一発合格）/.test(sh) && /完了（再検合格）/.test(sh) && /不合格（記録して候補へ戻す）/.test(sh));
+  ok('落ちた所は不合格と再検合格の両方で書ける（窓は同じ1つ）',
+     /window\.shkNotePop=function\(id,act\)/.test(sh) && /shkActNote\(/.test(sh)
+     && /note:\(note==null\?null:note\)/.test(sh.replace(/\s/g, '')));
   ok('ガントの左端は「不合格◯」', /'不合格'\+rcN/.test(sh));
   ok('件数と凡例も新しい言葉', /うち再合/.test(sh) && /不合格'\+cnt\.recheck/.test(sh));
 
@@ -165,6 +172,31 @@ console.log('── ⑥ 前日LINEの画像 ──');
   ok('車種名のうしろに 車検／再検 の札を出す', /badge\(r\.re \? \(r\.mark \|\| '再検'\) : \(r\.kind \|\| '車検'\)/.test(b));
   ok('これから行く再検は右の印に出さない', /\(r\.mark && !r\.re\) \?/.test(b));
   ok('再検合格は緑', /r\.repass \? '#047857'/.test(b));
+}
+
+console.log('── ⑦ 決定チップの窓の組み方（v2.57.0・ゆうた指定 2026-09-04） ──');
+{
+  const sh = bendShaken(JS('shaken.js'));
+  const menu = sh.slice(sh.indexOf('window.shkChipMenu='), sh.indexOf('function _slT('));
+  ok('🔴 「予定を取り消す」は消した（候補に戻すと実質同じ）', menu.indexOf("'cancel'") < 0);
+  ok('🔴 塊を分ける線が2本ある', (menu.match(/shk-psep/g) || []).length === 2, (menu.match(/shk-psep/g) || []).length);
+  ok('カードを開くは、まん中の塊に入っている',
+     menu.indexOf('openDetail') > menu.indexOf('shk-psep') && /return;/.test(menu));
+  ok('午前午後は窓を切り替える（そのままラウンドへ）', /shkFlipPop\(/.test(menu) && !/'flip'/.test(menu));
+  ok('再検合格・不合格は理由の窓へ切り替える',
+     /shkNotePop\('.\+id\+'.,.'repass'\)/.test(menu.replace(/\\/g, '')) || /shkNotePop/.test(menu));
+  ok('一発合格だけはその場で確定（理由が無いので）', /shkAct\('.\+id\+'.,.'done'\)/.test(menu.replace(/\\/g, '')) || /'done'/.test(menu));
+  ok('窓の中に落ちた所の入力を置きっぱなしにしない', menu.indexOf('id="shk-note"') < 0);
+
+  ok('🔴 切り替える前に、担当・陸運局・R を控える',
+     /window\.shkNotePop=function[\s\S]{0,200}_shkPend=_grabFields\(\)/.test(sh)
+     && /window\.shkFlipPop=function[\s\S]{0,200}_shkPend=_grabFields\(\)/.test(sh));
+  ok('ラウンドの窓は 1〜4R を全部出す', /\[1,2,3,4\]\.map/.test(sh) && /未定にする/.test(sh));
+  ok('落ちた所の窓に「よく使う言葉」の札がある',
+     /SHK_NG_WORDS\s*=\s*\['光軸'/.test(sh) && /window\.shkAddWord=/.test(sh));
+  ok('札はもう一度押すと外れる', /if\(i>=0\) a\.splice\(i,1\); else a\.push\(w\);/.test(sh));
+  ok('記録は物差し1本を通る（窓が増えても写しを作らない）',
+     /function _applyPend/.test(sh) && /pitShakenApply\(s, act,/.test(sh));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
