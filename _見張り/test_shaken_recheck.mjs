@@ -69,7 +69,8 @@ console.log('── ① 中身をぜんぶ直せる ──');
   ok('Rを直せる',        h && h.round === 4, h);
   ok('理由を直せる',     h && h.note === 'サイドスリップ', h);
   ok('記録は1本のまま（増やさない）', r.insp.history.length === 1, r.insp.history.length);
-  ok('フローに残る1行がある', /再検の記録を直した/.test(r.log), r.log);
+  /* ⚠ v2.56.0 で言葉を分けた＝ログの字も「不合格の記録」に変わった（記録の中身は同じ） */
+  ok('フローに残る1行がある', /不合格の記録を直した/.test(r.log), r.log);
 
   const rp = box.pitShakenApply(S({}), 'reedit', { at: { i: 0, date: D1, slot: 'am' }, patch: { note: 'ブーツ切れ' } });
   ok('🔴 渡さなかったものは触らない（担当・陸運局・Rはそのまま）',
@@ -145,7 +146,8 @@ console.log('\n── ⑤ 画面の決めごと ──');
      /input\[type=text\]/.test(css) && /\.cv-shrc-i/.test(css));
 
   const mhs = MHS();
-  ok('MHS も「この再検の記録を取り消す」を出す', /この再検の記録を取り消す/.test(mhs));
+  /* ⚠ v1.58.0 で言葉を分けた＝ボタンの字は「この不合格の記録を取り消す」 */
+  ok('MHS も記録の取り消しボタンを出す', /この不合格の記録を取り消す/.test(mhs));
   ok('MHS は行の日と時間帯を渡している', /pitShkTap\(\\'\'\+escA\(r\.id\)\+\'\\',\\''\+escA\(bStr\)/.test(mhs.replace(/\n/g,' ')) || /escA\(bStr\)/.test(mhs));
   ok('🔴 MHS も中身は物差し1本（redrop を呼ぶだけ）', /pitShakenApply\(s, 'redrop'/.test(mhs));
   ok('🔴 MHS は2本ある時に消さず PitFlow へ回す', /hit\.amb/.test(mhs) && /予約詳細/.test(mhs));
