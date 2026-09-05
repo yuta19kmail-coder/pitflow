@@ -128,6 +128,16 @@ console.log('── ⑥ 整備タブは触っていない ──');
   ok('一番上のタブが増えただけ', /function topTabs\(\)/.test(ms) && /wsSetTop/.test(ms));
   ok('整備の配分エンジンは残っている', /function pitMechAlloc/.test(ms) && /FEE_DEFAULT/.test(ms));
   ok('期間の出し方は1か所（車検ラインへ渡している）', /renderShakenLine\(wrap, topTabs\(\), header\(\)/.test(ms));
+  /* 🔴🔴 2026-09-04 の反省（来店属性で踏んだ）＝**文字だけ見ていると「無い関数を呼んでいる」を拾えない。**
+     期間の帯を存在しない名前で呼び、タブを押しても何も起きない状態で出してしまった。
+     ＝ 呼んでいる名前が、そのファイルに本当にあるかまで見る。 */
+  var br = ms.slice(ms.indexOf("if(window._wsTop==='line')"), ms.indexOf("if(window._wsMode==='year') renderYear"));
+  br = br.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  var callNames = (br.match(/(?:^|[^\w.$])([a-zA-Z_$][\w$]*)\s*\(/g) || [])
+    .map(function(x){ return x.replace(/[^\w$]/g, ''); })
+    .filter(function(n2){ return ['if','return','function','var','typeof','new','Date'].indexOf(n2) < 0 && n2.indexOf('renderShakenLine') !== 0; });
+  var miss = callNames.filter(function(n2){ return ms.indexOf('function ' + n2 + '(') < 0 && ms.indexOf('window.' + n2 + ' =') < 0; });
+  ok('🔴 呼んでいる関数が本当にある（無い名前を呼んでいない）', miss.length === 0, miss);
   const idx = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   ok('index.html に ?v= 付きで載っている',
      /js\/shaken-line\.js\?v=\d+/.test(idx) && /css\/shaken-line\.css\?v=\d+/.test(idx));

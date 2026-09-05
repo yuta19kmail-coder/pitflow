@@ -24,6 +24,7 @@
 //     node _見張り/test_visit_attr.mjs --break=3 … 同じ日も過去扱い     → ③が赤
 //     node _見張り/test_visit_attr.mjs --break=4 … 札で判定してしまう   → ③が赤
 //     node _見張り/test_visit_attr.mjs --break=5 … スライドを週にも入れる → ⑤が赤
+//     node _見張り/test_visit_attr.mjs --break=6 … 無い関数を呼ぶ         → ⑦が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -143,7 +144,22 @@ console.log('── ⑦ 売上ビューへのつなぎ ──');
 {
   const sv = JS('sales.js');
   ok('タブに「来店属性」がある', /\['visit','来店属性'\]/.test(sv));
-  ok('期間の帯は売上ビューが作って渡す', /pitVisitYear\(wrap, head\(\)/.test(sv) && /pitVisitMonth\(wrap, head\(\)/.test(sv));
+  /* 🔴🔴 2026-09-04 の反省＝**文字だけ見ていたので「無い関数を呼んでいる」を拾えなかった。**
+     期間の帯を `head()` という**存在しない名前**で呼んでいて、タブを押しても何も起きない状態で出した。
+     ＝ ここでは「呼んでいる名前が、そのファイルに本当にあるか」まで見る。 */
+  var branch = sv.slice(sv.indexOf("if(tab==='visit'){"), sv.indexOf("if(tab==='quarter')"));
+  /* ⚠ コメントの中の言葉は数えない（説明で書いた名前を「呼んでいる」と読み違えるため） */
+  branch = branch.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  if (BREAK === '6') branch = branch.replace(/header\(/g, 'head(');
+  var calls = (branch.match(/(?:^|[^\w.$])([a-zA-Z_$][\w$]*)\s*\(/g) || [])
+    .map(function(x){ return x.replace(/[^\w$]/g, ''); })
+    .filter(function(n2){ return ['if','return','function','var','typeof','new'].indexOf(n2) < 0 && n2.indexOf('pitVisit') !== 0; });
+  var missing = calls.filter(function(n2){
+    return sv.indexOf('function ' + n2 + '(') < 0 && sv.indexOf('window.' + n2 + ' =') < 0 && !global[n2];
+  });
+  ok('🔴 呼んでいる関数が本当にある（無い名前を呼んでいない）', missing.length === 0, missing);
+  ok('期間の帯は売上ビューが作って渡す',
+     /pitVisitYear\(wrap, vHead/.test(sv) && /pitVisitMonth\(wrap, vHead/.test(sv) && /header\('year'/.test(branch));
   ok('🔴 PDFも来店属性の紙になる（売上の紙が出ない）', /tab==='visit' && window\.pitVisitCollect/.test(sv));
   const idx = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   ok('index.html に ?v= 付きで載っている',
