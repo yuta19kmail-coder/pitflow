@@ -29,6 +29,7 @@
 //     node _見張り/test_loaner_link.mjs --break=9 … 未紐づけでもお客様側へ飛ばす        → ⑫が赤
 //     node _見張り/test_loaner_link.mjs --break=10 … 車両の選択肢に番号を戻す           → ⑬が赤
 //     node _見張り/test_loaner_link.mjs --break=11 … 内容テンプレの置き場所を戻さない   → ⑬が赤
+//     node _見張り/test_loaner_link.mjs --break=12 … ×が候補ぜんぶを消すようにする      → ⑭が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -54,6 +55,8 @@ function bendMaint(src) {
   if (BREAK === '10') return src.replace("+ '>' + esc(vehName(v)) + '</option>';",
                                          "+ '>' + esc(vehName(v)) + '（' + esc(vehNo(v)) + '）</option>';");
   if (BREAK === '11') return src.replace("try { w.WorkContent.setHost(''); if (w.WorkContent.closePanel) w.WorkContent.closePanel(); } catch(e){}", "");
+  if (BREAK === '12') return src.replace("c.maintSpans = arr(c.maintSpans).filter(function(x){ return x.sid !== sp.sid; });",
+                                         "c.maintSpans = [];");
   return src;
 }
 function bend(src) {
@@ -521,6 +524,91 @@ console.log('── ⑬ 代車の作業予定を足す窓 ──');
   /* 🔴 置き場所を必ず戻す＝戻し忘れると、次にカードを開いた時に内容テンプレが効かない */
   ok('🔴🔴 閉じる時に、内容テンプレの置き場所を戻している',
      /w\.WorkContent\.setHost\(''\)/.test(bendMaint(JS('maint-pit.js'))));
+}
+
+/* ============================================================
+   ⑭ 作業予定ボードの候補に「×」（v2.68.0）
+   ------------------------------------------------------------
+   🗣「候補を置くのはOK。**一度決めた候補を横にちっちゃい×つけて**、
+   　　飛び地の予定でも例えば**真ん中だけ消す**とかできるようにしてほしい」
+   ⚠ 本物の maint-pit.js を走らせて、**実際に描いたボード**と**消した後の中身**を見る。
+   ============================================================ */
+console.log('── ⑭ 作業予定ボードの候補に「×」──');
+{
+  const held2 = {}, toasts = [];
+  function node4(){
+    const n = { _html:'', id:'', style:{setProperty(){}},
+      classList:{add(){},remove(){},toggle(){},contains(){return false;}},
+      addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){}, children:[],
+      value:'', checked:false, insertAdjacentHTML(){}, querySelector(){return null;},
+      querySelectorAll(){return [];}, scrollIntoView(){} };
+    Object.defineProperty(n, 'innerHTML', { get(){ return n._html; }, set(v){ n._html = v; } });
+    return n;
+  }
+  /* 飛び地3本＝4〜6／12〜16／24〜26。真ん中（12〜16）だけ消せるか。 */
+  const YM = '2026-10';
+  const CARD = {
+    id:'mc1', resNo:'Z00001', internKind:'loanercar', status:'reserved', intakeTbd:true,
+    customer:'自社代車', car:'アクア', maker:'トヨタ', plate:'', boardId:'default',
+    workType:'general', maintVehId:'l9', maintYm:YM, menu:'エアコン 冷風が出ない',
+    maintSpans:[{ sid:'a', from:YM+'-04', to:YM+'-06' },
+                { sid:'b', from:YM+'-12', to:YM+'-16' },
+                { sid:'c', from:YM+'-24', to:YM+'-26' }],
+    maintFixSid:'', maintSkipped:[], reserveDate:'', returnDate:''
+  };
+  const ctx = {
+    console:{log(){},warn(){},error(){}}, setTimeout:(f)=>{ try{ f(); }catch(e){} }, clearTimeout,
+    Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
+    localStorage:{ getItem(){return null;}, setItem(){}, removeItem(){} },
+    document:{ body:{ appendChild(n){ if (n.id) held2[n.id] = n; } }, head:node4(),
+      documentElement:{clientWidth:1280,style:{setProperty(){}}},
+      getElementById(id){ return held2[id] || null; }, createElement:()=>node4(),
+      querySelector(){return null;}, querySelectorAll(){return [];}, addEventListener(){}, removeEventListener(){} },
+    state:{ currentView:'fleet', customers:[], fleetEvents:[], staff:[], settings:{},
+      loaners:[{ id:'l9', name:'代車9', number:9, model:'アクア' }], companyCars:[],
+      cards:[JSON.parse(JSON.stringify(CARD))],
+      workTypes:[{ id:'general', label:'一般', color:'#84cc16' }] },
+    PitDB:{ save(){} }, pitAlert(){}, pitAsk(){ return Promise.resolve(false); }, pitLog(){},
+    pitToast:(m)=>toasts.push(m), showView(){}, icHydrate(){}, renderFleet(){}, renderSettings(){},
+    pitRefreshAutoTenken(){}, pitGenResNo:()=>'Z00002'
+  };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(JS('pit-share.js'), ctx);
+  ctx.PitShare.use({ divisions:()=>[], estAmount:()=>0, teamKey:()=>'default' });
+  vm.runInContext(JS('loaner-free.js'), ctx);
+  vm.runInContext(JS('fleet-link.js'), ctx);
+  vm.runInContext(JS('loaner.js'), ctx);
+  vm.runInContext(JS('intern-pit.js'), ctx);
+  vm.runInContext(JS('work-content.js'), ctx);
+  vm.runInContext(bendMaint(JS('maint-pit.js')), ctx);
+
+  const board = ctx.flMaintBoardHtml();
+  const xs = (board.match(/flMaintDelRec\('([^']+)'\)/g) || []).map(x => x.replace(/^.*\('|'\).*$/g, ''));
+  ok('🔴 候補ぜんぶに × が付く（飛び地3本＝3つ）', xs.length === 3, xs);
+  ok('× はその1本を指している（候補ごとに別の相手）',
+     xs.length === 3 && new Set(xs).size === 3 && xs.every(x => x.indexOf('mc1#') === 0), xs);
+  ok('× は候補の中に入っている（チップの横）', /class="mb-chip[^"]*"[^>]*>[^<]*<button type="button" class="mb-x"/.test(board));
+  ok('🔴 押し間違いで行ごと反応しない（止めてある）', /event\.stopPropagation\(\);flMaintDelRec/.test(board));
+  ok('色は css のクラスで持っている', /\.mb-x\{/.test(CSS('polish.css')));
+
+  /* 真ん中（12〜16）だけ消す */
+  const mid = xs.filter(x => x.indexOf('#b') > 0)[0];
+  ctx.flMaintDelRec(mid);
+  const spans = ctx.state.cards[0].maintSpans.map(x => x.sid);
+  ok('🔴🔴 飛び地の真ん中だけ消える（前後は残る）',
+     JSON.stringify(spans) === JSON.stringify(['a','c']), spans);
+  ok('🔴 カードは消さない（月の目標として残る）', ctx.state.cards.length === 1);
+  ok('消したことを知らせる（押す前に聞かないので）',
+     toasts.some(t => /取り消しました/.test(t) && /残り 2本/.test(t)), toasts);
+
+  /* 最後の1本まで消してもカードは残る */
+  ctx.flMaintDelRec('mc1#a'); ctx.flMaintDelRec('mc1#c');
+  ok('🔴 最後の1本を消してもカードは残る（カードごと無くすのは「取り下げ」だけ）',
+     ctx.state.cards.length === 1 && ctx.state.cards[0].maintSpans.length === 0,
+     ctx.state.cards.length);
+  ok('🔴 カードごと消す道は「取り下げ」1本のまま（押す前に聞く）',
+     /w\.flMaintDrop = function/.test(JS('maint-pit.js')) && /この予定を取り下げますか？/.test(JS('maint-pit.js')));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
