@@ -27,6 +27,8 @@
 //     node _見張り/test_loaner_link.mjs --break=7 … 詳細表の「顧客紐づけ」の行を消す    → ⑪が赤
 //     node _見張り/test_loaner_link.mjs --break=8 … 履歴に「どの車か」を渡さない        → ⑫が赤
 //     node _見張り/test_loaner_link.mjs --break=9 … 未紐づけでもお客様側へ飛ばす        → ⑫が赤
+//     node _見張り/test_loaner_link.mjs --break=10 … 車両の選択肢に番号を戻す           → ⑬が赤
+//     node _見張り/test_loaner_link.mjs --break=11 … 内容テンプレの置き場所を戻さない   → ⑬が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -46,6 +48,12 @@ function bendFleet(src) {
   if (BREAK === '7') return src.replace(/\+ row\('顧客紐づけ', \(function\(\)\{[\s\S]*?\}\)\(\)\)/, "+ ''");
   if (BREAK === '8') return src.replace("custHistory(lk.cust.id, lk.veh.id)", "custHistory(lk.cust.id)");
   if (BREAK === '9') return src.replace("  if (!lk){", "  if (false){");
+  return src;
+}
+function bendMaint(src) {
+  if (BREAK === '10') return src.replace("+ '>' + esc(vehName(v)) + '</option>';",
+                                         "+ '>' + esc(vehName(v)) + '（' + esc(vehNo(v)) + '）</option>';");
+  if (BREAK === '11') return src.replace("try { w.WorkContent.setHost(''); if (w.WorkContent.closePanel) w.WorkContent.closePanel(); } catch(e){}", "");
   return src;
 }
 function bend(src) {
@@ -400,6 +408,119 @@ console.log('── ⑫ スペック表から、お客様側と作業予定へ�
   ok('ほかの車にも選び直せる（押し間違いの逃げ道）', /<option value="l8"/.test(pop));
   ok('前からある「＋ 予定を足す」も同じ窓を使っている（写しを作っていない）',
      /flMaintAdd\(\)/.test(JS('maint-pit.js')));
+}
+
+/* ============================================================
+   ⑬ 「代車の作業予定を足す」窓（v2.67.0）
+   ------------------------------------------------------------
+   🗣「代車名（数字）が入ってるが **数字をカット**、代車名だけで」
+   🗣「作業は **車検 12点 一般 BP の並び**で、通常の新規予約のバッチから選ばせられないかな？」
+   🗣「**一言メモもカット**で。通常予約画面の**作業内容のバッチとテンプレ**をそのまま載せてほしい」
+   🗣「**✅急ぎはカット**で」
+   ⚠ 本物の maint-pit.js / work-content.js を走らせて、**実際に描いた窓の中身**を見る。
+   ============================================================ */
+console.log('── ⑬ 代車の作業予定を足す窓 ──');
+{
+  const held = {};
+  function node3(){
+    const n = { _html:'', id:'', style:{setProperty(){}},
+      classList:{add(){},remove(){},toggle(){},contains(){return false;}},
+      addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){ if (n.id) delete held[n.id]; },
+      children:[], value:'', checked:false, insertAdjacentHTML(){}, querySelector(){return null;},
+      querySelectorAll(){return [];}, scrollIntoView(){} };
+    Object.defineProperty(n, 'innerHTML', { get(){ return n._html; }, set(v){ n._html = v; } });
+    return n;
+  }
+  const alerts = [];
+  const ctx = {
+    console:{log(){},warn(){},error(){}}, setTimeout:(f)=>{ try{ f(); }catch(e){} }, clearTimeout,
+    Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
+    localStorage:{ getItem(){return null;}, setItem(){}, removeItem(){} },
+    document:{ body:{ appendChild(n){ if (n.id) held[n.id] = n; } }, head:node3(),
+      documentElement:{clientWidth:1280,style:{setProperty(){}}},
+      getElementById(id){ return held[id] || null; },
+      createElement:()=>node3(), querySelector(){return null;}, querySelectorAll(){return [];},
+      addEventListener(){}, removeEventListener(){} },
+    state:{ currentView:'fleet', customers:[], fleetEvents:[], cards:[], staff:[], settings:{},
+      loaners:[{ id:'l9', name:'代車9', number:9, model:'アクア' }, { id:'l8', name:'代車8', number:8, model:'ムーヴ' }],
+      companyCars:[{ id:'c1', name:'ハイエース', model:'ハイエース' }],
+      workTypes:[{ id:'shaken', label:'車検', color:'#ef4444' }, { id:'12pt', label:'12点', color:'#f97316' },
+                 { id:'general', label:'一般', color:'#84cc16' }, { id:'bp', label:'B.P', color:'#a855f7' }] },
+    PitDB:{ save(){} },
+    pitAlert:(m,o)=>alerts.push({ msg:m, code:(o||{}).code }),
+    pitAsk(){ return Promise.resolve(false); }, pitLog(){}, pitToast(){}, showView(){}, icHydrate(){},
+    renderFleet(){}, renderSettings(){}, pitRefreshAutoTenken(){}, pitGenResNo:()=>'X00001'
+  };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(JS('pit-share.js'), ctx);
+  ctx.PitShare.use({ divisions:()=>[], estAmount:()=>0, teamKey:()=>'default' });
+  vm.runInContext(JS('loaner-free.js'), ctx);
+  vm.runInContext(JS('fleet-link.js'), ctx);
+  vm.runInContext(JS('loaner.js'), ctx);
+  vm.runInContext(JS('intern-pit.js'), ctx);
+  vm.runInContext(JS('work-content.js'), ctx);
+  vm.runInContext(bendMaint(JS('maint-pit.js')), ctx);
+
+  ctx.flMaintAdd('l9');
+  const h = (held['mb-modal'] || {}).innerHTML || '';
+  ok('窓が開く', h.length > 200);
+  ok('🔴 車両の選択肢に番号が入っていない（代車名だけ）',
+     !/（\d+）<\/option>/.test(h), (h.match(/<option[\s\S]*?<\/option>/) || [''])[0]);
+  ok('その車が選ばれた状態', /<option value="l9" selected>/.test(h));
+  const picks = (h.match(/flMaintPickWork\('([^']+)'\)/g) || []).map(x => x.replace(/[^a-z0-9]/gi, ''));
+  ok('🔴🔴 作業は 車検→12点→一般→B.P の並びの札',
+     JSON.stringify(picks) === JSON.stringify(['flMaintPickWorkshaken','flMaintPickWork12pt','flMaintPickWorkgeneral','flMaintPickWorkbp']), picks);
+  ok('札は予約と同じ見た目の部品（cf-chip）', /class="cf-chip[^"]*"[^>]*onclick="flMaintPickWork/.test(h));
+  ok('🔴 ひとことメモの欄が無い', h.indexOf('mba-memo') < 0 && h.indexOf('ひとことメモ') < 0);
+  ok('🔴 急ぎのチェックが無い', h.indexOf('mba-urgent') < 0 && h.indexOf('急ぎ') < 0);
+  ok('🔴 予約と同じ「作業内容」の欄がある', /textarea[^>]*data-key="menu"/.test(h));
+  ok('🔴 内容テンプレとタグ札を、そのまま載せている',
+     /id="wc-panel"/.test(h) && /class="wc-chip/.test(h) && /WorkContent\.chip\(this\)/.test(h));
+  ok('🔴 中身は work-content.js 1本（写しを作っていない）',
+     /w\.WorkContent \? w\.WorkContent\.builderHtml\(\)/.test(JS('maint-pit.js')));
+
+  /* 札を押す＝選ばれる／もう一度で外れる */
+  held['mba-work'] = node3(); held['mba-work'].id = 'mba-work';
+  ctx.flMaintPickWork('general');
+  ok('札を押すと選ばれる', /class="cf-chip active"[^>]*onclick="flMaintPickWork\('general'\)/.test(held['mba-work'].innerHTML));
+  ctx.flMaintPickWork('general');
+  ok('もう一度押すと外れる（押し間違いの逃げ道）',
+     !/active/.test(held['mba-work'].innerHTML));
+
+  /* 保存の関門 */
+  held['mba-veh'] = { value:'l9' }; held['mba-ym'] = { value:'2026-09' }; held['mba-menu'] = { value:'' };
+  alerts.length = 0;
+  ctx.flMaintSave();
+  ok('🔴 作業を選んでいないと足せない',
+     ctx.state.cards.length === 0 && alerts.some(x => x.code === 'PF-3069'), alerts);
+  ctx.flMaintPickWork('general');
+  alerts.length = 0;
+  ctx.flMaintSave();
+  ok('🔴 一般は作業内容が空だと足せない（何の作業か分からなくなる）',
+     ctx.state.cards.length === 0 && alerts.some(x => x.code === 'PF-3051'), alerts);
+  held['mba-menu'] = { value:'エアコン 冷風が出ない（ぬるい）' };
+  alerts.length = 0;
+  ctx.flMaintSave();
+  ok('🔴 作業内容を入れたら足せる', ctx.state.cards.length === 1, alerts);
+  const card = ctx.state.cards[0];
+  ok('作業内容がカードの「内容」に入る', card.menu === 'エアコン 冷風が出ない（ぬるい）');
+  ok('作業が入る', card.workType === 'general');
+  ok('🔴 急ぎは付かない（欄を無くしたので）', !card.urgent);
+  ok('🔴 ボードの一言は作業内容の1行目で補う',
+     ctx.pitMaintRecs().some(r => r.memo === 'エアコン 冷風が出ない（ぬるい）'),
+     ctx.pitMaintRecs().map(r => r.memo));
+  /* 車検は名前で通じるので、作業内容が空でも足せる */
+  ctx.state.cards = [];
+  ctx.flMaintAdd('l9');
+  held['mba-veh'] = { value:'l9' }; held['mba-ym'] = { value:'2026-09' }; held['mba-menu'] = { value:'' };
+  ctx.flMaintPickWork('shaken');
+  ctx.flMaintSave();
+  ok('車検は作業内容が空でも足せる（名前で通じる）', ctx.state.cards.length === 1, ctx.state.cards.length);
+
+  /* 🔴 置き場所を必ず戻す＝戻し忘れると、次にカードを開いた時に内容テンプレが効かない */
+  ok('🔴🔴 閉じる時に、内容テンプレの置き場所を戻している',
+     /w\.WorkContent\.setHost\(''\)/.test(bendMaint(JS('maint-pit.js'))));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
