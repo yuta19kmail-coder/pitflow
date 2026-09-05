@@ -33,6 +33,8 @@
        node test_fleet_cal.mjs --break=4  … 縦バーを全部の日で丸める        → ⑩ が赤
        node test_fleet_cal.mjs --break=5  … 列を可変幅（minmax）に戻す      → ⑧ が赤
        node test_fleet_cal.mjs --break=6  … 満了日を「やること」に混ぜる     → ⑥ が赤
+       node test_fleet_cal.mjs --break=7  … 札を1行に戻す                  → ⑧-2 が赤
+                                             （86px のマスからはみ出す状態）
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -63,6 +65,10 @@ function bend(name, src){
   if (BREAK === '5' && name === 'fleet.js')
     return src.replace("+ FL_COL_NAME + 'px repeat(' + months.length + ', ' + FL_COL_M + 'px)",
                        "+ FL_COL_NAME + 'px repeat(' + months.length + ', minmax(' + FL_COL_M + 'px,1fr))");
+  if (BREAK === '7' && name === 'fleet-cal.css')
+    return src.replace('.fl-mb{ display:flex; align-items:center; flex-wrap:wrap;',
+                       '.fl-mb{ display:flex; align-items:center; flex-wrap:nowrap;')
+              .replace('.fl-mb .st{ flex:1 0 100%;', '.fl-mb .st{ flex:0 0 auto; margin-left:auto;');
   if (BREAK === '6' && name === 'maint-pit.js')
     return src.replace("      ms.sort();", "      ms.sort();\n      if (p.dueDate) out.push({ state:'due', months:ms, months2:1, work:r.work, workDot:'wk-shaken', workShort:'満了', stateLabel:'満了', bar:false, gid:r.groupId, title:'', months:ms });");
   return src;
@@ -176,6 +182,27 @@ console.log('\n── ⑧ 列は固定幅（バーが何マスぶんか計算で
   ok('バーが乗るマスは上に場所を空ける', /barpad/.test(month) && /\.fl-cal-cell\.barpad\{[^}]*padding-top:35px/.test(calcss));
   ok('🔴 日ビューの枠も期間ぜんぶで1本', /pitMaintDayBars\(/.test(day) && /fl-bar3/.test(day));
   ok('画面の外へ続く側は角を落として点線', /cutL/.test(day) && /\.fl-bar3\.cutL\{[^}]*border-left-style:dashed/.test(calcss));
+}
+
+console.log('\n── ⑧-2 1マスに収まっているか（v2.71.1）──');
+{
+  /* 🗣 ゆうた「テキストが1せるだと入り切ってない」
+     ◎計算 … 月の列は 86px。マスの内側は 74px、札の内側は **56px しか無い**。
+       そこへ「四角＋作業名＋状態」を1行（約79px）で入れていた＝はみ出していた。
+     ◎いま … **行を増やして収める**（字は小さくしない＝決めごと③）。 */
+  ok('🔴🔴 月ビューの札は2行にする（状態が次の行へ回る）',
+     /\.fl-mb\{[^}]*flex-wrap:wrap/.test(calcss) && /\.fl-mb \.st\{[^}]*flex:1 0 100%/.test(calcss));
+  ok('🔴 字は小さくしていない（11.5px のまま）', /\.fl-mb\{[^}]*font-size:11\.5px/.test(calcss));
+  /* ⚠ 1マスぶんしか見えていない帯は、バーにすると必ずはみ出す＝札で出す */
+  ok('🔴 1マスしか見えていない帯はバーにしない', /b && b\.span > 1/.test(month) && /else if \(b\)/.test(month));
+  ok('🔴 その時は上に場所も空けない', /if \(span > 1\) for/.test(month));
+  /* ⚠ 日ビューの列は 56px。1日だけの枠はバーの内側が 26px しか無い＝作業名を入れると切れる */
+  ok('🔴🔴 日ビューは幅で出す字を変える（1日＝四角だけ）',
+     /_w >= 2 \? '<b>/.test(day) && /_w >= 4 \?/.test(day) && /_w < 2 \? ' tiny'/.test(day));
+  ok('1日だけの枠は四角を真ん中に置く', /\.fl-bar3\.tiny\{[^}]*justify-content:center/.test(calcss));
+  /* ⚠ 予定か確定かは**色**が言っている（凡例に出してある）ので、字が消えても意味は落ちない */
+  ok('自由イベントの長い名前は2行まで折り返す',
+     /\.fl-ev span\{[^}]*line-clamp:2/.test(calcss) && /<span>' \+ _fleetEsc\(x\.label\)/.test(fleet));
 }
 
 console.log('\n── ⑨ 凡例（凡例に無い見た目は出さない、の受け皿）──');
