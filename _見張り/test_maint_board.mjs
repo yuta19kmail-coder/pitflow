@@ -24,6 +24,10 @@
        node test_maint_board.mjs --break=2  … バッジを満了月だけにする   → ③が赤
        node test_maint_board.mjs --break=3  … 元のバッジを月カレンダーに戻す・なぞりを外す
                                              ・「日を決める」の右寄せを外す → ⑧-2 が赤
+       node test_maint_board.mjs --break=4  … カレンダーを半年までに戻す → ③-3 が赤
+                                             （1年先の車検の帯が消える）
+       node test_maint_board.mjs --break=5  … 12ヶ月点検を1ヶ月だけに戻す → ③-3 が赤
+                                             （2ヶ月の帯にならない）
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -47,6 +51,12 @@ function bend(name, src) {
   if (BREAK === '2' && name === 'loaner-free.js')
     return src.replace("months: [_ymAdd(_ym(v.shakenDate), -2), _ymAdd(_ym(v.shakenDate), -1), _ym(v.shakenDate)],",
                        "months: [_ym(v.shakenDate)],");
+  /* v2.71.0 …カレンダーを半年までに戻す（＝1年先の車検の帯が消える） */
+  if (BREAK === '4' && name === 'maint-pit.js')
+    return src.replace("    rows(td, 12).forEach(function(r){", "    rows(td, 6).forEach(function(r){");
+  /* v2.71.0 …12ヶ月点検を1ヶ月だけに戻す（＝2ヶ月の帯にならない） */
+  if (BREAK === '5' && name === 'loaner-free.js')
+    return src.replace("          months: [_ymAdd(_ym(tk), -1), _ym(tk)],", "          months: [_ym(tk)],");
   return src;
 }
 
@@ -55,7 +65,12 @@ const 代車 = [
   { id:'l1', name:'代車1', number:1, model:'タント',   shakenDate:'2026-10-31' },   /* 候補あり */
   { id:'l2', name:'代車2', number:2, model:'ヤリス',   shakenDate:'2026-09-30' },   /* 今月・候補0本＝警告 */
   { id:'l3', name:'代車3', number:3, model:'ハイゼット', shakenDate:'2026-08-20' },   /* 満了超過＝赤 */
-  { id:'l4', name:'代車4', number:4, model:'ノート',   shakenDate:'2028-05-10' }    /* まだ先 */
+  { id:'l4', name:'代車4', number:4, model:'ノート',   shakenDate:'2028-05-10' },   /* まだ先＝1年より先 */
+  /* 🔴 v2.71.0 の見張り用（ゆうた指定 2026-09-05）
+     l5＝満了が**約10ヶ月先**＝ボード（半年）には出ないが、カレンダー（1年先まで）には帯が出る
+     l6＝満了が**1年2ヶ月先**＝車検はまだ出ない。12ヶ月点検の目安が 2026-11 に来る（2ヶ月の帯） */
+  { id:'l5', name:'代車5', number:5, model:'ソリオ',   shakenDate:'2027-07-20' },
+  { id:'l6', name:'代車6', number:6, model:'スペーシア', shakenDate:'2027-11-20' }
 ];
 const 社用車 = [ { id:'c1', name:'ハイエース', model:'ハイエース', shakenDate:'2026-10-15' } ];
 /* 🔧🔧 v2.49.0 整備の枠は**ふつうの予約カード**（1作業1枚・候補は maintSpans の配列） */
@@ -186,6 +201,33 @@ console.log('\n── ③ 車両カレンダーに出す「やること」（v2.
   ok('1ヶ月だけならバーにしない', it3.bar === false);
 }
 
+console.log('\n── ③-3 どこまで先を出すか／12ヶ月点検の帯（v2.71.0）──');
+{
+  const c = boot();
+  /* 🗣「車検は1年先ぐらいまで3か月の帯表示を出して欲しい」
+     ⚠ ボードは**直近半年のまま**（ゆうた指定）。同じ物差しを、見る場所ごとに期間だけ変えて使う。 */
+  const l5 = c.state.loaners[3+1];   /* ソリオ・満了 2027-07-20＝約10ヶ月先 */
+  const it5 = c.pitMaintCalItems(l5, TODAY).filter(x => x.work === 'shaken')[0];
+  ok('🔴🔴 車検は1年先まで帯が出る', !!it5 && it5.months.length === 3, it5 && it5.months);
+  ok('🔴 帯は満了月＋その前2ヶ月', !!it5 && it5.months.join(',') === '2027-05,2027-06,2027-07');
+  ok('⚠ ボード（直近半年）には出ない（そこは変えていない）',
+     !c.pitMaintRows(TODAY).some(r => r.vehicleId === 'l5' && r.work === 'shaken'));
+  const l6 = c.state.loaners[5];     /* スペーシア・満了 2027-11-20＝1年2ヶ月先 */
+  ok('🔴 1年より先の車検はまだ出さない',
+     !c.pitMaintCalItems(l6, TODAY).some(x => x.work === 'shaken'));
+  /* 🗣「12点も車検のように2ヵ月分でバーで表示してほしい」 */
+  const tk6 = c.pitMaintCalItems(l6, TODAY).filter(x => x.work === '12pt')[0];
+  ok('🔴🔴 12ヶ月点検も帯になる', !!tk6 && tk6.bar === true, tk6 && tk6.months);
+  ok('🔴🔴 12点の帯は2ヶ月（目安の月＋その前1ヶ月）',
+     !!tk6 && tk6.months.length === 2 && tk6.months.join(',') === '2026-10,2026-11');
+  ok('作業の四角は12点の色', !!tk6 && tk6.workDot === 'wk-12pt');
+  ok('短い名前は「12点」', !!tk6 && tk6.workShort === '12点');
+  /* 🗣「12点は満了日の記載はいらない。あくまで位だから」
+     ⚠ 物差しは日付を持っていてよい（title やボードで使う）。**画面に出さない**のは fleet.js の仕事。
+        画面側は test_fleet_cal.mjs が見張っている。 */
+  ok('⚠ 目安の日は物差しの中には残っている（画面には出さない）', !!tk6 && !!tk6.dueDate);
+}
+
 console.log('\n── ③-2 日の軸に出す整備の枠（期間ぜんぶで1本のバー）──');
 {
   const c = boot();
@@ -305,9 +347,10 @@ console.log('\n── ⑧-2 二重バッジの始末・行の並び・なぞり�
   ok('🔴🔴 月カレンダーから元の「車検」バッジを消した', month.indexOf('fl-bdg shaken') < 0);
   ok('🔴🔴 月カレンダーから元の「12ヶ月」バッジを消した', month.indexOf('fl-bdg tenken') < 0);
   ok('🔴 やることは物差しからもらう', /pitMaintCalItems\(/.test(month));
-  /* 🔴 v2.70.0 日ビューの満了日・12点は**マスごと塗る**（前は上端の細い線＝ほぼ気づけなかった） */
+  /* 🔴 v2.70.0 日ビューの満了日は**マスごと塗る**（前は上端の細い線＝ほぼ気づけなかった）
+     🔴 v2.71.0 **12点の日は塗らない**（ゆうた「あくまで位だから」）＝12点に期限の日は無い */
   ok('🔴🔴 日ビューの満了日はマスごと塗る', day.indexOf('d-exp') >= 0);
-  ok('🔴 12点の日も同じ形（橙）', day.indexOf('d-tkc') >= 0);
+  ok('🔴🔴 12点の日は塗らない（期限ではなく目安）', day.indexOf('d-tkc') < 0);
   ok('🔴 日ビューの整備の枠は1本のバー', day.indexOf('fl-bar3') >= 0 && /pitMaintDayBars\(/.test(day));
   /* 🗣「候補日はドラッグでまとまった日を選べるように」 */
   ok('🔴 日ビューのマスに車と日の目印が付いている', /data-fv="/.test(day) && /data-fd="/.test(day));

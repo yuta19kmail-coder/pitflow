@@ -124,9 +124,12 @@ console.log('\n── ⑤ ベタ塗りは「手遅れになると困る日」だ
 {
   /* 🗣「日ビューの満了だけわかりにくい。逆に最も目立つぐらいじゃないと」 */
   ok('🔴🔴 日ビューの満了日はマスごと赤く塗る', /\.fl-cal-cell\.d-exp\{[^}]*background:var\(--red\)/.test(calcss));
-  ok('🔴 12点の日は同じ形の橙', /\.fl-cal-cell\.d-tkc\{[^}]*245,158,11/.test(calcss));
   ok('中の字は白抜きで大きい', /\.fl-big\{[^}]*font-size:13px/.test(calcss) && /\.fl-big\{[^}]*font-weight:900/.test(calcss));
-  ok('🔴 日ビューが満了日・12点の日を塗り分けている', /d-exp/.test(day) && /d-tkc/.test(day));
+  ok('🔴 日ビューが満了日を塗っている', /d-exp/.test(day));
+  /* 🔴 v2.71.0（ゆうた 2026-09-05）「12点は満了日の記載はいらない。あくまで位だから」
+     ＝ 12ヶ月点検に期限の日は無い。塗ると「この日が期限」に見えるので**塗らない**。 */
+  ok('🔴🔴 12点の日はマスを塗らない（期限ではなく目安）',
+     !/d-tkc/.test(day) && !/d-tkc/.test(calcss));
   /* ⚠ ベタ塗りは超過と満了・12点だけ。ほかは枠＋薄い塗り。 */
   const solid = (calcss.match(/\.fl-(mb|bar3)\.[a-z]+\s*\{[^}]*background:var\(--red\)/g) || []);
   ok('🔴 札とバーでベタ塗りなのは「超過」だけ', solid.every(s => /\.over/.test(s)), solid);
@@ -135,9 +138,10 @@ console.log('\n── ⑤ ベタ塗りは「手遅れになると困る日」だ
 console.log('\n── ⑥ 期限は札にしない（左に色の縦線の1行）──');
 {
   ok('🔴🔴 満了は縦線の1行', /\.fl-due\{[^}]*border-left:3px solid var\(--red\)/.test(calcss));
-  ok('🔴 12点は同じ形の橙', /\.fl-due\.tk\{[^}]*border-left-color:var\(--orange\)/.test(calcss));
   ok('🔴 月ビューが満了日を別の行で出している', /fl-due/.test(month) && /満了 /.test(month));
-  ok('🔴 12点の目安も出している', /fl-due tk/.test(month) && /pitTenkenFromShaken/.test(month));
+  /* 🔴 v2.71.0 期限として日付を出すのは**車検の満了日だけ**。12点は目安なので日付を出さない。 */
+  ok('🔴🔴 月ビューに12点の日付を出さない',
+     !/fl-due tk/.test(month) && !/pitTenkenFromShaken/.test(month) && !/\.fl-due\.tk\{/.test(calcss));
   /* ⚠ 満了日は「やること」ではない＝物差しの側に混ぜない */
   ok('🔴🔴 物差しは満了日を「やること」として返さない',
      !/state:\s*'due'/.test(maint), 'pitMaintCalItems が state:"due" を返している');
@@ -179,8 +183,11 @@ console.log('\n── ⑨ 凡例（凡例に無い見た目は出さない、の
   ok('🔴 凡例が画面に出る', /flCalLegendHtml\(\)/.test(fleet) && /function flCalLegendHtml/.test(fleet));
   ok('状態の4つが凡例にある', /未割当/.test(fleet) && /fl-mb cand/.test(fleet) && /fl-mb fixed/.test(fleet) && /fl-mb over/.test(fleet));
   ok('作業の四角が凡例にある', /dot\('shaken','車検'\)/.test(fleet) && /dot\('bp','B\.P'\)/.test(fleet));
-  ok('月ビューでは期限の見方が出る', /左に縦線の1行/.test(fleet));
+  ok('月ビューでは期限の見方が出る', /左に赤い縦線の1行/.test(fleet));
   ok('日ビューでは満了・貸出の見方が出る', /fl-lg-sq exp/.test(fleet) && /fl-lg-sw lend/.test(fleet));
+  /* ⚠ 画面から消したものは凡例からも消す（凡例と画面は1対1） */
+  ok('🔴 凡例からも12点の日付・塗りを外した', !/fl-due tk/.test(fleet) && !/fl-lg-sq tkc/.test(fleet));
+  ok('🔴 バーの長さの決めごとが凡例に出る', /12点＝目安の月＋その前/.test(fleet) && /12点に期限日はありません/.test(fleet));
 }
 
 console.log('\n── ⑩ 代車カレンダーの整備予定（太い縦バー・外わくなし）──');

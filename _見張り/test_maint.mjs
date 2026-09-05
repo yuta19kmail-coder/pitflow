@@ -175,7 +175,11 @@ console.log('\n── ⑤ 月の目標は計算（保存しない）──');
   ok('まだ超過していない', sk.overdue === false);
   const tk = plans.find(x => x.work === '12pt');
   ok('12ヶ月点検の目標も出る', !!tk && !!tk.dueDate);
-  ok('12ヶ月点検は1ヶ月ぶん', tk.months.length === 1);
+  /* 🔴 v2.71.0（ゆうた指定 2026-09-05）「12点も車検のように2ヵ月分でバーで表示してほしい」
+     ＝ 12ヶ月点検も帯にする。**目安の月＋その前1ヶ月の2ヶ月**（車検は3ヶ月）。
+     ⚠ `months` は**カレンダーで帯を出す月**。本来いつまでかは `dueDate` を見ること。 */
+  ok('🔴🔴 12ヶ月点検は2ヶ月ぶんの帯', tk.months.length === 2, tk.months);
+  ok('🔴 帯の終わりが目安の月', tk.months[1] === String(tk.dueDate).slice(0,7), tk.months);
   /* 過ぎた12ヶ月点検は翌月へスライド（回数は数えない＝ゆうた指定） */
   const c2 = boot();
   const late = c2.pitLoanerMaintPlans({ id:'lx', shakenDate:'2027-06-30' }, '2027-01-15').find(x => x.work === '12pt');
