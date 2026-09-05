@@ -120,6 +120,21 @@ ok('回送の担当別の表がある（整備した人ではない）',
 ok('国産・輸入の表がある', H.indexOf('>国産<') > 0 && H.indexOf('>輸入<') > 0);
 ok('不合格の明細がある', H.indexOf('不合格の明細') > 0);
 ok('気をつけどころが出る', H.indexOf('気をつけどころ') > 0);
+/* 🔴🔴 v2.61.0 ゆうたの大前提＝抜けは許容せず、**0にする対象として数を出す** */
+ok('未記入が無い月は「全部書かれています」と出す', H.indexOf('未記入 0件') > 0);
+{
+  /* 落ちた所を書いていない不合格を1件だけ足して、そこだけ見る（ほかの数字は動かさない） */
+  const keep = box.state.cards.slice();
+  box.state.cards = keep.concat([car({ customer: '未記入太郎',
+    inspSchedule: insp({ history: [ng({ date: '2026-09-25', note: '' })] }) })]);
+  const w2 = { innerHTML: '' };
+  box.renderShakenLine(w2, '', '', '2026-09-01', '2026-09-30', '');
+  const H2 = w2.innerHTML;
+  ok('🔴 落ちた所の未記入を「0にする対象」として立てる',
+     H2.indexOf('0にする対象') > 0 && H2.indexOf('落ちた所」が未記入') > 0);
+  ok('未記入だと集計に出ないことを書いてある', H2.indexOf('上の集計に出てきません') > 0);
+  box.state.cards = keep;
+}
 ok('予定は数えていないと書いてある', H.indexOf('予定は0件も入っていません') > 0);
 
 console.log('── ⑥ 整備タブは触っていない ──');

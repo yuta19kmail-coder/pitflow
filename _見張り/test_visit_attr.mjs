@@ -13,15 +13,17 @@
 //        ＝ **総計が伝票の数と合う**。ここがズレたら表全体の意味が無くなる
 //     🔴 車検・点検＝車検か12点が入っているもの。**それ以外はぜんぶ一般**（取りこぼしを作らない）
 //     🔴 リピーター＝**予約の「初回／リピーター」の札**で数える（2026-09-04 ゆうた指定）
-//        ⚠ 札が空の時だけ来店履歴で補う（v1.88.0「選んでいないものを初回だと決めつけない」）
-//        ⚠ 補った数（付け忘れ）と、札が履歴と食い違う数（付け間違いの疑い）は画面の下に出す
+//     🔴🔴 **札が空は「未チェック」として独立して数える。推測で埋めない**（v2.61.0）
+//        ゆうたの大前提＝「伝票＝PitFlow＝実台数」が常にイコール／**抜けは許容せず0にする対象として数を出す**
+//        ⚠ だからリピーター％＋一見％は、未チェックがある間 100% にならない
+//        ⚠ 「0にする対象」＝未選択／売上日が空／札と履歴の食い違い を画面の下に並べる
 //     🔴 クォーター＝1〜7／8〜15／16〜23／24〜末
 //
 //   使い方（サーバーもブラウザも要らない）
 //     node _見張り/test_visit_attr.mjs
 //     node _見張り/test_visit_attr.mjs --break=1 … 売上なしも数える     → ①が赤
 //     node _見張り/test_visit_attr.mjs --break=2 … B.Pを一般に入れない  → ②が赤
-//     node _見張り/test_visit_attr.mjs --break=3 … 空の札を初回に落とす → ③が赤
+//     node _見張り/test_visit_attr.mjs --break=3 … 空の札を一見に落とす → ③が赤
 //     node _見張り/test_visit_attr.mjs --break=4 … 札を見ずに履歴で判定 → ③が赤
 //     node _見張り/test_visit_attr.mjs --break=5 … スライドを週にも入れる → ⑤が赤
 //     node _見張り/test_visit_attr.mjs --break=6 … 無い関数を呼ぶ         → ⑦が赤
@@ -41,8 +43,8 @@ function bend(src) {
   if (BREAK === '1') return src.replace('return !noSale(c);', 'return true;');
   if (BREAK === '2') return src.replace("if (ids[i]==='shaken' || ids[i]==='12pt') return true;",
                                         "if (ids[i]!=='general' && ids[i]!=='oil') return true;");
-  if (BREAK === '3') return src.replace("return { rep: seenBefore(c, dates), from:'hist' };", "return { rep:false, from:'hist' };");
-  if (BREAK === '4') return src.replace("if (tag==='repeater') return { rep:true,  from:'tag' };", "");
+  if (BREAK === '3') return src.replace("return { kind:'none',  guess:seenBefore(c, dates) };", "return { kind:'first', guess:false };");
+  if (BREAK === '4') return src.replace("if (tag==='repeater') return { kind:'rep',   guess:seenBefore(c, dates) };", "");
   if (BREAK === '5') return src.replace('if(isSlide(c)){ put(qs[0].b, c, j, dates); return; }', 'if(isSlide(c)){ put(qs[0].b, c, j, dates); }');
   return src;
 }
@@ -90,18 +92,24 @@ ok('まだ返していない車は数えない', may.all === 4);
 
 console.log('── ② 区分＝車検・点検 と 一般だけ ──');
 ok('車検・点検は1台（上野様の車検）', may.insp.rep + may.insp.first === 1, may.insp);
-ok('B.P も オイル も 一般に寄る（3台）', may.gen.rep + may.gen.first === 3, may.gen);
+ok('B.P も オイル も 一般に寄る（3台）', may.gen.rep + may.gen.first + may.gen.none === 3, may.gen);
 ok('車検・点検＋一般＝合計（取りこぼし無し）',
-   (may.insp.rep + may.insp.first) + (may.gen.rep + may.gen.first) === may.all);
+   (may.insp.rep + may.insp.first + may.insp.none) + (may.gen.rep + may.gen.first + may.gen.none) === may.all);
 
 console.log('── ③ リピーターの決め方（札が先・空だけ履歴で補う） ──');
-/* 5月＝相田（札が空→履歴でリピーター）／井上2台（札は 初回 と リピーター）／上野（初回）
-   ＝ リピーター2・一見2。⚠ 井上の2台目は**前の日が無いのに札がリピーター**＝札のとおりに数える */
-ok('🔴 札が「リピーター」ならリピーター（履歴に無くても）', may.gen.rep === 2, may.gen);
-ok('🔴 札が「初回」なら一見（同じ日の1台目）', may.gen.first === 1, may.gen);
+/* 5月＝相田（札が空＝未チェック）／井上2台（札は 初回 と リピーター）／上野（初回）
+   ＝ リピーター1・一見2・未チェック1。⚠ 井上の2台目は**前の日が無いのに札がリピーター**＝札のとおりに数える */
+ok('🔴 札が「リピーター」ならリピーター（履歴に無くても）', may.gen.rep === 1, may.gen);
+ok('🔴 札が「初回」なら一見', may.gen.first === 1, may.gen);
 ok('初来店は一見', may.insp.first === 1, may.insp);
-ok('🔴 札が空のものは来店履歴で補う（付け忘れ1件）', may.noTag === 1, may.noTag);
+ok('🔴🔴 札が空は「未チェック」＝どちらにも入れない（推測で埋めない）',
+   may.none === 1 && may.gen.none === 1 && may.gen.rep + may.gen.first === 2, { none: may.none, gen: may.gen });
+ok('🔴 未チェックがあると リピーター＋一見 は合計に届かない（足りない分が抜けの量）',
+   (may.insp.rep + may.gen.rep) + (may.insp.first + may.gen.first) === may.all - may.none);
+ok('参考に「来店履歴だとどちらか」は数えておく（数字には混ぜない）',
+   may.guessRep === 1 && may.guessFirst === 0, { r: may.guessRep, f: may.guessFirst });
 ok('🔴 札と履歴が食い違う数を知らせる（井上様2台目＝1件）', may.mismatch === 1, may.mismatch);
+ok('🔴 売上日が空の数も数える（スライドか判断できない車＝3件）', may.noSalesDate === 3, may.noSalesDate);
 
 console.log('── ④ 国産・輸入 ──');
 ok('スライドは1台（売上日が4月・返車が5月）', may.slide === 1, may.slide);
@@ -137,9 +145,13 @@ console.log('── ⑥ 画面に出るもの ──');
   ok('スライドの列と行が出る', H.indexOf('>スライド<') > 0 && H.indexOf('うちスライド（先月売上・今月返車）') > 0);
   ok('スライドが何かを下に書いてある', H.indexOf('この月に作った仕事ではない') > 0);
   ok('札で数えていると下に書いてある', H.indexOf('予約の「初回／リピーター」の札') > 0);
-  ok('付け忘れと付け間違いの数を出す', H.indexOf('来店履歴から補ったもの') > 0 && H.indexOf('来店履歴と食い違うもの') > 0);
+  ok('🔴 表に「未チェック」の行がある', H.indexOf('未チェック（初回／リピーター 未選択）') > 0);
+  ok('🔴 「0にする対象」の一覧が出る',
+     H.indexOf('0にする対象') > 0 && H.indexOf('初回／リピーターの未選択') > 0 && H.indexOf('売上日が空') > 0);
+  ok('推測で埋めていないと書いてある', H.indexOf('推測で埋めない') > 0 && H.indexOf('100% になりません') > 0);
   ok('比率は色だけでなく名前と台数と％も出す',
-     /リピーター <b>2<\/b>台 50%/.test(H) && /一見 <b>2<\/b>台 50%/.test(H), H.slice(H.indexOf('リピーター <b>'), H.indexOf('リピーター <b>')+120));
+     /リピーター <b>1<\/b>台 25%/.test(H) && /一見 <b>2<\/b>台 50%/.test(H) && /未チェック <b>1<\/b>台 25%/.test(H),
+     H.slice(H.indexOf('リピーター <b>'), H.indexOf('リピーター <b>')+200));
   ok('何を数えたかが下に書いてある', H.indexOf('伝票の数') > 0 && H.indexOf('実績カウント日') > 0);
   const wrap2 = { innerHTML: '' };
   box.pitVisitYear(wrap2, '<i>head</i>', 2026);
