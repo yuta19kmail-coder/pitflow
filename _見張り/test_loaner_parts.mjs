@@ -36,6 +36,7 @@ const ok = (n, c, x = '') => {
   else { fail++; console.log('  ❌ ' + n + (x !== '' ? '\n       → ' + (typeof x === 'string' ? x : JSON.stringify(x)) : '')); }
 };
 const JS = (f) => fs.readFileSync(path.join(process.cwd(), 'js', f), 'utf8');
+const CSS = (f) => fs.readFileSync(path.join(process.cwd(), 'css', f), 'utf8');
 function bend(name, src) {
   if (BREAK === '1' && name === 'loaner-free.js')
     return src.replace("      out.push(_assignItem(a));", "      if (a.hold) return;\n      out.push(_assignItem(a));");
@@ -210,9 +211,14 @@ console.log('\n── ⑤ 代車自身の予定の色が落ちない ──');
   ok('🔴 画面側で「自動は隠す」と書かなくなった',
      !/filter\(function\(x\)\{ return !x\.auto/.test(JS('fleet.js'))
      && !/filter\(function\(e\)\{ return !e\.auto/.test(JS('fleet.js')));
-  /* 🔴 代車カレンダーからも消せるようにした（前は車両管理まで行くしか無かった） */
-  ok('🔴 代車カレンダーの予定を押すと直す・消せる窓が開く',
-     /lo-evt-tag[\s\S]{0,400}flOpenEventModal\(/.test(JS('loaner.js')));
+  /* 🔴🔴 v2.72.1（ゆうた指定）**代車カレンダー本体からは修理系のイベントを触らない。**
+     🗣「あったとしても仮押さえみたいな通常のクリック挙動をするようにして」
+     ⚠ v2.70.1 で一度「押すと直す・消せる」にしたが、**取り消した**。
+        ここは貸出を入れる画面なので、押した先は**マスの通常の動き**であってほしい。
+     ⚠ 直す・消すのは車両管理の月カレンダー（そこでは今までどおり押せる）。 */
+  ok('🔴🔴 代車カレンダーの予定は押せない（マスに素通しする）',
+     !/flOpenEventModal\(/.test(JS('loaner.js'))
+     && /\.lo-evt-tag\{ pointer-events:none/.test(CSS('fleet-cal.css')));
 }
 
 console.log('\n─────────────────────────────');

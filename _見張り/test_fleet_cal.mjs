@@ -34,6 +34,7 @@
        node test_fleet_cal.mjs --break=5  … 列を可変幅（minmax）に戻す      → ⑧ が赤
        node test_fleet_cal.mjs --break=6  … 満了日を「やること」に混ぜる     → ⑥ が赤
        node test_fleet_cal.mjs --break=7  … 札を1行に戻す                  → ⑧-2 が赤
+       node test_fleet_cal.mjs --break=8  … 代車カレンダーの整備をまた押せるようにする → ⑩ が赤
                                              （86px のマスからはみ出す状態）
    =================================================================== */
 import fs from 'fs';
@@ -65,6 +66,10 @@ function bend(name, src){
   if (BREAK === '5' && name === 'fleet.js')
     return src.replace("+ FL_COL_NAME + 'px repeat(' + months.length + ', ' + FL_COL_M + 'px)",
                        "+ FL_COL_NAME + 'px repeat(' + months.length + ', minmax(' + FL_COL_M + 'px,1fr))");
+  /* v2.72.1 …代車カレンダーの整備をまた押せるようにする（＝貸出を入れたいのに整備の窓が開く） */
+  if (BREAK === '8' && name === 'fleet-cal.css')
+    return src.replace('  pointer-events:none; background:none; border:0; }',
+                       '  cursor:pointer; background:none; border:0; }');
   if (BREAK === '7' && name === 'fleet-cal.css')
     return src.replace('.fl-mb{ display:flex; align-items:center; flex-wrap:wrap;',
                        '.fl-mb{ display:flex; align-items:center; flex-wrap:nowrap;')
@@ -230,10 +235,22 @@ console.log('\n── ⑩ 代車カレンダーの整備予定（太い縦バー
   ok('🔴 貸出の札が乗る日には整備の札を出さない（重ねない）', /isStart \? '' : mtTag/.test(loaner));
   ok('確定と予定で濃さを変える', /\.lo-mtline\.cand\{/.test(calcss) && /\.lo-mt\.cand\{/.test(calcss));
   ok('🔴 マスの外わくは足していない（バーが期間の目印）', !/\.lo-mt\{[^}]*border:1px/.test(calcss));
-  ok('押すと作業予定の窓が開く', /flMaintChip/.test(loaner));
+  /* 🔴🔴 v2.72.1（ゆうた指定 2026-09-05）
+     🗣「代車カレンダー本体側からは修理系のイベントはさわれなくていい。
+     　　あったとしても仮押さえみたいな通常のクリック挙動をするようにして」
+     ＝ 札も縦バーも**クリックを受けない**。押した先はマスに素通しされて、空きマス・仮押さえと同じ動きになる。
+     ⚠ ここは貸出を入れる画面。押した時に整備の窓が開くと、やりたいことと違う所へ飛ぶ。 */
+  ok('🔴🔴 この画面では押せない（マスに素通しする）',
+     !/flMaintChip/.test(loaner) && /\.lo-mt\{[^}]*pointer-events:none/.test(calcss));
+  ok('🔴 縦バーもクリックを受けない', /\.lo-mtline\{[^}]*pointer-events:none/.test(calcss));
+  /* ⚠ 押せないぶん、何が入っているかは**マスの title**（カーソルを乗せた時）で言う */
+  ok('🔴 かわりにマスにカーソルを乗せると中身が出る',
+     /if \(mtTitle\) attrs \+= ' title="'/.test(loaner) && /まだ貸せます/.test(loaner));
   /* ⚠ 候補は代車をふさがない＝今までどおり貸せる。使い方にもそう書く。 */
   ok('🔴 使い方に「確定は貸せない／予定はまだ貸せる」と書いてある',
      /確定は貸せません／予定はまだ貸せます/.test(loaner));
+  ok('🔴 使い方に「この画面では押せない」と書いてある',
+     /この画面では押せません/.test(loaner) && /空きマス・仮押さえと同じ動き/.test(loaner));
 }
 
 console.log('\n── ⑪ 決めごとの後始末 ──');
