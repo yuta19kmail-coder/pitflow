@@ -24,7 +24,9 @@
 //     node _見張り/test_loaner_link.mjs --break=4 … 1台に2台結べるようにする           → ④が赤
 //     node _見張り/test_loaner_link.mjs --break=5 … 顧客ビューが無い名前を呼ぶ          → ⑧が赤
 //     node _見張り/test_loaner_link.mjs --break=6 … 引退した車にも未紐づけを出す        → ⑪が赤
-//     node _見張り/test_loaner_link.mjs --break=7 … 詳細表の「顧客車両」の行を消す      → ⑪が赤
+//     node _見張り/test_loaner_link.mjs --break=7 … 詳細表の「顧客紐づけ」の行を消す    → ⑪が赤
+//     node _見張り/test_loaner_link.mjs --break=8 … 履歴に「どの車か」を渡さない        → ⑫が赤
+//     node _見張り/test_loaner_link.mjs --break=9 … 未紐づけでもお客様側へ飛ばす        → ⑫が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -42,6 +44,8 @@ const IDX = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 function bendFleet(src) {
   if (BREAK === '6') return src.replace("        : (v.retired ? ''\n            : '<div class=\"fl-card-link\">", "        : ('' || '<div class=\"fl-card-link\">");
   if (BREAK === '7') return src.replace(/\+ row\('顧客紐づけ', \(function\(\)\{[\s\S]*?\}\)\(\)\)/, "+ ''");
+  if (BREAK === '8') return src.replace("custHistory(lk.cust.id, lk.veh.id)", "custHistory(lk.cust.id)");
+  if (BREAK === '9') return src.replace("  if (!lk){", "  if (false){");
   return src;
 }
 function bend(src) {
@@ -293,6 +297,109 @@ console.log('── ⑪ 代車一覧・車両の詳細に出す印 ──');
   ok('🔴 結ばれていない時も行を空にしない（「未紐づけ」と書く）',
      /顧客紐づけ[\s\S]{0,200}未紐づけ/.test(d2), d2.slice(0, 200));
   ok('どこから結べるかは、カーソルを乗せた時に出る', /title="[^"]*顧客車両との紐づけ/.test(d2));
+}
+
+/* ============================================================
+   ⑫ スペック表の一番下＝履歴・作業予定／カルテNo のリンク（v2.66.0）
+   ------------------------------------------------------------
+   🗣「閉じる、編集の一番下の列に **履歴**→顧客ビューの履歴ビューの車両で絞った画面／
+   　　**作業予定**→この車でワンタイムの代車作業予定を入れるPOPアップ を追加」
+   🗣「また **カルテナンバーはリンク**にして、車両（顧客の一覧画面）に飛ぶように」
+   ⚠ 本物の fleet.js / maint-pit.js を走らせて、**どこへ何を渡したか**まで見る。
+   ============================================================ */
+console.log('── ⑫ スペック表から、お客様側と作業予定へ渡る ──');
+{
+  function node2(){
+    const n = { _html:'', style:{setProperty(){}},
+      classList:{add(){},remove(){},toggle(){},contains(){return false;}},
+      addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){}, children:[],
+      value:'', checked:false, insertAdjacentHTML(){}, querySelector(){return null;},
+      querySelectorAll(){return [];}, scrollIntoView(){} };
+    Object.defineProperty(n, 'innerHTML', { get(){ return n._html; }, set(v){ n._html = v; } });
+    return n;
+  }
+  const bodyEl = node2(), made = [], went = [];
+  const ctx = {
+    console:{log(){},warn(){},error(){}}, setTimeout:(f)=>{ try{ f(); }catch(e){} }, clearTimeout,
+    Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
+    localStorage:{ getItem(){return null;}, setItem(){}, removeItem(){} },
+    document:{ body:{appendChild(){}}, head:node2(), documentElement:{clientWidth:1280,style:{setProperty(){}}},
+      getElementById(id){ return id === 'view-fleet-body' ? bodyEl : null; },
+      createElement:()=>{ const n = node2(); made.push(n); return n; },
+      querySelector(){return null;}, querySelectorAll(){return [];}, addEventListener(){}, removeEventListener(){} },
+    state:{ currentView:'fleet',
+      customers:[{ id:'cu1', name:'小林モータース', vehicles:[
+        { id:'v1', plate:'松戸 500 す 8230', maker:'トヨタ', car:'アクア', karteNo:'K-777' }] }],
+      loaners:[
+        { id:'l9', name:'代車9', number:9, model:'アクア', plate:'松戸 500 す 8230', custId:'cu1', custVehId:'v1' },
+        { id:'l8', name:'代車8', number:8, model:'ムーヴ', plate:'柏 500 い 4444' }],
+      companyCars:[], fleetEvents:[], cards:[], staff:[], settings:{},
+      workTypes:[{ id:'shaken', label:'車検', color:'#ef4444' }] },
+    PitDB:{ save(){} },
+    pitAlert:(m,o)=>went.push({ kind:'alert', code:(o||{}).code }),
+    pitAsk(){ return Promise.resolve(false); }, pitLog(){}, pitToast(){},
+    showView:(v)=>{ went.push({ kind:'showView', v:v }); ctx.state.currentView = v; },
+    custHistory:(cid, vid)=>went.push({ kind:'custHistory', cid:cid, vid:vid }),
+    custOpen:(cid)=>went.push({ kind:'custOpen', cid:cid }),
+    icHydrate(){}, icoBoot(){}, pitModalOutside(){}, pitRefreshAutoTenken(){}, renderSettings(){},
+    pitLoanerSpan:()=>[], pitLoanerRemainText:()=>'', pitVehLabel:(v)=>((v && (v.name || v.model)) || ''),
+    pitSeatsText:(x)=>x||'', pitTenkenFromShaken:()=>'', pitWareki:(x)=>x||''
+  };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(JS('pit-share.js'), ctx);
+  ctx.PitShare.use({ divisions:()=>[], estAmount:()=>0, teamKey:()=>'default' });
+  vm.runInContext(JS('loaner-free.js'), ctx);
+  vm.runInContext(JS('fleet-link.js'), ctx);
+  vm.runInContext(JS('loaner.js'), ctx);
+  vm.runInContext(JS('intern-pit.js'), ctx);
+  vm.runInContext(JS('maint-pit.js'), ctx);
+  vm.runInContext(bendFleet(JS('fleet.js')), ctx);
+
+  ctx.fleetOpenDetail('l9');
+  const box1 = made.map(n => n.innerHTML).filter(x => x && x.indexOf('fd-btns') >= 0).pop() || '';
+  const btns = (box1.match(/<div class="fd-btns">[\s\S]*?<\/div>/) || [''])[0];
+  ok('一番下の列に「履歴」がある', /履歴<\/button>/.test(btns), btns.slice(0,300));
+  ok('一番下の列に「作業予定」がある', /作業予定<\/button>/.test(btns));
+  ok('前からある「閉じる」「編集」も残っている', /閉じる<\/button>/.test(btns) && /編集<\/button>/.test(btns));
+  ok('🔴 カルテNo が押せる形になっている（お客様の車両一覧へ）',
+     /class="fd-linkkarte"[^>]*fleetGoCustomer/.test(box1) && /K-777/.test(box1));
+
+  went.length = 0;
+  ctx.fleetGoHistory('l9');
+  ok('🔴 履歴＝顧客ビューへ切り替えてから開く',
+     went.filter(x => x.kind === 'showView' && x.v === 'customers').length === 1, went);
+  ok('🔴🔴 履歴は「この車で絞った」状態で開く（お客様と車の両方を渡す）',
+     went.some(x => x.kind === 'custHistory' && x.cid === 'cu1' && x.vid === 'v1'), went);
+
+  went.length = 0;
+  ctx.fleetGoCustomer('l9');
+  ok('🔴 カルテNo＝そのお客様の車両一覧を開く',
+     went.some(x => x.kind === 'custOpen' && x.cid === 'cu1'), went);
+
+  /* 紐づいていない車＝押しても飛ばさず、理由を言う */
+  went.length = 0;
+  /* ⚠ 関門を外すと、相手が居ないまま先へ進んで落ちる。落ちても「飛ばさない」は守れていないので赤にする。 */
+  try { ctx.fleetGoHistory('l8'); } catch (e) { went.push({ kind:'crash', msg:String(e && e.message) }); }
+  ok('🔴 紐づいていない車は飛ばさない',
+     !went.some(x => x.kind === 'custHistory' || x.kind === 'showView' || x.kind === 'crash'), went);
+  ok('理由に番号が付いている（PF-3068）',
+     went.some(x => x.kind === 'alert' && x.code === 'PF-3068'), went);
+  ctx.fleetOpenDetail('l8');
+  const box2 = made.map(n => n.innerHTML).filter(x => x && x.indexOf('fd-btns') >= 0).pop() || '';
+  ok('🔴 紐づいていない車では「履歴」が押せない形で出る',
+     /履歴<\/button>/.test(box2) && /disabled[^>]*>\s*<i data-ic=clock/.test(box2), (box2.match(/<div class="fd-btns">[\s\S]*?<\/div>/)||[''])[0].slice(0,300));
+
+  /* 作業予定＝その車が選ばれた状態で開く */
+  made.length = 0;
+  ctx.flMaintAdd('l9');
+  const pop = made.map(n => n.innerHTML).filter(x => x && x.indexOf('mba-veh') >= 0).pop() || '';
+  ok('🔴 作業予定の窓が開く', pop.indexOf('代車の作業予定を足す') > 0);
+  ok('🔴🔴 その車が選ばれた状態になっている',
+     /<option value="l9" selected>/.test(pop), (pop.match(/<select id="mba-veh">[\s\S]*?<\/select>/)||[''])[0]);
+  ok('ほかの車にも選び直せる（押し間違いの逃げ道）', /<option value="l8"/.test(pop));
+  ok('前からある「＋ 予定を足す」も同じ窓を使っている（写しを作っていない）',
+     /flMaintAdd\(\)/.test(JS('maint-pit.js')));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
