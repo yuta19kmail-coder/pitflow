@@ -41,7 +41,7 @@ const IDX = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 function bendFleet(src) {
   if (BREAK === '6') return src.replace("        : (v.retired ? ''\n            : '<div class=\"fl-card-link\">", "        : ('' || '<div class=\"fl-card-link\">");
-  if (BREAK === '7') return src.replace(/\+ row\('顧客車両', \(function\(\)\{[\s\S]*?\}\)\(\)\)/, "+ ''");
+  if (BREAK === '7') return src.replace(/\+ row\('顧客紐づけ', \(function\(\)\{[\s\S]*?\}\)\(\)\)/, "+ ''");
   return src;
 }
 function bend(src) {
@@ -123,10 +123,17 @@ console.log('── ④ お客様の車1台に、自社の車は1台まで ─�
 
 console.log('── ⑤ 印に出す言葉 ──');
 {
-  ok('代車は呼び名がそのまま出る', box.pitFleetBadgeText('loaner', box.state.loaners[0]) === '代車1');
-  ok('自社車両は種別を頭に付ける',
-     box.pitFleetBadgeText('company', box.state.companyCars[0]) === '自社車両（ハイエース）',
+  /* 🔴 v2.65.0（ゆうた「うるさい」「自社🔗済 ／ 🔗済 ぐらいの内容で」）
+     印は**種別＋済**だけ。車の呼び名も、お客様の名前も画面には出さない。 */
+  ok('🔴 代車の印は「代車」の2文字（呼び名を出さない）',
+     box.pitFleetBadgeText('loaner', box.state.loaners[0]) === '代車',
+     box.pitFleetBadgeText('loaner', box.state.loaners[0]));
+  ok('🔴 自社車両の印は「自社」の2文字（車種を出さない）',
+     box.pitFleetBadgeText('company', box.state.companyCars[0]) === '自社',
      box.pitFleetBadgeText('company', box.state.companyCars[0]));
+  ok('相手のお名前は、カーソルを乗せた時の説明に回している',
+     /小林モータース 様/.test(box.pitFleetBadgeTitle('loaner', box.state.loaners[0])),
+     box.pitFleetBadgeTitle('loaner', box.state.loaners[0]));
   ok('種別の言葉は「代車」「自社車両」',
      box.pitFleetKindLabel('loaner') === '代車' && box.pitFleetKindLabel('company') === '自社車両');
 }
@@ -148,6 +155,9 @@ console.log('── ⑦ 顧客ビューの印 ──');
   const pill = (cu.match(/const flPill =[\s\S]*?: '';/) || [''])[0];
   ok('🔴 押せない印（onclick が付いていない）', pill.indexOf('onclick') < 0);
   ok('🔴 色を js に直書きしていない', !/#[0-9a-fA-F]{6}/.test(pill));
+  /* 🔴 v2.65.0 短い印になっているか＝「代車🔗済」「自社🔗済」 */
+  ok('🔴 印は「済」で終わる短い形（車の呼び名を並べていない）',
+     /data-ic=link[\s\S]{0,40}済<\/span>/.test(pill) && pill.indexOf('pitFleetBadgeTitle') > 0, pill.slice(-160));
   ok('色は css のクラスで持っている', /\.cd-pill-fleet\{/.test(CSS('customer-detail.css')));
   ok('都度車両変動の印と色をぶつけていない',
      CSS('customer-detail.css').indexOf('rgba(168,85,247') > 0);
@@ -234,7 +244,7 @@ console.log('── ⑪ 代車一覧・車両の詳細に出す印 ──');
       querySelector(){return null;}, querySelectorAll(){return [];}, addEventListener(){}, removeEventListener(){} },
     state:{ currentView:'fleet',
       customers:[{ id:'cu1', name:'小林モータース', vehicles:[
-        { id:'v1', plate:'松戸 500 す 8230', maker:'トヨタ', car:'アクア' }] }],
+        { id:'v1', plate:'松戸 500 す 8230', maker:'トヨタ', car:'アクア', karteNo:'K-777' }] }],
       loaners:[
         { id:'l9', name:'代車9', number:9, model:'アクア', color:'青', plate:'松戸 500 す 8230', custId:'cu1', custVehId:'v1' },
         { id:'l8', name:'代車8', number:8, model:'ムーヴ', plate:'柏 500 い 4444' },
@@ -255,25 +265,34 @@ console.log('── ⑪ 代車一覧・車両の詳細に出す印 ──');
   ctx.renderFleet();
   const h = bodyEl.innerHTML;
   ok('一覧が描けた', h.length > 200, h.length);
-  ok('🔴 紐づけ済みの車に「◯◯ 様」の印が出る',
-     /fl-link-bdg on[\s\S]{0,160}小林モータース 様/.test(h));
+  /* 🔴 v2.65.0（ゆうた「うるさい」）代車一覧は**「🔗済」だけ**。ここは自社の車しか並ばないので種別も要らない。 */
+  ok('🔴 紐づけ済みの車に「済」の印が出る',
+     /fl-link-bdg on[\s\S]{0,140}data-ic=link[\s\S]{0,30}済<\/span>/.test(h));
+  ok('🔴 一覧にお客様の名前を並べない（カーソルを乗せた時だけ）',
+     h.indexOf('>小林モータース 様<') < 0 && /title="[^"]*小林モータース 様/.test(h));
   const offN = (h.match(/fl-link-bdg off/g) || []).length;
   ok('🔴 結ばれていない車には「未紐づけ」が出る（代車8・ハイエースの2台）', offN === 2, offN);
   ok('🔴 引退した車には出さない（L08 が数えていないので、画面と数を揃える）',
      h.indexOf('代車7') > 0 && offN === 2, { 引退の車が一覧に居る:h.indexOf('代車7') > 0, 未紐づけ:offN });
   ok('🔴 色を js に直書きしていない', !/fl-link-bdg[^']*#[0-9a-fA-F]{6}/.test(JS('fleet.js')));
   ok('色は css のクラスで持っている', /\.fl-link-bdg\.on\{/.test(CSS('polish.css')) && /\.fl-link-bdg\.off\{/.test(CSS('polish.css')));
-  /* 一回クリックした「スペック詳細表」 */
+  /* 一回クリックした「スペック詳細表」＝ v2.65.0「顧客紐づけ：🔗済み　カルテNo」ぐらいの内容で（ゆうた指定） */
   ctx.fleetOpenDetail('l9');
   const d1 = made.map(n => n.innerHTML).filter(x => x && x.indexOf('fd-tbl') >= 0).pop() || '';
-  ok('🔴 詳細表に「顧客車両」の行が出て、相手が分かる',
-     /顧客車両[\s\S]{0,240}小林モータース 様/.test(d1), d1.slice(0, 200));
-  ok('相手のナンバー・車種も出る', /松戸 500 す 8230/.test(d1) && /トヨタ アクア/.test(d1));
+  ok('🔴 詳細表に「顧客紐づけ」の行が出て、済みと分かる',
+     /顧客紐づけ[\s\S]{0,200}済み/.test(d1), d1.slice(0, 200));
+  ok('🔴 カルテNo が出る', /K-777/.test(d1));
+  /* ⚠ 見るのは**その行だけ**。表には代車自身のナンバーの行があるので、
+        表ぜんぶを見ると「お客様のナンバーが出ている」と読み違える。 */
+  const row1 = (d1.match(/<td>顧客紐づけ<\/td>[\s\S]*?<\/tr>/) || [''])[0];
+  ok('🔴 その行にお名前・ナンバー・車種を並べない（カーソルを乗せた時だけ）',
+     row1.indexOf('松戸 500 す 8230') < 0 && row1.indexOf('トヨタ') < 0 &&
+     /title="[^"]*小林モータース 様/.test(row1), row1);
   ctx.fleetOpenDetail('l8');
   const d2 = made.map(n => n.innerHTML).filter(x => x && x.indexOf('fd-tbl') >= 0).pop() || '';
   ok('🔴 結ばれていない時も行を空にしない（「未紐づけ」と書く）',
-     /顧客車両[\s\S]{0,240}未紐づけ/.test(d2), d2.slice(0, 200));
-  ok('どこから結べるかを書いてある', /編集 ▸「顧客車両との紐づけ」/.test(d2));
+     /顧客紐づけ[\s\S]{0,200}未紐づけ/.test(d2), d2.slice(0, 200));
+  ok('どこから結べるかは、カーソルを乗せた時に出る', /title="[^"]*顧客車両との紐づけ/.test(d2));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
