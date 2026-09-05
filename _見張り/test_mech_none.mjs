@@ -120,13 +120,17 @@ console.log('\n── ③ 物差し（決まっているか）は1本 ──');
   const r = await p.evaluate(() => {
     const c = state.cards[0];
     c.inspectors = []; c.mechanics = []; c.inspectorsNone = false; c.mechanicsNone = false;
+    /* ✅ v2.73.0 チェック担当は「なし」で決めておく（この節は点検・整備の言い分けを見る所）。
+       ⚠ 明示しないと、カードの日付が導入日をまたいだ日から急に3件になる＝日付で結果が変わる試験になる。
+       　 チェック担当そのものは test_mech_check.mjs が見ている。 */
+    c.checkers = []; c.checkersNone = true;
     const a = PitMechPick.unsettled(c).slice();
     c.inspectorsNone = true;
     const b2 = PitMechPick.unsettled(c).slice();
     c.mechanics = ['蓮沼'];
     const c3 = PitMechPick.unsettled(c).slice();
     const borrowed = (window.pitMechUnsettled ? pitMechUnsettled(c).slice() : null);
-    c.inspectorsNone = false; c.mechanics = [];
+    c.inspectorsNone = false; c.mechanics = []; c.checkersNone = false;
     return { a, b2, c3, borrowed };
   });
   ok('🔴 どちらも空＝2つとも未入力', r.a.join() === '点検担当,整備担当', r.a);
@@ -152,7 +156,8 @@ const mgShown = () => p.evaluate(() => {
     none: document.querySelectorAll('#mg-pick .cf-mnone').length,
     persons: document.querySelectorAll('#mg-pick .cf-mperson').length
   }));
-  ok('🔴 窓の中もカード詳細と同じ部品（なしも人も並ぶ）', inside.none === 2 && inside.persons > 0, inside);
+  /* ✅ v2.73.0 役は3つ（点検・整備・チェック）＝「なし」も3つ並ぶ */
+  ok('🔴 窓の中もカード詳細と同じ部品（3つの役に「なし」も人も並ぶ）', inside.none === 3 && inside.persons > 0, inside);
   await p.evaluate(() => PitMechGuard.close(0));
   await p.waitForTimeout(200);
   ok('やめたらカードは動かない', (await card()).status === 'work');
@@ -202,8 +207,9 @@ console.log('\n── ⑤ データチェック（T03）＝空っぽは要対応
       car: 'アクア', plate: '野田 500 あ 1-1', boardId: 'default', division: 'div1',
       workType: 'oil', dropType: 'drop', repeat: 'repeat',
       reserveDate: '2100-01-01', returnDate: '2100-01-02',
-      status: 'workDone', inspectors: [], mechanics: [], log: [], maint: {}, office: {}
-    }, o);
+      status: 'workDone', inspectors: [], mechanics: [], checkers: [], checkersNone: true,
+      log: [], maint: {}, office: {}
+    }, o);   /* ✅ v2.73.0 チェック担当は「なし」で決めた形にしておく（この節は点検・整備を見る所） */
     state.cards = [
       mk({ id: 'n1' }),                                                   /* どちらも空 */
       mk({ id: 'n2', mechanics: ['蓮沼'] }),                              /* 点検だけ空 */

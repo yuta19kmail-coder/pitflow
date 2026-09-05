@@ -92,6 +92,10 @@ await p.evaluate(() => {
       status: 'reserved', frontStaff: '椎名', staff: '椎名',
       estAmount: 100000, estHoldDays: 2, needLoaner: false,
       inspectors: ['椎名'], mechanics: ['椎名'],
+      /* ✅ v2.73.0 チェック担当は「なし」で決めた形を既定にする。
+         ⚠ 空のままだと、担当を見ていない節（状態の矛盾・期間など）のカードまで T03 に出て、
+         　 その節が何を見張っているのか読めなくなる。チェック担当は test_mech_check.mjs が見張る。 */
+      checkers: [], checkersNone: true,
       amountQuote: null, amountOrder: null, amountFinal: null
     }, over || {});
     _seq++;
@@ -298,7 +302,7 @@ console.log('\n── ⑦ 状態の矛盾 ──');
   const r = await only([
     { id:'t01', status:'contact', returnStage:'returnWait', returnDate:'@' },
     { id:'t02', status:'returned', returnStage:null, completedAt:null, amountFinal:100000 },
-    { id:'t03', status:'workDone', mechanics:[], inspectors:[] },
+    { id:'t03', status:'workDone', mechanics:[], inspectors:[], checkersNone:true },
     { id:'t05', status:'cancelled' },
     { id:'t09', status:'work', boardId:'nosuchboard' }
   ]);

@@ -61,7 +61,8 @@ console.log('\n── 🎛 チップ式（案B）になっているか ──');
     live: !!document.getElementById('cv-mech-live'),
     liveTxt: (document.getElementById('cv-mech-live') || {}).innerText || ''
   }));
-  ok('点検・整備の2ブロックが出る', r.blocks === 2, r);
+  /* ✅ v2.73.0 チェック担当が3つ目の枠として増えた（点検・整備・チェック） */
+  ok('点検・整備・チェックの3ブロックが出る', r.blocks === 3, r);
   ok('🔴 名前はチップ（ボタン）で並ぶ', r.chips > 0, r);
   ok('プルダウン（select）は消えている', r.selects === 0, r);
   ok('配分プレビューの枠がある', r.live === true, r);
