@@ -21,6 +21,9 @@
        node test_maint_flow.mjs --break=2  … 「今日はやらない」を無視する → ④が赤
        node test_maint_flow.mjs --break=3  … 選択肢の窓が範囲を受けない形に戻す → ⑧が赤
        node test_maint_flow.mjs --break=4  … 入庫しても当日ビューから消さない（v2.48.0 前の姿）→ ⑨が赤
+       node test_maint_flow.mjs --break=5  … 完了したものをカレンダーから消す → ⑦-2 が赤
+       node test_maint_flow.mjs --break=6  … 預かり日数を自前で数え直す → ⑦-2 が赤
+                                             （タスクボードと数字が食い違う）
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -50,6 +53,13 @@ function bend(name, src) {
   if (BREAK === '4' && name === 'pit-share.js')
     return src.replace("if (c.status !== 'reserved') return null;      /* 入庫済み以降はここには出ない */", "")
               .replace("if (c.actualInAt) return null;", "");
+  /* v2.72.0 …完了したものをカレンダーから消してしまう（＝いつやったか分からなくなる前の姿） */
+  if (BREAK === '5' && name === 'maint-pit.js')
+    return src.replace("    doneCards(v.id).forEach(function(c){", "    [].forEach(function(c){");
+  /* v2.72.0 …預かり日数を自前で数え直す（＝タスクボードと数字が食い違う） */
+  if (BREAK === '6' && name === 'maint-pit.js')
+    return src.replace("    var txt = w.pitHoldDaysText ? w.pitHoldDaysText(f, t) : '';",
+                       "    var txt = String(daysBetween(f, t) + 1) + '日';");
   return src;
 }
 
@@ -116,6 +126,9 @@ function boot(form, answer){
   ctx.window = ctx; ctx.asked = asked; ctx.els = els;
   vm.createContext(ctx);
   vm.runInContext(bend('pit-share.js', JS('pit-share.js')), ctx, { filename:'pit-share.js' });
+  /* 🏁 v2.72.0 預かり日数の数え方（pitHoldDays / pitHoldDaysText）はここに居る。
+     ⚠ 本物を読む＝**タスクボードと同じ数え方**であることを見張るため（写しを置かない）。 */
+  vm.runInContext(JS('views.js'), ctx, { filename:'views.js' });
   vm.runInContext(JS('loaner-free.js'), ctx, { filename:'loaner-free.js' });
   vm.runInContext(JS('fleet-link.js'), ctx, { filename:'fleet-link.js' });   /* 🔗 v2.62.0 紐づけの物差し */
   vm.runInContext(JS('loaner.js'), ctx, { filename:'loaner.js' });
@@ -270,6 +283,78 @@ console.log('\n── ⑥⑦ 完TELを通った時 ──');
   ok('🔴 完TEL関門から1か所だけ呼んでいる',
      (src.match(/if \(w\.pitMaintOnComplete\) w\.pitMaintOnComplete\(c\);/g) || []).length === 1);
   ok('関門の側に判断を書き写していない', !/groupId/.test(src));
+}
+
+console.log('\n── ⑦-2 「完了する」を押したあと（v2.72.0）──');
+{
+  /* 🗣 ゆうた 2026-09-05
+     「タスクボードも回って、さいご代車作業予定部分で完了するをクリックしたら
+     　カードは消え、カレンダーのバッチはタスクボードの預かり日数だけにして
+     　グレーで終わった感じを出して。その他の候補は勿論そこで消える」 */
+  const c = boot();
+  c.pitMaintIntake(R1);
+  await tick();
+  const card = c.state.cards[0];
+  c.pitInternReturn(card);       /* 完TEL関門を通す＝実績（returned）へ */
+  await tick();
+  const v = c.state.loaners[0];
+  ok('押す前はボードに残っている（完了の押し忘れが目に入る）',
+     c.pitMaintRows(TODAY).some(r => r.card && r.card.id === card.id));
+  ok('押す前はまだグレーではない',
+     !c.pitMaintCalItems(v, TODAY).some(x => x.state === 'done'));
+
+  /* 「完了する」＝車検なので新しい満了日を入れて押す */
+  c.els['mbf-shaken'] = { value:'2028-10-31' };
+  c.flMaintFinishSave(card.id);
+
+  ok('🔴🔴 ボードから消える', !c.pitMaintRows(TODAY).some(r => r.card && r.card.id === card.id));
+  ok('🔴 済んだ印が付く', card.maintDone === true && !!card.maintDoneAt);
+  ok('🔴🔴 その他の候補は残っていない',
+     (card.maintSpans || []).every(x => x.sid === card.maintFixSid));
+
+  /* 🏁 カレンダーには「預かっていた期間だけ」がグレーで残る */
+  const dn = c.pitMaintCalItems(v, TODAY).filter(x => x.state === 'done')[0];
+  ok('🔴🔴 カレンダーにグレーで残る', !!dn, c.pitMaintCalItems(v, TODAY).map(x => x.state));
+  ok('🔴 車検の3ヶ月の帯ではなくなっている（預かったぶんだけ）',
+     !!dn && dn.months.length === 1 && dn.months[0] === TODAY.slice(0,7));
+  ok('🔴 やった作業は分かる', !!dn && dn.workShort === '車検' && dn.workDot === 'wk-shaken');
+  /* 🔴 数字はタスクボードと同じ物差し（泊数・当日返しは0）。ここで数え直していないことを見る。 */
+  const held = c.pitHoldDaysText(card.reserveDate, card.returnDateFinal || card.returnDate);
+  ok('🔴🔴 数字はタスクボードと同じ預かり日数', !!dn && dn.stateLabel === held, [dn && dn.stateLabel, held]);
+  ok('中身は title で分かる', !!dn && dn.title.indexOf('預かり') >= 0);
+
+  /* 日の軸（車両カレンダーの日ビュー・代車カレンダー）も同じ扱い */
+  const bar = c.pitMaintDayBars(v.id, TODAY.slice(0,7) + '-01', TODAY.slice(0,7) + '-28')[0];
+  ok('🔴 日の軸でもグレーになる', !!bar && bar.state === 'done' && bar.done === true);
+  ok('🔴 期間は預かっていた期間', !!bar && bar.from === card.reserveDate
+     && bar.to === (card.returnDateFinal || card.returnDate));
+  ok('日の軸の数字も預かり日数', !!bar && bar.stateLabel === held);
+
+  /* ⚠ 車検なので満了日が進む＝来年の目標は別に立つ（済んだ印で消えるのはこの1件だけ） */
+  ok('⚠ 車検の満了日は進んでいる', v.shakenDate === '2028-10-31');
+}
+{
+  /* 🔴 完TELを通らずに実績へ入っても、完了で候補は必ず消える（取りこぼしの最後の関門） */
+  const c = boot();
+  c.pitMaintIntake(R1);
+  await tick();
+  const card = c.state.cards[0];
+  card.status = 'returned'; card.returnDate = TODAY;   /* 完TEL関門を通さずに実績にした場合 */
+  ok('候補がまだ残っている状態を作れた', (card.maintSpans || []).length >= 1);
+  c.els['mbf-shaken'] = { value:'2028-10-31' };
+  c.flMaintFinishSave(card.id);
+  ok('🔴🔴 完了で残りの候補は必ず消える',
+     (card.maintSpans || []).every(x => x.sid === card.maintFixSid));
+}
+{
+  /* 画面側＝グレーの見た目が用意してあるか（凡例にも出す＝凡例に無い見た目は出さない） */
+  const css = fs.readFileSync(path.join(process.cwd(), 'css', 'fleet-cal.css'), 'utf8');
+  const fleet = JS('fleet.js'), lo = JS('loaner.js');
+  ok('🔴 済んだ札・バーがグレー', /\.fl-mb\.done \{[^}]*148,163,184/.test(css)
+     && /\.fl-bar3\.done \{[^}]*148,163,184/.test(css));
+  ok('🔴 凡例にグレーが出る', /fl-mb done/.test(fleet) && /預かり日数/.test(fleet));
+  ok('🔴 代車カレンダーの縦バーもグレーになる', /\.lo-mtline\.done\{/.test(css) && /mt\.done \? 'done'/.test(lo));
+  ok('代車カレンダーの使い方にも載せた', /整備（済）/.test(lo));
 }
 
 console.log('\n── ⑧ 画面のつなぎ ──');
