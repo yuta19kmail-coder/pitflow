@@ -277,7 +277,9 @@ console.log('\n── ⑧ 画面のつなぎ ──');
   const fleet = JS('fleet.js'), today = JS('today.js');
   ok('日ビューのセルが選択肢を出す', /flMaintCellMenu\(/.test(fleet));
   ok('🔴 いままでの「予定を追加」も残っている', /flOpenEventModal\(/.test(JS('maint-pit.js')));
-  ok('日ビューに整備の枠のチップが出る', /fl-mn/.test(fleet) && /flMaintChip\(/.test(fleet));
+  /* 🔴 v2.70.0 日ビューの整備の枠は**期間ぜんぶで1本のバー**（.fl-bar3）になった。
+     前は「開始日に札＋続きは細い帯（.fl-mn）」で、何本あるか数えられなかった。 */
+  ok('日ビューに整備の枠のバーが出る', /fl-bar3/.test(fleet) && /flMaintChip\(/.test(fleet));
   ok('当日ビューが自社代車を出す', /pitMaintTodayHtml/.test(today));
   ok('🔴 当日ビューの件数にも入る', /maintN/.test(today));
   ok('🔴 翌日ビューには出さない（今日だけ）', /isToday\) \? pitMaintTodayHtml/.test(today));

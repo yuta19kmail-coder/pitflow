@@ -40,7 +40,7 @@ function bend(name, src) {
   if (BREAK === '1' && name === 'maint-pit.js')
     return src.replace("else if (!live.length && p.inWindow){", "else if (false){");
   if (BREAK === '3' && name === 'fleet.js')
-    return src.replace('/* 🔧 v2.46.0（ゆうた報告', "h += '<span class=\"fl-bdg shaken\">車検</span>';\n      /* 🔧 v2.46.0（ゆうた報告")
+    return src.replace('/* ① 3ヶ月ぶち抜きのバー（車検） */', "inner += '<span class=\"fl-bdg shaken\">車検</span>';\n      /* ① 3ヶ月ぶち抜きのバー（車検） */")
               .replace('if (_flMode === \'day\') _flBindDayDrag();', '/* なぞりを外した */;');
   if (BREAK === '3' && name === 'polish.css')
     return src.replace('.mb-act{ grid-column:3; justify-self:end;', '.mb-act{');
@@ -154,24 +154,54 @@ console.log('\n── ② 警告の出し方 ──');
   ok('赤の次は警告', lv.indexOf('warn') < (lv.indexOf('go') < 0 ? 99 : lv.indexOf('go')));
 }
 
-console.log('\n── ③ 月カレンダーのバッジ ──');
+console.log('\n── ③ 車両カレンダーに出す「やること」（v2.70.0 で作り直し）──');
 {
   const c = boot();
   const v1 = c.state.loaners[0];   /* タント・満了 2026-10-31 */
-  const has = (ym) => c.pitMaintBadges(v1, ym, TODAY).length > 0;
-  ok('🔴🔴 満了月の前々月（8月）に立つ', has('2026-08'));
-  ok('🔴🔴 前月（9月）に立つ', has('2026-09'));
-  ok('🔴🔴 満了月（10月）に立つ', has('2026-10'));
-  ok('その前（7月）には立たない', !has('2026-07'));
-  ok('その後（11月）には立たない', !has('2026-11'));
-  const b10 = c.pitMaintBadges(v1, '2026-10', TODAY);
-  ok('🔴 満了日そのものが赤で出る', b10.some(b => b.cls === 'due' && b.text.indexOf('満了') >= 0));
-  /* ⚠ 1マスに2本以上ある時は数でまとめる（1本目だけ出すと残りが無いように見える） */
-  ok('🔴 同じ月に候補が2本あればまとめて数で出る', b10.some(b => b.text.indexOf('候補2本') >= 0), b10.map(x=>x.text));
-  ok('中身は title で分かる', b10.some(b => (b.title||'').indexOf('10/4') >= 0 && (b.title||'').indexOf('10/12') >= 0));
+  const it1 = c.pitMaintCalItems(v1, TODAY).filter(x => x.work === 'shaken')[0];
+  ok('車検の枠が1件だけ返る（3つに割れない）', !!it1);
+  ok('🔴🔴 満了月の前々月（8月）に立つ', it1.months.indexOf('2026-08') >= 0);
+  ok('🔴🔴 前月（9月）に立つ', it1.months.indexOf('2026-09') >= 0);
+  ok('🔴🔴 満了月（10月）に立つ', it1.months.indexOf('2026-10') >= 0);
+  ok('その前（7月）には立たない', it1.months.indexOf('2026-07') < 0);
+  ok('その後（11月）には立たない', it1.months.indexOf('2026-11') < 0);
+  /* 🔴 3ヶ月ぶち抜きの1本のバーにする＝月が2つ以上なら bar が立つ */
+  ok('🔴🔴 3ヶ月を1本のバーでぶち抜く', it1.bar === true && it1.months.length === 3);
+  /* 🔴 色は状態。作業の種類は前の四角（クラス名だけを配る＝色は CSS が持つ） */
+  ok('🔴 候補があれば状態は「予定」', it1.state === 'cand' && it1.stateLabel.indexOf('予定') === 0);
+  ok('🔴 候補の本数が出る', it1.stateLabel === '予定2');
+  ok('🔴 作業の四角はクラス名で渡す', it1.workDot === 'wk-shaken');
+  ok('作業の短い名前が付く', it1.workShort === '車検');
+  ok('中身は title で分かる', it1.title.indexOf('10/4') >= 0 && it1.title.indexOf('10/12') >= 0);
+  /* ⚠ 満了日そのものは「やること」ではない＝ここでは返さない（画面が別の行で出す） */
+  ok('🔴🔴 満了日は「やること」に混ぜない', !c.pitMaintCalItems(v1, TODAY).some(x => x.state === 'due'));
+  ok('満了日は参照用に持っている', it1.dueDate === '2026-10-31');
+  const v2 = c.state.loaners[1];   /* ヤリス・今月・候補0本 */
+  ok('🔴 候補が1本も無ければ「未割当」（赤）',
+     c.pitMaintCalItems(v2, TODAY).some(x => x.work === 'shaken' && x.state === 'tbd'));
   const v3 = c.state.loaners[2];   /* 満了超過 */
-  ok('🔴 満了超過は今月の列に赤で出る（消えない）',
-     c.pitMaintBadges(v3, '2026-09', TODAY).some(b => b.cls === 'bad'));
+  const it3 = c.pitMaintCalItems(v3, TODAY).filter(x => x.work === 'shaken')[0];
+  ok('🔴 満了超過は「超過」', it3.state === 'over');
+  ok('🔴 満了超過は今月の列に出す（消えない）', it3.months.length === 1 && it3.months[0] === '2026-09');
+  ok('1ヶ月だけならバーにしない', it3.bar === false);
+}
+
+console.log('\n── ③-2 日の軸に出す整備の枠（期間ぜんぶで1本のバー）──');
+{
+  const c = boot();
+  const bars = c.pitMaintDayBars('l1', '2026-10-01', '2026-10-31');
+  ok('🔴 飛び地は本数ぶん並ぶ（数えられる）', bars.length === 2);
+  ok('🔴 日ごとに切らない（1本＝期間ぜんぶ）', bars[0].from === '2026-10-04' && bars[0].to === '2026-10-06');
+  ok('日付順に並ぶ', bars[1].from === '2026-10-12');
+  ok('確定していなければ「予定」', bars[0].state === 'cand' && bars[0].stateLabel === '予定');
+  ok('作業の四角はクラス名で渡す', bars[0].workDot === 'wk-shaken');
+  /* ⚠ 画面からはみ出す側は端で分かるようにする */
+  const cut = c.pitMaintDayBars('l1', '2026-10-05', '2026-10-05');
+  ok('🔴 はみ出す側が分かる（左）', cut[0].cutL === true);
+  ok('🔴 はみ出す側が分かる（右）', cut[0].cutR === true);
+  ok('🔴 切り詰めた端が返る', cut[0].clipFrom === '2026-10-05' && cut[0].clipTo === '2026-10-05');
+  /* 🔴 月の目標（候補が1本も無いカード）は日の軸に出さない＝縮尺が違うものを乗せない */
+  ok('🔴🔴 月の目標は日の軸に出てこない', c.pitMaintDayBars('l2', '2026-09-01', '2026-09-30').length === 0);
 }
 
 console.log('\n── ④ 「日を決める」は日ビューに切り替える ──');
@@ -188,20 +218,37 @@ console.log('\n── ④ 「日を決める」は日ビューに切り替える
   const fleet = bend('fleet.js', JS('fleet.js'));
   ok('日ビュー側に行を光らせる用意がある', /fl-hl/.test(fleet) && /flZoomTo/.test(fleet));
   ok('車両管理がボードを差し込んでいる', /flMaintBoardHtml\(\)/.test(fleet));
-  ok('月カレンダーがバッジを差し込んでいる', /pitMaintBadges\(/.test(fleet));
+  ok('月カレンダーが物差しから中身をもらっている', /pitMaintCalItems\(/.test(fleet));
 }
 
 console.log('\n── ⑤ 手入力は「月の目標」だけ ──');
+/* 🔴 v2.67.0 で入力の形が変わった（ゆうた指定）。ここもその形に直した（v2.70.0）。
+   ・「ひとことメモ」は無くなり、**予約と同じ「作業内容」**になった（mba-menu）
+   ・作業は札（チップ）で選ぶ＝`flMaintPickWork` を押した状態
+   ・「✅急ぎ」は無くなった（ボードの急ぎはカード側の印） */
 {
-  const c = boot({ 'mba-veh':'l1', 'mba-work':'fix', 'mba-ym':'2026-10', 'mba-memo':'' });
+  const c = boot({ 'mba-veh':'l1', 'mba-ym':'2026-10', 'mba-menu':'' });
+  c.flMaintPickWork('general');
   c.flMaintSave();
-  ok('🔴 メモが空なら止まる', c.asked.length === 1 && c.asked[0].code === 'PF-3051');
+  ok('🔴 一般・B.P は作業内容が空なら止まる', c.asked.length === 1 && c.asked[0].code === 'PF-3051');
   ok('カードが1枚も増えない', c.state.cards.length === 2);
 }
 {
-  const c = boot({ 'mba-veh':'l1', 'mba-work':'fix', 'mba-ym':'2026-10', 'mba-memo':'ブレーキから音', '__chk_mba-urgent':true });
+  const c = boot({ 'mba-veh':'l1', 'mba-ym':'2026-10', 'mba-menu':'' });
   c.flMaintSave();
-  const card = c.state.cards.filter(x => x.memo === 'ブレーキから音')[0];
+  ok('🔴 作業を選んでいなければ止まる', c.asked.length === 1 && c.asked[0].code === 'PF-3069');
+}
+{
+  const c = boot({ 'mba-veh':'l1', 'mba-ym':'2026-10', 'mba-menu':'' });
+  c.flMaintPickWork('shaken');
+  c.flMaintSave();
+  ok('⚠ 車検・12点は名前で通じるので作業内容が空でも通る', c.state.cards.length === 3);
+}
+{
+  const c = boot({ 'mba-veh':'l1', 'mba-ym':'2026-10', 'mba-menu':'ブレーキから音' });
+  c.flMaintPickWork('general');
+  c.flMaintSave();
+  const card = c.state.cards.filter(x => x.menu === 'ブレーキから音')[0];
   ok('🔴🔴 カードが1枚だけ増える（fleetEvents ではない）', !!card && c.state.cards.length === 3);
   ok('🔴 社内区分は「代車」（売上・突合から外れる受け皿）', card.internKind === 'loanercar');
   ok('🔴 予約カードとして生まれる', card.status === 'reserved');
@@ -210,7 +257,7 @@ console.log('\n── ⑤ 手入力は「月の目標」だけ ──');
   ok('🔴 候補はまだ1本も無い', Array.isArray(card.maintSpans) && card.maintSpans.length === 0);
   ok('🔴 予約番号は候補を置いた時（＝カードが生まれた時）に振る', typeof card.resNo === 'string');
   ok('月の目標が入る', card.maintYm === '2026-10');
-  ok('急ぎが付く', card.urgent === true);
+  ok('🔴 作業内容が入る（ボードの一言はここの1行目で補う）', card.menu === 'ブレーキから音');
   ok('保存が呼ばれる', c.PitDB.saved === 1);
   ok('ボードに出る', c.pitMaintRows(TODAY).some(r => r.plan.manualId === card.id));
 }
@@ -253,14 +300,15 @@ console.log('\n── ⑧-2 二重バッジの始末・行の並び・なぞり�
   const mStart = fleet.indexOf('function flMonthCalHtml');
   const dStart = fleet.indexOf('function flDayCalHtml');
   const month = fleet.slice(mStart, dStart);
-  const day = fleet.slice(dStart, dStart + 4000);
+  const day = fleet.slice(dStart, dStart + 7000);
   /* 🗣「今元のバッチとダブっちゃってる　まずもとのバッチを消してくれ」 */
   ok('🔴🔴 月カレンダーから元の「車検」バッジを消した', month.indexOf('fl-bdg shaken') < 0);
   ok('🔴🔴 月カレンダーから元の「12ヶ月」バッジを消した', month.indexOf('fl-bdg tenken') < 0);
-  ok('🔴 新しいバッジは月カレンダーに出る', /pitMaintBadges\(/.test(month));
-  /* ⚠ 日ビューの「車検」「12ヶ月」は**その日が満了日・点検日**という別の意味＝残す */
-  ok('⚠ 日ビューの「車検」は残っている（意味が違う＝その日が満了日）', day.indexOf('fl-bdg shaken') >= 0);
-  ok('⚠ 日ビューの「12ヶ月」も残っている', day.indexOf('fl-bdg tenken') >= 0);
+  ok('🔴 やることは物差しからもらう', /pitMaintCalItems\(/.test(month));
+  /* 🔴 v2.70.0 日ビューの満了日・12点は**マスごと塗る**（前は上端の細い線＝ほぼ気づけなかった） */
+  ok('🔴🔴 日ビューの満了日はマスごと塗る', day.indexOf('d-exp') >= 0);
+  ok('🔴 12点の日も同じ形（橙）', day.indexOf('d-tkc') >= 0);
+  ok('🔴 日ビューの整備の枠は1本のバー', day.indexOf('fl-bar3') >= 0 && /pitMaintDayBars\(/.test(day));
   /* 🗣「候補日はドラッグでまとまった日を選べるように」 */
   ok('🔴 日ビューのマスに車と日の目印が付いている', /data-fv="/.test(day) && /data-fd="/.test(day));
   ok('🔴 なぞりを繋いでいる（日ビューを描いた後に呼んでいる）', /_flMode === 'day'\) _flBindDayDrag\(\)/.test(fleet));
