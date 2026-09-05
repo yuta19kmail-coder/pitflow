@@ -30,6 +30,7 @@
 //     node _見張り/test_loaner_link.mjs --break=10 … 車両の選択肢に番号を戻す           → ⑬が赤
 //     node _見張り/test_loaner_link.mjs --break=11 … 内容テンプレの置き場所を戻さない   → ⑬が赤
 //     node _見張り/test_loaner_link.mjs --break=12 … ×が候補ぜんぶを消すようにする      → ⑭が赤
+//     node _見張り/test_loaner_link.mjs --break=13 … 確定の×を聞かずに消すようにする    → ⑮が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -57,6 +58,7 @@ function bendMaint(src) {
   if (BREAK === '11') return src.replace("try { w.WorkContent.setHost(''); if (w.WorkContent.closePanel) w.WorkContent.closePanel(); } catch(e){}", "");
   if (BREAK === '12') return src.replace("c.maintSpans = arr(c.maintSpans).filter(function(x){ return x.sid !== sp.sid; });",
                                          "c.maintSpans = [];");
+  if (BREAK === '13') return src.replace("flMaintDelRecAsk(\\'", "flMaintDelRec(\\'");
   return src;
 }
 function bend(src) {
@@ -609,6 +611,106 @@ console.log('── ⑭ 作業予定ボードの候補に「×」──');
      ctx.state.cards.length);
   ok('🔴 カードごと消す道は「取り下げ」1本のまま（押す前に聞く）',
      /w\.flMaintDrop = function/.test(JS('maint-pit.js')) && /この予定を取り下げますか？/.test(JS('maint-pit.js')));
+}
+
+/* ============================================================
+   ⑮ 確定の「×」は押す前に聞く（v2.69.0）
+   ------------------------------------------------------------
+   🗣「**確定予定も×で消したい**。こっちは**POPアップ確認**を出来るようにして」
+   🔴 候補は聞かない／確定は聞く＝**消えるものの重さで分けている。**
+      確定は当日ビュー・予約カレンダー・MHS に出ているので、消すと現場の見え方が変わる。
+   ============================================================ */
+console.log('── ⑮ 確定の「×」は押す前に聞く ──');
+{
+  const held3 = {}, asked = [];
+  let answer = true;
+  function node5(){
+    const n = { _html:'', id:'', style:{setProperty(){}},
+      classList:{add(){},remove(){},toggle(){},contains(){return false;}},
+      addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){}, children:[],
+      value:'', checked:false, insertAdjacentHTML(){}, querySelector(){return null;},
+      querySelectorAll(){return [];}, scrollIntoView(){} };
+    Object.defineProperty(n, 'innerHTML', { get(){ return n._html; }, set(v){ n._html = v; } });
+    return n;
+  }
+  const YM2 = '2026-10';
+  function boot(cardPatch){
+    const card = Object.assign({
+      id:'mc2', resNo:'Z00003', internKind:'loanercar', status:'reserved', intakeTbd:false,
+      customer:'自社代車', car:'アクア', maker:'トヨタ', plate:'', boardId:'default',
+      workType:'general', maintVehId:'l9', maintYm:YM2, menu:'エアコン',
+      maintSpans:[{ sid:'f', from:YM2+'-04', to:YM2+'-06' }, { sid:'g', from:YM2+'-20', to:YM2+'-22' }],
+      maintFixSid:'f', maintSkipped:[], reserveDate:YM2+'-04', returnDate:''
+    }, cardPatch || {});
+    const ctx = {
+      console:{log(){},warn(){},error(){}}, setTimeout:(f)=>{ try{ f(); }catch(e){} }, clearTimeout,
+      Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
+      localStorage:{ getItem(){return null;}, setItem(){}, removeItem(){} },
+      document:{ body:{ appendChild(n){ if (n.id) held3[n.id] = n; } }, head:node5(),
+        documentElement:{clientWidth:1280,style:{setProperty(){}}},
+        getElementById(id){ return held3[id] || null; }, createElement:()=>node5(),
+        querySelector(){return null;}, querySelectorAll(){return [];}, addEventListener(){}, removeEventListener(){} },
+      state:{ currentView:'fleet', customers:[], fleetEvents:[], staff:[], settings:{},
+        loaners:[{ id:'l9', name:'代車9', number:9, model:'アクア' }], companyCars:[],
+        cards:[JSON.parse(JSON.stringify(card))],
+        workTypes:[{ id:'general', label:'一般', color:'#84cc16' }] },
+      PitDB:{ save(){} },
+      pitAlert:(m,o)=>asked.push({ kind:'alert', code:(o||{}).code }),
+      pitAsk:(m,o)=>{ asked.push({ kind:'ask', msg:m, detail:(o||{}).detail, danger:(o||{}).danger }); return Promise.resolve(answer); },
+      pitLog(){}, pitToast(){}, showView(){}, icHydrate(){}, renderFleet(){}, renderSettings(){},
+      pitRefreshAutoTenken(){}, pitGenResNo:()=>'Z00004'
+    };
+    ctx.window = ctx;
+    vm.createContext(ctx);
+    vm.runInContext(JS('pit-share.js'), ctx);
+    ctx.PitShare.use({ divisions:()=>[], estAmount:()=>0, teamKey:()=>'default' });
+    vm.runInContext(JS('loaner-free.js'), ctx);
+    vm.runInContext(JS('fleet-link.js'), ctx);
+    vm.runInContext(JS('loaner.js'), ctx);
+    vm.runInContext(JS('intern-pit.js'), ctx);
+    vm.runInContext(JS('work-content.js'), ctx);
+    vm.runInContext(bendMaint(JS('maint-pit.js')), ctx);
+    return ctx;
+  }
+  const tick = () => new Promise(r => setTimeout(r, 0));
+
+  const a = boot();
+  const board = a.flMaintBoardHtml();
+  ok('🔴 確定のチップにも × が付く', /mb-chip fixed[\s\S]{0,80}class="mb-x"/.test(board),
+     (board.match(/<span class="mb-chip fixed">[\s\S]*?<\/span>/) || [''])[0]);
+  ok('🔴🔴 確定の × は「聞いてから」の道を通る（候補と別）',
+     /flMaintDelRecAsk\('mc2#f'\)/.test(board), (board.match(/mb-chip fixed[\s\S]{0,200}/) || [''])[0]);
+  ok('候補の × は今までどおり聞かない道', /flMaintDelRec\('mc2#g'\)/.test(board));
+
+  asked.length = 0; answer = true;
+  a.flMaintDelRecAsk('mc2#f');
+  await tick();
+  ok('🔴 押すと窓が出る（危ない操作として）',
+     asked.some(x => x.kind === 'ask' && /確定を取り消しますか/.test(x.msg) && x.danger === true), asked);
+  ok('窓に、消すと現場のどこから消えるかが書いてある',
+     asked.some(x => x.kind === 'ask' && /当日ビュー・予約カレンダー・MHS/.test(x.detail || '')), asked);
+  ok('窓に、予定そのものは残ることが書いてある',
+     asked.some(x => x.kind === 'ask' && /予定そのもの（月の目標）は残る/.test(x.detail || '')));
+  ok('🔴 はい＝確定が消えて、候補は残る',
+     a.state.cards[0].maintSpans.map(x => x.sid).join() === 'g', a.state.cards[0].maintSpans);
+  ok('🔴 確定が外れる（入庫日も外れて「日が決まっていない」に戻る）',
+     a.state.cards[0].maintFixSid === '' && !a.state.cards[0].reserveDate && a.state.cards[0].intakeTbd === true,
+     { fix:a.state.cards[0].maintFixSid, d:a.state.cards[0].reserveDate, tbd:a.state.cards[0].intakeTbd });
+
+  const b = boot(); asked.length = 0; answer = false;
+  b.flMaintDelRecAsk('mc2#f');
+  await tick();
+  ok('🔴 いいえ＝何も消えない', b.state.cards[0].maintSpans.length === 2, b.state.cards[0].maintSpans.length);
+
+  /* 入庫したあと＝取り消す話ではない */
+  const c = boot({ status:'check', actualInAt:YM2+'-04' });
+  const board2 = c.flMaintBoardHtml();
+  ok('🔴 入庫したあとは × を出さない', !/class="mb-x"/.test((board2.match(/<span class="mb-chip fixed">[\s\S]*?<\/span>/) || [''])[0]));
+  asked.length = 0;
+  c.flMaintDelRecAsk('mc2#f');
+  await tick();
+  ok('🔴 それでも押されたら止める（関門は画面だけに置かない）',
+     c.state.cards[0].maintSpans.length === 2 && asked.some(x => x.kind === 'alert' && x.code === 'PF-3070'), asked);
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
