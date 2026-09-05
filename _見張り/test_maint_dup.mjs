@@ -25,6 +25,7 @@
 //     node _見張り/test_maint_dup.mjs --break=2 … 関門が整備カードを素通しする       → ③が赤
 //     node _見張り/test_maint_dup.mjs --break=3 … 当日ビューが関門を呼ばない         → ④が赤
 //     node _見張り/test_maint_dup.mjs --break=4 … 見送った日をふつうの行で出す作りに → ①が赤
+//     node _見張り/test_maint_dup.mjs --break=5 … 画面を切り替えずに描き直すだけにする → ⑦が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -41,6 +42,9 @@ function bend(name, src) {
   if (name === 'today.js' && BREAK === '1') return src.replace(" && !_maintCard(c))", ")");
   if (name === 'today.js' && BREAK === '3') return src.replace('if (window.pitMaintIntakeGuard && pitMaintIntakeGuard(c)) return;', '');
   if (name === 'today.js' && BREAK === '4') return src.replace('!_maintCard(c)', '!(window.pitMaintSpanOn && pitMaintSpanOn(c, dayStr))');
+  if (name === 'fleet.js' && BREAK === '5') return src.replace(
+    "  _flGoFleet();   /* 🔴 v2.63.1 別の画面（当日ビュー）から来ることがある。上の注記を参照 */",
+    "  renderFleet();");
   if (name === 'maint-pit.js' && BREAK === '2') return src.replace(
     "if (!(w.pitCardMaint && w.pitCardMaint(c))) return false;   /* 整備カードでなければ素通し */",
     "return false;");
@@ -220,6 +224,54 @@ console.log('── ⑤ 代車の整備行から、カードが開ける ──'
   c.pitMaintDetailFromToday('mcard_u47540#nope');
   ok('見つからない時は黙らずに番号を出す',
      c.calls.filter(x => x.kind === 'alert' && x.code === 'PF-3067').length === 1, c.calls);
+}
+
+/* ============================================================
+   ⑦ 「車両管理で見る」が、ちゃんと車両管理へ飛ぶ（v2.63.1）
+   ------------------------------------------------------------
+   🗣 ゆうた「車両管理で見るがあるが、クリックしても管理ビューに飛ばない」
+   🔴 `flZoomTo` は長いあいだ**車両管理の中からしか呼ばれていなかった**ので、
+      画面を切り替えずに `renderFleet()` だけしていた＝別の画面から押すと何も起きない。
+   ⚠ 本物の fleet.js を走らせて、**showView('fleet') を呼んだか**まで見る。
+   ============================================================ */
+console.log('── ⑦ 「車両管理で見る」で、ちゃんと車両管理へ飛ぶ ──');
+{
+  function bootFleet(currentView){
+    const calls = [];
+    const ctx = {
+      console:{log(){},warn(){},error(){}}, setTimeout:(f)=>{ try{ f(); }catch(e){} }, clearTimeout,
+      Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
+      localStorage:{ getItem(){return null;}, setItem(){}, removeItem(){} },
+      document:{ body:{appendChild(){}}, head:node0(), documentElement:{clientWidth:1280,style:{setProperty(){}}},
+        getElementById(id){ return id === 'view-fleet-body' ? node0() : null; }, createElement:()=>node0(),
+        querySelector(){return null;}, querySelectorAll(){return [];}, addEventListener(){}, removeEventListener(){} },
+      state:{ currentView:currentView, loaners:[{ id:'l9', name:'代車9', model:'アクア' }], companyCars:[],
+              fleetEvents:[], cards:[], staff:[], settings:{}, workTypes:[] },
+      PitDB:{ save(){} }, pitAlert(){}, pitAsk(){ return Promise.resolve(false); }, pitLog(){}, pitToast(){},
+      showView:(v)=>{ calls.push('showView:' + v); ctx.state.currentView = v; },
+      icHydrate(){}, pitRefreshAutoTenken(){}
+    };
+    ctx.window = ctx; ctx.calls = calls;
+    vm.createContext(ctx);
+    vm.runInContext(bend('fleet.js', JS('fleet.js')), ctx, { filename:'fleet.js' });
+    ctx.renderFleet = () => calls.push('renderFleet');   /* 描く所は差し替えて、呼ばれたかだけ見る */
+    return ctx;
+  }
+  const a = bootFleet('today');
+  a.flZoomTo('l9', 2026, 8);
+  ok('🔴🔴 別の画面（当日ビュー）から押すと、車両管理へ切り替える',
+     a.calls.indexOf('showView:fleet') >= 0, a.calls);
+  const b = bootFleet('fleet');
+  b.flZoomTo('l9', 2026, 8);
+  ok('もう車両管理を見ている時は、切り替えずに描き直すだけ',
+     b.calls.length === 1 && b.calls[0] === 'renderFleet', b.calls);
+  const c = bootFleet('today');
+  c.flZoom(2026, 8);
+  ok('月ヘッダから日ビューへ（前からある道）も同じ関門を通る',
+     c.calls.indexOf('showView:fleet') >= 0, c.calls);
+  const mp = JS('maint-pit.js');
+  ok('当日ビューからの飛び先は flMaintGoto 1本（写しを作っていない）',
+     /w\.flMaintGoto\(r\.vehicleId/.test(mp));
 }
 
 console.log('── ⑥ MHS と揃っている（どちらも2枚出さない）──');
