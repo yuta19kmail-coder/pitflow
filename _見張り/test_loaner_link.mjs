@@ -23,6 +23,8 @@
 //     node _見張り/test_loaner_link.mjs --break=3 … ナンバー候補を1件目だけ返す         → ③が赤
 //     node _見張り/test_loaner_link.mjs --break=4 … 1台に2台結べるようにする           → ④が赤
 //     node _見張り/test_loaner_link.mjs --break=5 … 顧客ビューが無い名前を呼ぶ          → ⑧が赤
+//     node _見張り/test_loaner_link.mjs --break=6 … 引退した車にも未紐づけを出す        → ⑪が赤
+//     node _見張り/test_loaner_link.mjs --break=7 … 詳細表の「顧客車両」の行を消す      → ⑪が赤
 // ============================================================
 import fs from 'fs';
 import vm from 'vm';
@@ -37,6 +39,11 @@ const JS  = (f) => fs.readFileSync(new URL('../js/' + f, import.meta.url), 'utf8
 const CSS = (f) => fs.readFileSync(new URL('../css/' + f, import.meta.url), 'utf8');
 const IDX = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
+function bendFleet(src) {
+  if (BREAK === '6') return src.replace("        : (v.retired ? ''\n            : '<div class=\"fl-card-link\">", "        : ('' || '<div class=\"fl-card-link\">");
+  if (BREAK === '7') return src.replace(/\+ row\('顧客車両', \(function\(\)\{[\s\S]*?\}\)\(\)\)/, "+ ''");
+  return src;
+}
 function bend(src) {
   if (BREAK === '1') return src.replace('function isLinked(fv){ return !!targetOf(fv); }',
                                         'function isLinked(fv){ return !!(fv && fv.custId && fv.custVehId); }');
@@ -196,6 +203,77 @@ console.log('── ⑩ 日常チェックの規則 L08 ──');
   ok('車両管理へ飛べる形（kind は veh）', /kind:'veh'/.test(rule));
   ok('直し方に紐づけ欄の場所が書いてある', rule.indexOf('顧客車両との紐づけ') > 0);
   ok('相手が消えた時と、初めから結んでいない時を言い分けている', rule.indexOf('見つかりません') > 0);
+}
+
+/* ============================================================
+   ⑪ 代車一覧・車両の詳細に出す印（v2.64.0）
+   ------------------------------------------------------------
+   🗣「代車一覧の方にも**紐づけ完了バッチ**が欲しい」
+   🗣「あと一回クリックした**スペック詳細表**みたいな部分にも**リンク済み**を教えて」
+   ⚠ 本物の fleet.js を走らせて、**実際に描いた HTML** を見る（文字だけ見ない）。
+   ============================================================ */
+console.log('── ⑪ 代車一覧・車両の詳細に出す印 ──');
+{
+  function node1(){
+    const n = { _html:'', style:{setProperty(){}},
+      classList:{add(){},remove(){},toggle(){},contains(){return false;}},
+      addEventListener(){}, removeEventListener(){}, appendChild(){}, remove(){}, children:[],
+      value:'', checked:false, insertAdjacentHTML(){}, querySelector(){return null;},
+      querySelectorAll(){return [];}, scrollIntoView(){} };
+    Object.defineProperty(n, 'innerHTML', { get(){ return n._html; }, set(v){ n._html = v; } });
+    return n;
+  }
+  const bodyEl = node1(), made = [];
+  const ctx = {
+    console:{log(){},warn(){},error(){}}, setTimeout:(f)=>{ try{ f(); }catch(e){} }, clearTimeout,
+    Promise, Date, Math, JSON, String, Number, Array, Object, isFinite, RegExp,
+    localStorage:{ getItem(){return null;}, setItem(){}, removeItem(){} },
+    document:{ body:{appendChild(){}}, head:node1(), documentElement:{clientWidth:1280,style:{setProperty(){}}},
+      getElementById(id){ return id === 'view-fleet-body' ? bodyEl : null; },
+      createElement:()=>{ const n = node1(); made.push(n); return n; },
+      querySelector(){return null;}, querySelectorAll(){return [];}, addEventListener(){}, removeEventListener(){} },
+    state:{ currentView:'fleet',
+      customers:[{ id:'cu1', name:'小林モータース', vehicles:[
+        { id:'v1', plate:'松戸 500 す 8230', maker:'トヨタ', car:'アクア' }] }],
+      loaners:[
+        { id:'l9', name:'代車9', number:9, model:'アクア', color:'青', plate:'松戸 500 す 8230', custId:'cu1', custVehId:'v1' },
+        { id:'l8', name:'代車8', number:8, model:'ムーヴ', plate:'柏 500 い 4444' },
+        { id:'l7', name:'代車7', number:7, model:'ミラ', retired:true }],
+      companyCars:[{ id:'c1', name:'ハイエース', model:'ハイエース' }],
+      fleetEvents:[], cards:[], staff:[], settings:{}, workTypes:[] },
+    PitDB:{ save(){} }, pitAlert(){}, pitAsk(){ return Promise.resolve(false); }, pitLog(){}, pitToast(){},
+    showView(){}, icHydrate(){}, icoBoot(){}, pitModalOutside(){}, pitRefreshAutoTenken(){},
+    pitLoanerSpan:()=>[], pitLoanerRemainText:()=>'', pitVehLabel:(v)=>((v && (v.name || v.model)) || ''),
+    pitSeatsText:(x)=>x||'', pitTenkenFromShaken:()=>'', pitWareki:(x)=>x||''
+  };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  vm.runInContext(JS('pit-share.js'), ctx);
+  ctx.PitShare.use({ divisions:()=>[], estAmount:()=>0, teamKey:()=>'default' });
+  vm.runInContext(JS('fleet-link.js'), ctx);
+  vm.runInContext(bendFleet(JS('fleet.js')), ctx);
+  ctx.renderFleet();
+  const h = bodyEl.innerHTML;
+  ok('一覧が描けた', h.length > 200, h.length);
+  ok('🔴 紐づけ済みの車に「◯◯ 様」の印が出る',
+     /fl-link-bdg on[\s\S]{0,160}小林モータース 様/.test(h));
+  const offN = (h.match(/fl-link-bdg off/g) || []).length;
+  ok('🔴 結ばれていない車には「未紐づけ」が出る（代車8・ハイエースの2台）', offN === 2, offN);
+  ok('🔴 引退した車には出さない（L08 が数えていないので、画面と数を揃える）',
+     h.indexOf('代車7') > 0 && offN === 2, { 引退の車が一覧に居る:h.indexOf('代車7') > 0, 未紐づけ:offN });
+  ok('🔴 色を js に直書きしていない', !/fl-link-bdg[^']*#[0-9a-fA-F]{6}/.test(JS('fleet.js')));
+  ok('色は css のクラスで持っている', /\.fl-link-bdg\.on\{/.test(CSS('polish.css')) && /\.fl-link-bdg\.off\{/.test(CSS('polish.css')));
+  /* 一回クリックした「スペック詳細表」 */
+  ctx.fleetOpenDetail('l9');
+  const d1 = made.map(n => n.innerHTML).filter(x => x && x.indexOf('fd-tbl') >= 0).pop() || '';
+  ok('🔴 詳細表に「顧客車両」の行が出て、相手が分かる',
+     /顧客車両[\s\S]{0,240}小林モータース 様/.test(d1), d1.slice(0, 200));
+  ok('相手のナンバー・車種も出る', /松戸 500 す 8230/.test(d1) && /トヨタ アクア/.test(d1));
+  ctx.fleetOpenDetail('l8');
+  const d2 = made.map(n => n.innerHTML).filter(x => x && x.indexOf('fd-tbl') >= 0).pop() || '';
+  ok('🔴 結ばれていない時も行を空にしない（「未紐づけ」と書く）',
+     /顧客車両[\s\S]{0,240}未紐づけ/.test(d2), d2.slice(0, 200));
+  ok('どこから結べるかを書いてある', /編集 ▸「顧客車両との紐づけ」/.test(d2));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（' + pass + '件 緑）' : '✅ ぜんぶ緑（' + pass + '件）'));
