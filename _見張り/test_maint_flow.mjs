@@ -60,7 +60,10 @@ const add = (n) => { const x = new Date(T); x.setDate(x.getDate()+n); return ymd
 const TODAY = ymd(T);
 
 const 代車 = [
-  { id:'l1', name:'代車1', number:1, model:'タント', plate:'野田 580 あ 12-34', maker:'ダイハツ', shakenDate:add(45) },
+  /* 🔗 v2.62.0 custId / custVehId ＝**車両管理で人が設定した紐づけ**。
+     ⚠ ここが無い代車は、ナンバーが同じでもお客様が付かない（黙って引き当てるのをやめたため）。 */
+  { id:'l1', name:'代車1', number:1, model:'タント', plate:'野田 580 あ 12-34', maker:'ダイハツ', shakenDate:add(45),
+    custId:'cu1', custVehId:'v1' },
   { id:'l2', name:'代車2', number:2, model:'アクア', plate:'', shakenDate:add(300) }
 ];
 const 顧客 = [
@@ -114,6 +117,7 @@ function boot(form, answer){
   vm.createContext(ctx);
   vm.runInContext(bend('pit-share.js', JS('pit-share.js')), ctx, { filename:'pit-share.js' });
   vm.runInContext(JS('loaner-free.js'), ctx, { filename:'loaner-free.js' });
+  vm.runInContext(JS('fleet-link.js'), ctx, { filename:'fleet-link.js' });   /* 🔗 v2.62.0 紐づけの物差し */
   vm.runInContext(JS('loaner.js'), ctx, { filename:'loaner.js' });
   vm.runInContext(JS('intern-pit.js'), ctx, { filename:'intern-pit.js' });
   vm.runInContext(bend('maint-pit.js', JS('maint-pit.js')), ctx, { filename:'maint-pit.js' });
@@ -216,12 +220,18 @@ console.log('\n── ⑤ 入庫＝社内区分「代車」のカードが点検
   ok('🔴 いきなり点検待ち（＝タスクボード）', card.status === 'check');
   ok('実入庫日が入る', card.actualInAt === TODAY);
   ok('作業タイプが渡る（変換表なし）', card.workType === 'shaken');
-  ok('🔴 ナンバーでお客様を引けている', card.customer === '小林モータース株式会社' && card.customerId === 'cu1');
+  /* 🔗 v2.62.0（ゆうた指定 2026-09-05）**ナンバーで引き当てるのをやめた。**
+     持ち主が付くのは「車両管理で人が紐づけた代車」だけ。 */
+  ok('🔴 紐づけてあるお客様が付く', card.customer === '小林モータース株式会社' && card.customerId === 'cu1');
   ok('カルテNoも拾う', card.karteNo === 'K-777');
   ok('車種・ナンバーが入る', card.car === 'タント' && card.plate === '野田 580 あ 12-34');
   ok('🔴 未定が外れて入庫日が入る（ふつうの車と同じ階段）',
      card.intakeTbd === false && card.reserveDate === TODAY);
-  ok('🔴 代車マスタに結び先を覚える', c.state.loaners[0].custId === 'cu1' && c.state.loaners[0].custVehId === 'v1');
+  /* 🔴🔴 v2.62.0 **入庫は代車マスタに1文字も書かない。**（結び目を作るのは車両管理の紐づけ欄だけ）
+     ⚠ 前は「入庫の瞬間にナンバーで引いて黙って覚える」だった。人が設定していない結び目は、
+        間違っていても誰も気づけない／ダブっている時にどちらへ結ぶかが運になる、で外した。 */
+  ok('🔴 入庫は代車マスタの紐づけを書き換えない',
+     c.state.loaners[0].custId === 'cu1' && c.state.loaners[0].custVehId === 'v1');
   ok('🔴 枠が「確定・作業中」になる', rec(c,R1).stage === 'fixed' && rec(c,R1).started === true);
   ok('🔴 カードと枠は**同じもの**（つなぐ鍵がもう要らない）',
      card.maintVehId === 'l1' && Array.isArray(card.maintSpans));
