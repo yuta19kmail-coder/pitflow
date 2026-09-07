@@ -125,7 +125,54 @@ console.log('\n── ④ 中古・内部の社内車両も書き戻さない �
   });
 }
 
-console.log('\n── ⑤ ソースの見張り（判定を書き写していない） ──');
+console.log('\n── ⑤🚙 データチェック L09＝すでに書き換わってしまったものを数える（v2.79.0） ──');
+{
+  const ctx = boot();
+  vm.runInContext(JS('fleet-link.js'), ctx, { filename: 'fleet-link.js' });
+  ctx.state.customers = [控え()];
+  /* 顧客控えの車種名が、代車の呼び名で上書きされてしまった姿 */
+  ctx.state.customers[0].vehicles[0].car = 'タント茶';
+  ctx.state.loaners = [{ id:'L1', name:'代車1', model:'タント茶', plate:'柏 500 あ 12-34',
+                         custId:'cu1', custVehId:'v1' }];
+  let r = ctx.pitFleetNameBled();
+  ok('🔴🔴 上書きされた1台を見つける', r.length === 1, r.map(x => x.呼び名));
+  ok('🔴 どの呼び名で上書きされたかを言える', r[0] && r[0].呼び名 === 'タント茶', r[0] && r[0].呼び名);
+  ok('🔴 誰の車かを言える', r[0] && r[0].cust.id === 'cu1', r[0] && r[0].cust.id);
+
+  /* 直したら消える＝「0にする対象」になっている */
+  ctx.state.customers[0].vehicles[0].car = 'タント';
+  ok('🔴 車種名を直したら数から消える', ctx.pitFleetNameBled().length === 0);
+
+  /* 空白のあるなしは同じものとして見る */
+  ctx.state.customers[0].vehicles[0].car = 'タント 茶';
+  ok('空白のあるなしは同じものとして見る', ctx.pitFleetNameBled().length === 1);
+
+  /* 結ばれていない車は L08 の担当（ここでは数えない） */
+  ctx.state.loaners[0].custId = ''; ctx.state.loaners[0].custVehId = '';
+  ok('🔴 紐づいていない車はここでは数えない（L08 の担当）', ctx.pitFleetNameBled().length === 0);
+
+  /* 引退した車は数えない（L08 と同じ扱い） */
+  ctx.state.loaners[0].custId = 'cu1'; ctx.state.loaners[0].custVehId = 'v1';
+  ctx.state.loaners[0].retired = true;
+  ok('引退した車は数えない', ctx.pitFleetNameBled().length === 0);
+}
+
+console.log('\n── ⑤-2 規則の側は「見て決める」（もともと呼び名＝車種名のことがあるため） ──');
+{
+  const ctx = boot();
+  vm.runInContext(JS('fleet-link.js'), ctx, { filename: 'fleet-link.js' });
+  vm.runInContext(JS('inspect-rules.js'), ctx, { filename: 'inspect-rules.js' });
+  const rules = ctx.PIT_INSPECT_RULES || [];
+  const L09 = rules.filter(x => x.id === 'L09')[0];
+  ok('🔴 L09 がある', !!L09);
+  ok('🔴 「見て決める」（確認したで閉じられる）', !!(L09 && L09.judge), L09 && L09.judge);
+  ok('🔴 代車のグループに入っている', !!(L09 && L09.cat === 'loaner'), L09 && L09.cat);
+  ok('規則は51本になった（L08 を数えていなかったぶんも含む）', rules.length === 51, rules.length);
+  const src = JS('inspect-rules.js');
+  ok('🔴 判定は `pitFleetNameBled` 1本を呼んでいる', /pitFleetNameBled\(\)/.test(src));
+}
+
+console.log('\n── ⑥ ソースの見張り（判定を書き写していない） ──');
 {
   const src = JS('customers.js');
   ok('🔴 判定は `pitCardIntern` 1本を呼んでいる', /pitCardIntern\s*\(\s*c\s*\)/.test(src));
