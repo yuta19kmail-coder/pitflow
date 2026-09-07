@@ -110,7 +110,33 @@ console.log('\n── ④ 同じ車・同じ日は「止めずに聞く」（正
   ctx.state.cards = [];
 }
 
-console.log('\n── ⑤ ソースの見張り（写しを作っていない・使われていない欄を並べていない） ──');
+console.log('\n── ⑤🗑🖨 売上なしアーカイブ／表紙を印刷して保存（ゆうた指定 2026-09-07） ──');
+{
+  /* 🗣「保存の他に表紙を印刷して保存。売上なしとアーカイブのバッチはなしで、売上なしアーカイブで保存する」
+     🗣「アーカイブは状態が実績なら勝手にそうなるでしょ？」＝そのとおり（archive-pit.js の物差し）。 */
+  const s2 = JS('master-pit.js');
+  ok('🔴 「売上なし」の札を置いていない', !/chip\(!!M\.noSale/.test(s2));
+  ok('🔴 「アーカイブ」の札も置いていない（返車済みなら自動で付くため）', !/chip\(!!M\.archived/.test(s2));
+  ok('🔴 かわりに「売上なしアーカイブで保存」のボタンがある', /pitMasterNoSale/.test(s2));
+  ok('🔴 中身は予約詳細と同じ手順（印＋返車済み＋実績カウント日を空＋確定返車日）',
+     /M\.noSale = true/.test(s2) && /M\.status = 'returned'/.test(s2)
+     && /M\.completedAt = ''/.test(s2) && /M\.returnDateFinal =/.test(s2));
+  ok('🖨 表紙は `pitPrintCover` 1本を呼ぶだけ', /w\.pitPrintCover\(live\.id\)/.test(s2));
+  ok('🖨 保存が通った時だけ刷る（紙だけ出る道を作っていない）',
+     /if \(print\)\{[\s\S]{0,320}pitPrintCover/.test(s2));
+
+  /* 売上なしアーカイブの形が、関門を通ること */
+  const c = 良い();
+  c.noSale = true; c.completedAt = ''; c.amountFinal = '';
+  ok('🔴 売上なしアーカイブの形（実績カウント日が空）は止まらない', stops(c).length === 0, stops(c));
+  const c2 = 良い(); c2.noSale = true; c2.completedAt = '';
+  ok('🔴 でも確定金額が残っていたら止まる（ゆうたの例）', 引っかかる(c2, '売上なし'), stops(c2));
+  const c3 = 良い(); c3.completedAt = '';
+  ok('🔴 ふつうの返車済みで実績カウント日が空なら、今までどおり止まる',
+     引っかかる(c3, '実績カウント日が空'), stops(c3));
+}
+
+console.log('\n── ⑥ ソースの見張り（写しを作っていない・使われていない欄を並べていない） ──');
 {
   const s = JS('master-pit.js');
   ok('🔴 必須の判定は `pitCardMisses` を借りている', /pitCardMisses\(c\)/.test(s));
