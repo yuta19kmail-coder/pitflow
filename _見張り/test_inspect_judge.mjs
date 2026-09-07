@@ -79,5 +79,38 @@ console.log('\n── ④✅ 「これでいい」を押せる規則（要判断
   ok('残り40本は「直すしかない」', R.length - on.length === 40, R.length);
 }
 
+console.log('\n── ⑤🔴🔴 「確認した」の札を、版のちがう端末どうしで消し合わない（v2.83.0） ──');
+{
+  /* 🗣「R01-297688 とか D01-774597 が、確認したでチェックしてても**数秒で戻ってきちゃう**」
+     ◎正体＝**まだ新しくなっていない端末**では R01・D01 が「要判断ではない」ので、
+       その端末の片づけが**札を消して保存**していた（押した本人の画面は正しい）。
+     🔴 CoreBoard「動かしたはずのカードが戻る」とまったく同じ家族＝
+       **自分の版の知識だけで、ほかの版が書いたものを消しに行かない。** */
+  const ctx = boot([済(200000, 400000)]);
+  const key = 'M07:' + 済(200000, 400000).id;
+  ctx.pitInspectMark(key, 'ok');
+  ok('🔴 要判断の規則には「確認した」が付く', !!(ctx.state.inspectMarks[key]), ctx.state.inspectMarks);
+  ctx.pitInspectRun(); ctx.pitInspectRun(); ctx.pitInspectRun();
+  ok('🔴🔴 何回チェックを走らせても札が消えない', !!(ctx.state.inspectMarks[key]), ctx.state.inspectMarks);
+  const f = (ctx.pitInspectRun().findings || []).filter(x => x.key === key)[0];
+  ok('🔴 数からは外れている（行は残る）', !!f && f.mark === 'ok', f && f.mark);
+}
+{
+  /* 古い札＝要判断でない規則に付いてしまった「確認した」。**消さずに無視する。** */
+  const c = 済(200000, 400000);
+  const ctx = boot([c]);
+  const key = 'D04:' + c.id;                       /* D04＝返車済みなのに電話番号が空（要判断ではない） */
+  ctx.state.inspectMarks[key] = { v:'ok', at:'2026-09-01', by:'だれか' };
+  const res = ctx.pitInspectRun();
+  const f = (res.findings || []).filter(x => x.key === key)[0];
+  ok('🔴🔴 抜け道にならない（要判断でない規則の「確認した」は数から外さない）',
+     !!f && f.mark !== 'ok', f && f.mark);
+  ok('🔴🔴 それでも札は消さない（版がちがう端末どうしで消し合わないため）',
+     !!ctx.state.inspectMarks[key], ctx.state.inspectMarks);
+  const src = JS('inspect-rules.js');
+  ok('🔴 片づけの中に「要判断でないなら消す」が残っていない',
+     !/mk\[k\]\.v === 'ok' && !judgeOf/.test(src));
+}
+
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
 process.exit(fail ? 1 : 0);
