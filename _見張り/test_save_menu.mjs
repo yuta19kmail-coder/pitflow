@@ -33,9 +33,19 @@ import path from 'path';
        `pitCardMisses` に聞く。試験台にも**本物のまま**足す（写しを作らない）。
      ⚠ ここを足し忘れると、関門が「赤ゼロ」と勘違いして**全部素通り**する。 */
   const missSrc = fs.readFileSync(path.join(dir,'js','card-miss.js'),'utf8');
+  /* 🔴 v2.87.0 「この車でもう1件」は **views.js の本物**を切り出して足す（写しを作らない）。
+     ＝ 引き継ぐ欄の一覧（PIT_NEXT_KEEP）を試験の中に書き写さない。本体で足した欄がそのまま試される。
+     ⚠ 名前や並びが変わったらここで落ちる＝それでよい。 */
+  const vSrc = fs.readFileSync(path.join(dir,'js','views.js'),'utf8');
+  const vbFrom = vSrc.indexOf('function _pitBlankReserveCard(){');
+  const vbTo   = vSrc.indexOf('function openNewReserve(){');
+  const vnFrom = vSrc.indexOf('const PIT_NEXT_KEEP = [');
+  const vnEnd  = vSrc.indexOf('window.pitOpenNextReserveFrom = pitOpenNextReserveFrom;');
+  if (vbFrom < 0 || vbTo < 0 || vnFrom < 0 || vnEnd < 0) throw new Error('views.js から「まっさらな1枚」と「この車でもう1件」を切り出せません（構成が変わった？）');
+  const vPart = vSrc.slice(vbFrom, vbTo) + '\n' + vSrc.slice(vnFrom, vnEnd + 'window.pitOpenNextReserveFrom = pitOpenNextReserveFrom;'.length);
   fs.writeFileSync(path.join(dir,'_save-part.js'),
     'let _cardBodyId = "md-body";\nlet _cardCheckOn = false;\n'
-    + missSrc + '\n' + src.slice(gFrom,gTo) + '\n' + src.slice(from,to));
+    + missSrc + '\n' + src.slice(gFrom,gTo) + '\n' + src.slice(from,to) + '\n' + vPart);
 
   const h = fs.readFileSync(path.join(dir,'index.html'),'utf8');
   const head = h.slice(h.indexOf('<section id="view-card" class="view">'), h.indexOf('<div id="md-body"'));
@@ -75,8 +85,17 @@ window.__reset=function(card){
   _cardCheckOn=false; window.__ask=null; window.__askAnswer=true;
   window._pitLastSaveAt=0;   /* 🔴 v1.56.1 二度押しの見張りを毎回まっさらに（続けて試すので） */
   window.__closed=0; window.__printed=[]; window.__toasts=[]; window.__logs=[]; window.__flow=[]; window.__draftCleared=0; window.__alert=null;
+  window.__opened=[]; window.__resNoSeq=0;   /* 🔁 v2.87.0 2枚目まわりも毎回まっさらに */
 };
 window.__card=function(){ return state.cards[0]; };
+/* 🔁 v2.87.0 「この車でもう1件」で2枚目が開くところ。開いた相手を控えるだけ。 */
+window.__opened=[];
+window.openCard=function(id,mode){ window.__opened.push({id:id,mode:mode}); };
+window.PitDB={ save:function(){} };
+window.__resNoSeq=0;
+window.pitGenResNo=function(){ window.__resNoSeq++; return 'K0000'+window.__resNoSeq; };
+window.pitCurrentStaffName=function(){ return ''; };
+window.__next=function(){ return state.cards[1]; };
 </script>
 <script src="_save-part.js"></script>
 <script>window.__ready=1;</script></body>`;
@@ -109,8 +128,10 @@ await p.click('#cs-menu-btn');
 const items=await p.evaluate(()=>Array.from(document.querySelectorAll('#cs-menu-panel .vh-mi b')).map(x=>x.textContent.trim()));
 console.log('   ',JSON.stringify(items));
 ok('開く', await p.evaluate(()=>getComputedStyle(document.getElementById('cs-menu-panel')).display)!=='none');
-/* 🔵 v1.74.0 いちばん上に「承認に回して保存」が増えた（ゆうた指定）。以下は今までどおりの並び。 */
-ok('6つ・順番どおり（承認が先頭）', JSON.stringify(items)===JSON.stringify(['承認に回して保存','仮予約で保存','入庫中に印刷して保存','入庫中に保存のみ','予約保存のみ','表紙印刷のみ']), items);
+/* 🔵 v1.74.0 いちばん上に「承認に回して保存」が増えた（ゆうた指定）。
+   🔁 v2.87.0 その次に「印刷して保存して、この車でもう1件」が入った（ゆうた指定 2026-09-09）。
+   ⚠ 一等地（画面右の「印刷して保存」）は動かさない＝いちばん多い操作の場所を変えない。 */
+ok('7つ・順番どおり（承認 → この車でもう1件 が先頭2つ）', JSON.stringify(items)===JSON.stringify(['承認に回して保存','印刷して保存して、この車でもう1件','仮予約で保存','入庫中に印刷して保存','入庫中に保存のみ','予約保存のみ','表紙印刷のみ']), items);
 ok('下に開く（ボタンより下）', await p.evaluate(()=>{
   const b=document.getElementById('cs-menu-btn').getBoundingClientRect();
   const q=document.getElementById('cs-menu-panel').getBoundingClientRect(); return q.top>=b.bottom-1; }));
@@ -196,6 +217,100 @@ r=await run({_draft:true,status:'reserved',boardId:'default',reserveDate:TODAY},
 ok('仮予約：tentative が立つ', r.card.tentative===true, r.card.tentative);
 ok('仮予約：下書きが外れる',   r.card._draft===undefined, r.card._draft);
 ok('仮予約：status は予約のまま', r.card.status==='reserved', r.card.status);
+
+/* ===================================================================
+   🔁 v2.87.0（ゆうた指定 2026-09-09）印刷して保存して、この車でもう1件
+   -------------------------------------------------------------------
+   見ているのは＝1枚目はふつうに刷って保存されるか／2枚目が続けて開くか／
+   引き継ぐ欄と、わざと空にする欄／2枚がつながっていないこと／
+   🔴 **関門で止まったら2枚目を開かないこと**（ここが一番大事）。
+   =================================================================== */
+console.log('\n── ⑩ 印刷して保存して、この車でもう1件（v2.87.0） ──');
+const SRC = { _draft:true, status:'reserved', boardId:'default', division:'d1',
+  customer:'田中 太郎', sei:'田中', mei:'太郎', kana:'タナカ タロウ', seiKana:'タナカ', meiKana:'タロウ',
+  tel:'090-1111-2222', contacts:[{tel:'090-1111-2222',label:'個人携帯',primary:true}],
+  karteNo:'1234', maker:'トヨタ', car:'アクアGz', plate:'松戸 500 す 8230', drive:['low'],
+  repeat:'repeater', customerId:'cust1', frontStaff:'吉田', reserveStaff:'小林',
+  /* ⚠ 車検にすると「諸費用」が赤になって関門で止まる＝ここでは油脂類で試す（関門そのものは下で別に試す） */
+  workType:'oil', workAddons:['bp'],
+  /* ここから下は「引き継がない」ことを確かめるための、わざと入れてある分 */
+  reserveDate:PAST, reserveTime:'10:00', dropType:'wait', consult:true, memo:'相談で来店',
+  needLoaner:true, loanerId:'L1', loanerFrom:PAST, loanerTo:PAST,
+  estAmount:120000, estHoldDays:3, returnDate:PAST, tentative:false };
+
+const runNext = async (setup, fn) => {
+  await p.evaluate(c=>{ window.__reset(c); }, setup);
+  await p.evaluate(f=>{ eval(f); }, fn);
+  await p.waitForTimeout(80);
+  return p.evaluate(()=>({ card:window.__card(), next:window.__next(), n:state.cards.length,
+    closed:window.__closed, printed:window.__printed, opened:window.__opened,
+    toasts:window.__toasts, logs:window.__logs, flow:window.__flow, alert:window.__alert, ask:window.__ask }));
+};
+
+let x = await runNext(SRC, 'pitSaveAndPrintNext()');
+console.log('   ', JSON.stringify({n:x.n, printed:x.printed, opened:x.opened, closed:x.closed, alert:x.alert, ask:x.ask}));
+ok('1枚目：表紙を刷った',              x.printed.length===1 && x.printed[0]==='c1', x.printed);
+ok('1枚目：下書きが外れる＝保存される', x.card._draft===undefined, x.card._draft);
+ok('1枚目：フローに「表紙を印刷して保存」', x.flow.some(l=>/表紙を印刷して保存/.test(l)), x.flow);
+ok('1枚目：前の画面へ戻る（closeDetail）', x.closed===1, x.closed);
+ok('🔴 2枚目ができた（合計2枚）',       x.n===2, x.n);
+ok('🔴 2枚目が全画面で開く',           x.opened.length===1 && x.opened[0].mode==='page', x.opened);
+ok('🔴 開いたのは2枚目（1枚目ではない）', x.opened.length===1 && x.opened[0].id===x.next.id && x.next.id!=='c1', {o:x.opened,id:x.next&&x.next.id});
+ok('2枚目は下書き＝押すまで予約にならない', x.next._draft===true, x.next._draft);
+ok('続けて入力してほしいと伝える',       x.toasts.some(t=>/次の予約を入力/.test(t)), x.toasts);
+
+console.log('\n   ▸ 引き継ぐもの（ゆうた指定 2026-09-09）');
+for (const [label,key] of [['お客様名','customer'],['姓','sei'],['名','mei'],['カナ','kana'],
+  ['TEL','tel'],['初回／リピーター','repeat'],['お客様の紐づけ','customerId'],
+  ['カルテNo.','karteNo'],['メーカー','maker'],['車種','car'],['ナンバー','plate'],
+  ['作業タイプ','workType'],['国産／輸入','boardId'],['課','division'],
+  ['フロント担当','frontStaff'],['予約担当','reserveStaff']]){
+  ok('引き継ぐ：'+label, JSON.stringify(x.next[key])===JSON.stringify(SRC[key]), {n:x.next[key],s:SRC[key]});
+}
+ok('引き継ぐ：その他連絡先', JSON.stringify(x.next.contacts)===JSON.stringify(SRC.contacts), x.next.contacts);
+ok('引き継ぐ：車両注意',     JSON.stringify(x.next.drive)===JSON.stringify(SRC.drive), x.next.drive);
+ok('引き継ぐ：併用可',       JSON.stringify(x.next.workAddons)===JSON.stringify(SRC.workAddons), x.next.workAddons);
+
+console.log('\n   ▸ わざと空にするもの');
+ok('🔴 相談の印は引き継がない', x.next.consult===false, x.next.consult);
+ok('受付タイプは空',            !x.next.dropType, x.next.dropType);
+ok('入庫時刻は空',              x.next.reserveTime==='', x.next.reserveTime);
+ok('作業内容は空',              x.next.menu==='', x.next.menu);
+ok('メモは空',                  x.next.memo==='', x.next.memo);
+ok('代車は付いてこない',        x.next.needLoaner===false, x.next.needLoaner);
+ok('🔴 使用代車・貸出の期間も付いてこない', !x.next.loanerId && !x.next.loanerFrom && !x.next.loanerTo,
+   {i:x.next.loanerId,f:x.next.loanerFrom,t:x.next.loanerTo});
+ok('概算 金額は空',             x.next.estAmount===null, x.next.estAmount);
+ok('概算 日数は空',             x.next.estHoldDays==='', x.next.estHoldDays);
+ok('返車予定日は空',            x.next.returnDate==='', x.next.returnDate);
+ok('仮予約の印は立っていない',  x.next.tentative===false, x.next.tentative);
+ok('🔴 入庫日は今日（前の日付を持ってこない）', x.next.reserveDate===TODAY, x.next.reserveDate);
+ok('状態は予約',                x.next.status==='reserved', x.next.status);
+
+console.log('\n   ▸ 2枚はつながっていない');
+ok('🔴 予約番号は別々',        !!x.next.resNo && x.next.resNo!==x.card.resNo, {a:x.card.resNo,b:x.next.resNo});
+ok('🔴 相手を指す印を持たない', !Object.keys(x.next).some(k=>/pair|linkedCard|siblingId|fromCard/i.test(k)), Object.keys(x.next).filter(k=>/pair|link|sibling|from/i.test(k)));
+ok('1枚目にも相手の印は付かない', !Object.keys(x.card).some(k=>/pair|linkedCard|siblingId|nextCard/i.test(k)), Object.keys(x.card).filter(k=>/pair|link|sibling|next/i.test(k)));
+ok('🔴 連絡先は写し＝2枚目を直しても1枚目は変わらない', await p.evaluate(()=>{
+  const a=state.cards[0], b=state.cards[1];
+  if (!b.contacts) return false;
+  b.contacts[0].tel='080-9999-9999';
+  return a.contacts[0].tel==='090-1111-2222';
+}));
+
+console.log('\n   ▸ 🔴 関門で止まったら2枚目を開かない');
+x = await runNext(Object.assign({}, SRC, {kana:'', seiKana:'', meiKana:''}), 'pitSaveAndPrintNext()');
+ok('🔴 赤（カナ）で止まる',       !!x.alert && /保存できません/.test(x.alert.t), x.alert&&x.alert.t);
+ok('🔴 1枚目は下書きのまま',      x.card._draft===true, x.card._draft);
+ok('🔴 刷らない',                 x.printed.length===0, x.printed);
+ok('🔴 画面を閉じない',           x.closed===0, x.closed);
+ok('🔴🔴 2枚目を開かない（1枚のまま）', x.n===1 && x.opened.length===0, {n:x.n,o:x.opened});
+
+console.log('\n   ▸ 🟡 黄で「入力に戻る」を選んだら、そこで終わり');
+await p.evaluate(s=>{ window.__reset(Object.assign({},s,{reserveTime:''})); window.__askAnswer=false; }, SRC);
+await p.evaluate(()=>{ pitSaveAndPrintNext(); }); await p.waitForTimeout(100);
+ok('🟡 保存しない・刷らない・2枚目も開かない', await p.evaluate(()=>
+  state.cards[0]._draft===true && window.__printed.length===0 && window.__closed===0 && state.cards.length===1 && window.__opened.length===0));
 
 console.log('\n── ⑨ メニューから選ぶと閉じる ──');
 await p.evaluate(()=>window.__reset({_draft:true,status:'reserved',boardId:'default',reserveDate:'2026-08-04'}));
