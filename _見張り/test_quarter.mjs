@@ -32,7 +32,7 @@ const F1 = '資料/突合サンプル/整備ソフト_2026-08-01_08-07.json';
 const F2 = '資料/突合サンプル/PitFlow_2026-08-01_08-07.json';
 if (!fs.existsSync(F1) || !fs.existsSync(F2)) {
   console.log('\n⏸ 見張り用の本物データがこの箱にありません（' + F1 + '）。');
-  console.log('　 ゆうたのPCの D:\\Claude\\アプリ開発\\PitFlow\\pitflow\\資料\\突合サンプル\\ にあります。');
+  console.log('　 ゆうたのPCの D:\\Claude\\CoreFlowアプリ\\PitFlow\\pitflow\\資料\\突合サンプル\\ にあります。');
   console.log('　 ＝ この試験は走らせていません（**緑でも赤でもない**）。');
   process.exit(2);
 }
