@@ -76,7 +76,8 @@ console.log('\n── ④✅ 「これでいい」を押せる規則（要判断
      R.some(x => x.id === 'R01') && R.some(x => x.id === 'D01'));
   ok('🔴 赤（抜け）のままにしてある＝「やらなくていい」にはしていない',
      R.filter(x => x.id === 'R01')[0].level === 'red' && R.filter(x => x.id === 'D01')[0].level === 'red');
-  ok('残り39本は「直すしかない」', R.length - on.length === 39, R.length);
+  /* ⚠ v2.105.0 D10・T10（どちらも直すしかない側）を足して 41本 */
+  ok('残り41本は「直すしかない」', R.length - on.length === 41, R.length);
 }
 
 console.log('\n── ⑤🔴🔴 「確認した」の札を、版のちがう端末どうしで消し合わない（v2.83.0） ──');
