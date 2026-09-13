@@ -157,5 +157,57 @@ console.log('\n── ⑥ ソースの見張り（写しを作っていない・
   ok('🔴 管理者以上だけ（物差しは pitIsAdmin 1本）', /w\.pitIsAdmin && w\.pitIsAdmin\(\)/.test(s));
 }
 
+
+console.log('\n── 🔧 作業タイプの「併用可」（B.P など）が付けられる（v2.98.0・ゆうた報告） ──');
+{
+  /* 🗣「マスター入力機能の作業タイプにBPがない」 */
+  ctx.state.workTypes = [
+    { id:'shaken', label:'車検', color:'#ef4444' }, { id:'general', label:'一般', color:'#84cc16' },
+    { id:'bp', label:'B.P', color:'#3b82f6', combinable:true }, { id:'coat1y', label:'1Y', color:'#8b5cf6', combinable:true },
+    { id:'carsale', label:'車販依頼', color:'#06b6d4', combinable:true, hideWhenOthers:true },
+    { id:'goods', label:'物販', color:'#14b8a6', alone:true, drawer:true }
+  ];
+  ctx.pitMasterOpen();
+  const html = ctx.pitMasterSec2Html();
+  ok('🔴🔴 画面に B.P のチップが出ている', /pitMasterAddon\(\'bp\'\)/.test(html) && />B\.P</.test(html));
+  ok('併用可の 1Y・車販依頼も出ている', /pitMasterAddon\(\'coat1y\'\)/.test(html) && /pitMasterAddon\(\'carsale\'\)/.test(html));
+  ok('物販（引き出し）は併用可の並びに出さない', !/pitMasterAddon\(\'goods\'\)/.test(html));
+
+  ctx.pitMasterAddon('bp');
+  let M = ctx.pitMasterCurrent();
+  ok('🔴🔴 B.P だけでも付けられる', (M.workAddons || []).join() === 'bp' && (M.workTypes || []).join() === 'bp', M);
+  const miss = ((ctx.pitCardMisses(M) || {}).red || []).map(x => x.key);
+  ok('🔴 B.P だけでも「作業タイプが空」で止まらない', miss.indexOf('workType') < 0, miss);
+
+  ctx.pitMasterSet('workType', 'shaken');
+  M = ctx.pitMasterCurrent();
+  ok('🔴 基本（車検）と重ねられる＝バッジの並びは 車検・B.P', (M.workTypes || []).join() === 'shaken,bp', M.workTypes);
+
+  ctx.pitMasterAddon('bp');
+  M = ctx.pitMasterCurrent();
+  ok('もう一度押すと外れる（並びもそろう）', (M.workAddons || []).length === 0 && (M.workTypes || []).join() === 'shaken', M);
+
+  ctx.pitMasterAddon('coat1y');
+  ctx.pitMasterSet('workType', 'goods');
+  M = ctx.pitMasterCurrent();
+  ok('🔴 物販を選んだら併用可はおりる（単独）', (M.workAddons || []).length === 0 && (M.workTypes || []).join() === 'goods', M);
+  ctx.pitMasterAddon('bp');
+  M = ctx.pitMasterCurrent();
+  ok('🔴 併用可を押したら物販はおりる', !M.workType && (M.workTypes || []).join() === 'bp', M);
+
+  ctx.pitMasterSet('workType', '');
+  M = ctx.pitMasterCurrent();
+  ok('基本を「—」に戻すと、並びは併用可だけ', (M.workType == null) && (M.workTypes || []).join() === 'bp', M);
+
+  ctx.pitMasterIntern('used');
+  M = ctx.pitMasterCurrent();
+  const html2 = ctx.pitMasterSec2Html();
+  ok('🔴 社内区分（中古）を選ぶと併用可もおりて、並びもそろう', (M.workAddons || []).length === 0 && (M.workTypes || []).length === 0, M);
+  ok('社内区分の間は、併用可のチップが押せない', /ms-chip off"[^>]*disabled[^>]*pitMasterAddon\(\'bp\'\)/.test(html2));
+  ctx.pitMasterAddon('bp');
+  ok('押しても付かない', (ctx.pitMasterCurrent().workAddons || []).length === 0);
+  ctx.pitMasterIntern('used');
+}
+
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
 process.exit(fail ? 1 : 0);
