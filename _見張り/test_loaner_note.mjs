@@ -20,6 +20,7 @@
 import fs from 'fs';
 import path from 'path';
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 
 const PORT = process.env.PORT || 8996;
 const MHS_DIR = process.env.MHS_DIR || path.resolve('../../MHS');
@@ -183,8 +184,7 @@ if (!fs.existsSync(mhsPath)) {
 }
 
 console.log('\n── ④ 実物のブラウザ：見た目が打った文字と1つも違わないか ──');
-const chrome = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/opt/pw-browsers/chromium/chrome-linux/chrome']
-  .find(c => { try { return fs.existsSync(c); } catch (_) { return false; } });
+const chrome = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const b = await chromium.launch(chrome ? { executablePath: chrome } : {});
 const p = await b.newPage({ viewport: { width: 1280, height: 700 } });
 const errs = []; p.on('pageerror', e => errs.push(e.message));

@@ -147,5 +147,54 @@ console.log('\n── ☎ T02＝「完TELなしでOK」で閉じられる（v2.9
   ok('⚠ 要判断でない規則には、今までどおり付けられない', !ctx.state.inspectMarks[d04]);
 }
 
+
+console.log('\n── 👤 D08＝「何通りの書き方」ではなく「何人に分かれているか」（v2.95.0・ゆうた報告 D08-254938） ──');
+{
+  /* 🗣「これは顧客統合で直したはずなのに出る」
+     顧客統合はカードのつながり（customerId）だけを付け替え、**名前の書き方は当時のまま残す**。 */
+  const 車 = (id, name, extra) => Object.assign({ id, status:'returned', returnStage:'returnWait', amountFinal:5000,
+    completedAt:'2026-09-01', reserveDate:'2026-09-01', returnDate:'2026-09-01', tel:'090-1111-2222',
+    kana:name, customer:'', plate:'柏 500 あ ' + id, car:'タント' }, extra || {});
+  const D08 = (ctx) => (ctx.pitInspectRun().findings || []).filter(f => f.ruleId === 'D08');
+  const withCust = (cards, customers) => { const ctx = boot(cards); ctx.state.customers = customers || []; return ctx; };
+
+  {
+    const ctx = withCust([車('a1', 'ミゾグチ', { customerId:'cu1' }), 車('a2', '溝口', { customerId:'cu1' })],
+                         [{ id:'cu1', name:'溝口', kana:'ミゾグチ', contacts:[{ tel:'090-1111-2222', primary:true }] }]);
+    ok('🔴🔴 統合して同じお客様につながっていれば、書き方が違っても出ない（D08-254938 の形）', D08(ctx).length === 0, D08(ctx).map(f => f.text));
+  }
+  {
+    const ctx = withCust([車('b1', 'ミゾグチ', { customerId:'cuB' }), 車('b2', '溝口', { customerId:'cuA' })],
+                         [{ id:'cuA', name:'溝口', kana:'ミゾグチ' }, { id:'cuB', name:'', kana:'ミゾグチ', mergedInto:'cuA', archived:true }]);
+    ok('🔴 統合で残った人を指す古いカードは、統合先までたどって同じ人とみなす', D08(ctx).length === 0, D08(ctx).map(f => f.text));
+  }
+  {
+    const ctx = withCust([車('c1', 'ミゾグチ'), 車('c2', '溝口')], []);
+    ok('🔴🔴 つながっていない2枚で書き方が違えば、今までどおり出る（2枚とも）', D08(ctx).length === 2, D08(ctx).length);
+  }
+  {
+    const ctx = withCust([車('d1', 'ミゾグチ', { customerId:'cu1' }), 車('d2', 'サトウ', { customerId:'cu2' })],
+                         [{ id:'cu1', kana:'ミゾグチ' }, { id:'cu2', kana:'サトウ' }]);
+    ok('🔴 同じ番号で別々のお客様につながっていれば、出る（本当に分かれている）', D08(ctx).length === 2, D08(ctx).length);
+  }
+  {
+    const ctx = withCust([車('e1', '溝口', { customerId:'cu1' }), 車('e2', 'ミゾグチ')],
+                         [{ id:'cu1', name:'溝口', kana:'ミゾグチ' }]);
+    ok('🔴 つながっていないカードでも、そのお客様と同じ書き方なら同じ人（D07 が別に見ている）', D08(ctx).length === 0, D08(ctx).map(f => f.text));
+  }
+  {
+    const ctx = withCust([車('f1', '溝口', { customerId:'cu1' }), 車('f2', 'タナカ')],
+                         [{ id:'cu1', name:'溝口', kana:'ミゾグチ' }]);
+    ok('⚠ つながっていないカードが別の書き方なら、出る', D08(ctx).length === 2, D08(ctx).length);
+  }
+  {
+    const cA = { id:'cuA', name:'溝口', kana:'ミゾグチ', contacts:[], vehicles:[] };
+    const cB = { id:'cuB', name:'', kana:'ミゾグチ', mergedInto:'cuA' };
+    const ctx = withCust([車('g1', 'ミゾグチ', { customerId:'cuB' }), 車('g2', '溝口', { customerId:'cuA' })], [cA, cB]);
+    delete cB.mergedInto;                            /* 統合を取り消した＝つながりが②へ戻った形 */
+    ok('⚠ 統合を取り消したら、また出る（正しい）', D08(ctx).length === 2, D08(ctx).length);
+  }
+}
+
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
 process.exit(fail ? 1 : 0);

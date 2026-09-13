@@ -8,6 +8,7 @@
      python -m http.server 8947      ← 別ウィンドウ
      node test_wc_sort.mjs                                                  */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -41,7 +42,7 @@ window.__ready=1;
   fs.writeFileSync(path.join(dir, 'test-wc-sort.html'), page);
 })();
 
-const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
+const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log('  ✅ ' + n); } else { fail++; console.log('  ❌ ' + n + (x !== '' ? '  → ' + JSON.stringify(x) : '')); } };
 

@@ -7,12 +7,12 @@
 //   使い方： python3 -m http.server 8952 --directory .  →  PORT=8952 node test_nav.mjs
 // ============================================================
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 /* 🔴 2026-08-21 ここだけ `chromium.launch()` を素で呼んでいたので、
    ブラウザの置き場所が見つからず **この見張りだけずっと動いていなかった**（NGですらなく起動失敗）。
    ほかの見張りと同じ探し方にそろえる。 */
-const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-            '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(x => fs.existsSync(x));
+const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const PORT = process.env.PORT || 8952;
 /* 🔴 `localhost` だと環境によって IPv6(::1) を先に見に行き、
    IPv4 でだけ待っているサーバに繋がらない。ほかの見張りと同じ 127.0.0.1 にそろえる。 */

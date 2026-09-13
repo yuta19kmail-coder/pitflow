@@ -32,8 +32,9 @@
 import fs from 'fs';
 
 const PORT = process.env.PORT || 8998;
-const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-            '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
+/* 🧪 2026-09-13 ブラウザの場所は _chrome.mjs 1本（Windows でも走る）。playwright 本体は下で動的に読むまま */
+const { chromePath } = await import('./_chrome.mjs');
+const cp = chromePath();
 /* playwright が入っていない／chromium が無い時は、②を飛ばす */
 let chromium = null, 飛ばした理由 = '';
 try { ({ chromium } = await import('playwright')); } catch (e) { 飛ばした理由 = 'playwright が入っていません'; }

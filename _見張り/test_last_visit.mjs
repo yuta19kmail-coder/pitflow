@@ -17,10 +17,11 @@
      node /tmp/srv.js（別ウィンドウ・8991番）
      node test_last_visit.mjs                                           */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
 const PORT = process.env.PORT || 8991;
-const cp=['/opt/pw-browsers/chromium-1194/chrome-linux/chrome','/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p=>fs.existsSync(p));
+const cp=chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 let pass=0, fail=0;
 const b=await chromium.launch({executablePath:cp});
 const p=await b.newPage({viewport:{width:1400,height:900}});

@@ -5,8 +5,9 @@
      python3 -m http.server 8936      （このフォルダで・別ウィンドウ）
      node test_deeplink.mjs                                                     */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
-const cp=['/opt/pw-browsers/chromium-1194/chrome-linux/chrome','/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p=>fs.existsSync(p));
+const cp=chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const b=await chromium.launch({executablePath:cp});
 let pass=0,fail=0; const ok=(n,c,x='')=>{ if(c){pass++;console.log('  ✅ '+n);} else {fail++;console.log('  ❌ '+n+(x?' → '+x:''));} };
 

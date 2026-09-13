@@ -17,6 +17,7 @@
      python -m http.server 8964      ← 別ウィンドウ
      node test_mhscal.mjs                                                  */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -108,7 +109,7 @@ console.log('\n── ② 二重管理の再発防止（PitFlowでは直せな�
 }
 
 /* ===== ③ 読む側（cal-pit.js）を実際に動かす ===== */
-const cp = ['/opt/pw-browsers/chromium-1194/chrome-linux/chrome', '/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p => fs.existsSync(p));
+const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const b = await chromium.launch({ executablePath: cp });
 const ctx = await b.newContext({ viewport: { width: 900, height: 900 } });
 const p = await ctx.newPage();

@@ -21,10 +21,11 @@
      PORT=8967 node test_result_search.mjs
    ============================================================ */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
 
-const cp   = process.env.CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const cp   = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const PORT = process.env.PORT || 8967;
 let OK = 0, NG = 0;
 function ok(name, cond, extra){

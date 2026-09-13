@@ -24,8 +24,9 @@
      NODE_PATH=... node test_board_reorder_real.mjs
    ============================================================ */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 
-const cp   = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const cp   = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const PORT = process.env.PORT || 8994;
 let OK = 0, NG = 0;
 function ok(name, cond, extra){

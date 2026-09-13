@@ -9,6 +9,7 @@
      node test_save_menu.mjs
    ⚠ 書き出す test-save.html / _save-part.js は確認用。本番には含めない（.gitignore 済み）。 */
 import { chromium } from 'playwright';
+import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
 
@@ -102,7 +103,7 @@ window.__next=function(){ return state.cards[1]; };
   fs.writeFileSync(path.join(dir,'test-save.html'), page);
 })();
 
-const cp=['/opt/pw-browsers/chromium-1194/chrome-linux/chrome','/opt/pw-browsers/chromium/chrome-linux/chrome'].find(p=>fs.existsSync(p));
+const cp=chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const TODAY=ymd(new Date()), PAST=ymd(new Date(Date.now()-9*86400000));
 let pass=0,fail=0;
