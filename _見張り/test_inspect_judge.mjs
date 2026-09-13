@@ -68,15 +68,15 @@ console.log('\n── ④✅ 「これでいい」を押せる規則（要判断
 {
   const R = boot([]).PIT_INSPECT_RULES || [];
   const on = R.filter(x => x.judge).map(x => x.id).sort();
-  const want = ['D01','D08','F07','L03','L09','M04','M06','M07','R01','R04','T08'];
-  ok('🔴🔴 要判断はこの11本ちょうど（増えても減っても落ちる）', on.join() === want.join(), on);
+  const want = ['D01','D08','F07','L03','L09','M04','M06','M07','R01','R04','T02','T08'];   /* v2.93.0 T02（完TELなしでOK）を足した */
+  ok('🔴🔴 要判断はこの12本ちょうど（増えても減っても落ちる）', on.join() === want.join(), on);
   ok('🔴🔴 R01（同じ車が同じ日に2枚）に「これでいい」が付いた（ゆうた指定）', on.indexOf('R01') >= 0);
   ok('🔴🔴 D01（必須の項目が空）にも付いた（ゆうた指定）', on.indexOf('D01') >= 0);
   ok('🔴 規則そのものは消していない（R01・D01 は規則表に残っている）',
      R.some(x => x.id === 'R01') && R.some(x => x.id === 'D01'));
   ok('🔴 赤（抜け）のままにしてある＝「やらなくていい」にはしていない',
      R.filter(x => x.id === 'R01')[0].level === 'red' && R.filter(x => x.id === 'D01')[0].level === 'red');
-  ok('残り40本は「直すしかない」', R.length - on.length === 40, R.length);
+  ok('残り39本は「直すしかない」', R.length - on.length === 39, R.length);
 }
 
 console.log('\n── ⑤🔴🔴 「確認した」の札を、版のちがう端末どうしで消し合わない（v2.83.0） ──');
@@ -110,6 +110,41 @@ console.log('\n── ⑤🔴🔴 「確認した」の札を、版のちがう�
   const src = JS('inspect-rules.js');
   ok('🔴 片づけの中に「要判断でないなら消す」が残っていない',
      !/mk\[k\]\.v === 'ok' && !judgeOf/.test(src));
+}
+
+
+console.log('\n── ☎ T02＝「完TELなしでOK」で閉じられる（v2.93.0・ゆうた指定 T02-245425） ──');
+{
+  /* 🗣「T02-245425 これ、直した以外にも完TELなしでOKのチェックがほしい」 */
+  const 完TELなし = () => ({ id:'nocall1', status:'returned', returnStage:'', coverCall:{ done:false },
+    amountQuote:30000, amountFinal:30000, completedAt:'2026-09-01', reserveDate:'2026-08-31',
+    returnDate:'2026-09-01', customer:'テスト', plate:'柏 500 あ 1', car:'タント' });
+  const ctx = boot([完TELなし()]);
+  const T02 = () => (ctx.pitInspectRun().findings || []).filter(f => f.ruleId === 'T02');
+  ok('前提：完TELの印が無い返車済みは T02 に出る', T02().length === 1);
+  const f = T02()[0];
+  ok('🔴 T02 は見て決める規則になった', !!f && f.judge === true);
+  ok('🔴🔴 ボタンの言い方は「完TELなしでOK」（規則の表が持っている）', !!f && f.okLabel === '完TELなしでOK', f && f.okLabel);
+
+  ctx.pitInspectMark(f.key, 'ok');
+  const g = T02()[0];
+  ok('🔴🔴 押すと数から外れる（消えはしない＝下の別枠に残る）', !!g && g.mark === 'ok');
+  ok('🔴 押した日が残る', !!ctx.state.inspectMarks[f.key] && !!ctx.state.inspectMarks[f.key].at);
+  const res = ctx.pitInspectRun();
+  ok('🔴 これから直す数に入らない', (res.byRule.T02 || {}).open === 0, res.byRule.T02);
+
+  /* ⚠ 抜け道にしない＝お金と担当は別の規則が見ている（ここで閉じても逃げない） */
+  const ctx2 = boot([Object.assign(完TELなし(), { id:'nocall2', amountFinal:'' })]);
+  const f2 = (ctx2.pitInspectRun().findings || []).filter(x => x.ruleId === 'T02')[0];
+  ctx2.pitInspectMark(f2.key, 'ok');
+  const still = (ctx2.pitInspectRun().findings || []).filter(x => x.refId === 'nocall2' && x.ruleId !== 'T02' && x.mark !== 'ok');
+  ok('🔴🔴 T02 を閉じても、確定金額の抜けは別の規則で出たまま',
+     still.some(x => x.ruleId === 'M02'), still.map(x => x.ruleId));
+
+  /* ⚠ 他の抜け・矛盾は今までどおり閉じられない（言い方の仕組みを足しただけで、門は広げていない） */
+  const d04 = 'D04:' + 'nocall1';
+  ctx.pitInspectMark(d04, 'ok');
+  ok('⚠ 要判断でない規則には、今までどおり付けられない', !ctx.state.inspectMarks[d04]);
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
