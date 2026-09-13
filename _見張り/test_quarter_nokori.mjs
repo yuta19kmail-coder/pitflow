@@ -73,5 +73,17 @@ console.log('\n── ④ 残り件数と、箱に出る件数が一致する �
   ok('🔴 残り件数も箱（splitDone）と同じ pitQRowDone を見ている', /pitQRowDone/.test(body) && /function splitDone[\s\S]*?pitQRowDone/.test(src), body.slice(0, 200));
 }
 
+
+console.log('\n── ⑤ PitFlowだけの行：照合できた行だけ数えない（v2.101.0・ゆうた指定） ──');
+{
+  /* 🗣「伝票がない場合はアカでOK」「Q3の分がでたら再度Q3に赤が入る挙動で全然OK」 */
+  const r = R([], [], [
+    { 生: { id: 'T23253' }, 別のQ: '伝票は 8月 第3クォーター（2026-08-23・0696）にあります', 別のQ確定: true },
+    { 生: { id: 'X1' }, 別のQ: 'このカードの売上日は 2026-09-02（9月 第1クォーター）です' },
+    { 生: { id: 'X2' } }
+  ]);
+  ok('🔴🔴 照合できた1台は数えない／推しただけ・伝票なしの2台は数える → 残り 2', ctx.pitQNokori(r) === 2, ctx.pitQNokori(r));
+}
+
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
 process.exit(fail ? 1 : 0);
