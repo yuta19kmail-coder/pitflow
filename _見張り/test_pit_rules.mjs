@@ -75,6 +75,8 @@ OK_STATUS.add('cancelled');
 const NOT_CARD = [
   ['board-notes.js',  'done', '付箋（note）の状態'],
   ['board-notes.js',  'open', '付箋（note）の状態'],
+  ['coreflow-note-board.js', 'done', '付箋（note）の状態・全アプリ共通の部品（v2.109.0）'],
+  ['coreflow-note-board.js', 'open', '付箋（note）の状態・全アプリ共通の部品（v2.109.0）'],
   ['sample-data.js',  'done', '見本の付箋の状態'],
   ['members-pit.js',  'left', 'CoreMembers の在籍（退職）'],
 ];

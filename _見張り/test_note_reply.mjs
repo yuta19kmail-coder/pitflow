@@ -124,18 +124,23 @@ const n2 = await notes();
 ok('自分の返信が消えた', n2[0].r.length === 1 && n2[0].r[0].uid === 's2', n2[0]);
 
 console.log('\n───── ⑤ ⋮ からの返信も回覧で出る ─────');
+/* 🔴 v2.109.0 ⋮ のメニューは付箋ボードの共通部品（coreflow-note-board.js）が #cfnb-actions に作る */
 await p.evaluate(() => openBoardNoteActions('n2'));
 await p.waitForTimeout(250);
 ok('🔴 回覧でも ⋮ に「返信する」が出る',
-   await p.evaluate(() => { const e = document.getElementById('bn-action-reply'); return !!e && e.style.display !== 'none'; }));
-await p.evaluate(() => closeBoardNoteActions());
+   await p.evaluate(() => !!document.querySelector('#cfnb-actions.open [data-act="reply"]')));
+await p.evaluate(() => CFNoteBoard._act('reply'));
+await p.waitForTimeout(250);
+ok('⋮ の「返信する」で、その付箋の返信欄が開く',
+   await p.evaluate(s => !!document.querySelector(s + ' .cfr.is-open'), CARD('n2')));
 
 console.log('\n───── ⑥ 配線（共通部品を通っていること）─────');
 {
   const src = fs.readFileSync('js/board-notes.js', 'utf8');
-  ok('返信の描画は CFNoteReply.html 1本', /CFNoteReply\.html\(/.test(src) && (src.match(/CFNoteReply\.html\(/g) || []).length === 1);
-  ok('差し込み（setup）も1か所', (src.match(/CFNoteReply\.setup\(/g) || []).length === 1);
-  ok('🔴 回覧を弾く古い条件が残っていない', !/noteType === 'circulate'\) return ''/.test(src));
+  const board = fs.readFileSync('js/coreflow-note-board.js', 'utf8');
+  ok('返信の描画は CFNoteReply.html 1本（付箋ボードの部品の中）', (board.match(/CFNoteReply\.html\(/g) || []).length === 1 && !/CFNoteReply\.html\(/.test(src));
+  ok('差し込み（setup）も1か所（付箋ボードの部品の中）', (board.match(/CFNoteReply\.setup\(/g) || []).length === 1 && !/CFNoteReply\.setup\(/.test(src));
+  ok('🔴 回覧を弾く古い条件が残っていない', !/noteType === 'circulate'\) return ''/.test(src) && !/noteType === 'circulate'\) return ''/.test(board));
   const shared = fs.readFileSync('js/coreflow-note-reply.js', 'utf8');
   ok('共通部品は「本体は _shared」と書いてある', /_shared/.test(shared));
   ok('共通部品はアプリの名前を持っていない（差し込みで受け取る）',

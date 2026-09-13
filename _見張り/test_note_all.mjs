@@ -147,18 +147,21 @@ ok('🔴 MHS の回覧付箋のチェックは mhsNotes に書く',
 ok('チェックでも PitDB には保存していない', await p.evaluate(() => window.__pitSaves === 0));
 
 console.log('\n───── ④ よその付箋は編集・消去・並び替えができない ─────');
+/* 🔴 v2.109.0 ⋮ のメニューと編集の窓は付箋ボードの共通部品（coreflow-note-board.js）が作る */
 await p.evaluate(() => openBoardNoteActions('c1'));
 await p.waitForTimeout(250);
 ok('⋮ に「編集」を出さない',
-   await p.evaluate(() => document.getElementById('bn-action-edit').style.display === 'none'));
+   await p.evaluate(() => !!document.querySelector('#cfnb-actions.open') && !document.querySelector('#cfnb-actions [data-act="edit"]')));
 ok('⋮ に「消去」を出さない',
-   await p.evaluate(() => document.getElementById('bn-action-delete').style.display === 'none'));
+   await p.evaluate(() => !document.querySelector('#cfnb-actions [data-act="delete"]')));
 ok('⋮ の「返信する」は出る',
-   await p.evaluate(() => document.getElementById('bn-action-reply').style.display !== 'none'));
-await p.evaluate(() => closeBoardNoteActions());
+   await p.evaluate(() => !!document.querySelector('#cfnb-actions [data-act="reply"]')));
+await p.evaluate(() => CFNoteBoard._close('cfnb-actions'));
 await p.waitForTimeout(150);
 ok('🔴 関数を直に呼んでも編集モーダルは開かない',
-   await p.evaluate(() => { openBoardNoteModal('c1'); const m = document.getElementById('modal-board-note'); return !m || !m.classList.contains('show'); }));
+   await p.evaluate(() => { openBoardNoteModal('c1'); const m = document.getElementById('cfnb-editor'); return !m || !m.classList.contains('open'); }));
+ok('🔴 部品の入口を直に呼んでも開かない（よその付箋は canEdit で止まる）',
+   await p.evaluate(() => { CFNoteBoard.openEditor('c1'); const m = document.getElementById('cfnb-editor'); return !m || !m.classList.contains('open'); }));
 ok('よその付箋はドラッグできない',
    await p.evaluate(() => document.querySelector('.bn-card[data-note-id="c1"]').getAttribute('draggable') !== 'true'));
 ok('自分の付箋はドラッグできる',

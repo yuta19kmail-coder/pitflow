@@ -30,17 +30,17 @@ console.log('\n── ① ソースの見張り ──');
 {
   const bn = fs.readFileSync(path.join(dir, 'js', 'board-notes.js'), 'utf8');
   ok('🔴 付箋用に「自社を外した名簿」を作っている', /function _bnStaff\(\)[\s\S]{0,160}?!s\.isSelf/.test(bn));
+  /* 🔴 v2.109.0 付箋ボードは共通部品（coreflow-note-board.js）。PitFlow は名簿を渡すだけ＝渡す所で自社を外していればよい */
   const musts = [
-    ['担当のチェック一覧', /const list = _bnStaff\(\);/],
-    ['「全員」ボタン', /bnQuickSelectAll = function \(\) \{ _editor\.members = _bnStaff\(\)/],
-    ['部署の一括選択', /const inDiv = _bnStaff\(\)/],
-    ['受付の一括選択', /const recp = _bnStaff\(\)/],
-    ['「自分」の選択肢', /const meOpts = _bnStaff\(\)/],
-    ['「自分」の既定値', /const staff = _bnStaff\(\);/],
+    ['担当の候補（部品に渡す名簿）', /members: \(\) => _bnStaff\(\)/],
+    ['部署・受付の一括選択', /quickGroups: \(\) => \{\s*const staff = _bnStaff\(\);/],
+    ['「自分」の既定値（見本のとき）', /function _meIds\(\)[\s\S]{0,500}?const staff = _bnStaff\(\);/],
   ];
   musts.forEach(([label, re]) => ok('🔴 ' + label + 'から自社を外している', re.test(bn)));
   ok('名前を出す方は素の state.staff を見る（昔の付箋が化けない）',
-     /function _staffById[\s\S]{0,200}?\(state\.staff \|\| \[\]\)\.find/.test(bn), '');
+     /function _staffById[\s\S]{0,200}?state\.staff\) \|\| \[\]\)\.find/.test(bn), '');
+  ok('🔴 ログインしていれば「自分」は本人（名簿に見つからなくても他人にしない）',
+     /function _meIds\(\)\s*\{\s*const m = window\.fb && window\.fb\.currentMember;\s*if \(m && m\.id\) return/.test(bn));
 
   const mp = fs.readFileSync(path.join(dir, 'js', 'members-pit.js'), 'utf8');
   ok('🔴 メンバー一覧からも自社を外している',
@@ -56,8 +56,6 @@ console.log('\n── ① ソースの見張り ──');
   const ver = /<meta name="app-version" content="([\d.]+)">/.exec(html);
   ok('版の表示がそろっている（meta＋画面2か所）',
      !!ver && (html.match(new RegExp('v' + ver[1].replace(/\./g, '\\.') + '<', 'g')) || []).length >= 2, ver && ver[1]);
-  /* 🔴 v1.75.0 ここは番号を**決め打ち**していたので、直すたびに落ちていた（版を上げるのは正しい作業なのに）。
-     「その時より**下がっていないか**」だけを見る形にした。 */
   const vnum = (re) => { const m = re.exec(html); return m ? +m[1] : -1; };
   ok('付箋とメンバーのキャッシュ番号が下がっていない',
      vnum(/board-notes\.js\?v=(\d+)/) >= 8 && vnum(/members-pit\.js\?v=(\d+)/) >= 14,
@@ -71,10 +69,9 @@ const p = await b.newPage({ viewport: { width: 1400, height: 1000 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 
-/* 本物の board-notes.js を、にせの state だけ与えて動かす */
+/* 本物の 付箋ボードの部品＋board-notes.js を、にせの state だけ与えて動かす */
 const page = `<!doctype html><meta charset="utf-8"><body>
 <div id="board-notes-area"></div>
-<div id="bn-inp-members"></div><div id="bn-group-quick"></div>
 <script>
 window.state = {
   boardNotes: [], boardLabels: {}, currentView: 'dashboard',
@@ -89,6 +86,7 @@ window.PIT_DIVS = [{ id:'div1', label:'1課' }, { id:'div2', label:'2課' }];
 window.PitDB = { save: function(){} };
 window.pitToast = function(){};
 <\/script>
+<script src="js/coreflow-note-board.js"><\/script>
 <script src="js/board-notes.js"><\/script>
 <script>window.__ready = 1;<\/script>`;
 fs.writeFileSync(path.join(dir, 'test-self-member.html'), page);
@@ -99,15 +97,14 @@ const ev = (fn, arg) => p.evaluate(fn, arg);
 
 console.log('\n── ② 付箋の担当えらび ──');
 /* 選ばれている人を画面から読む（本体に手を入れずに中身を見るため） */
-const CHECKED = `(() => Array.from(document.querySelectorAll('#bn-inp-members input[type=checkbox]'))
-  .filter(x => x.checked)
-  .map(x => (/'([^']+)'/.exec(x.getAttribute('onchange')) || [])[1]))()`;
+const CHECKED = `(() => Array.from(document.querySelectorAll('#cfnb-ed-body .bn-member-pick.is-checked'))
+  .map(x => (/'member','([^']+)'/.exec(x.getAttribute('onclick')) || [])[1]))()`;
 const checked = () => p.evaluate(CHECKED);
 
-await ev(() => { window.bnQuickClear(); });
-await p.waitForTimeout(60);
+await ev(() => { window.CFNoteBoard.openEditor(null); });
+await p.waitForTimeout(80);
 {
-  const html = await ev(() => document.getElementById('bn-inp-members').innerHTML);
+  const html = await ev(() => (document.querySelector('#cfnb-ed-body .bn-member-list') || {}).innerHTML || '');
   ok('ふつうの人は出る（ゆうた・コバモ・たろう）',
      /ゆうた/.test(html) && /コバモ/.test(html) && /たろう/.test(html));
   ok('🔴 「小林モータース」は担当の候補に出ない', !/小林モータース/.test(html), html.slice(0, 200));
@@ -116,27 +113,32 @@ await p.waitForTimeout(60);
 
 console.log('\n── ③ 一括選択のボタン ──');
 {
-  await ev(() => { window.bnQuickClear(); window.bnQuickSelectAll(); });
+  await ev(() => { CFNoteBoard._ed('clear'); CFNoteBoard._ed('all'); });
   const all = await checked();
   ok('🔴 「全員」に自社が混ざらない', all.indexOf('pit_self') < 0, all);
   ok('「全員」はふつうの人3人', all.length === 3, all);
 }
 {
-  await ev(() => { window.bnQuickClear(); window.bnQuickSelectDivision('div1'); });
+  const labels = await ev(() => Array.from(document.querySelectorAll('#cfnb-ed-body .cfnb-quick .cfnb-chip')).map(x => x.textContent.trim()));
+  ok('一括ボタンは 全員・クリア・1課・2課・受付ぜんぶ', /全員/.test(labels.join()) && /1課/.test(labels.join()) && /受付ぜんぶ/.test(labels.join()), labels);
+  await ev(() => { CFNoteBoard._ed('clear'); CFNoteBoard._ed('group', 0); });
   const d1 = await checked();
-  ok('部署の一括に自社が混ざらない', d1.indexOf('pit_self') < 0, d1);
-  await ev(() => { window.bnQuickClear(); window.bnQuickSelectReception(); });
+  ok('部署の一括に自社が混ざらない', d1.indexOf('pit_self') < 0 && d1.length === 2, d1);
+  await ev(() => { CFNoteBoard._ed('clear'); CFNoteBoard._ed('group', 2); });
   const rc = await checked();
-  ok('🔴 受付の一括に自社が混ざらない（自社は front:true を持っている）', rc.indexOf('pit_self') < 0, rc);
+  ok('🔴 受付の一括に自社が混ざらない（自社は front:true を持っている）', rc.indexOf('pit_self') < 0 && rc.length === 2, rc);
+  await ev(() => CFNoteBoard._close('cfnb-editor'));
 }
 
-console.log('\n── ④ 「自分」の選択肢 ──');
+console.log('\n── ④ 「自分」 ──');
 {
-  await ev(() => { try { localStorage.removeItem('pitflow_bn_me'); } catch (e) {} window.renderBoardNotes(); });
-  await p.waitForTimeout(60);
-  const html = await ev(() => document.getElementById('board-notes-area').innerHTML);
-  ok('🔴 「自分」の選択肢に自社が出ない', !/value="pit_self"/.test(html));
-  ok('「自分」の既定は自社ではない', !/<option value="pit_self"[^>]*selected/.test(html));
+  const sample = await ev(() => { try { localStorage.removeItem('pitflow_bn_me'); } catch (e) {} return CFNoteBoard.adapter().me(); });
+  ok('🔴 見本（ログインなし）でも「自分」の既定は自社ではない', sample.indexOf('pit_self') < 0 && sample[0] === 'p1', sample);
+  const picked = await ev(() => { try { localStorage.setItem('pitflow_bn_me', 'pit_self'); } catch (e) {} return CFNoteBoard.adapter().me(); });
+  ok('🔴 端末に自社が覚えてあっても自分にしない', picked.indexOf('pit_self') < 0, picked);
+  const login = await ev(() => { window.fb = { currentMember: { id: 'p9' }, currentUser: { uid: 'u9' } }; return CFNoteBoard.adapter().me(); });
+  ok('🔴 ログインしていれば本人（名簿に見つからなくても、先頭の人を自分にしない）', JSON.stringify(login) === JSON.stringify(['p9', 'u9']), login);
+  await ev(() => { delete window.fb; });
 }
 
 console.log('\n── ⑤ 昔の付箋に入っている分は化けない ──');
@@ -158,4 +160,3 @@ ok('ページのJSエラーなし', errs.length === 0, errs.slice(0, 4));
 await b.close();
 if (!process.env.KEEP_HTML) { try { fs.unlinkSync(path.join(dir, 'test-self-member.html')); } catch (e) {} }
 console.log('\n' + pass + ' OK / ' + fail + ' NG\n');
-process.exit(fail ? 1 : 0);
