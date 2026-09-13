@@ -24,6 +24,8 @@
        node test_maint_flow.mjs --break=5  … 完了したものをカレンダーから消す → ⑦-2 が赤
        node test_maint_flow.mjs --break=6  … 預かり日数を自前で数え直す → ⑦-2 が赤
                                              （タスクボードと数字が食い違う）
+       node test_maint_flow.mjs --break=7  … 行がカードを探すのを「予約中だけ」に戻す（v2.91.0 までの姿）
+                                             → ⑦-3 が赤（入庫した瞬間に行とカードが切れる＝完了するが出ない）
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -60,6 +62,10 @@ function bend(name, src) {
   if (BREAK === '6' && name === 'maint-pit.js')
     return src.replace("    var txt = w.pitHoldDaysText ? w.pitHoldDaysText(f, t) : '';",
                        "    var txt = String(daysBetween(f, t) + 1) + '日';");
+  /* v2.92.0 …行がカードを探すのを「予約中・同じ月だけ」に戻す（＝L57688 で起きていた姿） */
+  if (BREAK === '7' && name === 'maint-pit.js')
+    return src.replace("var _card = p.manualId ? cardOf(p.manualId) : planCard(v.id, p);",
+                       "var _card = p.manualId ? cardOf(p.manualId) : cardForPlan(v.id, p.work, p.ym);");
   return src;
 }
 
@@ -529,6 +535,78 @@ console.log('\n── ⑪ 引っ越しの入口は必ず何か出す（v2.49.1 �
      && !/class="pit-blank-box"/.test(mp));
   ok('⚠ 掛け直しは掛かったら止まる（掛かったあとも待ち続けない）',
      /if \(w\.renderSettings\.__pitMaintMig\) return;/.test(mp));
+}
+
+console.log('\n── ⑦-3 車検・12点（計算で出る行）でも「完了する」が出る（v2.92.0・ゆうた報告 L57688）──');
+{
+  /* 🗣 ゆうた 2026-09-13「L57688 で非カウントの実績に入ってるにも関わらず、代車管理の方から完了にできない」
+     ◎正体 … 車検・12点の行は**計算で出る**。行からカードを探す物差しが「予約中のカードだけ」だったので、
+       **入庫した瞬間に行とカードが切れていた**＝実績に入っても「完了する」が永久に出ない。
+     ⚠ 上の ⑦-2 は見本のカードの月（今月）が車検の月とズレていて、**手で足した行の道**を通っていた。
+       ＝ 実物と違う道で緑になっていた。ここは**実物と同じ＝計算の行から置いたカード**で見る。 */
+  const c = boot();
+  const v = c.state.loaners[0];
+  const card = c.state.cards[0];
+  card.maintYm = v.shakenDate.slice(0, 7);          /* 実物＝計算の行から置いたカードは、その月の目標を持つ */
+  const rowOf = () => c.pitMaintRows(TODAY).filter(r => r.vehicleId === 'l1' && r.work === 'shaken');
+  ok('前提：見本は計算の行（手で足した行ではない）',
+     rowOf().length === 1 && !rowOf()[0].plan.manualId, rowOf().map(r => r.plan.manualId));
+  ok('予約中は行とカードが結びついている', !!rowOf()[0].card && rowOf()[0].card.id === card.id);
+
+  c.pitMaintIntake(R1); await tick();
+  ok('🔴🔴 入庫したあとも、行はカードを見失わない',
+     rowOf().length === 1 && !!rowOf()[0].card && rowOf()[0].card.id === card.id, rowOf().map(r => r.card && r.card.id));
+  ok('🔴 入庫中は「作業中」（「候補がまだ1本もありません」と騒がない）',
+     rowOf()[0].level === 'doing', rowOf()[0].msg);
+
+  c.pitInternReturn(card); await tick();
+  ok('前提：実績（非カウント）に入った', card.status === 'returned' && c.pitCardNoSale(card));
+  const r = rowOf()[0];
+  ok('🔴🔴 実績に入ったら「完了する」が出る',
+     !!r && r.doneReady === true && r.level === 'done', r && { doneReady:r.doneReady, level:r.level, msg:r.msg });
+  ok('🔴 行は1本だけ（二重に出ない）',
+     c.pitMaintRows(TODAY).filter(x => x.vehicleId === 'l1' && x.work === 'shaken').length === 1);
+  ok('カレンダーでも「確定」のまま（未割当に戻らない）',
+     c.pitMaintCalItems(v, TODAY).some(x => x.work === 'shaken' && x.state === 'fixed'),
+     c.pitMaintCalItems(v, TODAY).map(x => x.work + ':' + x.state));
+
+  c.els['mbf-shaken'] = { value: add(45 + 731) };
+  c.flMaintFinishSave(card.id);
+  ok('🔴🔴 「完了する」を押したら行が消える',
+     !c.pitMaintRows(TODAY).some(x => x.card && x.card.id === card.id));
+}
+{
+  /* 12ヶ月点検 ＝ 満了日が動かないので、**済んだ印を見ないと永久に出続ける**作業。 */
+  const c = boot();
+  const v = c.state.loaners[0];
+  v.shakenDate = add(365 + 10);                     /* 12点の目安 ＝ だいたい10日後 */
+  const tk = c.pitTenkenFromShaken(v.shakenDate);
+  const card = c.state.cards[0];
+  card.workType = '12pt'; card.maintYm = tk.slice(0, 7);
+  const rows12 = (td) => c.pitMaintRows(td).filter(r => r.vehicleId === 'l1' && r.work === '12pt');
+  ok('前提：12点も計算の行', rows12(TODAY).length === 1 && !rows12(TODAY)[0].plan.manualId);
+
+  c.pitMaintIntake(R1); await tick();
+  c.pitInternReturn(card); await tick();
+  ok('🔴🔴 12点も実績に入ったら「完了する」が出る',
+     !!rows12(TODAY)[0] && rows12(TODAY)[0].doneReady === true, rows12(TODAY).map(r => r.msg));
+
+  c.flMaintFinishSave(card.id);
+  ok('🔴 押したら行が消える', rows12(TODAY).length === 0, rows12(TODAY).map(r => r.msg));
+
+  /* 目安の月を過ぎると、計算は「できなかった → 今月へスライド」に切り替わる。
+     済ませてあるのに「◯月にできませんでした」と出し直したら、押した意味が無い。 */
+  const later = (() => { const q = tk.split('-'); const d = new Date(+q[0], +q[1] - 1, +q[2]); d.setDate(d.getDate() + 45); return ymd(d); })();
+  ok('🔴🔴 済ませた12点は、目安の月を過ぎても「できませんでした」と出し直さない',
+     rows12(later).length === 0, rows12(later).map(r => r.msg));
+}
+{
+  /* ⚠ 置く道（候補を足す）は、今までどおり**予約中のカードだけ**に足す。
+     入庫した・実績に入ったカードに候補を足すと、終わった作業に予定が生えてくる。 */
+  const mp = JS('maint-pit.js');
+  ok('⚠ 置く道はまだ予約中だけを探している',
+     /var c = cardOf\(gid\) \|\| cardForPlan\(vehId, work, ym \|\| ymOf\(from\)\);/.test(mp)
+     && /c\.maintYm === ym && c\.status === 'reserved'/.test(mp));
 }
 
 console.log('\n─────────────────────────────');
