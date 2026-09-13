@@ -7,7 +7,7 @@
         ・保存        … state.boardNotes に置いて PitDB.save()（クラウドは pitBoardNotes へ差分保存）
         ・名簿        … state.staff（🔴 自社「小林モータース」は人ではないので担当・自分に出さない）
         ・一括で選ぶ   … 1課・2課・受付課・その他（PIT_DIVS）＋受付ぜんぶ
-        ・画像        … 保存先が無いので縮小して dataURL（部品がやる）
+        ・添付        … 画像・PDF をファイル置き場（pitBoardNotes/）へ（部品がやる・v2.110.0）
         ・まとめて表示 … よその付箋は返信とチェックだけ（coreflow-note-all.js）
    🔴 「自分」＝ **ログインした人**（fb.currentMember.id）。名簿に見つからなくても**他人を自分にしない**。
       ⚠ ログインしない見本（デモ）だけ、今までどおり端末に覚えた人／先頭のフロント担当。
@@ -114,7 +114,12 @@
         return _save();
       },
       reorder: list => { state.boardNotes = list; return _save(); },
-      attach: { accept: 'image/*' },
+      /* 🔴 v2.110.0 画像も PDF も付けられる（CarFlow と同じ）。置き場＝companies/{会社}/pitBoardNotes/。
+         ⚠ 見本・デモ（クラウドなし）は置き場が無いので、画像だけ付箋に直接持つ（部品が判断する） */
+      attach: {
+        accept: 'image/*,application/pdf,.pdf',
+        storage: { folder: 'pitBoardNotes', company: () => (window.PIT_CLOUD && window.fb && window.fb.currentCompanyId) || null }
+      },
       isForeign: _foreign,
       badgeHtml: n => (window.CFNoteAll ? CFNoteAll.badgeHtml(n) : ''),
       headerExtraHtml: _allBtnHtml,

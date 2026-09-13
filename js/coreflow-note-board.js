@@ -37,8 +37,11 @@
        save: function(note, info){ return Promise },  // info={isNew, app}
        remove: function(note){ return Promise },
        reorder: function(notesInOrder){ return Promise } ← 無ければ並び替えなし,
-       attach: { accept:'image/*,application/pdf', upload:function(note,file,kind){ return Promise<{imageURL,pdfURL,pdfName}> } }
-               ← upload が無ければ画像を縮小して dataURL で持つ／attach 自体が無ければ添付欄を出さない
+       attach: { accept:'image/*,application/pdf,.pdf', storage:{ folder:'pitBoardNotes' か function(app), company:function(){ return 会社id } } }
+               ← 🔴 v2026-09-13b 画像・PDF は **ファイル置き場（Firebase Storage）** の companies/{会社}/{folder}/{付箋id}.jpg / .pdf に置く
+                  （画像は長い辺1200pxに縮めて JPEG・PDF は原本・1ファイル10MBまで＝storage.rules と同じ上限）
+                  ⚠ 置き場が使えない時（見本・デモ）は、画像だけ縮小して付箋に直接持つ。PDF は付けられない
+               ← upload(note,file,kind) を渡せば、そちらを使う／attach 自体が無ければ添付欄を出さない
        canMutate, canEdit(n), canDelete(n), isForeign(n), badgeHtml(n), formatText(t),
        headerExtraHtml(), postTargets:[{app,label}], targets(), sort(list), avatarHtml(id,px),
        onAutoEdit(n), onLog(msg), ask(msg,opt)→Promise<bool>, toast(msg), rerender()
@@ -413,7 +416,7 @@
     return ask('付箋「' + (n.title || bodyOf(n).slice(0, 20) || '(無題)') + '」を消去しますか？', { ok: '消去する', danger: true }).then(function (yes) {
       if (!yes) return;
       var r = call('remove', n);
-      return Promise.resolve(r).then(function () { log('付箋を消去しました'); render(); });
+      return Promise.resolve(r).then(function () { attachCleanup(n); log('付箋を消去しました'); render(); });
     }).catch(function (e) { console.error(e); toast('消去できませんでした'); });
   }
 
@@ -510,7 +513,7 @@
       if (a.kind === 'pdf' || (!a.changed && a.pdfURL)) pv = '<span class="bn-pdf">' + icon('fileText', '📄', 14) + ' ' + esc(a.name || a.pdfName || 'PDF') + '</span>';
       else if (a.data || (!a.changed && a.imageURL)) pv = '<img src="' + esc(a.data || a.imageURL) + '" alt="" class="cfnb-att-img">';
       var accept = A.attach.accept || 'image/*';
-      attach = '<div class="cfnb-fld"><label>' + (/pdf/.test(accept) ? '画像・PDF' : '画像') + '（任意）</label>' +
+      attach = '<div class="cfnb-fld"><label>' + (/pdf/.test(accept) ? '画像・PDF' : '画像') + '（任意・1つの付箋に1つ・10MBまで）</label>' +
         '<label class="bn-file"><span class="ic">' + icon('image', '🖼', 15) + '</span><span>' + (/pdf/.test(accept) ? '画像・PDFを選ぶ' : '画像を選ぶ') + '</span><input type="file" accept="' + esc(accept) + '" onchange="CFNoteBoard._file(this)"></label>' +
         (pv ? '<div class="cfnb-att">' + pv + '<button type="button" class="cfnb-btn" onclick="CFNoteBoard._ed(\'noatt\')">外す</button></div>' : '') + '</div>';
     }
@@ -544,16 +547,83 @@
     else if (kind === 'noatt') ED.att = { changed: true, file: null, kind: '', name: '', data: '', imageURL: '', pdfURL: '', pdfName: '' };
     edRender();
   }
+  /* ---------- 添付（ファイル置き場） ---------- */
+  var MAX_FILE = 10 * 1024 * 1024;   /* storage.rules の上限と同じ */
+  function storageRoot(app) {
+    var st = A && A.attach && A.attach.storage; if (!st) return null;
+    var folder = typeof st.folder === 'function' ? st.folder(app || A.app) : st.folder;
+    var cid = typeof st.company === 'function' ? st.company() : st.company;
+    var S = null;
+    try { S = (w.firebase && typeof firebase.storage === 'function') ? firebase.storage() : null; } catch (e) { S = null; }
+    if (!S || !folder || !cid) return null;
+    return S.ref('companies/' + cid + '/' + folder);
+  }
+  function resizeBlob(file, max, q) {
+    return new Promise(function (res, rej) {
+      var rd = new FileReader();
+      rd.onerror = rej;
+      rd.onload = function (e) {
+        var img = new Image();
+        img.onerror = rej;
+        img.onload = function () {
+          var iw = img.width, ih = img.height;
+          if (iw > max || ih > max) { var r = Math.min(max / iw, max / ih); iw = Math.round(iw * r); ih = Math.round(ih * r); }
+          var cv = d.createElement('canvas'); cv.width = iw; cv.height = ih;
+          cv.getContext('2d').drawImage(img, 0, 0, iw, ih);
+          cv.toBlob(function (b) { b ? res(b) : rej(new Error('画像を縮められませんでした')); }, 'image/jpeg', q);
+        };
+        img.src = e.target.result;
+      };
+      rd.readAsDataURL(file);
+    });
+  }
+  /* 選んだ添付を付箋に反映する。🔴 1つの付箋に1点（画像を付けたら PDF は外す・逆も） */
+  function attachApply(n, a) {
+    if (A.attach.upload) {
+      return Promise.resolve(a.file ? A.attach.upload(n, a.file, a.kind) : (A.attach.clear ? A.attach.clear(n) : { imageURL: '', pdfURL: '', pdfName: '' }))
+        .then(function (p) { if (p) Object.assign(n, p); });
+    }
+    var root = storageRoot(n.app || A.app);
+    if (!root) {
+      if (a.kind === 'pdf') { var er = new Error('no storage'); er.userMsg = 'PDF はいまは付けられません（ファイル置き場につながっていません）'; return Promise.reject(er); }
+      n.imageURL = a.data || ''; n.pdfURL = ''; n.pdfName = '';
+      return Promise.resolve();
+    }
+    var img = root.child(n.id + '.jpg'), pdf = root.child(n.id + '.pdf');
+    var del = function (ref) { return ref.delete().catch(function () {}); };
+    if (!a.file) return Promise.all([del(img), del(pdf)]).then(function () { n.imageURL = ''; n.pdfURL = ''; n.pdfName = ''; });
+    if (a.kind === 'pdf') {
+      return pdf.put(a.file, { contentType: 'application/pdf' }).then(function () { return pdf.getDownloadURL(); }).then(function (url) {
+        var had = n.imageURL; n.pdfURL = url; n.pdfName = a.name || 'PDF'; n.imageURL = '';
+        return (had && /^https?:/.test(had)) ? del(img) : null;
+      });
+    }
+    return resizeBlob(a.file, 1200, 0.85).then(function (b) { return img.put(b, { contentType: 'image/jpeg' }); })
+      .then(function () { return img.getDownloadURL(); }).then(function (url) {
+        var had = n.pdfURL; n.imageURL = url; n.pdfURL = ''; n.pdfName = '';
+        return had ? del(pdf) : null;
+      });
+  }
+  /* 付箋を消した時、置き場のファイルも消す（見つからなくても気にしない） */
+  function attachCleanup(n) {
+    if (!A.attach || A.attach.upload || !(n.imageURL || n.pdfURL)) return;
+    var root = storageRoot(n.app || A.app); if (!root) return;
+    if (n.imageURL && /^https?:/.test(n.imageURL)) root.child(n.id + '.jpg').delete().catch(function () {});
+    if (n.pdfURL) root.child(n.id + '.pdf').delete().catch(function () {});
+  }
+
   function onFile(input) {
     var f = input && input.files && input.files[0]; if (!f || !ED) return;
     var isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
     if (isPdf && !/pdf/.test((A.attach && A.attach.accept) || '')) { toast('画像ファイルを選んでください'); input.value = ''; return; }
+    if (f.size > MAX_FILE) { toast('ファイルが大きすぎます（10MBまで）'); input.value = ''; return; }
+    if (isPdf && !A.attach.upload && !storageRoot(ED.app)) { toast('PDF はいまは付けられません（ファイル置き場につながっていません）'); input.value = ''; return; }
     if (!isPdf && !/^image\//.test(f.type)) { toast('画像ファイルを選んでください'); input.value = ''; return; }
     ED.att = { changed: true, file: f, kind: isPdf ? 'pdf' : 'image', name: f.name || '', data: '', imageURL: '', pdfURL: '', pdfName: '' };
     if (isPdf) { edRender(); return; }
     var rd = new FileReader();
     rd.onload = function (e) {
-      if (A.attach && A.attach.upload) { ED.att.data = e.target.result; edRender(); return; }
+      if (A.attach && (A.attach.upload || storageRoot(ED.app))) { ED.att.data = e.target.result; edRender(); return; }   /* 保存の時に置き場へ上げる */
       /* 保存先が無いアプリは、縮小して dataURL で持つ（長い辺 1000px・JPEG 0.82） */
       var img = new Image();
       img.onload = function () {
@@ -590,20 +660,12 @@
     var authorIds = (n.authorUid && isMine(n.authorUid, me())) ? me() : [n.authorUid];
     n.secret = secretFor(n.memberUids, authorIds);
     var a = ED.att, up = Promise.resolve();
-    if (a.changed && A.attach) {
-      if (A.attach.upload) {
-        up = Promise.resolve().then(function () {
-          return a.file ? A.attach.upload(n, a.file, a.kind) : (A.attach.clear ? A.attach.clear(n) : { imageURL: '', pdfURL: '', pdfName: '' });
-        }).then(function (p) { if (p) Object.assign(n, p); });
-      } else {
-        n.imageURL = a.data || ''; n.pdfURL = ''; n.pdfName = '';
-      }
-    }
+    if (a.changed && A.attach) up = attachApply(n, a);
     return up.then(function () { return saveNote(n, { isNew: isNew, app: n.app || A.app }); }).then(function () {
       log((isNew ? '付箋を追加しました：' : '付箋を更新しました：') + (title || body.slice(0, 20)));
       closeOverlay('cfnb-editor'); ED = null; render();
     }).catch(function (e) {
-      console.error('[note-board] save', e); toast('保存できませんでした');
+      console.error('[note-board] save', e); toast((e && e.userMsg) || '保存できませんでした（添付を付けた時は、ファイルの大きさと通信を確かめてください）');
       if (btn) btn.disabled = false;
     });
   }
