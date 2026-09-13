@@ -142,9 +142,15 @@ console.log('\n── ⑥ ソースの見張り（写しを作っていない・
   ok('🔴 必須の判定は `pitCardMisses` を借りている', /pitCardMisses\(c\)/.test(s));
   ok('🔴 時刻は新規予約と同じ `_normTime` / `PIT_TIME_QUICK`',
      /_normTime\(v\)/.test(s) && /PIT_TIME_QUICK/.test(s));
-  ok('🔴 社内区分は `PIT_INTERN_KINDS` をそのまま並べている', /PIT_INTERN_KINDS/.test(s));
-  ok('🔴 付加は `PIT_WORK_SPECIALS` をそのまま並べている', /PIT_WORK_SPECIALS/.test(s));
-  ok('🔴 代車の区分はここから選べない（作業予定ボードだけ）', /k === 'loanercar'\) return;/.test(s));
+  /* 🔧 v2.99.0 作業タイプ・付加・社内区分・物販は、新規予約・予約詳細と**同じ部品**を呼ぶだけ（自前の並びを持たない） */
+  const cd = JS('card-detail.js');
+  const code0 = s.replace(/\/\*[\s\S]*?\*\//g, '');
+  ok('🔴🔴 作業タイプの欄は予約詳細と同じ部品（pitWorkTypeFieldsHtml／その他の引き出し）', /w\.pitWorkTypeFieldsHtml\(M\)/.test(s) && /w\.pitWorkTypeOtherPanelHtml\(M\)/.test(s));
+  ok('🔴🔴 押した時の処理も予約詳細と同じ1本（pitWorkTypeBind）', /w\.pitWorkTypeBind\(wt, M, render, \{ save: false \}\)/.test(s));
+  ok('🔴 自前の付加・社内区分・作業タイプの並びを持っていない', !/PIT_INTERN_KINDS|PIT_WORK_SPECIALS|pitMasterAddon|pitMasterIntern|pitMasterSpecial/.test(code0),
+     (code0.match(/.{0,30}(PIT_INTERN_KINDS|PIT_WORK_SPECIALS|pitMasterAddon|pitMasterIntern|pitMasterSpecial).{0,30}/) || [''])[0]);
+  ok('🔴 予約詳細側も同じ1本を呼んでいる（写しを作っていない）', /pitWorkTypeBind\(root, c, \(\) => renderCardForm\(c\), \{ save: true \}\)/.test(cd) && /h \+= workTypeFieldsHtml\(c\);/.test(cd));
+  ok('🔴 代車の区分は、引き出しの中でも押せない（作業予定ボードだけ）', /var lock   = \(it\.id === 'loanercar'\);/.test(cd));
   /* ⚠ コメントは外して見る（この画面には「急ぎを置かないこと」と**書いてある**ため） */
   const code = s.replace(/\/\*[\s\S]*?\*\//g, '');
   ok('🔴🔴 使われていない「急ぎ」を並べていない（ゆうた指定）', !/urgent/.test(code),
@@ -158,55 +164,43 @@ console.log('\n── ⑥ ソースの見張り（写しを作っていない・
 }
 
 
-console.log('\n── 🔧 作業タイプの「併用可」（B.P など）が付けられる（v2.98.0・ゆうた報告） ──');
+
+console.log('\n── 🛡 保険＝返車済み → 入金待ち → 入金日で実績（v2.99.0・ゆうた指定） ──');
 {
-  /* 🗣「マスター入力機能の作業タイプにBPがない」 */
-  ctx.state.workTypes = [
-    { id:'shaken', label:'車検', color:'#ef4444' }, { id:'general', label:'一般', color:'#84cc16' },
-    { id:'bp', label:'B.P', color:'#3b82f6', combinable:true }, { id:'coat1y', label:'1Y', color:'#8b5cf6', combinable:true },
-    { id:'carsale', label:'車販依頼', color:'#06b6d4', combinable:true, hideWhenOthers:true },
-    { id:'goods', label:'物販', color:'#14b8a6', alone:true, drawer:true }
-  ];
-  ctx.pitMasterOpen();
-  const html = ctx.pitMasterSec2Html();
-  ok('🔴🔴 画面に B.P のチップが出ている', /pitMasterAddon\(\'bp\'\)/.test(html) && />B\.P</.test(html));
-  ok('併用可の 1Y・車販依頼も出ている', /pitMasterAddon\(\'coat1y\'\)/.test(html) && /pitMasterAddon\(\'carsale\'\)/.test(html));
-  ok('物販（引き出し）は併用可の並びに出さない', !/pitMasterAddon\(\'goods\'\)/.test(html));
+  /* 🗣「保険にした場合のストーリーの分岐がないと思う。実際には返車済み、入金待ち なども状態も存在するし、入金日みたいな表記もいるかと」 */
+  vm.runInContext(JS('insurance-pit.js'), ctx, { filename:'insurance-pit.js' });
+  const 保険 = () => Object.assign(良い(), { id:'ins1', workType:'general', workTypes:['general'], workSpecials:['insurance'],
+    inspSchedule:{ mode:'manual', slots:{}, history:[] }, completedAt:'', paymentDate:null, paymentSeparate:true });
+  let c = 保険();
+  ok('前提：保険の返車済み・入金日なし＝入金待ち', ctx.pitInsPayWait(c) === true);
+  ok('🔴🔴 入金待ちは「実績カウント日が空」で止めない', !引っかかる(c, '実績カウント日が空'), stops(c));
+  ok('🔴 入金待ちで保存することを、押す前に聞く', warns(c).some(x => x.indexOf('入金待ち') >= 0), warns(c));
 
-  ctx.pitMasterAddon('bp');
+  c = 保険(); c.paymentDate = '2026-08-05'; c.completedAt = '2026-07-18';
+  ok('🔴🔴 入金日と実績カウント日がずれていたら止める（保険は入金日＝実績カウント日）', 引っかかる(c, '入金日（2026-08-05）'), stops(c));
+
+  c = Object.assign(良い(), { completedAt:'' });
+  ok('⚠ 保険でない返車済みは、今までどおり実績カウント日が空なら止まる', 引っかかる(c, '実績カウント日が空'), stops(c));
+
+  /* 画面の道（pitMasterSet）で入金日を入れる＝insurance-pit.js の1本を通って、実績カウント日が動く */
+  ctx.pitIsAdmin = () => true;              /* マスター入力は管理者以上だけ＝見張りも管理者として開く */
+  ctx.state.cards = [保険()];
+  ctx.pitMasterOpen('ins1');
+  ctx.pitMasterSet('paymentDate', '2026-08-05');
   let M = ctx.pitMasterCurrent();
-  ok('🔴🔴 B.P だけでも付けられる', (M.workAddons || []).join() === 'bp' && (M.workTypes || []).join() === 'bp', M);
-  const miss = ((ctx.pitCardMisses(M) || {}).red || []).map(x => x.key);
-  ok('🔴 B.P だけでも「作業タイプが空」で止まらない', miss.indexOf('workType') < 0, miss);
-
-  ctx.pitMasterSet('workType', 'shaken');
+  ok('🔴🔴 入金日を入れると、その日が実績カウント日になる', M && M.paymentDate === '2026-08-05' && M.completedAt === '2026-08-05', M && { p:M.paymentDate, d:M.completedAt });
+  ok('入金日を入れたら、止まる所は無い', stops(M).length === 0, stops(M));
+  ctx.pitMasterSet('paymentDate', '');
   M = ctx.pitMasterCurrent();
-  ok('🔴 基本（車検）と重ねられる＝バッジの並びは 車検・B.P', (M.workTypes || []).join() === 'shaken,bp', M.workTypes);
-
-  ctx.pitMasterAddon('bp');
+  ok('🔴 入金日を消すと、実績カウント日も空に戻る（入金待ち）', !M.paymentDate && M.completedAt === '' && ctx.pitInsPayWait(M), { p:M.paymentDate, d:M.completedAt });
+  ctx.pitMasterSet('status', 'check');
+  ctx.pitMasterSet('paymentDate', '2026-08-06');
   M = ctx.pitMasterCurrent();
-  ok('もう一度押すと外れる（並びもそろう）', (M.workAddons || []).length === 0 && (M.workTypes || []).join() === 'shaken', M);
-
-  ctx.pitMasterAddon('coat1y');
-  ctx.pitMasterSet('workType', 'goods');
+  ok('まだ返車していない時は、入金日を入れても実績カウント日は入らない', M.paymentDate === '2026-08-06' && !M.completedAt, { p:M.paymentDate, d:M.completedAt, s:M.status });
+  ctx.pitMasterSet('status', 'returned');
   M = ctx.pitMasterCurrent();
-  ok('🔴 物販を選んだら併用可はおりる（単独）', (M.workAddons || []).length === 0 && (M.workTypes || []).join() === 'goods', M);
-  ctx.pitMasterAddon('bp');
-  M = ctx.pitMasterCurrent();
-  ok('🔴 併用可を押したら物販はおりる', !M.workType && (M.workTypes || []).join() === 'bp', M);
-
-  ctx.pitMasterSet('workType', '');
-  M = ctx.pitMasterCurrent();
-  ok('基本を「—」に戻すと、並びは併用可だけ', (M.workType == null) && (M.workTypes || []).join() === 'bp', M);
-
-  ctx.pitMasterIntern('used');
-  M = ctx.pitMasterCurrent();
-  const html2 = ctx.pitMasterSec2Html();
-  ok('🔴 社内区分（中古）を選ぶと併用可もおりて、並びもそろう', (M.workAddons || []).length === 0 && (M.workTypes || []).length === 0, M);
-  ok('社内区分の間は、併用可のチップが押せない', /ms-chip off"[^>]*disabled[^>]*pitMasterAddon\(\'bp\'\)/.test(html2));
-  ctx.pitMasterAddon('bp');
-  ok('押しても付かない', (ctx.pitMasterCurrent().workAddons || []).length === 0);
-  ctx.pitMasterIntern('used');
+  ok('🔴 そのあと返車済みにすると、入金日で実績カウント日がそろう', M.completedAt === '2026-08-06', M.completedAt);
+  ctx.state.cards = [];
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
