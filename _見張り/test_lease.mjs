@@ -10,6 +10,8 @@
      🗣「他代車カードの🔗済 のボタンの変わりにリース車両 ばっちを付与」
      （確かめた答え）代車と社用車の両方／2ヵ月前から案内・分かればもっと手前から入力できる／
                      グレー＋貸出は警告（止めない）／アーカイブ＝引退
+     🗣（v2.107.0）「暫定予定は年 月 までにしておいてほしい　で確定は日まで入ってる感じ」
+       ＝ 暫定は 'YYYY-MM'。**その月の1日から**ふさがり・「過ぎた」は**その月の末日**のあと
 
    ◎ここで見張ること
      🔴🔴 ① リースアップ日（確定→無ければ暫定）の**当日から先はふさがり**（空いている代車・案内から外れる）
@@ -37,11 +39,12 @@ const bare = (f) => JS(f).replace(/\/\*[\s\S]*?\*\//g, '');
 
 const 車 = () => ({
   loaners: [
-    { id:'L1', name:'代車1', number:1, model:'ルークス', lease:true, leaseUp:'2026-11-30' },                          /* 暫定だけ */
-    { id:'L2', name:'代車2', number:2, model:'N-BOX', lease:true, leaseUp:'2026-11-30', leaseUpFixed:'2026-11-20' },   /* 確定あり */
+    { id:'L1', name:'代車1', number:1, model:'ルークス', lease:true, leaseUp:'2026-11' },                             /* 暫定だけ（年月） */
+    { id:'L2', name:'代車2', number:2, model:'N-BOX', lease:true, leaseUp:'2026-11', leaseUpFixed:'2026-11-20' },      /* 確定あり */
+    { id:'L4', name:'代車4', number:4, model:'デイズ', lease:true, leaseUp:'2026-12-15' },                            /* v2.106.0 の日付入り＝年月だけ読む */
     { id:'L3', name:'代車3', number:3, model:'タント', shakenDate:'2027-05-10' }                                         /* ふつうの代車 */
   ],
-  companyCars: [ { id:'C1', name:'プロボックス', model:'プロボックス', lease:true, leaseUp:'2026-10-31' } ]
+  companyCars: [ { id:'C1', name:'プロボックス', model:'プロボックス', lease:true, leaseUp:'2026-10' } ]
 });
 
 function node0(){
@@ -86,10 +89,15 @@ console.log('\n── ① リースアップ日の当日から先はふさがり
   const c = boot();
   const day = (id, ds) => c.pitLoanerDay(id, ds);
   ok('（前提）物差しが出ている（pitLeaseEnd）', typeof c.pitLeaseEnd === 'function');
-  ok('🔴 使う日は 確定 → 無ければ暫定', c.pitLeaseEnd && c.pitLeaseEnd(c.state.loaners[0]) === '2026-11-30' && c.pitLeaseEnd(c.state.loaners[1]) === '2026-11-20');
-  ok('🔴 前の日はまだ貸せる（暫定 11/30 の前日）', day('L1', '2026-11-29').busy === false);
-  const d30 = day('L1', '2026-11-30');
-  ok('🔴🔴 リースアップの当日からふさがり', d30.busy === true && (d30.leaseOut || []).length === 1 && d30.leaseOut[0].isStart === true, d30.items && d30.items.map(x => x.kind));
+  ok('🔴🔴 使う日は 確定 → 無ければ暫定の月の1日', c.pitLeaseEnd && c.pitLeaseEnd(c.state.loaners[0]) === '2026-11-01' && c.pitLeaseEnd(c.state.loaners[1]) === '2026-11-20');
+  ok('🔴🔴 「過ぎた」の境目は暫定の月の末日（確定ならその日）', c.pitLeaseLast && c.pitLeaseLast(c.state.loaners[0]) === '2026-11-30' && c.pitLeaseLast(c.state.loaners[1]) === '2026-11-20');
+  ok('🔴 v2.106.0 の日付入りの暫定は、年月だけを読む', c.pitLeaseEnd(c.state.loaners.find(x => x.id === 'L4')) === '2026-12-01');
+  ok('🔴 言い方＝暫定は年月（暫定）／確定は日（確定）',
+     /（暫定）$/.test(c.pitLeaseLabel(c.state.loaners[0])) && !/日（暫定）$/.test(c.pitLeaseLabel(c.state.loaners[0])) && /日（確定）$/.test(c.pitLeaseLabel(c.state.loaners[1])),
+     [c.pitLeaseLabel(c.state.loaners[0]), c.pitLeaseLabel(c.state.loaners[1])]);
+  ok('🔴 前の月はまだ貸せる（暫定 11月 に対して 10/31）', day('L1', '2026-10-31').busy === false);
+  const d30 = day('L1', '2026-11-01');
+  ok('🔴🔴 暫定の月の1日からふさがり', d30.busy === true && (d30.leaseOut || []).length === 1 && d30.leaseOut[0].isStart === true, d30.items && d30.items.map(x => x.kind));
   ok('🔴🔴 その先もずっとふさがり', day('L1', '2027-02-01').busy === true);
   ok('🔴 確定があれば確定の日から（11/20 確定・暫定 11/30）', day('L2', '2026-11-25').busy === true && day('L2', '2026-11-19').busy === false);
   ok('ふつうの代車は変わらない', day('L3', '2027-02-01').busy === false);
@@ -98,7 +106,7 @@ console.log('\n── ① リースアップ日の当日から先はふさがり
   ok('古い呼び方（busyWhy）でも壊れない＝「代車自身の予定」の形で答える', !!why && why.kind === 'event' && /リースアップ/.test(why.event.label), why);
   const ev = c.pitLoanerEventsIn('L1', '2026-11-28', '2026-12-02');
   ok('🔴🔴 貸出の窓の「この代車自身の予定と重なります」に出る', ev.some(e => e.type === 'lease' && /リースアップ/.test(e.label)), ev);
-  ok('🔴 リースアップより前だけの貸出には出ない', c.pitLoanerEventsIn('L1', '2026-11-01', '2026-11-10').length === 0);
+  ok('🔴 リースアップより前だけの貸出には出ない', c.pitLoanerEventsIn('L1', '2026-10-01', '2026-10-10').length === 0);
   const lo = bare('loaner.js');
   ok('🔴🔴 貸出の窓は止めずに聞く（pitAsk「それでも登録しますか？」のまま）', /_loConflictEvents\(lo, from, to\)/.test(lo) && /pitAsk\('それでも登録しますか？'/.test(lo));
   const un = (c.pitFleetUnlinked ? c.pitFleetUnlinked() : []).map(x => x.v.id);
@@ -110,9 +118,11 @@ console.log('\n── ② 作業予定ボード：2ヶ月前から・状態・�
   const c = boot();
   const R = (td, id) => (c.pitMaintLeaseRows ? c.pitMaintLeaseRows(td) : []).filter(r => r.vehicleId === id)[0];
   ok('（前提）リースアップの行を出す関数がある', typeof c.pitMaintLeaseRows === 'function');
-  ok('🔴🔴 2ヶ月より前は出さない（暫定 11/30 に対して 9/29）', !R('2026-09-29', 'L1'));
-  const w1 = R('2026-09-30', 'L1');
+  ok('🔴🔴 2ヶ月より前は出さない（暫定 11月＝11/1 に対して 8/31）', !R('2026-08-31', 'L1'));
+  const w1 = R('2026-09-01', 'L1');
   ok('🔴🔴 2ヶ月前の日から出る＝暫定なので警告＋「日を決める」', !!w1 && w1.level === 'warn' && !w1.fixed, w1 && { level:w1.level });
+  const m1 = R('2026-11-30', 'L1');
+  ok('🔴🔴 暫定の月の末日まではまだ赤くしない（月の途中で赤くしない）', !!m1 && m1.level === 'warn', m1 && m1.level);
   const b1 = R('2026-12-02', 'L1');
   ok('🔴 暫定の日を過ぎた＝赤', !!b1 && b1.level === 'bad', b1 && b1.level);
   const g2 = R('2026-11-01', 'L2');
@@ -138,7 +148,7 @@ console.log('\n── ② 作業予定ボード：2ヶ月前から・状態・�
   ok('ふつうの代車のマスには出ない', (menu3.match(/flLeaseFix\('L3'/g) || []).length === 0);
 
   await c.flLeaseFix('L1', '2026-11-26');
-  ok('🔴🔴 確定を押すと leaseUpFixed に入る（暫定は残す）', c.state.loaners[0].leaseUpFixed === '2026-11-26' && c.state.loaners[0].leaseUp === '2026-11-30' && c.PitDB.saved > 0, c.state.loaners[0]);
+  ok('🔴🔴 確定を押すと leaseUpFixed に日で入る（暫定の年月は残す）', c.state.loaners[0].leaseUpFixed === '2026-11-26' && c.state.loaners[0].leaseUp === '2026-11' && c.PitDB.saved > 0, c.state.loaners[0]);
   ok('🔴 確定したら、その日からふさがり', c.pitLoanerDay('L1', '2026-11-26').busy === true && c.pitLoanerDay('L1', '2026-11-25').busy === false);
   /* 🔴 ボードは知らせるだけ＝引退にするのは車両管理（fleet.js）の fleetLeaseArchive 1本。ここでは呼んだかを見る */
   let called = '';
@@ -156,7 +166,7 @@ console.log('\n── ③ 設定の窓・札・カレンダー ──');
 {
   const idx = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
   ok('🔴🔴 設定の窓にリース車両のスイッチ', /<input type="checkbox" id="fl-lease" onchange="flLeaseToggle\(\)">/.test(idx) && /リース車両<\/span>/.test(idx));
-  ok('🔴🔴 リースアップ日は日付ピッカー（暫定／確定）', /id="fl-leaseup" type="date"/.test(idx) && /id="fl-leaseup-fix" type="date"/.test(idx));
+  ok('🔴🔴 暫定は年月のピッカー／確定は日付ピッカー', /id="fl-leaseup" type="month"/.test(idx) && /id="fl-leaseup-fix" type="date"/.test(idx));
   ok('🔴 紐づけ欄・車検満了日の欄に「リースなら入れない」の言葉', /id="fl-link-row" data-off="/.test(idx) && /id="fl-shaken-row" data-off="/.test(idx));
 
   const fl = bare('fleet.js');
@@ -166,12 +176,15 @@ console.log('\n── ③ 設定の窓・札・カレンダー ──');
   ok('🔴🔴 保存でもリースなら車検満了日を書かない', /f\.v\.shakenDate = lease \? '' : shaken/.test(fl) && /shakenDate:\(lease \? '' : shaken\)/.test(fl));
   ok('🔴🔴 保存でもリースなら紐づけを書かない', /if \(!lease && _flLink\.custId && _flLink\.custVehId\)\{ f\.v\.custId/.test(fl) && /if \(!lease && _flLink\.custId && _flLink\.custVehId\)\{ rec\.custId/.test(fl));
   ok('🔴 保存でリースアップ日（暫定／確定）を持つ', /f\.v\.lease = true; f\.v\.leaseUp = leaseUp; f\.v\.leaseUpFixed = leaseUpFixed;/.test(fl) && /rec\.lease = true;/.test(fl));
+  ok('🔴🔴 暫定は年月だけで保存する', /const leaseUp = lease \? String\(\(document\.getElementById\('fl-leaseup'\) \|\| \{\}\)\.value \|\| ''\)\.slice\(0, 7\)/.test(fl));
+  ok('🔴 日ビュー＝暫定の月はまるごと薄い紫・確定はその日', /cls \+= ' d-lease tbd'/.test(fl) && /v\.leaseUpFixed && _le2 === ds/.test(fl));
   ok('🔴🔴 🔗済 の代わりに「リース車両」の札', /const _bdg = v\.lease \? '<div class="fl-card-link"><span class="fl-link-bdg lease"/.test(fl) && /\+ _bdg /.test(fl));
   ok('🔴 札の下は車検の代わりにリースアップ', /v\.lease \? _flLeaseFoot\(v\)/.test(fl));
-  ok('🔴 管理カレンダー（月）に暫定の札', /fl-due lease/.test(fl) && /リースアップ ' \+ _flMd\(_le\)/.test(fl));
+  ok('🔴 管理カレンダー（月）に暫定の札（暫定は「暫定・◯月」／確定は日）', /fl-due lease/.test(fl) && /'🏁 リースアップ ' \+ \(v\.leaseUpFixed \? _flMd\(_le\) : '（暫定・' \+ \(\+_le\.slice\(5, 7\)\) \+ '月）'\)/.test(fl));
   ok('🔴 管理カレンダー（日）＝リースアップ日を紫・その先はグレー', /cls \+= ' d-lease'/.test(fl) && /cls \+= ' fl-leaseout'/.test(fl));
   const lo = bare('loaner.js');
   ok('🔴🔴 代車カレンダー＝リースアップ日から先はグレー＋札', /day\.leaseOut && day\.leaseOut\.length/.test(lo) && /lo-leaseout/.test(lo) && /lo-ls-tag/.test(lo));
+  ok('🔴 代車カレンダー＝暫定の月は薄く（tbd）', /!ls0\.fixed && ls0\.last && dStr <= ls0\.last/.test(lo));
   const css = fs.readFileSync(path.join(process.cwd(), 'css', 'polish.css'), 'utf8') + fs.readFileSync(path.join(process.cwd(), 'css', 'fleet-cal.css'), 'utf8');
   ok('見た目がある（札・グレー・薄くした欄）', /\.fl-link-bdg\.lease/.test(css) && /\.lo-cell\.lo-leaseout \.lo-lsbg/.test(css) && /\.fl-mlb\.fl-off/.test(css) && /\.fl-cal-cell\.d-lease/.test(css));
 }
