@@ -92,12 +92,14 @@ console.log('── ① これから行く予定に「再検」が出る（今�
 
 console.log('── ② 再検合格＝完了の中の印。押し直したら消える ──');
 {
-  const s = { mode: 'manual', slots: {}, history: [ng({})], decided: D2, decidedSlot: 'pm' };
+  /* 🔀 v2.112.0 再検合格（その場で直した）は**1回目の車だけ**。前に落ちている車は「今回は合格」の1通り
+     （その決めごとは test_shaken_retry.mjs）。ここは1回目の車で見る。 */
+  const s = { mode: 'manual', slots: {}, history: [], decided: D2, decidedSlot: 'pm' };
   const r = box.pitShakenApply(s, 'repass', { staff: '吉田', note: ' 光軸\n ', today: D2 });
   ok('完了として残る', r && r.insp.result === 'done' && r.insp.resultDate === D2, r && r.insp.result);
   ok('再検合格の印が立つ', r && r.insp.repass === true, r && r.insp.repass);
   ok('落ちた所は1行にして残す', r && r.insp.repassNote === '光軸', r && r.insp.repassNote);
-  ok('履歴には積まない（同じ日に2行出さない）', r && r.insp.history.length === 1, r && r.insp.history.length);
+  ok('履歴には積まない（同じ日に2行出さない）', r && r.insp.history.length === 0, r && r.insp.history.length);
   const rows = box.pitShakenOnDate([CAR(r.insp)], D2);
   ok('その日の印は「再検合格」', rows[0] && rows[0].mark === '再検合格' && rows[0].repass === true, rows[0] && rows[0].mark);
   const d = box.pitShakenApply(r.insp, 'done', { staff: '吉田', today: D2 });
@@ -156,8 +158,9 @@ console.log('── ④ 画面が物差しを通っているか（文字で確�
 console.log('── ⑤ MHS（当日ビュー） ──');
 {
   const m = bendMhs(MHS());
-  ok('これから行く再検は頭の札を入れ替える', /bshk-kind'\+\(isRe\?' re':''\)/.test(m));
-  ok('頭に出す時は右端の印を出さない', /var mk = \(!isRe && r\.mark\)/.test(m));
+  /* 🔀 v2.112.0 頭の札・右端の印は物差しの head／tail（再検の車は済・不合格でも頭は「再検」） */
+  ok('再検は頭の札を入れ替える（済・不合格になっても）', /bshk-kind'\+\(reHead\?' re':''\)/.test(m) && /reHead = hasHT \? !!r\.retry : isRe/.test(m));
+  ok('右端の印は物差しの tail（これから行く時は空）', /tailTxt = hasHT \? r\.tail : \(!isRe \? r\.mark : ''\)/.test(m));
   ok('再検合格は緑の印', /shk-mk\.rp\{/.test(m) && /r\.repass\?' rp'/.test(m));
   ok('頭の札の色は黄色ではない（オレンジ）', /\.bshk-kind\.re\{background:#f97316/.test(m));
   ok('物差しが知らない指示のボタンは出さない',
