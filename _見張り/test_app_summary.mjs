@@ -1,6 +1,6 @@
 /* ============================================================
    test_app_summary.mjs
-   📡 CoreFlow のダッシュボードへ配る PitFlow の概況（js/app-summary.js・v2.108.0）を見張る。
+   📡 CoreFlow のダッシュボードへ配る PitFlow の概況（js/app-summary.js・v2.111.0）を見張る。
 
    きっかけ：ゆうた 2026-09-13
      🗣「コアフローのダッシュボードを仕上げる…一気にやっちゃってよ」
@@ -43,7 +43,7 @@ console.log('\n── 🧭 置き方と物差し ──');
   ok('🔴 まるごと書き直す（古い項目を残さない）', /\.set\(doc, \{ merge: false \}\)/.test(src));
   const md = rd('js/mydash.js');
   ok('mydash.js が入口 PIT_DASH_API を出している', /window\.PIT_DASH_API = \{/.test(md));
-  ok('版は 3か所とも v2.108.0', /content="2\.108\.0"/.test(idx) && /login-ver">v2\.108\.0</.test(idx) && /class="ver">v2\.108\.0</.test(idx));
+  ok('版は 3か所とも v2.111.0', /content="2.111.0"/.test(idx) && /login-ver">v2.111.0</.test(idx) && /class="ver">v2.111.0</.test(idx));
 }
 
 const b = await chromium.launch({ executablePath: cp });

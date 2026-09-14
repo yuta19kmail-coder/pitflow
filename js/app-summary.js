@@ -308,6 +308,22 @@
       [['1課（国産）', d1], ['2課（輸入）', d2]].forEach(function (p) { ST.forEach(function (k) { items.push(line(p[0], L[k] || k, p[1][k] + '台')); }); });
       return sec('課別タスク', [met('1課 作業中', d1._t + '台', 'good'), met('2課 作業中', d2._t + '台', 'purple')], items);
     });
+    add('pitlist', function () {
+      /* 🆕 v2.111.0 ピットリスト（FlowDesk の状況の列・CoreFlow のBOX）。
+         数え方は「課別タスク」と同じ（status で工程・返車の段に入った車は外す）＋作業完了。長くいる車が先 */
+      var ST = ['check', 'estim', 'contact', 'parts', 'work', 'workDone'], L = Object.assign({}, P.TASK_LABEL || {}, { workDone: '作業完了' });
+      var by = {}; ST.forEach(function (k) { by[k] = []; });
+      C.cards.forEach(function (c) { if (by[c.status] && !c.returnStage) by[c.status].push(c); });
+      var items = [], n = 0, lim = P.longHoldDays();
+      ST.forEach(function (k) {
+        n += by[k].length;
+        by[k].sort(function (a, b) { return (P.holdDays(b) || 0) - (P.holdDays(a) || 0); }).forEach(function (c) {
+          var d = P.holdDays(c);
+          items.push(row(c, subOf(L[k] || k, window.pitDivisionLabel ? pitDivisionLabel(c) : ''), d != null ? d + '日目' : '', d != null && d >= lim));
+        });
+      });
+      return sec('ピットリスト', [met('盤面の車', n + '台', 'good')].concat(ST.map(function (k) { return met(L[k] || k, by[k].length + '台', k === 'workDone' ? 'purple' : 'info'); })), items, 60);
+    });
     return S;
   }
 
