@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><body>
+<!-- test_deeplink.mjs 用の小さなページ（v2.51.0 の片づけで消えていたのを v2.118.0 で戻した） -->
+<div id="pit-login" style="display:none"></div>
+<script>
+window.__opened=[]; window.__fd=[]; window.state={cards:[], currentView:'dashboard'};
+window.pitOpenCardDetail=function(id){ window.__opened.push(id); };
+window.openNewReserve=function(){ window.__fd.push('new-reserve:'+state.currentView); };
+window.custNewCustomer=function(){ window.__fd.push('new-customer'); };
+window.pitToast=function(m){ (window.__toasts=window.__toasts||[]).push(m); };
+window.PitDB={_loaded:false};
+</script>
+<script src="../js/deeplink-pit.js"></script>
+</body>
