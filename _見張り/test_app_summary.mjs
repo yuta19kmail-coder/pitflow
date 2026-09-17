@@ -1,6 +1,6 @@
 /* ============================================================
    test_app_summary.mjs
-   📡 CoreFlow のダッシュボードへ配る PitFlow の概況（js/app-summary.js・v2.111.0）を見張る。
+   📡 CoreFlow のダッシュボードへ配る PitFlow の概況（js/app-summary.js）を見張る。
 
    きっかけ：ゆうた 2026-09-13
      🗣「コアフローのダッシュボードを仕上げる…一気にやっちゃってよ」
@@ -12,6 +12,7 @@
      🔴 クラウドに書ける形（undefined・配列の中の配列・NaN が無い／1MB より十分小さい）
      🔴 CoreFlow の dash.js が知っている項目の鍵と、ここが配る鍵が**そろっている**
      🔴 自分の分（perUser）の鍵は state.staff の id（＝メンバーid）
+     🔴 2026-09-17 ゆうた：最短入庫日（earliest）に FlowDesk 用の grid（日付そのもの）と days（3週間の空き）
 
    使い方：
      python -m http.server 8971   （PitFlow\pitflow で）
@@ -43,7 +44,11 @@ console.log('\n── 🧭 置き方と物差し ──');
   ok('🔴 まるごと書き直す（古い項目を残さない）', /\.set\(doc, \{ merge: false \}\)/.test(src));
   const md = rd('js/mydash.js');
   ok('mydash.js が入口 PIT_DASH_API を出している', /window\.PIT_DASH_API = \{/.test(md));
-  ok('版は 3か所とも v2.111.0', /content="2.111.0"/.test(idx) && /login-ver">v2.111.0</.test(idx) && /class="ver">v2.111.0</.test(idx));
+  /* 🔴 2026-09-17 版は決め打ちしない＝ app-version を読んで、画面の2か所とそろっているか */
+  const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
+  const _lVer = (idx.match(/login-ver">v([\d.]+)</) || [])[1] || '';
+  const _tVer = (idx.match(/class="ver">v([\d.]+)</) || [])[1] || '';
+  ok('版は 3か所ともそろっている（v' + _aVer + '）', !!_aVer && _aVer === _lVer && _aVer === _tVer, [_aVer, _lVer, _tVer]);
 }
 
 const b = await chromium.launch({ executablePath: cp });
@@ -90,6 +95,43 @@ const R = await p.evaluate(() => {
     salesVal: S.sales.metrics[0].value, salesPct: S.sales.metrics[1].value,
     salesStaffN: (S.salesStaff.items || []).length,
     loanerN: [(S.loaner.items || []).length, P.loanerStat(ymd(new Date())).total],
+    earliest: (function () {
+      const E = S.earliest || {}, G = E.grid || {}, D = E.days || [];
+      const isDs = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+      const want = {};
+      [['dom', 'default'], ['imp', 'import']].forEach(([k, tm]) => {
+        want[k] = {};
+        [['no', 'noLoaner'], ['loan', 'loaner'], ['same', 'same']].forEach(([kk, kind]) => {
+          const d = window.dashEarliestIntake(tm, kind, new Date(new Date().setHours(0, 0, 0, 0)));
+          want[k][kk] = d ? ymd(d) : null;
+        });
+      });
+      const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+      const cap = (state.settings && state.settings.reserveCap) || {};
+      const total = window.pitLoanerUsableList().length;
+      return {
+        grid: G, want,
+        gridShape: ['dom', 'imp'].every(k => G[k] && ['no', 'loan', 'same'].every(kk => G[k][kk] === null || isDs(G[k][kk]))),
+        metricsText: E.metrics.map(m => m.value),
+        titleOk: E.title === '最短入庫日' && E.metrics.length === 5 && E.items.length === 5,
+        daysN: D.length,
+        firstDs: D[0] && D[0].ds, todayDs: ymd(t0), lastDs: D[20] && D[20].ds, lastWant: ymd(addDays(t0, 20)),
+        rowShape: D.every(r => isDs(r.ds) && typeof r.closed === 'boolean' && typeof r.label === 'string'
+          && ['dom', 'imp'].every(k => Array.isArray(r[k]) && r[k].length === 2 && r[k].every(x => Number.isInteger(x)))
+          && Number.isInteger(r.loanFree) && Number.isInteger(r.loanTotal)),
+        seq: D.every((r, i) => r.ds === ymd(addDays(t0, i))),
+        sameAsFill: D.every((r, i) => {
+          const it = S.fill.items[i];
+          return r.closed ? it.right === '休' : it.right === '国産 ' + r.dom[0] + '/' + r.dom[1] + '・輸入 ' + r.imp[0] + '/' + r.imp[1];
+        }),
+        intakeSame: D.every(r => r.dom[0] === dashIntake('default', r.ds) && r.imp[0] === dashIntake('import', r.ds)),
+        closedList: D.filter(r => r.closed).map(r => r.ds + ':' + r.label),
+        closedHasNums: D.filter(r => r.closed).every(r => r.label !== '' && r.dom.length === 2 && r.imp.length === 2 && Number.isInteger(r.loanFree)),
+        closedCal: D.every(r => !PitCal.isClosed(r.ds) || r.closed),
+        loanOk: D.every(r => r.loanFree >= 0 && r.loanFree <= r.loanTotal && r.loanTotal === total && r.loanFree === pitLoanerFreeOn(r.ds).length),
+        total
+      };
+    })(),
     fillN: (S.fill.items || []).length, parkN: (S.park.items || []).length, days7: (S.salesDays.items || []).length,
     everyTitle: Object.keys(S).every(k => S[k].title && Array.isArray(S[k].metrics) && Array.isArray(S[k].items)),
     qShape: itemsAll.filter(it => it.q).every(it => /^card=[^&]+$/.test(it.q)),
@@ -121,6 +163,25 @@ ok('🔴 受注残＝同じ', R.order[0] === R.order[1], R.order);
 ok('🔴 当月実績＝同じ', R.result[0] === R.result[1], R.result);
 ok('🔴 売上は金額で出す（円・万・億）', /(円|万|億)$/.test(R.salesVal) && /%$/.test(R.salesPct), [R.salesVal, R.salesPct]);
 ok('代車は1台ずつ並ぶ', R.loanerN[0] === R.loanerN[1] && R.loanerN[0] > 0, R.loanerN);
+{
+  /* 🔴 2026-09-17 ゆうた：FlowDesk「最短入庫日の案内」が読む earliest.grid／earliest.days */
+  const E = R.earliest;
+  ok('🔴 最短入庫日の見出し・数字5つ・明細5行は今までどおり', E.titleOk, E.metricsText);
+  ok('🔴 grid＝国産・輸入 × 代車なし・代車あり・当日作業、日付(YYYY-MM-DD)か null', E.gridShape, E.grid);
+  ok('🔴 grid＝dashEarliestIntake と同じ日（当日作業は輸入も）', JSON.stringify(E.grid) === JSON.stringify(E.want), [E.grid, E.want]);
+  const vDs = ds => !ds ? 'なし' : ds === E.todayDs ? '今日' : null;
+  const mOk = [E.grid.dom.no, E.grid.dom.loan, E.grid.imp.no, E.grid.imp.loan, E.grid.dom.same].every((ds, i) => {
+    const t = vDs(ds), v = E.metricsText[i];
+    return t ? v === t : v.indexOf((+ds.slice(5, 7)) + '/' + (+ds.slice(8, 10)) + '(') === 0;
+  });
+  ok('🔴 grid と今までの数字（文字）が同じ日を指す', mOk, [E.grid, E.metricsText]);
+  ok('🔴 days＝今日から21日・1日ずつ', E.daysN === 21 && E.seq && E.firstDs === E.todayDs && E.lastDs === E.lastWant, [E.daysN, E.firstDs, E.lastDs]);
+  ok('🔴 days の1行＝ds・closed・label・dom[数,枠]・imp[数,枠]・loanFree・loanTotal（整数）', E.rowShape);
+  ok('🔴 days の数字＝予約の埋まり（fill）と同じ', E.sameAsFill && E.intakeSame, [E.sameAsFill, E.intakeSame]);
+  ok('🔴 休みの日も数字は入る（label あり）・PitCal の休みは closed', E.closedHasNums && E.closedCal, E.closedList);
+  ok('🔴 代車の空き＝pitLoanerFreeOn の台数・0〜全台数', E.loanOk, E.total);
+  console.log('     休みの日: ' + (E.closedList.join(' ') || 'なし') + '／代車 ' + E.total + '台／grid ' + JSON.stringify(E.grid));
+}
 ok('予約の埋まり＝21日／置場＝14日／売上＝7日', R.fillN === 21 && R.parkN === 14 && R.days7 === 7, [R.fillN, R.parkN, R.days7]);
 ok('🔴 明細の行き先は card=<id> の形', R.qShape && R.qN > 0, R.qN);
 ok('明細の行は すべて文字＋真偽', R.rowShape);
