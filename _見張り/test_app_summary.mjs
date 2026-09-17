@@ -13,6 +13,7 @@
      🔴 CoreFlow の dash.js が知っている項目の鍵と、ここが配る鍵が**そろっている**
      🔴 自分の分（perUser）の鍵は state.staff の id（＝メンバーid）
      🔴 2026-09-17 ゆうた：最短入庫日（earliest）に FlowDesk 用の grid（日付そのもの）と days（3週間の空き）
+     🔴 2026-09-17 ゆうた：売上ボード（salesBoard）＝売上画面「当月」と同じ数字／自分のフロント成績（perUser.front）
 
    使い方：
      python -m http.server 8971   （PitFlow\pitflow で）
@@ -132,6 +133,72 @@ const R = await p.evaluate(() => {
         total
       };
     })(),
+    board: (function () {
+      /* 🔴 売上ボード＝売上画面（sales.js collectMonth）と同じ数字か。区分は pitSalesTier＋pitSalesInRange で数え直して突き合わせる */
+      const B = S.salesBoard || null; if (!B) return null;
+      const MAP = { actual: 'act', actualWait: 'wait', confirmed: 'fixed', planned: 'plan', prospect: 'est', forecast: 'fore' };
+      const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+      const moS = ymd(new Date(t0.getFullYear(), t0.getMonth(), 1)), moE = ymd(new Date(t0.getFullYear(), t0.getMonth() + 1, 0));
+      const D = window.pitSalesMonthCollect(moS, moE);
+      const scr = {}, scrN = {}; Object.keys(MAP).forEach(id => { scr[MAP[id]] = Math.round(D.tiers[id].sum); scrN[MAP[id]] = D.tiers[id].count; });
+      /* 物差しだけで台数を数え直す（売上なし・廃車は pitSalesTier が null） */
+      const own = {}; Object.values(MAP).forEach(k => own[k] = 0);
+      let noSaleIn = 0, scrapIn = 0;
+      state.cards.forEach(c => {
+        const tr = pitSalesTier(c);
+        if (tr && pitSalesInRange(c, moS, moE, ymd(t0))) own[MAP[tr]]++;
+        if (window.pitCardNoSale && pitCardNoSale(c) && pitSalesInRange(c, moS, moE, ymd(t0))) noSaleIn++;
+        if (c.status === 'scrap' && pitSalesTier(c)) scrapIn++;
+      });
+      const K = Object.values(MAP), KF = ['act', 'wait', 'fixed', 'plan'];
+      const isInt = v => Number.isInteger(v);
+      const sumK = (a, b, k) => a[k] + b[k];
+      const fr = B.fronts || [];
+      const frSum = {}; KF.forEach(k => { frSum[k] = fr.reduce((a, f) => a + f.tiers[k], 0); });
+      const frCnt = {}; KF.forEach(k => { frCnt[k] = fr.reduce((a, f) => a + f.counts[k], 0); });
+      /* 平均預かり日数をここで数え直す（実績の車・入庫日 actualInAt||reserveDate → pitSalesCountDate） */
+      const dd = v => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || '')); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+      let ss = 0, sn = 0;
+      D.rows.filter(r => r.tier === 'actual').forEach(r => { const a = dd(r.c.actualInAt || r.c.reserveDate), b = dd(pitSalesCountDate(r.c)); if (a && b) { const x = Math.round((b - a) / 86400000); if (x >= 0) { ss += x; sn++; } } });
+      const tg = (state.settings && state.settings.target) || {};
+      const ratioD = tg.ratioD != null ? +tg.ratioD : 50;
+      const staffBy = {}; (state.staff || []).forEach(s => { if (s.id && !s.isSelf && s.name && !staffBy[s.name]) staffBy[s.name] = s.id; });
+      const pu = doc.perUser || {};
+      const puFront = Object.keys(pu).filter(id => pu[id].sections && pu[id].sections.front).map(id => ({ id, f: pu[id].sections.front, name: pu[id].name }));
+      const named = fr.filter(f => f.name !== '（未割当）');
+      return {
+        B: JSON.parse(JSON.stringify(B)),
+        shape: B.title === '売上ボード' && Array.isArray(B.metrics) && Array.isArray(B.items) && /^\d{4}-\d{2}$/.test(B.month)
+          && B.month === moS.slice(0, 7) && B.day === t0.getDate() && B.days === D.lastDay
+          && isInt(B.min) && isInt(B.max) && K.every(k => isInt(B.tiers[k]) && isInt(B.counts[k]))
+          && ['div1', 'div2'].every(d => B.divs[d] && isInt(B.divs[d].min) && isInt(B.divs[d].max) && K.every(k => isInt(B.divs[d].tiers[k]) && isInt(B.divs[d].counts[k])))
+          && fr.every(f => typeof f.key === 'string' && typeof f.name === 'string' && (f.memberId === null || typeof f.memberId === 'string')
+            && KF.every(k => isInt(f.tiers[k]) && isInt(f.counts[k])) && Object.keys(f.tiers).length === 4 && isInt(f.avgPrice)
+            && (f.avgStayDays === null || typeof f.avgStayDays === 'number'))
+          && B.company && isInt(B.company.avgPrice) && (B.company.avgStayDays === null || typeof B.company.avgStayDays === 'number'),
+        sameScreen: K.every(k => B.tiers[k] === scr[k] && B.counts[k] === scrN[k]), scr, scrN,
+        sameRule: K.every(k => B.counts[k] === own[k]), own, noSaleIn, scrapIn,
+        target: B.min === window.pitSalesTarget().min && B.max === window.pitSalesTarget().max,
+        divSum: K.every(k => sumK(B.divs.div1.tiers, B.divs.div2.tiers, k) === B.tiers[k] && sumK(B.divs.div1.counts, B.divs.div2.counts, k) === B.counts[k]),
+        divScreen: K.every(k => { const id = Object.keys(MAP).find(x => MAP[x] === k); return B.divs.div1.tiers[k] === Math.round(D.byCourse.div1[id].sum) && B.divs.div2.counts[k] === D.byCourse.div2[id].count; }),
+        divTarget: B.divs.div1.min + B.divs.div2.min === B.min && B.divs.div1.max + B.divs.div2.max === B.max
+          && B.divs.div1.min === Math.round(B.min * ratioD / 100) && B.divs.div1.max === Math.round(B.max * ratioD / 100), ratioD,
+        frontSum: KF.every(k => frSum[k] === B.tiers[k] && frCnt[k] === B.counts[k]), frSum,
+        frontScreen: Object.keys(D.fronts).length === fr.length && fr.every(f => { const x = D.fronts[f.name]; return x && KF.every(k => { const id = Object.keys(MAP).find(z => MAP[z] === k); return Math.round(x[id]) === f.tiers[k]; }); }),
+        frontSorted: fr.every((f, i) => i === 0 || fr[i - 1].tiers.act >= f.tiers.act),
+        frontAvg: fr.every(f => f.avgPrice === (f.counts.act ? Math.round(f.tiers.act / f.counts.act) : 0)) && B.company.avgPrice === (B.counts.act ? Math.round(B.tiers.act / B.counts.act) : 0),
+        frontMember: fr.every(f => f.memberId === (f.name === '（未割当）' ? null : (staffBy[f.name] || null))),
+        stay: [B.company.avgStayDays, sn ? Math.round(ss / sn * 10) / 10 : null],
+        frontStayN: fr.filter(f => f.avgStayDays !== null).length,
+        puFront: puFront.map(x => ({ id: x.id, name: x.name, rank: x.f.rank, of: x.f.of, act: x.f.tiers.act })),
+        puFrontOk: puFront.every(x => { const i = named.findIndex(f => f.name === x.f.name); return i >= 0 && x.f.rank === i + 1 && x.f.of === named.length && x.name === x.f.name
+            && JSON.stringify(x.f.tiers) === JSON.stringify(named[i].tiers) && JSON.stringify(x.f.counts) === JSON.stringify(named[i].counts)
+            && x.f.avgPrice === named[i].avgPrice && x.f.avgStayDays === named[i].avgStayDays && x.f.key === named[i].key; }),
+        puFrontAll: named.filter(f => f.memberId).every(f => pu[f.memberId] && pu[f.memberId].sections.front && pu[f.memberId].sections.front.name === f.name),
+        puKeepSections: puFront.every(x => ['reserve', 'task', 'ret', 'resstaff', 'sales'].every(k => pu[x.id].sections[k]) && Array.isArray(pu[x.id].metrics)),
+        size: JSON.stringify(B).length
+      };
+    })(),
     fillN: (S.fill.items || []).length, parkN: (S.park.items || []).length, days7: (S.salesDays.items || []).length,
     everyTitle: Object.keys(S).every(k => S[k].title && Array.isArray(S[k].metrics) && Array.isArray(S[k].items)),
     qShape: itemsAll.filter(it => it.q).every(it => /^card=[^&]+$/.test(it.q)),
@@ -182,6 +249,33 @@ ok('代車は1台ずつ並ぶ', R.loanerN[0] === R.loanerN[1] && R.loanerN[0] > 
   ok('🔴 代車の空き＝pitLoanerFreeOn の台数・0〜全台数', E.loanOk, E.total);
   console.log('     休みの日: ' + (E.closedList.join(' ') || 'なし') + '／代車 ' + E.total + '台／grid ' + JSON.stringify(E.grid));
 }
+{
+  /* 🔴 2026-09-17 ゆうた：FlowDesk のサイドバーに PitFlow の売上カード（sections.salesBoard／perUser[id].sections.front） */
+  const X = R.board;
+  ok('🔴 売上ボード（salesBoard）が届く', !!X);
+  if (X) {
+    ok('🔴 形＝month・day・days・min・max・tiers/counts（6区分）・divs・fronts・company（整数・null）', X.shape, X.B);
+    ok('🔴 6区分の金額・台数＝売上画面「当月」（collectMonth）と同じ', X.sameScreen, [X.B.tiers, X.scr, X.B.counts, X.scrN]);
+    ok('🔴 台数＝物差し（pitSalesTier＋pitSalesInRange）で数え直しても同じ（売上なし・廃車は入らない）', X.sameRule && X.scrapIn === 0, [X.B.counts, X.own, X.scrapIn]);
+    ok('🔴 目標＝売上画面の target（最低・最高）', X.target, [X.B.min, X.B.max]);
+    ok('🔴 1課＋2課＝全体（6区分の金額・台数）', X.divSum);
+    ok('🔴 課ごとの数字＝売上画面の課別と同じ', X.divScreen);
+    ok('🔴 課の目標＝ratioD（国産の％）で割る・足すと全体', X.divTarget, [X.ratioD, X.B.divs.div1.min, X.B.divs.div2.min]);
+    ok('🔴 フロント4区分の合計＝全体（未割当も1行で持つので必ずそろう）', X.frontSum, [X.frSum, X.B.tiers]);
+    ok('🔴 フロントごとの金額＝売上画面のフロント別と同じ', X.frontScreen);
+    ok('フロントは実績の多い順', X.frontSorted);
+    ok('平均単価＝実績÷実績台数（フロント・全社）', X.frontAvg);
+    ok('🔴 memberId＝state.staff の id（未割当・名簿に無い名前は null）', X.frontMember, X.B.fronts.map(f => [f.name, f.memberId]));
+    ok('🔴 平均預かり日数＝入庫日（actualInAt／reserveDate）→実績カウント日 の平均（小数1桁）', X.stay[0] === X.stay[1] && X.stay[0] !== null, X.stay);
+    ok('🔴 自分のフロント成績（perUser.front）＝ボードの行と同じ・順位と人数', X.puFront.length > 0 && X.puFrontOk, X.puFront);
+    ok('🔴 名簿にいるフロントは全員 perUser.front を持つ', X.puFrontAll);
+    ok('自分の分の今までの5項目はそのまま', X.puKeepSections);
+    ok('売上ボードは小さい（10KB未満）', X.size < 10000, X.size);
+    console.log('     売上ボード: ' + JSON.stringify({ month: X.B.month, day: X.B.day, days: X.B.days, min: X.B.min, max: X.B.max, tiers: X.B.tiers, counts: X.B.counts, divs: X.B.divs, company: X.B.company }));
+    console.log('     フロント: ' + X.B.fronts.map(f => f.name + '(' + (f.memberId || '-') + ') 実績' + f.tiers.act + '/' + f.counts.act + '台 預' + f.avgStayDays).join('／'));
+    console.log('     順位: ' + X.puFront.map(x => x.name + ' ' + x.rank + '/' + x.of).join('／') + '／売上なしで範囲内 ' + X.noSaleIn + '台（数えない）');
+  }
+}
 ok('予約の埋まり＝21日／置場＝14日／売上＝7日', R.fillN === 21 && R.parkN === 14 && R.days7 === 7, [R.fillN, R.parkN, R.days7]);
 ok('🔴 明細の行き先は card=<id> の形', R.qShape && R.qN > 0, R.qN);
 ok('明細の行は すべて文字＋真偽', R.rowShape);
@@ -216,7 +310,9 @@ console.log('\n── 🤝 CoreFlow の dash.js と鍵がそろっているか �
     const keys = [...block.matchAll(/\['([A-Za-z0-9_]+)', '/g)].map(m => m[1]);
     ok('dash.js の PitFlow の項目を読めた', keys.length >= 30, keys.length);
     ok('🔴 dash.js が知っている鍵は、ぜんぶ配っている', keys.every(k => R.keys.indexOf(k) >= 0), keys.filter(k => R.keys.indexOf(k) < 0));
-    ok('🔴 配っている鍵は、ぜんぶ dash.js が知っている', R.keys.every(k => keys.indexOf(k) >= 0), R.keys.filter(k => keys.indexOf(k) < 0));
+    /* salesBoard は FlowDesk だけが読む（機械で読む形・CoreFlow のBOXにはしない）ので dash.js に無くてよい */
+    const FD_ONLY = ['salesBoard'];
+    ok('🔴 配っている鍵は、ぜんぶ dash.js が知っている（FlowDesk 専用の salesBoard を除く）', R.keys.every(k => keys.indexOf(k) >= 0 || FD_ONLY.indexOf(k) >= 0), R.keys.filter(k => keys.indexOf(k) < 0));
     const me = (dj.match(/ME_SECTIONS = \{\s*pitflow: \[[\s\S]*?\]\],/) || [''])[0];
     const mk = [...me.matchAll(/\['([A-Za-z0-9_]+)', '/g)].map(m => m[1]);
     ok('🔴 自分の分の鍵もそろっている', mk.length === 5 && R.task && mk.every(k => R.task[2].indexOf(k) >= 0), [mk, R.task && R.task[2]]);
