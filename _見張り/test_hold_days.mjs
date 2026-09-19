@@ -156,8 +156,20 @@ console.log('\n── 🔗 元からある定義とつじつまが合ってい�
 console.log('\n── ソースの見張り（数え方が1か所に集まっているか） ──');
 {
   const v = fs.readFileSync('js/views.js', 'utf8');
-  ok('数え方は views.js に4つ揃っている',
-     /function pitDayNo\(/.test(v) && /function pitDayNoMs\(/.test(v) && /function pitHoldDays\(/.test(v) && /function pitHoldDaysText\(/.test(v));
+  const sh = fs.readFileSync('js/pit-share.js', 'utf8');
+  /* 🔴 2026-09-19 「◯日目」の2つ（pitDayNo／pitDayNoMs）は **pit-share.js へ移した**
+     ＝ FlowDesk・MHS も借りられるようにするため（ゆうた「PitFlow の共有側へ移す」）。
+     ⚠ 預かり日数の2つ（pitHoldDays／pitHoldDaysText）は views.js のまま。
+     🔴 ここは「**写しが増えていないか**」の番人。どちらか1か所にだけ在ること。 */
+  ok('「◯日目」の数え方は pit-share.js に2つ揃っている（借りられる所）',
+     /function pitDayNo\(/.test(sh) && /function pitDayNoMs\(/.test(sh));
+  ok('預かり日数の数え方は views.js に2つ揃っている',
+     /function pitHoldDays\(/.test(v) && /function pitHoldDaysText\(/.test(v));
+  ok('🔴 移した物が views.js に書き写されていない（両方に在ると片方だけ古くなる）',
+     !/function pitDayNo\(/.test(v) && !/function pitDayNoMs\(/.test(v) &&
+     !/function pitInShop\(/.test(v) && !/function pitHoldFrom\(/.test(v) && !/function daysFromToday\(/.test(v));
+  ok('入庫したか・預かりの起算日も pit-share.js にある',
+     /function pitInShop\(/.test(sh) && /function pitHoldFrom\(/.test(sh) && /function daysFromToday\(/.test(sh));
   ['js/card-view.js', 'js/outsource.js', 'js/reserve.js', 'js/card-hover.js'].forEach(function(f){
     const src = fs.readFileSync(f, 'utf8');
     ok(f + ' が pitDayNo 系を通している', /pitDayNoMs\(|pitDayNo\(/.test(src), f);

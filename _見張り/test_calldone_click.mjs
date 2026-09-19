@@ -151,7 +151,12 @@ console.log('\n── ④外側を押し始めて外側で離したら、今ま�
   const { p } = await stage();
   const id = await dragToCallDone(p, 'hold');
   const box = await p.locator('#rp-backdrop .rp-box').boundingBox();
-  await p.mouse.move(box.x + box.width / 2, box.y + box.height + 160);
+  /* 🔴 2026-09-19 押す場所を「窓の下に160px」から「窓の左の外」に変えた。
+     窓が育って（返車日未定のチェック・時間の3点セットなど）下端が 896px になり、
+     +160＝1056px が**画面の高さ1050pxを6pxはみ出して**、クリックがどこにも当たっていなかった。
+     ＝ 製品は正しく、テストの押す場所だけが古かった。
+     🔴 左の外なら、窓がこれから縦に伸びても はみ出さない（高さに引きずられない場所を選ぶ）。 */
+  await p.mouse.move(Math.max(8, box.x / 2), box.y + box.height / 2);
   await p.mouse.down(); await p.waitForTimeout(60); await p.mouse.up();
   await p.waitForTimeout(500);
   const r = await p.evaluate(i => ({ toasts: window.__toasts, open: document.getElementById('rp-backdrop').classList.contains('show'),

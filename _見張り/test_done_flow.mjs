@@ -277,11 +277,15 @@ const mgShown = () => p.evaluate(() => {
       blocks: box.querySelectorAll('.cf-mech-block').length,
       insp:   !!box.querySelector('.cf-mech-i'),
       mech:   !!box.querySelector('.cf-mech-m'),
+      check:  !!box.querySelector('.cf-mech-c'),
       chips:  box.querySelectorAll('.cf-mchip').length,
       live:   !!document.getElementById('mg-mech-live')
     };
   });
-  ok('🔴 点検・整備の2ブロックが出る', inside.blocks === 2 && inside.insp && inside.mech, inside);
+  /* 🔴 2026-09-19 **2ブロック → 3ブロック**に直した。
+     v2.73.0（2026-09-05・ゆうた指定）で「チェック担当者」を3つ目の枠として足したのに、
+     この見張りが2つのままだった＝**製品は正しく、テストが古かった**。 */
+  ok('🔴 点検・整備・チェックの3ブロックが出る', inside.blocks === 3 && inside.insp && inside.mech && inside.check, inside);
   ok('🔴 メインと同じチップ（cf-mchip）が並ぶ', inside.chips > 0, inside);
   ok('🔴 配分バーの置き場がある', inside.live === true, inside);
 
@@ -302,7 +306,7 @@ const mgShown = () => p.evaluate(() => {
   /* 🔴 v1.174.0 片方だけ入れても**まだ決まっていない**（点検が空）＝文言は変わらない */
   const okLb1 = await p.evaluate(() => document.getElementById('mg-ok').textContent);
   ok('🔴 片方だけ入れた時点では「このまま進める」のまま', okLb1 === 'このまま進める', okLb1);
-  /* 点検は「なし」と決める＝両方そろう */
+  /* 点検は「なし」と決める */
   const noneR = await p.evaluate(() => {
     const b = document.querySelector('#mg-pick .cf-mech-i .cf-mnone');
     b.click();
@@ -313,8 +317,21 @@ const mgShown = () => p.evaluate(() => {
   });
   await p.waitForTimeout(150);
   ok('🔴🔴 窓の中でも「なし」を押せる', noneR.on === true && noneR.flag === true, noneR);
-  ok('ボタンの文言が「入れて作業完了へ」に変わる', noneR.lb === '入れて作業完了へ', noneR.lb);
-  ok('🔴 そろったら注意も引っ込む', /決まりました/.test(noneR.warn), noneR.warn);
+  /* 🔴 2026-09-19 チェック担当（v2.73.0 の3つ目）が残っている間は、まだ決まっていない */
+  ok('🔴 チェック担当が残っている間は「このまま進める」のまま', noneR.lb === 'このまま進める', noneR.lb);
+  ok('🔴 何が足りないかを名指しする', /チェック担当/.test(noneR.warn), noneR.warn);
+  /* チェックも「なし」と決める＝3つそろう */
+  const noneC = await p.evaluate(() => {
+    document.querySelector('#mg-pick .cf-mech-c .cf-mnone').click();
+    return { on: !!document.querySelector('#mg-pick .cf-mech-c .cf-mnone.on'),
+             flag: !!state.cards.find(x => x.id === 'cDF').checkersNone,
+             lb: document.getElementById('mg-ok').textContent,
+             warn: (document.getElementById('mg-warn') || {}).textContent || '' };
+  });
+  await p.waitForTimeout(150);
+  ok('🔴🔴 チェック担当も「なし」と決められる', noneC.on === true && noneC.flag === true, noneC);
+  ok('ボタンの文言が「入れて作業完了へ」に変わる', noneC.lb === '入れて作業完了へ', noneC.lb);
+  ok('🔴 3つそろったら注意も引っ込む', /決まりました/.test(noneC.warn), noneC.warn);
 
   await p.evaluate(() => PitMechGuard.close(1));
   await p.waitForTimeout(300);
@@ -357,9 +374,10 @@ const mgShown = () => p.evaluate(() => {
   await p.waitForTimeout(150);
 }
 {
-  /* 🔴 「なし」を押して決めれば、もう出ない */
+  /* 🔴 「なし」を押して決めれば、もう出ない
+     🔴 2026-09-19 チェック担当（v2.73.0 の3つ目）も決めないと残る＝3つぶん決める */
   await put({ status: 'work', dropType: 'drop', reserveDate: -1, inspectors: [], mechanics: ['蓮沼'] });
-  await p.evaluate(() => { PitMechPick.none('x', 'cDF', 'inspectors'); });
+  await p.evaluate(() => { PitMechPick.none('x', 'cDF', 'inspectors'); PitMechPick.none('x', 'cDF', 'checkers'); });
   await p.evaluate(() => applyCardDrop('cDF', 'status', 'workDone'));
   await p.waitForTimeout(300);
   ok('🔴🔴 点検担当を「なし」と決めたら出さない', await mgShown() === false);
@@ -409,7 +427,8 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
              chips:  pane ? pane.querySelectorAll('.cf-mchip').length : -1,
              live:   !!document.getElementById('cv-mech-live') };
   });
-  ok('🔴 カード詳細の整備タブも今までどおり出る', cv.blocks === 2 && cv.chips > 0 && cv.live, cv);
+  /* 🔴 2026-09-19 ここも 2 → 3（点検・整備・チェック）。窓の中と同じ部品なので数もそろう */
+  ok('🔴 カード詳細の整備タブも今までどおり出る（3ブロック）', cv.blocks === 3 && cv.chips > 0 && cv.live, cv);
   const tap = await p.evaluate(() => {
     const chip = document.querySelector('#cv-p-maint .cf-mech-i .cf-mperson');
     chip.click();
