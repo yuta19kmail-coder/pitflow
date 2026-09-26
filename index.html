@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="2.124.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="2.125.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="css/polish.css?v=236">
 <link rel="stylesheet" href="css/fleet-cal.css?v=8"><!-- 🗓 v2.70.0 車両カレンダー・代車カレンダーの整備予定。polish.css より **後ろ**（ここが上書きする側） -->
 <link rel="stylesheet" href="css/floor.css?v=24">
-<link rel="stylesheet" href="css/coreflow-note-board.css?v=a29f6744"><!-- 📌 付箋ボードの見た目（全アプリ共通・_shared から配布）。v2.109.0 で前の付箋専用の見た目から置き換え -->
+<link rel="stylesheet" href="css/coreflow-note-board.css?v=87c1247a"><!-- 📌 付箋ボードの見た目（全アプリ共通・_shared から配布）。v2.109.0 で前の付箋専用の見た目から置き換え -->
 <link rel="stylesheet" href="css/coreflow-note-reply.css?v=b5c2b3fb"><!-- 📝 付箋の返信（全アプリ共通・_shared から配布）。board-notes.css より後ろに読む -->
 <link rel="stylesheet" href="css/coreflow-req.css?v=fd4a9c74"><!-- 📮 予定依頼（全アプリ共通・_shared から配布） -->
 <link rel="stylesheet" href="css/search.css?v=8">
@@ -132,7 +132,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v2.124.0</div>
+    <div class="login-ver">v2.125.0</div>
   </div>
 </div>
 
@@ -146,7 +146,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v2.124.0</span>
+    <span class="ver">v2.125.0</span>
     <!-- 文字サイズ3分割（A小・A中・A大） -->
     <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
       <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
@@ -802,7 +802,7 @@
 <script src="js/sample-data.js?v=19"></script>
 <script src="js/sample-fleet.js?v=14"></script>
 <script src="https://coreflow.kobayashi-motors.com/usage-log.js"></script><!-- 利用状況の記録（CoreFlow集約・自己完結・マスターだけ閲覧） -->
-<script src="js/db-pit.js?v=54"></script>
+<script src="js/db-pit.js?v=55"></script>
 <script src="js/coreflow-return-plan.js?v=08a1675a"></script><!-- 🔴 v1.153.0 返車予定の確からしさ（未完／暫定／未定）＝_shared の共通部品。CarFlow の整備依頼業務と同じ答えにする。return-slot.js / car-sales.js より前に読む -->
 <script src="js/return-slot.js?v=15"></script><!-- v1.60.0 返車の行き先（完TEL待ち／返車日未定／返車時間未定／カレンダー）を決める物差し＋時間の入力ガイド共通部品。state.js より後ろ、使う側（card-detail / card-hover / return-popup / undetermined）より前 -->
 <script src="js/overdue-pit.js?v=7"></script><!-- 🔴 v1.101.0 当日を過ぎた予約・返車を自動で正しい箱へ移す。return-slot.js より後ろ、views.js（showView から呼ぶ）より前 -->
@@ -829,8 +829,8 @@
 <script src="js/parking.js?v=9"></script>
 <script src="js/coreflow-note-reply.js?v=a224b9c0"></script><!-- 📝 付箋の返信（全アプリ共通・_shared から配布）。board-notes.js より **前** に読むこと -->
 <script src="js/coreflow-note-all.js?v=830ce1ff"></script><!-- 📎 付箋のまとめて表示（全アプリ共通・_shared から配布）。board-notes.js より **前** に読むこと -->
-<script src="js/coreflow-note-board.js?v=d8d6fbf2"></script><!-- 📌 付箋ボード本体（全アプリ共通・_shared から配布）。board-notes.js より **前** に読む -->
-<script src="js/board-notes.js?v=13"></script>
+<script src="js/coreflow-note-board.js?v=3ed9dfba"></script><!-- 📌 付箋ボード本体（全アプリ共通・_shared から配布）。board-notes.js より **前** に読む -->
+<script src="js/board-notes.js?v=14"></script>
 <script src="js/search.js?v=21"></script>
 <script src="js/insurance-pit.js?v=1"></script><!-- 🛡 v2.9.0 保険＝入金日で実績に乗せる物差し1本。**sales-count.js より前**に読む -->
 <script src="js/sales-count.js?v=7"></script><!-- 🔴 v1.61.0 「売上をどの月に数えるか」の物差し1本（実績＝実績カウント日／まだ返していない車＝返車予定日）。使う側（maintdash / sales / mech-summary / mydash）より前に読む -->
