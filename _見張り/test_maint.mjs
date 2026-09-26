@@ -185,6 +185,17 @@ console.log('\n── ⑤ 月の目標は計算（保存しない）──');
   const late = c2.pitLoanerMaintPlans({ id:'lx', shakenDate:'2027-06-30' }, '2027-01-15').find(x => x.work === '12pt');
   ok('🔴 過ぎた12ヶ月点検は今の月へスライドする', !late || late.slipped === false || late.ym === '2027-01');
   ok('繰り越しの回数は数えていない（そんな項目が無い）', !('slipCount' in (late || {})));
+  /* 🔴 v2.126.0（ゆうた指定 2026-09-26）12ヶ月点検は目安の月の翌月までOK
+     🗣「11月満了の翌年の12ヵ月点検で12月に入れようとすると候補として入れられない」 */
+  {
+    const nov = c2.pitLoanerMaintPlans({ id:'lz', shakenDate:'2027-11-20' }, '2026-10-10').find(x => x.work === '12pt');
+    ok('🔴 11月の12点は12月まで受けられる（lateYm）', nov && nov.dueDate === '2026-11-20' && nov.lateYm === '2026-12', nov);
+    ok('🔴 受けられる期間の終わりは12月末', nov && nov.openTo === '2026-12-31', nov && nov.openTo);
+    const dec = c2.pitLoanerMaintPlans({ id:'lz', shakenDate:'2027-11-20' }, '2026-12-05').find(x => x.work === '12pt');
+    ok('🔴 12月に入っても「できませんでした」にしない', dec && dec.slipped === false && dec.ym === '2026-11' && dec.inWindow === true, dec);
+    const jan = c2.pitLoanerMaintPlans({ id:'lz', shakenDate:'2027-11-20' }, '2027-01-05').find(x => x.work === '12pt');
+    ok('🔴 翌々月（1月）になったらスライド', jan && jan.slipped === true && jan.ym === '2027-01', jan);
+  }
   /* 末日の繰り上がり */
   const e = c.pitLoanerMaintPlans({ id:'ly', shakenDate:'2027-03-31' }, TODAY).find(x => x.work === 'shaken');
   ok('⚠ 3/31 の2ヶ月前は 1/31（勝手に3/3へ繰り上がらない）', e.openFrom === '2027-01-31', e.openFrom);
