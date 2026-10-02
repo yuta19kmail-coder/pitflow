@@ -79,7 +79,11 @@ const R = { 月: '2026-09', 書き出した日時: '2026-10-04T09:12:00Z', 書�
 let html = '';
 try { html = ctx.pitAiRepHtml(R); } catch (e) { html = 'ERR ' + e.stack; }
 ok('🔴 画面が作れる', html.indexOf('ERR') !== 0 && html.length > 1000, html.slice(0, 200));
-ok('🔴🔴 車は「苗字 車種｜課｜フロント」を1つの枠に。枠全体を押すとカードが開く', /<span class="air-car" role="button" tabindex="0" style="--dc:#222222" onclick="pitAiRepOpen\('c1'\)"><span class="nm">熊木 ミニR56<\/span><span class="dv">2課<\/span><span class="fr">箱崎<\/span><\/span>/.test(html), html.match(/air-car[^]{0,260}/) && html.match(/air-car[^]{0,260}/)[0]);
+ok('🔴🔴 車は文に溶け込む1行（苗字 車種・課・フロント）。下線は課の色。押すとカードが開く', /<span class="air-car" role="button" tabindex="0" style="--dc:#222222" onclick="pitAiRepOpen\('c1'\)"><span class="nm">熊木 ミニR56<\/span><span class="mt">2課・箱崎<\/span><\/span>/.test(html), html.match(/air-car[^]{0,260}/) && html.match(/air-car[^]{0,260}/)[0]);
+console.log('── データチェックと同じ物差し ──');
+ok('🔴🔴 作業タイプは pitCardWorkTypes（workTypes の配列も読む）', /function wtLabelOf\(c\)\{[\s\S]{0,120}w\.pitCardWorkTypes\(c\)/.test(SRC) && !/wtLabel\(c\.workType\)/.test(SRC));
+ok('🔴🔴 担当の入れ忘れは pitMechUnsettled（「なし」を押した車は抜けにしない）', /w\.pitMechUnsettled\(c\)/.test(SRC) && /整備担当なし（外注・物販など）/.test(SRC));
+ok('🔴 立ち上げ月は預かり日数を断定に使わない', /立ち上げ月: P\.tiers\.actual\.count === 0/.test(SRC) && /立ち上げ月」が true の月/.test(SRC));
 console.log('── 通知表 ──');
 const cards = html.match(/<div class="air-card">/g) || [];
 ok('🔴🔴 通知表は全体・1課・2課の3つ', cards.length === 3, cards.length);
