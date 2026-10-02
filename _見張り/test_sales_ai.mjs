@@ -86,7 +86,10 @@ ok('🔴 売上の判定：全体 1,200万／下限 1,500万（80%）は ×', /a
 ok('🔴 返車の判定：50日÷30台＝1.7日は △', /<span>返車<\/span><b>△<\/b><i>完了→返車 1\.7日<\/i>/.test(html));
 ok('🔴 判定はコード1本（grades）・AI には付け直させない', /function grades\(F\)/.test(SRC) && /評価を自分で付け直さない/.test(SRC));
 console.log('── 速く出す（書き出し済みは締めた証） ──');
-ok('🔴🔴 書き出し済みの月はレポート1つを読むだけ（締めの確認をしない）', /if \(sv && sv\.数字\)\{\s*\n\s*U\.saved = sv; U\.close = markClosed\(sv\.締め\)/.test(SRC));
+ok('🔴🔴 書き出し済みの月はレポート1つを読むだけ（締めの確認をしない）', /if \(sv && sv\.数字\)\{[\s\S]{0,300}U\.close = markClosed\(sv\.締め\)[\s\S]{0,200}return;/.test(SRC));
+ok('🔴🔴 控え（このパソコン）があれば読む前に出す', /var cached = cacheGet\(ym\);\s*\n\s*if \(cached && cached\.数字\)\{\s*\n\s*U\.saved = cached;/.test(SRC));
+ok('🔴 本物が書き出し直されていたら差し替える／消されていたら控えも捨てる', /s\(cached\.書き出した日時\) !== s\(sv\.書き出した日時\)/.test(SRC) && /if \(cached\) cachePut\(ym, null\);/.test(SRC));
+ok('🔴 タブを押しても書き出し済みの月は忘れない', /!\(MEM\[k\]\.saved && MEM\[k\]\.saved\.数字\)/.test(SRC));
 ok('🔴🔴 書き出し直す時は締めを確かめ直してから', /if \(!U\.fresh\)\{[\s\S]{0,200}closeState\(ym\)\.then/.test(SRC));
 ok('🔴 社長・専務・チーフ・蓮沼さんに仕事を戻す提案をしない', /この4人に仕事を戻す提案はしない/.test(SRC));
 ok('🔴 **…** は太字に', /<b>大物<\/b>/.test(html));
