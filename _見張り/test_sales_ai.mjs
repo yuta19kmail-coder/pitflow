@@ -76,7 +76,19 @@ const R = { 月: '2026-09', 書き出した日時: '2026-10-04T09:12:00Z', 書�
 let html = '';
 try { html = ctx.pitAiRepHtml(R); } catch (e) { html = 'ERR ' + e.stack; }
 ok('🔴 画面が作れる', html.indexOf('ERR') !== 0 && html.length > 1000, html.slice(0, 200));
-ok('🔴🔴 車は「苗字 車種｜課｜フロント」で、押すとカードが開く', /onclick="pitAiRepOpen\('c1'\)"><span class="nm">熊木 ミニR56<\/span><span class="air-dv" style="--dc:#222222">2課<\/span><span class="fr">箱崎<\/span>/.test(html), html.match(/air-car[^]{0,220}/) && html.match(/air-car[^]{0,220}/)[0]);
+ok('🔴🔴 車は「苗字 車種｜課｜フロント」で、課とフロントは1つの枠。押すとカードが開く', /onclick="pitAiRepOpen\('c1'\)"><span class="nm">熊木 ミニR56<\/span><span class="air-cb" style="--dc:#222222"><b>2課<\/b><i>箱崎<\/i><\/span>/.test(html), html.match(/air-car[^]{0,220}/) && html.match(/air-car[^]{0,220}/)[0]);
+console.log('── 通知表 ──');
+const cards = html.match(/<div class="air-card">/g) || [];
+ok('🔴🔴 通知表は全体・1課・2課の3つ', cards.length === 3, cards.length);
+ok('🔴 4項目（売上・単価・預かり・返車）', /<span>売上<\/span>/.test(html) && /<span>単価<\/span>/.test(html) && /<span>預かり<\/span>/.test(html) && /<span>返車<\/span>/.test(html));
+ok('🔴 前月が無い項目は「—」（前月なし）', /<b>—<\/b><i>前月なし<\/i>/.test(html));
+ok('🔴 売上の判定：全体 1,200万／下限 1,500万（80%）は ×', /air-g g4" title="目標の上限以上◎[^"]*"><span>売上<\/span><b>×<\/b>/.test(html));
+ok('🔴 返車の判定：50日÷30台＝1.7日は △', /<span>返車<\/span><b>△<\/b><i>完了→返車 1\.7日<\/i>/.test(html));
+ok('🔴 判定はコード1本（grades）・AI には付け直させない', /function grades\(F\)/.test(SRC) && /評価を自分で付け直さない/.test(SRC));
+console.log('── 速く出す（書き出し済みは締めた証） ──');
+ok('🔴🔴 書き出し済みの月はレポート1つを読むだけ（締めの確認をしない）', /if \(sv && sv\.数字\)\{\s*\n\s*U\.saved = sv; U\.close = markClosed\(sv\.締め\)/.test(SRC));
+ok('🔴🔴 書き出し直す時は締めを確かめ直してから', /if \(!U\.fresh\)\{[\s\S]{0,200}closeState\(ym\)\.then/.test(SRC));
+ok('🔴 社長・専務・チーフ・蓮沼さんに仕事を戻す提案をしない', /この4人に仕事を戻す提案はしない/.test(SRC));
 ok('🔴 **…** は太字に', /<b>大物<\/b>/.test(html));
 ok('🔴 課ごとの課題・全体の課題・改善した未来が出る', /課題A/.test(html) && /課題B/.test(html) && /全体A/.test(html) && /改善した未来/.test(html));
 ok('🔴 引継ぎメモ（止まった理由）を表に出す', /9\/5 BO ドイツ本国/.test(html));
