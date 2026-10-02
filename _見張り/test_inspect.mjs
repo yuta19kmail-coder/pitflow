@@ -880,8 +880,9 @@ console.log('\n── ⑬ いちばん上で「日常チェック／クォータ
   ok('日常チェックが選ばれている時は、規則の一覧が出る', r.dailyOn[0] === true && r.dailyHasRules === true, r);
   ok('🔴 クォーターチェックに切り替わると、規則の一覧は出ない（別の中身）',
      r.qOn[1] === true && r.qHasRules === false, r);
-  ok('クォーターチェックは②突合と③AIチェックの話をしている',
-     /売上チェックリストPDF/.test(r.qTxt) && /AIチェック/.test(r.qTxt), r.qTxt.slice(0, 120));
+  /* ⏸ v2.131.0 AIチェックは止めている（ゆうた 2026-10-02）＝③は出さない */
+  ok('クォーターチェックは②突合の話をしていて、止めている③AIチェックは出さない',
+     /売上チェックリストPDF/.test(r.qTxt) && !/AIチェック/.test(r.qTxt), r.qTxt.slice(0, 120));
   ok('🔴 クォーターの区切りは売上の物差し（pitQuarterOf）を借りている', r.ruler === true);
   ok('🔴 8月9日は第2クォーター（1〜7／8〜15／16〜23／24〜末）', r.sameAsSales === 2, r.sameAsSales);
   ok('いまのクォーターの期間が出ている', /\d{4}-\d{2}-\d{2} 〜 \d{4}-\d{2}-\d{2}/.test(r.qWin), r.qWin);
