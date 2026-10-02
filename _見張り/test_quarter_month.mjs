@@ -59,7 +59,7 @@ console.log('\n── 🔍 決めごとがコードに入っているか ──'
   ok('🔴 crossLink は「そろえてから1回」だけ',
      (view.match(/pitQCrossLink\(/g) || []).length === 2, (view.match(/pitQCrossLink\([^)]*\)/g) || []));
   ok('🔴 PDFを読んだあとも月ぶんをそろえる', /buildMonth\(U, monthOf\(U/.test(view));
-  ok('🔴 保存から借りた組は保存し直さない', /g\.出どころ !== '保存' && g\.全部/.test(view));
+  ok('🔴 保存から借りた組は保存し直さない', /g\.出どころ !== '保存' && !g\.保存しない/.test(view));
   ok('🔴 残り件数の物差しは pitQNokori 1本（一覧の要約も）', /直す件数: \(w\.pitQNokori \? w\.pitQNokori\(res\)/.test(store));
   ok('⏳ 読み込み中は数字を出さない（くるくるだけ）', /if \(U\.busy\)\{\s*return h \+ '<div class="q-load">/.test(view.replace(/\n\s*/g,'')));
   ok('🔴 月が変わったら結果を捨てる口がある', /w\.pitQClearForMonth = function/.test(view));

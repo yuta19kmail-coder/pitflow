@@ -63,7 +63,7 @@ console.log('\n── 🔍 決めごとがコードに入っているか ──'
   ok('🔴 開き直しで伝票からもう一度突き合わせる',
      /r\.伝票/.test(view) && /w\.pitQMatch\(den, pit/.test(view));
   ok('🔴 開き直しで新しい判定を作っていない（pitQCollect と pitQMatch だけ）',
-     /w\.pitQCollect\(\{ from: x\.from, to: x\.to \}\)/.test(view));
+     /w\.pitQCollect\(\{ from: gf, to: gt \}\)/.test(view));
   ok('🔴 一覧に無くても書類があれば開く', !/var has = \(U\.list \|\| \[\]\)\.some/.test(view));
   ok('✅ チェック済みの枠がある（doneBox）', /function doneBox\(/.test(view));
   ok('✅ 片づいた行を箱から抜く口がある（splitDone）', /function splitDone\(R\)/.test(view));
