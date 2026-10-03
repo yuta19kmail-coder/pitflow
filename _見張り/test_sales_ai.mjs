@@ -127,11 +127,18 @@ ok('🔴 営業した日（土日・祝日）は資料に載せない＝休ん�
 ok('🔴 方針は前提として守るだけ・本文で触れない', /\*\*本文で方針そのものに触れない\*\*/.test(SRC));
 ok('🔴 保険の枠は「保険を除いた自分たちの数字」から', /保険を除いた、自分たちで仕上げた数字/.test(SRC) && /課ごと: \{ div1:/.test(SRC) && /車の名前は並べない/.test(SRC));
 ok('🔴🔴 スタッフ名簿（受付＝予約件数／回送＝車検ライン／フロント・メカ＝売上台数）', /function rosterHtml\(F\)/.test(SRC) && /o\.予約件数\+\+/.test(SRC) && /pitShakenLineTrips\(moS, moE\)/.test(SRC) && /f\.フロント台数\+\+/.test(SRC) && /o\.メカ台数\+\+/.test(SRC));
-{ const F2 = JSON.parse(JSON.stringify(F)); F2.人 = { 名簿: [{ 名前: '菅谷', 本名: '菅谷 拓生', 部署: '2課', 入社: '2023-04-01', 役割: ['受付', 'フロント'], 予約件数: 40, 車検ライン: 0, フロント台数: 31, フロント売上: 5820000, メカ台数: 0, メカ生産: 0 },
-    { 名前: '高野 和己', 本名: '', 部署: '', 入社: '', 役割: [], 名簿にない: true, 予約件数: 0, 車検ライン: 5, フロント台数: 0, フロント売上: 0, メカ台数: 0, メカ生産: 0 }] };
+{ const F2 = JSON.parse(JSON.stringify(F)); F2.人 = { 名簿: [
+    { id: 'm1', 名前: '菅谷', 本名: '菅谷 拓生', 組: 'div2', 入社: '2024-12-01', 役割: ['受付', 'フロント'], 予約件数: 40, 車検ライン: 0, フロント台数: 31, フロント売上: 5820000, メカ台数: 0, メカ生産: 0 },
+    { id: 'm2', 名前: '高野 和己', 本名: '高野 和己', 組: 'other', 入社: '', 退職: '2026-09-10', 役割: [], 予約件数: 0, 車検ライン: 5, フロント台数: 0, フロント売上: 0, メカ台数: 0, メカ生産: 0 },
+    { id: '', 名前: '小林モータース', 組: 'self', 会社: true, 役割: [], 予約件数: 0, 車検ライン: 0, フロント台数: 3, フロント売上: 88000, メカ台数: 0, メカ生産: 0 }] };
   const hh = ctx.pitAiRepHtml(Object.assign({}, R, { 数字: F2 }));
-  ok('🔴 名簿が出る（みんなが見える方の最後）', /スタッフ名簿（この月の結果）/.test(hh) && /菅谷 拓生/.test(hh) && /31台<i>582万<\/i>/.test(hh) && /名簿にない/.test(hh) && hh.indexOf('スタッフ名簿') < hh.indexOf('このレポートが使ったもの'));
+  ok('🔴 名簿が出る（みんなが見える方の最後）', /スタッフ名簿（この月の結果）/.test(hh) && /菅谷 拓生/.test(hh) && /31台<\/span><i>582万<\/i>/.test(hh) && hh.indexOf('スタッフ名簿') < hh.indexOf('このレポートが使ったもの'), hh.slice(hh.indexOf('air-roster'), hh.indexOf('air-roster') + 400));
+  ok('🔴 アバター（写真が無ければ頭文字）・会社は「会社」', /<span class="air-av">/.test(hh) && /<span class="air-av co"><b>会社<\/b>/.test(hh));
+  ok('🔴 辞めた人は「◯/◯ 退職」で残す', /9\/10 退職/.test(hh));
+  ok('🔴 部署・入社の列は出さない', !/<th>部署<\/th>/.test(hh) && !/<th>入社/.test(hh));
+  ok('🔴 列のいちばんに★（会社は数えない）', /<span class="air-top">31台<\/span>/.test(hh) && /<span class="air-top">5<\/span>/.test(hh));
 }
+ok('🔴🔴 その月に在籍していた人だけ・共用アカウント（部署なし）は出さない', /s\(p\.joinedAt\) > moE\) return;/.test(SRC) && /if \(!hasDept\) return;/.test(SRC) && /s\(f\.leftAt\) < moS\) return;/.test(SRC));
 console.log('── ⑥ 課は設定の表から ──');
 ok('🔴 課の名前・色の直書きが無い', !/'1課'|'2課'|#1db97a|#ec4899/i.test(BODY));
 ok('🔴 課の名前は state.divisions から', /function divRow\(k\)\{ return \(S\(\)\.divisions/.test(SRC));
