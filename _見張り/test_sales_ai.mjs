@@ -144,6 +144,7 @@ ok('🔴🔴 原価は車に書き込んだ伝票から（予約番号で結ぶ�
 ok('🔴🔴 着地は売上で語る（粗利は理由づけ）', /\*\*最終的な着地（目標・見込み・改善した未来・MTG の来月やること）は売上で語る\*\*/.test(SRC));
 ok('🔴 人件費は入っていない前提を AI に渡す', /人件費は入っていない/.test(SRC));
 ok('🔴 通知表に粗利率（前月比のポイント）', /'粗利率'/.test(SRC) && /g4\(gd, 2, -2, -5\)/.test(SRC));
+ok('🔴🔴 板金（B.P）は預かりの数字から丸ごと外す（売上・粗利の合計には入れる）', /function isBodyShop\(c\)/.test(SRC) && /var st = a\.filter\(function \(r\) \{ return r\.預かり != null && !r\.板金; \}\)/.test(SRC) && /!r\.保険 && !r\.板金 && r\.預かり != null/.test(SRC) && /板金の車を「長く預かった」/.test(SRC));
 console.log('── ⑥ 課は設定の表から ──');
 ok('🔴 課の名前・色の直書きが無い', !/'1課'|'2課'|#1db97a|#ec4899/i.test(BODY));
 ok('🔴 課の名前は state.divisions から', /function divRow\(k\)\{ return \(S\(\)\.divisions/.test(SRC));
