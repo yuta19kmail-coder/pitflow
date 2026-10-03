@@ -139,6 +139,11 @@ ok('🔴🔴 スタッフ名簿（受付＝予約件数／回送＝車検ライ�
   ok('🔴 列のいちばんに★（会社は数えない）', /<span class="air-top">31台<\/span>/.test(hh) && /<span class="air-top">5<\/span>/.test(hh));
 }
 ok('🔴🔴 その月に在籍していた人だけ・共用アカウント（部署なし）は出さない', /s\(p\.joinedAt\) > moE\) return;/.test(SRC) && /if \(!hasDept\) return;/.test(SRC) && /s\(f\.leftAt\) < moS\) return;/.test(SRC));
+console.log('── 💰 粗利 ──');
+ok('🔴🔴 原価は車に書き込んだ伝票から（予約番号で結ぶ）', /function costOf\(c\)/.test(SRC) && /t\(x\.予約番号\) === t\(c\.resNo\)/.test(SRC));
+ok('🔴🔴 着地は売上で語る（粗利は理由づけ）', /\*\*最終的な着地（目標・見込み・改善した未来・MTG の来月やること）は売上で語る\*\*/.test(SRC));
+ok('🔴 人件費は入っていない前提を AI に渡す', /人件費は入っていない/.test(SRC));
+ok('🔴 通知表に粗利率（前月比のポイント）', /'粗利率'/.test(SRC) && /g4\(gd, 2, -2, -5\)/.test(SRC));
 console.log('── ⑥ 課は設定の表から ──');
 ok('🔴 課の名前・色の直書きが無い', !/'1課'|'2課'|#1db97a|#ec4899/i.test(BODY));
 ok('🔴 課の名前は state.divisions から', /function divRow\(k\)\{ return \(S\(\)\.divisions/.test(SRC));
