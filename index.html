@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="2.139.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="2.140.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -133,7 +133,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v2.139.0</div>
+    <div class="login-ver">v2.140.0</div>
   </div>
 </div>
 
@@ -147,13 +147,9 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver">v2.139.0</span>
-    <!-- 文字サイズ3分割（A小・A中・A大） -->
-    <div class="tb-fontsize-group" id="tb-fontsize-group" title="文字サイズを変更">
-      <button class="tb-fontsize-btn" data-fontsize="md" onclick="setFontSize('md')"><span style="font-size:10px;font-weight:600">A</span></button>
-      <button class="tb-fontsize-btn" data-fontsize="lg" onclick="setFontSize('lg')"><span style="font-size:14px;font-weight:700">A</span></button>
-      <button class="tb-fontsize-btn" data-fontsize="xl" onclick="setFontSize('xl')"><span style="font-size:19px;font-weight:800">A</span></button>
-    </div>
+    <span class="ver">v2.140.0</span>
+    <!-- 🔴 2026-10-03 AAA（文字サイズ3つ）は無くした＝見やすさ（CoreFlow でチェックした人だけ）に置き換え -->
+    <span id="cf-a11y-slot"></span><!-- 👓 見やすさ（くっきり／大きさ／拡大鏡）。CoreFlow のメンバー管理でチェックがある人だけ出る（coreflow-a11y.js） -->
     <!-- テーマ4パターン循環（ダーク→ライト→ダーク・リキッド→ライト・リキッド） -->
     <button class="tb-theme-cycle" id="tb-theme-cycle" onclick="cycleTheme()" title="テーマ切替" aria-label="テーマ切替"><i data-ic=moon data-ics=16></i></button>
     <!-- 右：新規予約＋ユーザー群（アバター/名前/同期/ヘルプ/ログアウト） -->
@@ -903,6 +899,7 @@
 <script src="js/auto-update.js?v=ffed3e38"></script>
   <script src="js/coreflow-user.js?v=4e5e1ce2"></script><!-- 👤 ヘッダー右の自分（写真＋フルネーム・全アプリ共通・_shared が本体） -->
   <script src="js/coreflow-power.js?v=caf3bb41"></script><!-- ⏻ 電源ボタン（全アプリ共通・_shared が本体） -->
+  <script src="js/coreflow-a11y.js?v=2860419b"></script><!-- 👓 見やすさ（全アプリ共通・_shared から配布）。電源の後 -->
 
 
 <script src="js/ui-dialog.js?v=19128a9d"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
