@@ -1,5 +1,5 @@
 /* ============================================================
-   coreflow-a11y.js ── 全アプリ共通「見やすさ」（くっきり／大きさ／拡大鏡）v1.0.0
+   coreflow-a11y.js ── 全アプリ共通「見やすさ」（くっきり／大きさ／拡大鏡）v1.2.0
    ------------------------------------------------------------
    ◎きっかけ（2026-10-03・ゆうた）
      🗣「車検予定のタイトル横『いつ行く／決定／完了・再検』が社長・専務（60代）に読めない。
@@ -60,9 +60,16 @@
   /* ---------- 控え（前回この端末で開いた人の状態） ---------- */
   var cache = null;
   try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch (e) {}
-  function writeCache(uid, enabled, p) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ uid: uid, on: !!enabled, kukkiri: !!p.kukkiri, ookisa: !!p.ookisa })); } catch (e) {} }
+  function writeCache(uid, enabled, p) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ uid: uid, on: !!enabled, kukkiri: !!p.kukkiri, ookisa: !!p.ookisa, viewer: p.viewer !== false })); } catch (e) {} }
 
-  var prefs = { kukkiri: false, ookisa: false };
+  var prefs = { kukkiri: false, ookisa: false, viewer: true };
+  /* 🆕 v1.2.0（2026-10-03）**見る画面**（FlowDesk・FlowGo・CoreFlow のダッシュボード）の「見やすい表示」。
+     🗣 ゆうた「FlowGo、Flowデスクも、見やすさチェックが入ってる人には専用の＝情報へらす・文字大きく・文字はっきり」
+     ・VIEWER（FlowDesk・FlowGo）＝スイッチは出さず、「見やすい表示」1つで くっきり＋大きさ＋情報を減らす をまとめて ON
+       設定（FlowDesk の基本設定・FlowGo の設定）から本人が切れる。決めていなければ ON＝ userPrefs/{uid}.cfA11y.viewer
+     ・SIMPLE（CoreFlow のダッシュボード）＝ヘッダーのスイッチはそのまま。「情報を減らす」だけ viewer に合わせる
+     🔴 情報を減らす＝<html class="cf-simple">。中身は下の CSS（通知は件名と時刻・カードは数字2つ・行5つ・補足なし） */
+  var VIEWER = !!w.CF_A11Y_VIEWER, SIMPLE = VIEWER || !!w.CF_A11Y_SIMPLE;
   var enabled = false, uid = '';
   var fsOn = false, ckOn = false;
 
@@ -76,6 +83,13 @@
     + '.cf-a11y .dot{width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;flex:none;box-sizing:border-box}'
     + '.cf-a11y button[aria-pressed="true"] .dot{background:#fff;border-color:#fff}'
     + '@media (max-width:759px){.cf-a11y{display:none!important}}'
+    /* ④ 情報を減らす（見る画面だけ）。部品の作りは3つの画面で同じ＝ここ1か所で効く */
+    + 'html.cf-simple .fd-it .fd-text{display:none}'
+    + 'html.cf-simple .fd-it.cf-open .fd-text{display:block}'
+    + 'html.cf-simple .cd-metric:nth-child(n+3){display:none}'
+    + 'html.cf-simple .cd-list > :nth-child(n+6){display:none}'
+    + 'html.cf-simple .cd-row-s,html.cf-simple .cd-updated,html.cf-simple .rc-h > small,html.cf-simple .sl-t1 small,'
+    + 'html.cf-simple .sl-tick,html.cf-simple .rc-sc-m small,html.cf-simple .sa-h small{display:none}'
     + '@media (hover:none){.cf-a11y [data-k=mag]{display:none!important}}'
     /* ① くっきり：色の変数を濃くする（アプリの :root[data-theme=…] より必ず勝つように !important） */
     + ':root:root[data-cf-kukkiri="dark"]{--text:#ffffff!important;--text1:#ffffff!important;--text2:#eef0f8!important;--text3:#eef0f8!important;--t1:#ffffff!important;--t2:#eef0f8!important;--t3:#eef0f8!important;--border:#5a6088!important;--border2:#6c73a0!important}'
@@ -168,21 +182,74 @@
     }
     if (ckOn && s.color && !hasOwnBg(s)) { var c = fixColor(s.color, kind); if (c) put('color', c); }
   }
-  function walkRules(rules, rec, kind) {
+  function walkRules(rules, rec, kind, opq) {
     for (var i = 0; i < rules.length; i++) {
       var r = rules[i];
-      if (r.cssRules && r.cssRules.length) walkRules(r.cssRules, rec, kind);
-      if (r.style) processDecl(r.style, rec, kind);
+      if (r.cssRules && r.cssRules.length) walkRules(r.cssRules, rec, kind, opq);
+      if (!r.style) continue;
+      processDecl(r.style, rec, kind);
+      /* 🔴🔴 2026-10-03 見えないルール：`font: 800 24px var(--num)` の**後に** font-variant-numeric などを書いたルールは、
+         Chrome が中身を返さない（font も font-size も空・cssText も空の箱だらけ）。FlowDesk のカードの CSS に 162か所。
+         ⚠ ほっておくと「大きさ」で**その字だけ 1.2倍にならない**（売上の大きい数字など＝いちばん読みたい字）。
+         → 印だけ付けて、あとで CSS の元の文字から直す（opaqueFix） */
+      if (fsOn && opq && !r.style.fontSize && !r.style.font && r.style.length && hasFontBox(r.style)) opq.push(r);
     }
+  }
+  function hasFontBox(st) { for (var i = 0; i < st.length; i++) if (st[i] === 'font-size') return true; return false; }
+
+  /* ---- 見えないルールを、CSS の元の文字から直す ---- */
+  var srcCache = {};
+  function srcText(sh) {
+    var n = sh.ownerNode;
+    if (n && n.tagName === 'STYLE') return Promise.resolve(n.textContent || '');
+    if (!sh.href) return Promise.resolve('');
+    if (!srcCache[sh.href]) srcCache[sh.href] = fetch(sh.href, { cache: 'force-cache' }).then(function (r) { return r.ok ? r.text() : ''; }).catch(function () { return ''; });
+    return srcCache[sh.href];
+  }
+  function normSel(x) { return String(x || '').replace(/\s+/g, '').replace(/'/g, '"'); }
+  function srcMap(text) {
+    var m = {}, re = /([^{}]+)\{([^{}]*)\}/g, x;
+    text = String(text).replace(/\/\*[\s\S]*?\*\//g, '');
+    while ((x = re.exec(text))) { var k = normSel(x[1]); if (k.charAt(0) === '@') continue; (m[k] = m[k] || []).push(x[2]); }
+    return m;
+  }
+  function decls(body) {
+    return body.split(';').map(function (t) { var i = t.indexOf(':'); return i < 0 ? null : [t.slice(0, i).trim().toLowerCase(), t.slice(i + 1).trim()]; }).filter(Boolean);
+  }
+  function opaqueFix(sh, list, rec) {
+    if (!list.length) return;
+    var g = gen;
+    srcText(sh).then(function (text) {
+      if (g !== gen || !fsOn || !text) return;
+      var map = srcMap(text), used = {};
+      list.forEach(function (r) {
+        var k = normSel(r.selectorText), bodies = map[k]; if (!bodies) return;
+        var i = used[k] || 0, ds = null;
+        for (; i < bodies.length; i++) { var d0 = decls(bodies[i]); if (d0.some(function (d) { return d[0] === 'font'; })) { ds = d0; break; } }
+        used[k] = i + 1; if (!ds) return;
+        var fi = -1; ds.forEach(function (d, j) { if (d[0] === 'font') fi = j; });
+        var raw = ds[fi][1], imp = /!important/i.test(raw) ? 'important' : '', val = raw.replace(/!important/i, '').trim();
+        var nv = scaleFont(val); if (!nv) return;
+        var after = ds.slice(fi + 1).filter(function (d) { return /^font-/.test(d[0]); });
+        function put(v) {
+          r.style.setProperty('font', v, imp);
+          after.forEach(function (d) { r.style.setProperty(d[0], d[1].replace(/!important/i, '').trim(), /!important/i.test(d[1]) ? 'important' : ''); });
+        }
+        put(nv);
+        if (rec) rec.push({ fn: function () { put(val); } });
+      });
+      if (mag.on) { mag.frameKey = null; schedule(); }
+    });
   }
   function sheetRules(sh) { try { return sh.cssRules; } catch (e) { return null; } }
   function isOwn(node) { return node && (node.id === 'cf-a11y-css' || node.id === 'cf-power-css'); }   /* 自分と電源メニューは触らない */
 
-  var rec = [], doneSheets = new WeakSet(), inlineDone = new WeakMap(), obs = null, curKind = 'dark';
+  var rec = [], doneSheets = new WeakSet(), inlineDone = new WeakMap(), obs = null, curKind = 'dark', gen = 0;
   function processSheet(sh) {
     if (!sh || doneSheets.has(sh) || isOwn(sh.ownerNode)) return;
     var rs = sheetRules(sh); if (!rs) return;
-    doneSheets.add(sh); walkRules(rs, rec, curKind);
+    doneSheets.add(sh);
+    var opq = []; walkRules(rs, rec, curKind, opq); opaqueFix(sh, opq, rec);
   }
   function processInline(el) {
     if (!el.style || !el.getAttribute || !el.getAttribute('style')) return;
@@ -200,8 +267,8 @@
   }
   function revertAll() {
     if (obs) { obs.disconnect(); obs = null; }
-    for (var i = rec.length - 1; i >= 0; i--) { var t = rec[i]; try { t.s.setProperty(t.p, t.o, t.pr); } catch (e) {} }
-    rec = []; doneSheets = new WeakSet(); inlineDone = new WeakMap();
+    for (var i = rec.length - 1; i >= 0; i--) { var t = rec[i]; try { if (t.fn) t.fn(); else t.s.setProperty(t.p, t.o, t.pr); } catch (e) {} }
+    rec = []; doneSheets = new WeakSet(); inlineDone = new WeakMap(); gen++;
   }
   function applyAll() {
     revertAll();
@@ -267,8 +334,8 @@
     var kind = curKind;
     Array.prototype.forEach.call(fd.querySelectorAll('link[rel="stylesheet"], style'), function (n) {
       if (isOwn(n)) return;
-      function go() { var rs = n.sheet && sheetRules(n.sheet); if (rs) { walkRules(rs, null, kind); schedule(); } }
-      if (n.sheet && sheetRules(n.sheet)) walkRules(n.sheet.cssRules, null, kind); else n.addEventListener('load', go);
+      function go() { var rs = n.sheet && sheetRules(n.sheet); if (rs) { var o = []; walkRules(rs, null, kind, o); opaqueFix(n.sheet, o, null); schedule(); } }
+      if (n.sheet && sheetRules(n.sheet)) { var o = []; walkRules(n.sheet.cssRules, null, kind, o); opaqueFix(n.sheet, o, null); } else n.addEventListener('load', go);
     });
   }
   function snapshot() {
@@ -404,12 +471,33 @@
     if (enabled) root.classList.add('cf-a11y-on'); else root.classList.remove('cf-a11y-on');
     prefs.kukkiri = enabled && !!(p && p.kukkiri);
     prefs.ookisa = enabled && !!(p && p.ookisa);
-    var ck = prefs.kukkiri, fs = prefs.ookisa;
+    prefs.viewer = !(p && p.viewer === false);              /* 決めていなければ ON */
+    var vw = enabled && prefs.viewer;
+    var ck = VIEWER ? vw : prefs.kukkiri, fs = VIEWER ? vw : prefs.ookisa;
+    root.classList.toggle('cf-simple', SIMPLE && vw);
     if (ck !== ckOn || fs !== fsOn) { ckOn = ck; fsOn = fs; applyAll(); }
     if (!enabled) { setMag(false); unmount(); }
-    else if (!mount()) { var n = 0, t = setInterval(function () { if (mount() || ++n > 60) clearInterval(t); }, 500); }
+    else if (!VIEWER && !mount()) { var n = 0, t = setInterval(function () { if (mount() || ++n > 60) clearInterval(t); }, 500); }
     paint();
+    if (lastSig !== sig()) { lastSig = sig(); try { w.dispatchEvent(new CustomEvent('cf-a11y-change', { detail: w.CFA11y && w.CFA11y.state() })); } catch (e) {} }
   }
+  var lastSig = '';
+  function sig() { return [enabled, prefs.kukkiri, prefs.ookisa, prefs.viewer].join(); }
+  /* 見る画面の「見やすい表示」を切り替える（FlowDesk・FlowGo の設定から） */
+  function setViewer(v) {
+    if (!enabled) return;
+    setState(true, { kukkiri: prefs.kukkiri, ookisa: prefs.ookisa, viewer: !!v });
+    savePrefs();
+  }
+  /* 🔴 通知を押すと本文が開く（情報を減らしている時だけ）。2回目は今までどおり（アプリで開く など） */
+  d.addEventListener('click', function (e) {
+    if (!root.classList.contains('cf-simple')) return;
+    var it = e.target && e.target.closest && e.target.closest('.fd-it');
+    if (!it || e.target.closest('button, a, input, select, textarea')) return;
+    var tx = it.querySelector('.fd-text');
+    if (!tx || it.classList.contains('cf-open')) return;
+    it.classList.add('cf-open'); e.preventDefault(); e.stopPropagation();
+  }, true);
 
   /* =======================================================
      Firestore：名簿の旗（portalMembers.a11y）と、本人の設定（userPrefs/{uid}.cfA11y）
@@ -448,13 +536,13 @@
     _saveT = setTimeout(function () {
       var ref = prefsDoc(); if (!ref) return;
       /* 🔴 merge 必須（同じ書類に memberId / memberEmail ＝ルールの橋渡しが入っている） */
-      ref.set({ cfA11y: { kukkiri: !!prefs.kukkiri, ookisa: !!prefs.ookisa, at: Date.now() } }, { merge: true })
+      ref.set({ cfA11y: { kukkiri: !!prefs.kukkiri, ookisa: !!prefs.ookisa, viewer: prefs.viewer !== false, at: Date.now() } }, { merge: true })
         .catch(function (e) { try { console.warn('[cf-a11y] 設定を保存できませんでした', e); } catch (_) {} });
     }, 400);
   }
 
   function onUser(user) {
-    if (!user) { uid = ''; setState(false); return; }
+    if (!user) { uid = ''; if (stopPrefs) { try { stopPrefs(); } catch (e) {} stopPrefs = null; } setState(false); return; }
     uid = user.uid;
     readMemberFlag(user).then(function (flag) {
       if (flag === null) {                      /* 読めなかった（通信など）＝控えがこの人なら控えのまま */
@@ -465,8 +553,24 @@
       return readPrefs().then(function (p) {
         if (p === null) p = (cache && cache.uid === uid) ? cache : {};
         setState(true, p); writeCache(uid, true, prefs);
+        watchPrefs();
       });
     });
+  }
+  /* 別の窓・別の端末で変えたら、こちらにもすぐ効かせる（FlowDesk の設定の窓 → 本体の窓 など） */
+  var stopPrefs = null;
+  function watchPrefs() {
+    if (stopPrefs) { try { stopPrefs(); } catch (e) {} stopPrefs = null; }
+    var ref = prefsDoc(); if (!ref || !ref.onSnapshot) return;
+    try {
+      stopPrefs = ref.onSnapshot(function (s) {
+        var v = s && s.exists ? (s.data() || {}).cfA11y : null;
+        if (!v || !enabled) return;
+        var nx = { kukkiri: !!v.kukkiri, ookisa: !!v.ookisa, viewer: v.viewer !== false };
+        if (nx.kukkiri === prefs.kukkiri && nx.ookisa === prefs.ookisa && nx.viewer === prefs.viewer) return;
+        setState(true, nx); writeCache(uid, true, prefs);
+      }, function () {});
+    } catch (e) {}
   }
   function watchAuth() {
     var n = 0;
@@ -474,6 +578,11 @@
       try {
         if (w.firebase && w.firebase.apps && w.firebase.apps.length && w.firebase.auth) {
           w.firebase.auth().onAuthStateChanged(function (u) { onUser(u); });
+          return;
+        }
+        /* firebase の本体が見えない時は、アプリが持っている fb.auth から（FlowGo の見張り台など） */
+        if (w.fb && w.fb.auth && typeof w.fb.auth.onAuthStateChanged === 'function' && w.fb.db) {
+          w.fb.auth.onAuthStateChanged(function (u) { onUser(u); });
           return;
         }
       } catch (e) {}
@@ -493,7 +602,8 @@
 
   w.CFA11y = {
     setMag: setMag,
-    state: function () { return { enabled: enabled, kukkiri: prefs.kukkiri, ookisa: prefs.ookisa, mag: mag.on, uid: uid }; },
+    state: function () { return { enabled: enabled, kukkiri: prefs.kukkiri, ookisa: prefs.ookisa, viewer: prefs.viewer, simple: root.classList.contains('cf-simple'), mag: mag.on, uid: uid }; },
+    setViewer: setViewer,
     /* 試験・見本用：Firestore を通さずに状態を決める */
     _set: function (on, p) { setState(on, p || {}); }
   };
