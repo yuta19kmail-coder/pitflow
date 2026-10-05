@@ -70,6 +70,8 @@ st.cards = [
          reserveDate: '2026-09-10', actualInAt: '2026-09-10', returnDateFinal: '2026-09-15', completedAt: '2026-09-28', paymentSeparate: true, paymentDate: '2026-09-28', amountFinal: 300000 }),
   card({ id: 'k4', resNo: 'R4', customer: '鈴木 一郎', sei: '鈴木', customerId: 'cu1', car: 'プリウス', status: 'cancelled', cancelled: true, reserveDate: '2026-08-01' }),
   card({ id: 'k5', resNo: 'R5', customer: '鈴木 一郎', sei: '鈴木', customerId: 'cu1', car: 'プリウス', status: 'reserved', reserveDate: '2026-10-20', amountFinal: '' }),
+  card({ id: 'k7', resNo: 'R7', customer: 'メフロ　バフシュ　アーヴィン', sei: 'メフロ　バフシュ　アーヴィン', car: 'プリウス', status: 'reserved', reserveDate: '2026-10-21' }),
+  card({ id: 'k8', resNo: 'R8', customer: '(有)ユウキオート', sei: '(有)ユウキオート', car: 'キャリイ', status: 'reserved', reserveDate: '2026-10-22' }),
   card({ id: 'k6', resNo: 'R6', customer: '佐藤,"ジョー"', car: 'カローラ', status: 'returned', reserveDate: '2026-09-02', actualInAt: '2026-09-02',
          returnDateFinal: '2026-09-02', completedAt: '2026-09-02', amountFinal: 5000 })
 ];
@@ -82,6 +84,8 @@ ok('下の名前（一郎・花子）が表のどこにも無い', !/一郎|イ�
 ok('電話・ナンバー・車台番号が表のどこにも無い', !/090-1111|12-34|56-78|ZVW30/.test(T.csv));
 ok('呼び名＝苗字＋車種（姓の欄から）', v('k1', '呼び名') === '鈴木 プリウス', v('k1', '呼び名'));
 ok('🔴 姓と名が分けられない名前は（苗字不明）', v('k2', '呼び名') === '（苗字不明） ミニ', v('k2', '呼び名'));
+ok('🔴 姓の欄にフルネームが空白区切りで入っていても、最初の区切りまで（本番で1件あった）', v('k7', '呼び名') === 'メフロ プリウス' && !/アーヴィン/.test(T.csv), v('k7', '呼び名'));
+ok('姓の欄の会社名（(有)など）は丸ごと', v('k8', '呼び名') === '(有)ユウキオート キャリイ', v('k8', '呼び名'));
 ok('法人は会社名で出す', v('k3', '呼び名') === '㈱テスト商事 ハイエース', v('k3', '呼び名'));
 
 console.log('\n── 原価・粗利（伝票と予約番号で結ぶ）──');
