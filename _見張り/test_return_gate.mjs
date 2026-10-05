@@ -164,6 +164,33 @@ ok('🔒 担当者が空なら関門の窓が出る',                 gate.関�
 ok('🔒 決まるまで進むボタンは押せない',               gate.押せない && gate.進まない, gate);
 ok('🔒 決まれば今までどおり完TELの窓へ進む',          gate.窓, gate);
 
+/* ===== ④-3 💳 v2.142.0 保険と保証を混ぜない ===== */
+console.log('\n■ 💳 保険は売上日を聞かない／保証は通常か売掛かを選ぶ（v2.142.0）');
+const payOne = async (specials, pick) => { await seed(); return p.evaluate(async ({ specials, pick }) => {
+  const c = state.cards.find(x=>x.id==='B2');
+  c.workSpecials = specials; c.paymentSeparate = true; c.salesDate = '';
+  applyCardDrop('B2', 'callDone', '');
+  await new Promise(r=>setTimeout(r,350));
+  const vis = id => { const e = document.getElementById(id); return !!e && getComputedStyle(e).display !== 'none'; };
+  const 選ぶ = vis('rp-pay-pick'), 売上日 = vis('rp-sales');
+  if (pick != null) PitReturnPopup.onPay(pick);
+  const d = document.getElementById('rp-date'); if (d){ d.value = window._T.tomo; PitReturnPopup.onDate(); }
+  PitReturnPopup.close(true);
+  await new Promise(r=>setTimeout(r,400));
+  return { 選ぶ, 売上日, 売掛: !!c.paymentSeparate, salesDate: c.salesDate || '' };
+}, { specials, pick }); };
+const ins = await payOne(['insurance'], null);
+ok('🛡 保険＝売上日を出さない・選ばせない',            !ins.売上日 && !ins.選ぶ && !ins.salesDate, ins);
+const wk = await payOne(['warranty'], 1);
+ok('💳 保証＝通常／売掛を選べる',                      wk.選ぶ, wk);
+ok('💳 保証で売掛＝売掛のまま・売上日は書かない',      wk.売掛 && !wk.salesDate, wk);
+const wn = await payOne(['warranty'], 0);
+ok('💳 保証で通常＝売掛を外して売上日を入れる',        !wn.売掛 && !!wn.salesDate, wn);
+const wb = await payOne(['warranty', 'insurance'], null);
+ok('🛡 保険と保証が両方なら保険が勝つ',                !wb.選ぶ && !wb.売上日, wb);
+const nn = await payOne([], null);
+ok('どちらも無い車は今までどおり（売上日を聞く・選ばせない）', nn.売上日 && !nn.選ぶ, nn);
+
 /* ===== ⑤ 待ち・当日返しは今までどおり（ゆうた「いまのまま残す」） ===== */
 console.log('\n■ 待ち・当日返し（今までどおり）');
 const W1 = await card('W1'), W2 = await card('W2');
