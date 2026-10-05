@@ -49,7 +49,9 @@ console.log('── ④ AI への決めごと ──');
 ok('🔴 数字は資料だけ', /数字は渡された資料（JSON）にあるものだけ/.test(SRC));
 ok('🔴 保険はボーナス', /保険の車は入金日で実績[\s\S]*?ボーナス/.test(SRC));
 ok('🔴 外注は課題に数えない', /外注に出している日数は、自社の場所も手も使わないので課題に数えない/.test(SRC));
-ok('🔴 MINI はまとめる（判定は車種名でも）', /BMW のMINI と MINI をまとめて「MINI」/.test(SRC) && /function isMini\(c\)/.test(SRC));
+/* 📊 v2.143.0 MINI・原価の物差しは analytics-pit.js に移した（分析用の書き出しと1本）。AIレポートは借りるだけ */
+const ANA = fs.readFileSync(path.join(process.cwd(), 'js', 'analytics-pit.js'), 'utf8');
+ok('🔴 MINI はまとめる（判定は車種名でも）', /BMW のMINI と MINI をまとめて「MINI」/.test(SRC) && /function isMini\(c\)/.test(ANA) && /w\.pitCardMaker\(c\)/.test(SRC));
 ok('🔴 引継ぎメモの理由で止まりを分ける', /理由のある止まり/.test(SRC) && /function memoTrail\(c\)/.test(SRC));
 ok('🔴 車は {{car:ID}} で指す', /\{\{car:ID\}\}/.test(SRC));
 ok('🔴 金額は万で書く', /金額は「万」で書く/.test(SRC));
@@ -140,7 +142,7 @@ ok('🔴🔴 スタッフ名簿（受付＝予約件数／回送＝車検ライ�
 }
 ok('🔴🔴 その月に在籍していた人だけ・共用アカウント（部署なし）は出さない', /s\(p\.joinedAt\) > moE\) return;/.test(SRC) && /if \(!hasDept\) return;/.test(SRC) && /s\(f\.leftAt\) < moS\) return;/.test(SRC));
 console.log('── 💰 粗利 ──');
-ok('🔴🔴 原価は車に書き込んだ伝票から（予約番号で結ぶ）', /function costOf\(c\)/.test(SRC) && /t\(x\.予約番号\) === t\(c\.resNo\)/.test(SRC));
+ok('🔴🔴 原価は車に書き込んだ伝票から（予約番号で結ぶ）', /function costOf\(c\)\{ return w\.pitCardCost\(c\); \}/.test(SRC) && /t\(x\.予約番号\) === t\(c\.resNo\)/.test(ANA));
 ok('🔴🔴 着地は売上で語る（粗利は理由づけ）', /\*\*最終的な着地（目標・見込み・改善した未来・MTG の来月やること）は売上で語る\*\*/.test(SRC));
 ok('🔴 人件費は入っていない前提を AI に渡す', /人件費は入っていない/.test(SRC));
 ok('🔴 通知表に粗利率（前月比のポイント）', /'粗利率'/.test(SRC) && /g4\(gd, 2, -2, -5\)/.test(SRC));
