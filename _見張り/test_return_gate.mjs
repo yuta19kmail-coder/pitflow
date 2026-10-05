@@ -47,7 +47,9 @@ const seed = async () => await p.evaluate(() => {
   const mk = (id, o) => Object.assign({
     id, boardId:'default', status:'work', workTypes:['seibi'], customer:'テスト'+id, car:'テスト車',
     reserveDate: add(-2), dropType:'keep', returnStage:'', returnDate:'', returnTime:'',
-    coverCall:{done:false,at:'',staff:''}
+    coverCall:{done:false,at:'',staff:''},
+    /* 🔒 v2.141.0 担当者が決まっていないと完TELへ出せない（mech-guard.js の関門）。ここは決まっている車で試す */
+    inspectorsNone:true, mechanicsNone:true, checkersNone:true
   }, o);
   state.cards = [
     mk('B1'),                                                        /* 盤面・作業待ち（預かり） */
@@ -133,6 +135,34 @@ const done = await p.evaluate(async () => {
 ok('🔴 完TEL済のドラッグで返車待ちへ入る',           done.returnStage === 'returnWait', done);
 ok('完TELの印も付く',                                done.完TEL === true, done);
 ok('入れた日付が確定返車日になる',                   done.returnDate === T.tomo, done);
+
+/* ===== ④-2 🔒 v2.141.0 担当者が決まっていない車は、完TELへ出せない ===== */
+console.log('\n■ 🔒 担当者が決まっていない車は盤面の外へ出せない（v2.141.0）');
+await seed();
+const gate = await p.evaluate(async () => {
+  showView('task'); await new Promise(r=>setTimeout(r,300));
+  const c = state.cards.find(x=>x.id==='B2');
+  c.inspectorsNone = false; c.mechanicsNone = false; c.checkersNone = false;
+  c.inspectors = []; c.mechanics = []; c.checkers = [];
+  applyCardDrop('B2', 'callDone', '');
+  await new Promise(r=>setTimeout(r,350));
+  const mg = document.getElementById('mg-backdrop');
+  const 関門 = !!(mg && mg.classList.contains('show'));
+  const 押せない = !!document.getElementById('mg-ok') && document.getElementById('mg-ok').disabled;
+  PitMechGuard.close(1);                      /* 押せないボタンを無理に押しても進まない */
+  await new Promise(r=>setTimeout(r,200));
+  const 進まない = !c.returnStage && !(document.getElementById('rp-backdrop') && document.getElementById('rp-backdrop').classList.contains('show'));
+  /* 3役とも「なし」で決めれば通る */
+  c.inspectorsNone = true; c.mechanicsNone = true; c.checkersNone = true;
+  PitMechGuard.close(1);
+  await new Promise(r=>setTimeout(r,350));
+  const 窓 = !!(document.getElementById('rp-backdrop') && document.getElementById('rp-backdrop').classList.contains('show'));
+  PitReturnPopup.close(false);
+  return { 関門, 押せない, 進まない, 窓 };
+});
+ok('🔒 担当者が空なら関門の窓が出る',                 gate.関門, gate);
+ok('🔒 決まるまで進むボタンは押せない',               gate.押せない && gate.進まない, gate);
+ok('🔒 決まれば今までどおり完TELの窓へ進む',          gate.窓, gate);
 
 /* ===== ⑤ 待ち・当日返しは今までどおり（ゆうた「いまのまま残す」） ===== */
 console.log('\n■ 待ち・当日返し（今までどおり）');

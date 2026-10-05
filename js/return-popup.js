@@ -61,9 +61,11 @@
       + '  <div class="pp-field">'
       /* ⚠ 見た目は**この窓にもとからある部品を借りる**（`pp-lb` / `pp-date` / `pp-ref`）。
          新しい見た目を作らない＝金額の欄と1ミリもズレない。 */
-      + '    <label class="pp-lb">売上日 <small>（伝票の日付）</small></label>'
+      + '    <label class="pp-lb">売上日 <small id="rp-sales-sub">（伝票の日付）</small></label>'
       + '    <input class="pp-date" id="rp-sales" type="date">'
       + '    <div class="pp-ref" id="rp-sales-note"></div>'
+      /* 🛡 v2.141.0 保険の車は日付を聞かず、この1行だけ（下の openModal） */
+      + '    <div class="rp-insnote" id="rp-sales-ins" style="display:none"></div>'
       + '  </div>'
       /* 🔴 v1.60.0（ゆうた指定）返車予定日の横に「返車日未定」のチェック。
          ⚠ 新しい項目は増やさない。**チェックが入っている＝日付が空**、それだけ。
@@ -162,7 +164,25 @@
              人が入れた日を勝手に動かすことになり、そちらのほうが怖い。
           ＝ そのまま入っても、月がちがえば**データチェック（M11）が必ず拾う**。
             黙って辻褄を合わせず、**見つけて人が直す**形に寄せる。 */
+    /* 🛡 v2.141.0（ゆうた指定 2026-10-05・A案）**保険の車は売上日を聞かない。**
+       🗣「保険のチェックで売掛になる場合に、完TELなどにドラッグすると入金日を入れるように促されるが、
+       　　システムでみればわかる通り入金日わからないので、非表示に」
+       ◎保険は**入金日で実績**（insurance-pit.js）。完TELの時点では決まる日が無いのに、
+         今日の日付が勝手に入っていて、確かめずにOKを押されていた。
+       ◎欄ごと消すと「無い」のか分からないので、**なぜ無いか・どこで入れるか**を1行出す。
+       ⚠ 物差しは `pitCardInsurance`（保険バッジ）1本。売掛チェック（保証・手で付けた売掛）は今までどおり聞く。
+       ⚠ 書き込み側（apply）も同じ物差しで売上日を触らない。 */
+    var _ins = !!(window.pitCardInsurance && pitCardInsurance(card));
     if (el('rp-sales')){
+      el('rp-sales').style.display = _ins ? 'none' : '';
+      el('rp-sales-note').style.display = _ins ? 'none' : '';
+      el('rp-sales-sub').style.display = _ins ? 'none' : '';
+      el('rp-sales-ins').style.display = _ins ? '' : 'none';
+      el('rp-sales-ins').innerHTML = _ins
+        ? '<b>保険：入金日で実績になります</b><span>いまは入れません。返車のあと「入金待ち」に並ぶので、入金が分かった日にそこで入れてください。</span>'
+        : '';
+    }
+    if (el('rp-sales') && !_ins){
       el('rp-sales').value = window.pitSalesDateSeed ? pitSalesDateSeed(card) : '';
       var _own = window.pitSalesDateOwn ? pitSalesDateOwn(card) : '';
       el('rp-sales-note').textContent = _own ? '入っている売上日です。ちがったら直してください'
@@ -351,7 +371,9 @@
          🔴 書き込みは sales-date.js の1本を通す。ここで `c.salesDate = …` と書かない。
          ⚠ 変わった時だけフローに残す（毎回書くとログが埋まって、本当の変更が見えなくなる）。 */
       var _sdBefore = window.pitSalesDate ? pitSalesDate(c) : '';
-      if (window.pitSetSalesDate && el('rp-sales')){
+      /* 🛡 v2.141.0 保険は聞いていない＝**触らない**（窓と同じ物差し） */
+      var _insNoDate = !!(window.pitCardInsurance && pitCardInsurance(c));
+      if (!_insNoDate && window.pitSetSalesDate && el('rp-sales')){
         if (pitSetSalesDate(c, el('rp-sales').value) && window.logFlow){
           logFlow(c, '売上日を ' + (_sdBefore || '（なし）') + ' → ' + (c.salesDate || '（なし）') + ' にした');
         }
