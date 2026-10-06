@@ -37,7 +37,7 @@ const R = await p.evaluate(() => {
   const L = x => { const y = new Date(); y.setDate(y.getDate() + x); return y.getFullYear() + '-' + String(y.getMonth()+1).padStart(2,'0') + '-' + String(y.getDate()).padStart(2,'0'); };
   const moS = L(0).slice(0, 8) + '01', moE = (() => { const t = new Date(); return L(0).slice(0, 8) + String(new Date(t.getFullYear(), t.getMonth()+1, 0).getDate()).padStart(2,'0'); })();
   const before = pitSalesMonthCollect(moS, moE);
-  const base = { boardId: 'default', division: 'div1', workType: 'general', reserveDate: L(-3), returnDate: L(0), frontStaff: '椎名 祐太', log: [] };
+  const base = { boardId: 'default', division: 'div1', workType: 'general', car: 'レガシィ', reserveDate: L(-3), returnDate: L(0), frontStaff: '椎名 祐太', log: [] };
   state.cards.push(Object.assign({}, base, { id: 'T_INS', customer: '保険 太郎', status: 'outsource', workSpecials: ['insurance'], amountOrder: 300000 }));
   state.cards.push(Object.assign({}, base, { id: 'T_EMP', customer: '社員 花子', division: 'div2', boardId: 'import', status: 'workDone', workSpecials: ['employee'], amountFinal: 50000 }));
   /* 🗣「実績になった社員と保険（入金により実績化）は入れてOK」＝実績は数える */
@@ -73,6 +73,7 @@ const R = await p.evaluate(() => {
     warKind: (LM.courses[0].groups.find(g => g.id === 'confirmed').rows.find(r => /保証 次郎/.test(r.name)) || {}).amtKind,
     insaRow: (() => { const r = LM.courses[0].groups[0].rows.find(r => /保険 入金済/.test(r.name)) || {}; return [r.amtKind, r.ret]; })(),
     kindsOk: LM.courses.every(c => c.groups.every(g => g.rows.every(r => /^(確定|受注|見積|概算)$/.test(r.amtKind) && /^(済|確定|予定|概算) \d|^未定$/.test(r.ret)))),
+    custRow: (() => { const r = LM.courses[0].groups.find(g => g.id === 'confirmed').rows.find(r => /保証/.test(r.cust || '')); return r ? [r.cust, r.car, r.front] : null; })(),
     pages: null,
     board: (() => { try { const S = window.pitAppSummaryBuild ? pitAppSummaryBuild() : null; return S ? 1 : 0; } catch (e) { return String(e); } })()
   };
@@ -105,6 +106,7 @@ ok('🆕 返車日に種類の札（保証＝受注時の返車予定日＝「�
 ok('🆕 金額に種類（受注額で拾った車＝「受注」）', R.warKind === '受注', R.warKind);
 ok('🆕 入金済みの保険＝確定金額・返車は「済」', R.insaRow[0] === '確定' && /^済 /.test(R.insaRow[1] || ''), R.insaRow);
 ok('🆕 全行が 確定/受注/見積/概算 と 済/確定/予定/概算/未定 のどれか', R.kindsOk);
+ok('🆕 お客様＝個人は苗字だけ・車種は別／フロントは通称か苗字（v2.153.0）', R.custRow && R.custRow[0] === '保証' && R.custRow[1] !== '' && R.custRow[2] && !/ /.test(R.custRow[2]), R.custRow);
 
 console.log('\n── ⑤ 紙（A4・白黒） ──');
 const src = fs.readFileSync('js/sales-print.js', 'utf8');
