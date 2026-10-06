@@ -89,6 +89,11 @@ const R = await p.evaluate(() => {
   window._svQ = sel; renderSales();
   const M = svReportModel();
   out.model = [M.title, M.sections.length, M.kpis.length];
+  /* 🆕 v2.150.0 単純割：Q4 なら月目標そのもの（課＝divTarget）。画面に「Q4までの目標」と達成の判定が出る */
+  const t1 = pitSalesDivTarget('div1').min, gsec = M.sections.find(x => /4等分/.test(x.title));
+  const html = document.getElementById('view-sales-body').innerHTML;
+  out.goal = { ok: !!gsec && gsec.rows.length === 3 && /Q4までの目標（月目標を4等分）/.test(html) && /sv-qgoal/.test(html)
+                   && (html.match(/sv-qgoal /g) || []).length === 3, t1, row: gsec && gsec.rows[1] };
   state.cards = state.cards.filter(c => !/^TQ_/.test(c.id)); window._svQ = null; renderSales();
   return out;
 });
@@ -120,7 +125,8 @@ ok('Q4 の次へ送る＝翌月Q1', R.fwd === JSON.stringify(R.expNx), R.fwd);
 ok('翌月Q1 から2つ戻す＝前の月のQ3（月をまたいで戻る）', JSON.parse(R.back).q === 2 && JSON.parse(R.back).m !== R.expNx.m, R.back);
 
 console.log('\n── ⑤ 紙 ──');
-ok('PDF出力＝クォーターの紙（表3つ・数字4つ）', /^クォーター /.test(R.model[0]) && R.model[1] === 3 && R.model[2] === 4, R.model);
+ok('PDF出力＝クォーターの紙（表4つ・数字4つ）', /^クォーター /.test(R.model[0]) && R.model[1] === 4 && R.model[2] === 4, R.model);
+ok('🆕 単純割の目標（月目標×n/4）と達成', R.goal.ok, R.goal);
 
 console.log('\n── 落ちていないか ──');
 ok('ページエラーなし', errs.length === 0, errs.slice(0, 3));
