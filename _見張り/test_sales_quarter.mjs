@@ -7,7 +7,7 @@
         「Q1〜Q4までのBOXはそのまま。その下に1課2課のグラフ」「年間はなくしていい」「A4PDFは必要」
 
    ◎ここで見張ること
-     🔴 最初に出るQ＝開いた日の直前に終わったQ（1〜7日なら前月のQ4）
+     🔴 最初に出るQ＝いま進行中のQ（v2.149.0 ゆうた「やっぱり前Qじゃなくて現Qに」）／Qの箱は押せない・いちばん下
      🔴 Q4 の次Q＝翌月の Q1
      🔴 前Qまで／選んだQ／次Q の振り分け（実績＝実績日・まだの車＝返車予定日。過ぎた・未定は次Qへ。次Qより先は出さない）
      🔴 次Qがもう終わっていたら見込みは出さない（実績だけ＝答え合わせ）
@@ -41,12 +41,15 @@ const R = await p.evaluate(() => {
   /* ① 最初に出るQ */
   window._svQ = null; showView('sales'); svSetTab('quarter');
   const qi = today.getDate()<=7?0:today.getDate()<=15?1:today.getDate()<=23?2:3;
-  const exp = qi>0 ? { y:today.getFullYear(), m:today.getMonth(), q:qi-1 } : (() => { const d = new Date(today.getFullYear(), today.getMonth()-1, 1); return { y:d.getFullYear(), m:d.getMonth(), q:3 }; })();
+  const exp = { y:today.getFullYear(), m:today.getMonth(), q:qi };   /* v2.149.0 いま進行中のQ */
   out.def = [JSON.stringify(window._svQ), JSON.stringify(exp)];
   const body = document.getElementById('view-sales-body').innerHTML;
   out.qBtns = (body.match(/svSetQ\(\d\)/g) || []).length >= 4;
   out.noMonthYear = !/svSetMode\('year'\)/.test(body);
   out.hasCourse = document.querySelectorAll('.sv-course').length === 2;
+  out.boxNoClick = ![...document.querySelectorAll('.sv-qcard')].some(e => e.getAttribute('onclick'));
+  const allCards = [...document.querySelectorAll('#view-sales-body .sv-qcards, #view-sales-body .sv-courses')];
+  out.boxLast = allCards.length === 2 && allCards[0].classList.contains('sv-courses');
   out.hasTop = /日次の進捗/.test(body) && /着地見込み（実績＋パイプライン）/.test(body);
 
   /* ② 振り分け＝来月 Q1 を選んで、その中で車を置く（日付は今日から作る＝決め打ちしない） */
@@ -91,7 +94,9 @@ const R = await p.evaluate(() => {
 });
 
 console.log('\n── ① 形 ──');
-ok('🔴 最初に出るQ＝直前に終わったQ', R.def[0] === R.def[1], R.def);
+ok('🔴 最初に出るQ＝いま進行中のQ（v2.149.0）', R.def[0] === R.def[1], R.def);
+ok('🔴 Qの箱は押せない（切り替えは上の Q1〜Q4 だけ）', R.boxNoClick);
+ok('🔴 Qの箱はいちばん下（課別より下）', R.boxLast);
 ok('上の切り替えは Q1〜Q4', R.qBtns);
 ok('「月間（年度）」は出ない', R.noMonthYear);
 ok('上の数字と日次の進捗＝売上ビューと同じ物', R.hasTop);
