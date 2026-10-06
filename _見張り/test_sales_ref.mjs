@@ -95,7 +95,7 @@ ok('一覧の実績にも入金済みの保険が載る', R.listActIns);
 
 console.log('\n── ③ 画面 ──');
 ok('当月ビューに参考（保険・社員）の別枠', R.refBox);
-ok('「一覧PDF」は売上タブの当月だけ', R.btnMonth && !R.btnYear && !R.btnQ, [R.btnMonth, R.btnYear, R.btnQ]);
+ok('「一覧PDF」は売上タブの当月と、クォーター（v2.152.0〜 該当Q・翌Q・それ以外の一覧）。月間（年度）には出ない', R.btnMonth && !R.btnYear && R.btnQ, [R.btnMonth, R.btnYear, R.btnQ]);
 
 console.log('\n── ④ 一覧（紙の材料） ──');
 ok('区分は実績〜見込（予測は載せない）', R.listTiers.every(s => s === 'actual,actualWait,confirmed,planned,prospect'), R.listTiers);

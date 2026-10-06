@@ -89,6 +89,16 @@ const R = await p.evaluate(() => {
   window._svQ = sel; renderSales();
   const M = svReportModel();
   out.model = [M.title, M.sections.length, M.kpis.length];
+  /* 🆕 v2.152.0 紙＝画面と同じ並びの材料（qgraphic）／一覧＝該当Q・翌Q・それ以外 */
+  const G = M.qgraphic, LM = svQListModel(), c1 = LM.courses[0];
+  out.graphic = !!G && !!G.month && G.courses.length === 2 && G.qboxes.length === 4 && G.goalAll && G.courses[0].goal;
+  const bands = [...new Set(c1.groups.map(g => g.band.split('：')[0]))];
+  out.qlist = { bands, sel: c1.groups[0].rows.map(r => r.name).filter(n => /^/.test(n)).length,
+    selHas: c1.groups[0].rows.some(r => r.amt === 240000 || r.amt === 200000 || r.amt === 40000),
+    prevHas: c1.groups.find(g => g.id === 'prev').rows.some(r => r.amt === 100000),
+    laterHas: c1.groups.find(g => g.id === 'later').rows.some(r => r.amt === 90000),
+    refHas: c1.refRows.some(r => r.amt === 500000 && r.ref === '保険'),
+    inSumOff: c1.groups.filter(g => g.inSum === false).map(g => g.id).join() };
   /* 🆕 v2.150.0 単純割：Q4 なら月目標そのもの（課＝divTarget）。画面に「Q4までの目標」と達成の判定が出る */
   const t1 = pitSalesDivTarget('div1').min, gsec = M.sections.find(x => /4等分/.test(x.title));
   const html = document.getElementById('view-sales-body').innerHTML;
@@ -127,6 +137,10 @@ ok('翌月Q1 から2つ戻す＝前の月のQ3（月をまたいで戻る）', J
 console.log('\n── ⑤ 紙 ──');
 ok('PDF出力＝クォーターの紙（表4つ・数字4つ）', /^クォーター /.test(R.model[0]) && R.model[1] === 4 && R.model[2] === 4, R.model);
 ok('🆕 単純割の目標（月目標×n/4）と達成', R.goal.ok, R.goal);
+ok('🆕 MTGの紙＝画面と同じ並びの材料（月の帯・全体の判定・課別・Qの箱）', R.graphic);
+ok('🆕 一覧＝該当Q／翌Q／それ以外 の3つの帯', R.qlist.bands.join() === '該当Q,翌Q,それ以外（上の合計には入れていない）', R.qlist.bands);
+ok('🆕 一覧：該当Qに選んだQの実績・それ以外に前Qまでと翌Qより先', R.qlist.selHas && R.qlist.prevHas && R.qlist.laterHas && R.qlist.inSumOff === 'prev,later', R.qlist);
+ok('🆕 一覧：保険の見込みは参考の欄', R.qlist.refHas, R.qlist);
 
 console.log('\n── 落ちていないか ──');
 ok('ページエラーなし', errs.length === 0, errs.slice(0, 3));
