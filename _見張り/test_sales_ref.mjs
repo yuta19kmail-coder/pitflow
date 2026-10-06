@@ -70,6 +70,10 @@ const R = await p.evaluate(() => {
     listHasIns: LM.courses.some(c => c.groups.some(g => g.rows.some(r => /保険 太郎/.test(r.name)))),
     listRef: LM.courses.map(c => c.refRows.map(r => r.ref + ':' + r.name).join('|')),
     warRet: (LM.courses[0].groups.find(g => g.id === 'confirmed').rows.find(r => /保証 次郎/.test(r.name)) || {}).ret,
+    warKind: (LM.courses[0].groups.find(g => g.id === 'confirmed').rows.find(r => /保証 次郎/.test(r.name)) || {}).amtKind,
+    insaRow: (() => { const r = LM.courses[0].groups[0].rows.find(r => /保険 入金済/.test(r.name)) || {}; return [r.amtKind, r.ret]; })(),
+    kindsOk: LM.courses.every(c => c.groups.every(g => g.rows.every(r => /^(確定|受注|見積|概算)$/.test(r.amtKind) && /^(済|確定|約束|概算) \d|^未定$/.test(r.ret)))),
+    pages: null,
     board: (() => { try { const S = window.pitAppSummaryBuild ? pitAppSummaryBuild() : null; return S ? 1 : 0; } catch (e) { return String(e); } })()
   };
   state.cards = state.cards.filter(c => !/^T_/.test(c.id)); renderSales();
@@ -97,7 +101,10 @@ console.log('\n── ④ 一覧（紙の材料） ──');
 ok('区分は実績〜見込（予測は載せない）', R.listTiers.every(s => s === 'actual,actualWait,confirmed,planned,prospect'), R.listTiers);
 ok('保険の車は本表に載らない', !R.listHasIns);
 ok('参考の欄に保険（1課）・社員（2課）', /保険:保険 太郎/.test(R.listRef[0]) && /社員:社員 花子/.test(R.listRef[1]), R.listRef);
-ok('返車日（予定）が入る', /^\d{1,2}\/\d{1,2}$/.test(R.warRet || ''), R.warRet);
+ok('🆕 返車日に種類の札（保証＝受注時の約束＝「約束 M/D」）', /^約束 \d{1,2}\/\d{1,2}$/.test(R.warRet || ''), R.warRet);
+ok('🆕 金額に種類（受注額で拾った車＝「受注」）', R.warKind === '受注', R.warKind);
+ok('🆕 入金済みの保険＝確定金額・返車は「済」', R.insaRow[0] === '確定' && /^済 /.test(R.insaRow[1] || ''), R.insaRow);
+ok('🆕 全行が 確定/受注/見積/概算 と 済/確定/約束/概算/未定 のどれか', R.kindsOk);
 
 console.log('\n── ⑤ 紙（A4・白黒） ──');
 const src = fs.readFileSync('js/sales-print.js', 'utf8');
