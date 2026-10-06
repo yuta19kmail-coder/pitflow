@@ -183,7 +183,9 @@ console.log('\n── ② 日付・進行 ──');
     const D = window._D;
     return [
       { id:'f01', status:'work', reserveDate:D(-20), returnDate:D(-5), amountOrder:300000 },  /* 返車予定を過ぎて盤面 */
-      { id:'f03', status:'work', returnStage:'returnWait', returnDate:'' },                   /* 完TEL済で日付が空 */
+      { id:'f03', status:'work', returnStage:'returnWait', returnDate:'', completeCallAt:'2000-01-01' }, /* 🔴 v2.157.0 完TEL済で返車日未定のまま長い */
+      { id:'f03n', status:'work', returnStage:'returnWait', returnDate:'', completeCallAt:'2099-01-01' }, /* 返車日未定にしたばかり＝出さない */
+      { id:'f03w', status:'work', returnStage:'callWait', returnDate:'' },                    /* 完TEL待ち＝日付が空で当たり前＝出さない */
       { id:'f05', status:'work', reserveDate:D(5), returnDate:D(2) },                         /* 返車が入庫より前 */
       { id:'f07', status:'work', reserveDate:D(1), returnDate:D(200) },                       /* ずっと先 */
       { id:'f08', status:'reserved', approvalPending:true, reserveDate:D(-4), returnDate:D(-2) },
@@ -191,7 +193,7 @@ console.log('\n── ② 日付・進行 ──');
     ];
   });
   const r = await only(c);
-  ok('🔴 完TELを通ったのに返車予定日が空（F03）', (r.by.F03 || []).join() === 'f03', r.by.F03);
+  ok('🔴 「返車日未定」のまま長く置いてある（F03・v2.157.0）＝置いたばかり・完TEL待ちは出さない', (r.by.F03 || []).join() === 'f03', r.by.F03);
   ok('🔴 返車予定日が入庫日より前（F05）', (r.by.F05 || []).join() === 'f05', r.by.F05);
   ok('返車予定がずっと先（F07）', (r.by.F07 || []).join() === 'f07', r.by.F07);
   ok('🔴 承認待ちのまま入庫日が過ぎている（F08）', (r.by.F08 || []).join() === 'f08', r.by.F08);
