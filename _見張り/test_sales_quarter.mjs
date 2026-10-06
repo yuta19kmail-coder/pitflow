@@ -65,6 +65,7 @@ const R = await p.evaluate(() => {
     { id:'TQ_NXP',  status:'work', returnDatePlan:D(nn.getFullYear(),nn.getMonth(),5), amountOrder:70000 },  /* 次Qの見込み（確定） */
     { id:'TQ_FAR',  status:'work', returnDatePlan:D(nn.getFullYear(),nn.getMonth(),20), amountOrder:90000 }, /* 次Qより先＝出ない */
     { id:'TQ_UND',  status:'contact', amountQuote:30000, reserveDate:'' },                                /* 返車日なし＝次Qへ */
+    { id:'TQ_FC',   status:'reserved', returnDatePlan:D(nn.getFullYear(),nn.getMonth(),3), estAmount:60000 }, /* 🔴 v2.154.0 予約（未入庫）＝入れない */
     { id:'TQ_INS',  status:'work', returnDatePlan:D(nn.getFullYear(),nn.getMonth(),4), amountOrder:500000, workSpecials:['insurance'] }, /* 保険の見込み＝外す */
     { id:'TQ_EMPA', status:'returned', completedAt:D(sel.y,sel.m,26), amountFinal:40000, workSpecials:['employee'] } /* 社員の実績＝数える */
   ].map(c => Object.assign({}, base, c));
@@ -99,6 +100,7 @@ const R = await p.evaluate(() => {
     laterHas: c1.groups.find(g => g.id === 'later').rows.some(r => r.amt === 90000),
     refHas: c1.refRows.some(r => r.amt === 500000 && r.ref === '保険'),
     inSumOff: c1.groups.filter(g => g.inSum === false).map(g => g.id).join() };
+  out.noFc = !c1.groups.some(g => g.id === 'nx_forecast') && !LM.courses.some(c => c.groups.some(g => g.rows.some(r => r.tier === 'forecast')) || c.refRows.some(r => r.tier === 'forecast'));
   /* 🆕 v2.150.0 単純割：Q4 なら月目標そのもの（課＝divTarget）。画面に「Q4までの目標」と達成の判定が出る */
   const t1 = pitSalesDivTarget('div1').min, gsec = M.sections.find(x => /4等分/.test(x.title));
   const html = document.getElementById('view-sales-body').innerHTML;
@@ -124,7 +126,8 @@ ok('🔴 選んだQの実績（社員の実績も数える）', R.sel === 240000
 ok('次Qにもう返した実績も見込みに入る', R.nextActual === 50000, R.nextActual);
 ok('次Qに返る予定の確定が入る', R.nextConf === 70000, R.nextConf);
 ok('返車日が無い車は次Qへ寄せる', R.nextPlan === 30000, R.nextPlan);
-ok('🔴 次Qより先・保険の見込みは入らない', R.nextIds.join() === 'TQ_NXA,TQ_NXP,TQ_UND', R.nextIds);
+ok('🔴 次Qより先・保険の見込み・未入庫の予約（予測）は入らない', R.nextIds.join() === 'TQ_NXA,TQ_NXP,TQ_UND', R.nextIds);
+ok('🔴 一覧にも予測（未入庫）の箱は無い', R.noFc, R.noFc);
 ok('次Qの合計', R.next === 150000, R.next);
 
 console.log('\n── ③ 答え合わせ ──');
