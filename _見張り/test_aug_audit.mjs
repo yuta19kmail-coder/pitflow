@@ -141,9 +141,9 @@ console.log('\n── ③ 金額は数字で保存する ──');
 console.log('\n── ④ 「進行中」は今月だけ ──');
 {
   const sv = bare('sales.js');
-  const body = (sv.match(/function renderQuarterMonth\(wrap\)\{[\s\S]*?wrap\.innerHTML=h;/) || [''])[0];
-  ok('🔴 進行中の札は今月の時だけ', /\(i===todayQ&&isThis\)\?'<em>進行中<\/em>'/.test(body));
-  ok('🔴 過ぎた月は「現クォーター」と言わない', /isThis\?'現クォーター':/.test(body));
+  /* 🆕 v2.148.0 クォーターは renderQuarter（MTG用）に作り替えた。「現クォーター」の大きい数字は無くなった */
+  const body = (sv.match(/function renderQuarter\(wrap\)\{[\s\S]*?wrap\.innerHTML = h;/) || [''])[0];
+  ok('🔴 進行中の札は今月の時だけ', /\(\(i===todayQ&&isThis\)\?'<em>進行中<\/em>'/.test(body), body.slice(0, 120));
 }
 
 console.log('\n' + (fail ? '❌ ' + fail + '件 赤（緑 ' + pass + '件）' : '✅ 全部緑（' + pass + '件）'));
