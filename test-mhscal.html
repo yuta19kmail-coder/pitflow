@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8">
+<link rel="stylesheet" href="css/polish.css">
+<style>
+:root{--bg:#12161f;--bg2:#161c28;--bg3:#1e2634;--border:#2b3547;--border2:#39455c;--text:#dbe3ef;--text2:#93a2bb;--text3:#63718a;--brand:#1db97a;--red:#ef4444}
+body{margin:0;background:var(--bg);color:var(--text);font-family:sans-serif;padding:16px}
+</style><body>
+<div id="out"></div>
+<script src="js/coreflow-icons.js"></script>
+<script>
+/* ---- 本体から借りる最小の道具 ---- */
+window.PIT_CAL_MIRROR=1;   /* 🔴 PitFlow だけが立てる印（CarFlow など他アプリでは写さない） */
+window.state={ currentView:'settings', settings:{ closedDow:[3], openTime:'09:00', cutoffTime:'17:00' } };
+window.__views=0; window.showView=function(){ window.__views++; };
+window.__repaints=0; window.pitCardRepaint=function(){ window.__repaints++; };
+
+/* ---- 偽の Firestore（onSnapshot を手で発火できるようにする） ---- */
+window.__sub=null; window.__subCount=0; window.__docId='';
+window.fb={ currentCompanyId:'kobayashi_motors', db:{
+  collection:function(){ return { doc:function(){ return { collection:function(){ return {
+    doc:function(id){ return { onSnapshot:function(okc,ng){
+      window.__docId=id; window.__subCount++; window.__sub={ok:okc,ng:ng}; return function(){};
+    } }; }
+  }; } }; } }; }
+}};
+window.__push=function(v,ageDays){
+  if(!window.__sub) return false;
+  var at=Date.now()-(ageDays||0)*86400000;
+  var d=JSON.parse(JSON.stringify(v)); d.updatedAt={ toMillis:function(){ return at; } };
+  window.__sub.ok({ exists:true, data:function(){ return d; } });
+  return true;
+};
+window.__pushMissing=function(){ if(!window.__sub) return false; window.__sub.ok({exists:false}); return true; };
+window.__pushError  =function(){ if(!window.__sub) return false; window.__sub.ng(new Error('permission-denied')); return true; };
+</script>
+<script src="js/cal-pit.js"></script>
+<script>window.__ready=1;</script>
