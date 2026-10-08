@@ -685,7 +685,10 @@ function todayRow(c, isReturn, inBreak){
     h += '<div class="tr-front empty"></div>';
   }
   h += '<div class="tr-main">';
-  h += '<div class="tr-headline"><span class="tr-customer">' + ((window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）') + ' 様</span>'
+  /* 🔴 v2.163.0（ゆうた報告 2026-10-08「13:00入庫が下にズレてる」）名前と車種は**必ず1行**。
+     長い法人名で車種が2行目に落ちると、56px 固定の行から3段がはみ出してナンバーが隠れていた。
+     入りきらない時は名前・車種の両方を長さに比例して「…」で縮める（CSS）。「様」は縮めない＝tr-sama に分ける。 */
+  h += '<div class="tr-headline"><span class="tr-customer"><span class="tr-cn">' + ((window.pitCustSurname ? pitCustSurname(c) : (c.customer || '')) || '（未入力）') + '</span><span class="tr-sama">様</span></span>'
      + (c.car ? '<span class="tr-carname">' + c.car + '</span>' : '') + '</div>';
   // ナンバー＋当日メモ（クイック引継ぎ）を1行で。メモはクリックで直入力＝当日ビュー内だけの簡単メモ v0.123.0
   /* 🏷 v1.113.0 ナンバーの場所＝初回なら「初回顧客」／リピーターでナンバーが無ければ「初回車両」。
