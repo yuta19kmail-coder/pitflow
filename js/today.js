@@ -116,7 +116,9 @@ function renderToday(){
     .sort((a,b) => _rmin(a) - _rmin(b));
 
   // 入庫：今日の予約総数（返車済み含む）を固定表示。残＝まだ来ていない（status=reserved）
-  const intakeTotal = state.cards.filter(c => c.reserveDate === dayStr && c.status !== 'scrap' && !_noSale(c)).length;
+  /* 🔴 v2.164.0（ゆうた報告 2026-10-09）「入庫6・残4 だが朝一から4しかない」＝**予約キャンセルも総数に入っていた**。
+     キャンセル2台が「もう入った2台」に見えて、朝一から残が出ていた。キャンセルは来ない車なので数えない。 */
+  const intakeTotal = state.cards.filter(c => c.reserveDate === dayStr && c.status !== 'scrap' && c.status !== 'cancelled' && !_noSale(c)).length;
   /* ⚠ v2.63.0 整備カードは上の代車ぶん（maintN）で数えるので、ここでは数えない（二重になる）。
      　 総数（intakeTotal）は `pitCardNoSale` で前から外れている＝残だけがズレていた。 */
   const inLeft  = state.cards.filter(c => c.reserveDate === dayStr && c.status === 'reserved' && !_maintCard(c)).length;
