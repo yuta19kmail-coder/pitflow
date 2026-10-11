@@ -99,6 +99,10 @@ console.log('\n── ④b 紐づけのカルテNo（v2.167.0） ──');
   ok('🔴 先頭に「カルテNo：」→ 1行空けて作業内容', rows[0] === 'カルテNo：K-123' && rows[1] === null && rows[2] === '車検一式', rows);
   const doc2 = ctx.pitBuildCoverDoc(card, { formSvg: FORM, noPrint: true, fleet: Object.assign({}, base, { fixed: null, karteNo: '' }) });
   ok('紐づけが無ければ出さない', memo(doc2)[0] === '車検一式');
+  /* 🏁 v2.168.0 リース車両＝カルテNo の場所に「リース車両」 */
+  const doc3 = ctx.pitBuildCoverDoc(card, { formSvg: FORM, noPrint: true, fleet: Object.assign({}, base, { fixed: null, lease: true }) });
+  ok('🔴 リース車両は先頭に「リース車両」', memo(doc3)[0] === 'リース車両' && memo(doc3)[1] === null, memo(doc3));
+  ok('ボードから lease を渡している', /lease: !!v\.lease/.test(JS('maint-pit.js')));
   const mp = JS('maint-pit.js');
   ok('カルテNo はスペック表と同じ pitFleetLinkTarget から', /pitFleetLinkTarget\(v\)[\s\S]{0,120}karteNo/.test(mp));
 }
