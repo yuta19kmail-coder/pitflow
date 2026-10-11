@@ -92,6 +92,28 @@ console.log('\n── ④ ふつうの表紙は今までどおり ──');
   ok('入庫日が出る', val(doc, 'm') === '10' && val(doc, 'd') === '20');
 }
 
+console.log('\n── ④b 紐づけのカルテNo（v2.167.0） ──');
+{
+  const doc = ctx.pitBuildCoverDoc(card, { formSvg: FORM, noPrint: true, fleet: Object.assign({}, base, { fixed: null, karteNo: 'K-123' }) });
+  const rows = memo(doc);
+  ok('🔴 先頭に「カルテNo：」→ 1行空けて作業内容', rows[0] === 'カルテNo：K-123' && rows[1] === null && rows[2] === '車検一式', rows);
+  const doc2 = ctx.pitBuildCoverDoc(card, { formSvg: FORM, noPrint: true, fleet: Object.assign({}, base, { fixed: null, karteNo: '' }) });
+  ok('紐づけが無ければ出さない', memo(doc2)[0] === '車検一式');
+  const mp = JS('maint-pit.js');
+  ok('カルテNo はスペック表と同じ pitFleetLinkTarget から', /pitFleetLinkTarget\(v\)[\s\S]{0,120}karteNo/.test(mp));
+}
+
+console.log('\n── ⑥ 内容を見る・直す（v2.167.0） ──');
+{
+  const mp = JS('maint-pit.js');
+  ok('🔴 ボードの行に「内容」の行がある', /class="mb-line mb-menu"><span>内容<\/span>/.test(mp));
+  ok('「直す」は実績に入った行には出さない', /r\.doneReady \? '' : '<span class="mb-chip add" onclick="flMaintEdit/.test(mp));
+  ok('🔴 計算の目標（車検・12点）は作業と月を変えさせない', /var work = manual \? _mbaWork : r\.work;/.test(mp) && /var ym = manual \?/.test(mp));
+  ok('一般・B.P は内容が要る（足す時と同じ PF-3051）', (mp.match(/code:'PF-3051'/g) || []).length >= 2);
+  ok('直したら記録（カードの log と操作ログ）', /代車の作業予定を直した（/.test(mp) && /pitLog\('代車の作業予定を直した'/.test(mp));
+  ok('カードが無い目標は内容を入れた時だけカードを作る', /if \(!menu\)\{ flMaintClose\(\); return; \}[\s\S]{0,120}newMaintCard\(vehId, r\.work, r\.plan\.ym/.test(mp));
+}
+
 console.log('\n── ⑤ ボードの行 ──');
 {
   const mp = JS('maint-pit.js');
