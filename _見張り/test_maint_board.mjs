@@ -379,6 +379,20 @@ console.log('\n── ⑧ ボードのHTML ──');
   ok('🔴 赤・橙・黄の3段になっている', /mb-bad/.test(h) && /mb-warn/.test(h) && /mb-go/.test(h));
 }
 
+console.log('\n── ⑨ ほかの画面の CSS と名前が当たらない（v2.169.0） ──');
+{
+  /* 🔴 ゆうた報告 2026-10-11「社長のハイエースだけ表紙印刷と日を決めるボタンが左につまってる」
+     ＝ メンバー画面（members.css）も接頭辞が mb- で、.mb-warn の display:flex が「警告」の行の grid を壊していた。
+     ボードが使う mb- の名前を全部拾って、members.css に同じ名前の指定が無いことを見る。 */
+  const mp = JS('maint-pit.js');
+  const names = new Set();
+  (mp.match(/mb-[a-z][\w-]*/g) || []).forEach(n => names.add(n));
+  ['bad','warn','go','doing','idle','done'].forEach(l => names.add('mb-' + l));   /* 'mb-' + r.level で作る名前 */
+  const mem = fs.readFileSync(path.join(process.cwd(), 'css', 'members.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  const hit = [...names].filter(n => new RegExp('\\.' + n.replace(/-/g, '\\-') + '(?![\\w-])').test(mem));
+  ok('🔴 ボードの名前が members.css に無い', hit.length === 0, hit);
+}
+
 console.log('\n─────────────────────────────');
 if (BREAK) {
   console.log('わざと壊したモード（--break=' + BREAK + '）：✅ ' + pass + ' / ❌ ' + fail);
