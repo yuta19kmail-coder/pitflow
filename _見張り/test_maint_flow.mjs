@@ -374,7 +374,7 @@ console.log('\n── ⑧ 画面のつなぎ ──');
 {
   const fleet = JS('fleet.js'), today = JS('today.js');
   ok('日ビューのセルが選択肢を出す', /flMaintCellMenu\(/.test(fleet));
-  ok('🔴 いままでの「予定を追加」も残っている', /flOpenEventModal\(/.test(JS('maint-pit.js')));
+  ok('🗑 古い「代車自身の予定を追加」は消えた（v2.165.0 ゆうた指定）', !/flOpenEventModal\(/.test(JS('maint-pit.js')));
   /* 🔴 v2.70.0 日ビューの整備の枠は**期間ぜんぶで1本のバー**（.fl-bar3）になった。
      前は「開始日に札＋続きは細い帯（.fl-mn）」で、何本あるか数えられなかった。 */
   ok('日ビューに整備の枠のバーが出る', /fl-bar3/.test(fleet) && /flMaintChip\(/.test(fleet));
@@ -446,8 +446,8 @@ console.log('\n── ⑩ カードに引っ越した（v2.49.0）・未定BOX�
   /* 🔴 保存先がカードになった＝fleetEvents に整備の枠を書く所がもう無い */
   const mp = bend('maint-pit.js', JS('maint-pit.js'));
   ok('🔴🔴 整備の枠を fleetEvents に書く所がもう無い', !/state\.fleetEvents\.push/.test(mp));
-  ok('🔴 loaner-free.js も fleetEvents の maint を拾わない',
-     /if \(e\.maint\) return;/.test(JS('loaner-free.js')));
+  ok('🔴 loaner-free.js は fleetEvents をもう読まない（v2.165.0）',
+     !/state\.fleetEvents/.test(JS('loaner-free.js')));
   /* 🔴 未定タブに「代車・自社車両」BOX がある＝隠す例外ではなく振り分け */
   const und = JS('undetermined.js');
   ok('🔴 未定タブに「代車・自社車両」BOX がある', /代車・自社車両/.test(und));

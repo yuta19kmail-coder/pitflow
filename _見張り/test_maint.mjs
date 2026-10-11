@@ -201,15 +201,14 @@ console.log('\n── ⑤ 月の目標は計算（保存しない）──');
   ok('⚠ 3/31 の2ヶ月前は 1/31（勝手に3/3へ繰り上がらない）', e.openFrom === '2027-01-31', e.openFrom);
 }
 
-console.log('\n── ⑥ 代車自身の予定（青帯）と混ざらない ──');
+console.log('\n── ⑥ 古い代車の予定（fleetEvents）は出ない・整備の枠と混ざらない ──');
 {
   const c = boot();
   const d = c.pitLoanerDay('l1', '2026-12-01');
-  ok('🔴 車検入庫は event のまま', d.events.length === 1 && d.maints.length === 0);
-  ok('色も落ちていない', d.events[0].color === '#ef4444');
+  /* 🗑 v2.165.0（ゆうた指定 2026-10-11）古い「車検入庫」は窓ごと廃止＝手で入れたものも出さない */
+  ok('🗑 古い車検入庫はもう出ない', d.events.length === 0 && d.maints.length === 0);
   ok('🔴 整備の枠は event に混ざらない', c.pitLoanerDay('l1','2026-10-05').events.length === 0);
-  /* 車両管理の月カレンダーは「予定」だけを拾っている＝整備の枠が二重に出ない */
-  ok('期間で予定だけ取れる', c.pitLoanerSpan('l1','2026-10-01','2026-12-31',{kinds:['event']}).length === 1);
+  ok('🗑 期間で聞いても古い予定は0', c.pitLoanerSpan('l1','2026-10-01','2026-12-31',{kinds:['event']}).length === 0);
   ok('期間で整備の枠だけ取れる', c.pitLoanerSpan('l1','2026-10-01','2026-12-31',{kinds:['maint']}).length === 2);
 }
 

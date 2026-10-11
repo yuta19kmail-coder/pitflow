@@ -15,15 +15,14 @@
      🔴 ② 「ふさがっているか」の答えが**今までと同じ**（busyOn / busyWhy を壊していない）
      🔴 ③ **画面が自前で読んでいない**（＝種類を増やした時に置いていかれる画面が無い）
      🔴 ④ **種類を1つ足したら、全部の画面に出る**（本番＝🔧整備の枠で効かせたい所）
-     🔴 ⑤ 代車自身の予定の**色（赤・橙・紫）が落ちない**
-        ⚠ `FL_EVT_TYPES` は fleet.js の const なので `window.` からは取れない。踏みやすい穴。
+     🔴 ⑤ 古い代車の予定（fleetEvents）は**どの画面にも出ない**（v2.165.0 で窓ごと廃止・手で入れたものも）
 
    ◎使い方
        node test_loaner_parts.mjs
        node test_loaner_parts.mjs --break=1  … 仮押さえを部品から外す → ①④が赤くなるのが正しい
-       node test_loaner_parts.mjs --break=2  … 色を window から取る   → ⑤が赤くなるのが正しい
-       node test_loaner_parts.mjs --break=3  … 自動で作った予定を弾くのをやめる → ⑤が赤くなるのが正しい
-       　　　　　　　　　　　　　　　　　　　　　（＝古い車検の予定が代車カレンダーに戻ってくる状態）
+       node test_loaner_parts.mjs --break=3  … 古い代車の予定をまた読む → ⑤が赤くなるのが正しい
+       　　　　　　　　　　　　　　　　　　　　　（＝古い車検の予定が貸出の窓に戻ってくる状態）
+       ⚠ --break=2（色を window から取る）は v2.165.0 で色を出す所ごと無くなったので廃止
    =================================================================== */
 import fs from 'fs';
 import path from 'path';
@@ -40,13 +39,13 @@ const CSS = (f) => fs.readFileSync(path.join(process.cwd(), 'css', f), 'utf8');
 function bend(name, src) {
   if (BREAK === '1' && name === 'loaner-free.js')
     return src.replace("      out.push(_assignItem(a));", "      if (a.hold) return;\n      out.push(_assignItem(a));");
-  if (BREAK === '2' && name === 'loaner-free.js')
-    return src.replace("var TY = (typeof FL_EVT_TYPES !== 'undefined') ? FL_EVT_TYPES : null;", "var TY = w.FL_EVT_TYPES || null;");
-  /* v2.70.1 …「アプリが勝手に作った予定を弾く」を外す＝古い車検の予定がまた出てくる */
+  /* v2.165.0 …「古い代車の予定を読まない」を外す＝古い車検の予定がまた窓に出てくる */
   if (BREAK === '3' && name === 'loaner-free.js')
-    return src.replace("      if (e.auto) return;", "      /* 弾くのをやめた */;");
+    return src.replace("var list = [];   /* ⚠ v2.165.0",
+      "var list = arr(w.state && w.state.fleetEvents).filter(function (e) { return e.vehicleId === loanerId && overlap(from, to, e.fromDate, e.toDate); });   /* ⚠ 壊した");
   return src;
 }
+const HTML_ = () => fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf8');
 
 const 代車 = [
   { id:'l1', name:'代車1', number:1, model:'タント', category:'kei', shakenDate:'2026-10-31' },
@@ -102,7 +101,8 @@ console.log('\n── ① 部品が3つの種類をまとめて返す ──');
   const c = boot();
   ok('貸出の日', c.pitLoanerDay('l1','2026-10-06').lends.length === 1);
   ok('🔴 仮押さえの日', c.pitLoanerDay('l1','2026-10-13').holds.length === 1);
-  ok('代車自身の予定の日', c.pitLoanerDay('l1','2026-10-21').events.length === 1);
+  /* 🗑 v2.165.0（ゆうた指定 2026-10-11）古い「代車自身の予定」（fleetEvents）は手で入れたものも出さない */
+  ok('🗑 古い代車の予定はもう出ない', c.pitLoanerDay('l1','2026-10-21').events.length === 0);
   ok('何も無い日は空', c.pitLoanerDay('l1','2026-10-01').items.length === 0);
   const d = c.pitLoanerDay('l1','2026-10-05');
   ok('初日・最終日が分かる', !!d.lends[0] && d.lends[0].isStart === true && d.lends[0].isEnd === false);
@@ -112,9 +112,9 @@ console.log('\n── ① 部品が3つの種類をまとめて返す ──');
      見るのは「外から見えるか」と「いまある種類が載っているか」。 */
   ok('種類の一覧が外から見える',
      ['lend','hold','event','maint'].every(k => !!c.PIT_LOANER_KINDS[k]), Object.keys(c.PIT_LOANER_KINDS));
-  /* ⚠ v2.70.1 で**自動で作った予定（e2）は物差しが弾く**ようになったので、1つ減った（下の⑤を見ること） */
-  ok('期間で聞ける（月表示用）', c.pitLoanerSpan('l1','2026-10-01','2026-10-31').length === 3);
-  ok('種類を選んで聞ける', c.pitLoanerSpan('l1','2026-10-01','2026-10-31',{kinds:['event']}).length === 1);
+  /* ⚠ v2.70.1 で自動の予定（e2）、v2.165.0 で手の予定（e1）も弾く＝貸出と仮押さえの2つ（下の⑤を見ること） */
+  ok('期間で聞ける（月表示用）', c.pitLoanerSpan('l1','2026-10-01','2026-10-31').length === 2);
+  ok('種類を選んで聞ける', c.pitLoanerSpan('l1','2026-10-01','2026-10-31',{kinds:['hold']}).length === 1);
   ok('自分自身を外せる', c.pitLoanerDay('l1','2026-10-06',{ignoreAssignId:'la1'}).lends.length === 0);
   ok('代車自身の予定だけ外せる', c.pitLoanerDay('l1','2026-10-21',{noEvents:true}).items.length === 0);
 }
@@ -125,11 +125,11 @@ console.log('\n── ② 「ふさがっているか」の答えが今までと
   const l1 = c.state.loaners[0];
   ok('貸出の日はふさがっている',     c.pitLoanerBusyOn(l1,'2026-10-06') === true);
   ok('🔴 仮押さえの日もふさがっている', c.pitLoanerBusyOn(l1,'2026-10-13') === true);
-  ok('代車自身の予定もふさがっている', c.pitLoanerBusyOn(l1,'2026-10-21') === true);
+  ok('🗑 古い代車の予定ではもうふさがらない（v2.165.0）', c.pitLoanerBusyOn(l1,'2026-10-21') === false);
   ok('空きは空き',                   c.pitLoanerBusyOn(l1,'2026-10-01') === false);
   ok('noEvents なら予定は数えない',   c.pitLoanerBusyOn(l1,'2026-10-21',{noEvents:true}) === false);
   ok('🔴 理由の形が今までのまま（貸出）', c.pitLoanerBusyWhy(l1,'2026-10-06').kind === 'assign');
-  ok('🔴 理由の形が今までのまま（予定）', c.pitLoanerBusyWhy(l1,'2026-10-21').kind === 'event');
+  ok('🗑 古い代車の予定は理由にならない（v2.165.0）', c.pitLoanerBusyWhy(l1,'2026-10-21') === null);
   ok('🔴 仮押さえは assign ＋ hold:true', (function(){ const y=c.pitLoanerBusyWhy(l1,'2026-10-13')||{}; return y.kind==='assign' && y.hold===true; })());
   ok('空きは null',                  c.pitLoanerBusyWhy(l1,'2026-10-01') === null);
   ok('主役は 貸出 → 仮押さえ → 予定 の順',
@@ -142,9 +142,11 @@ console.log('\n── ③ 画面が自前で読んでいない ──');
   const 自前 = (src) => (src.match(/state\.loanerAssigns\s*\|\|\s*\[\]\)\s*\.\s*(find|filter|some)\s*\(function[^)]*\)\s*\{[^}]*fromDate\s*<=/g) || []).length;
   ok('🔴 車両管理が自前で「その日の貸出」を探していない', 自前(fleet) === 0);
   ok('🔴 代車カレンダーも自前で探していない', 自前(lo) === 0);
-  ok('🔴 車両管理は部品を呼んでいる', /pitLoanerDay\(/.test(fleet) && /pitLoanerSpan\(/.test(fleet));
+  /* ⚠ v2.165.0 月ビューの pitLoanerSpan は自由イベント用だけだったので、札ごと消えた＝日ビューの pitLoanerDay を見る */
+  ok('🔴 車両管理は部品を呼んでいる', /pitLoanerDay\(/.test(fleet));
   ok('🔴 代車カレンダーも部品を呼んでいる', /pitLoanerDay\(/.test(lo));
-  ok('🔴 新規予約の右カラムも部品ごしに聞いている', /pitLoanerBusyWhy\(/.test(cd));
+  /* ⚠ v2.127.0 で右カラムは「本物の貸出だけ押せない」になり、pitLoanerHardOn／SoftOn で聞くようになった */
+  ok('🔴 新規予約の右カラムも部品ごしに聞いている', /pitLoanerHardOn\(/.test(cd) && /pitLoanerSoftOn\(/.test(cd));
   ok('車両管理が自前で fleetEvents を日で探していない',
      !/_flEvents\(\)\.filter\(function\(e\)\{ return !e\.auto/.test(fleet.replace(/\s+/g,' ')));
   const lf = JS('loaner-free.js');
@@ -182,12 +184,9 @@ console.log('\n── ④ 種類を1つ足したら、全部の画面に出る �
      !/kind\s*===\s*'lend'/.test(JS('fleet.js')));
 }
 
-console.log('\n── ⑤ 代車自身の予定の色が落ちない ──');
+console.log('\n── ⑤ 古い代車の予定（fleetEvents）は出ない ──');
 {
   const c = boot();
-  const e = c.pitLoanerDay('l1','2026-10-21').events[0] || null;
-  ok('🔴 車検入庫は赤のまま', !!e && e.color === '#ef4444', e && e.color);
-  ok('名前も取れる', !!e && e.label === '車検入庫');
   /* 🔴🔴 v2.70.1（ゆうた報告 2026-09-05「整備の仕組みになる以前の車検の予定が代車カレンダーに残ってる」）
      **アプリが勝手に作った予定（auto）は、どの画面にも出さない。**
      ◎正体 … v1.12 のころ、車を保存するたびに作っていた `auto_<車id>_shakenIn` / `_tenken`。
@@ -197,16 +196,20 @@ console.log('\n── ⑤ 代車自身の予定の色が落ちない ──');
   ok('🔴🔴 自動で作った予定は物差しが弾く',
      c.pitLoanerSpan('l1','2026-10-25','2026-10-25',{kinds:['event']}).length === 0);
   ok('🔴 その日を見ても出てこない', c.pitLoanerDay('l1','2026-10-25').events.length === 0);
-  ok('🔴 手で入れた予定はちゃんと出る（消してしまわない）',
-     c.pitLoanerDay('l1','2026-10-21').events.length === 1);
+  /* 🗑🔴 v2.165.0（ゆうた指定 2026-10-11「窓ごとけしていい、古い方の予定も消えてほしい」）手で入れたものも出さない */
+  ok('🗑🔴 手で入れた古い予定も出ない',
+     c.pitLoanerDay('l1','2026-10-21').events.length === 0
+     && c.pitLoanerEventsIn('l1','2026-10-19','2026-10-23').length === 0);
   /* 🔴 作る側も止めた＝もう増えない */
   ok('🔴🔴 車を保存しても自動の予定を作らない', !/_flSyncVehEvent\(/.test(JS('fleet.js')));
   ok('🔴 残っているぶんは開いた時に片付ける',
      /pitCleanupAutoVehEvents\s*=/.test(JS('fleet.js'))
      && /pitCleanupAutoVehEvents\(\)/.test(JS('fleet.js'))
      && /pitCleanupAutoVehEvents\(\)/.test(JS('loaner.js')));
-  ok('⚠ 片付けるのは自動の印が付いたものだけ',
-     /keep = evs\.filter\(function \(e\) \{ return !\(e && e\.auto\); \}\)/.test(JS('fleet.js')));
+  ok('🗑 片付けで残すのは整備の枠（maint＝引っ越し用）だけ（v2.165.0）',
+     /keep = evs\.filter\(function \(e\) \{ return !!\(e && e\.maint\); \}\)/.test(JS('fleet.js')));
+  ok('🗑 古い「＋ イベントを追加」の窓がどこにも無い',
+     !/flOpenEventModal|fleet-event-modal/.test(JS('fleet.js') + JS('maint-pit.js') + JS('loaner.js') + HTML_()));
   /* ⚠ 見るのは**書き方（コード）**。説明文に名前が出るのは構わない。 */
   ok('🔴 画面側で「自動は隠す」と書かなくなった',
      !/filter\(function\(x\)\{ return !x\.auto/.test(JS('fleet.js'))

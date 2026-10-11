@@ -368,7 +368,8 @@ console.log('\n── ⑧ ボードのHTML ──');
 {
   const c = boot();
   const h = c.flMaintBoardHtml();
-  ok('要対応の数が出る', h.indexOf('要対応 1') >= 0);
+  /* ⚠ boardHtml は本物の今日で数える（TODAY を渡せない）＝日が進むと数が変わる。数そのものではなく「出るか」を見る */
+  ok('要対応の数が出る', /要対応 \d+/.test(h), (h.match(/mb-cnt[^<]*/g) || []).join(' / '));
   ok('警告の数が出る', h.indexOf('警告') >= 0);
   ok('🔴 飛び地の候補が並ぶ', h.indexOf('10/4〜10/6') >= 0 && h.indexOf('10/12〜10/16') >= 0);
   ok('「日を決める」がある', h.indexOf('flMaintGoto') >= 0);

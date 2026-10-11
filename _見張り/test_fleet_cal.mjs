@@ -173,7 +173,9 @@ console.log('\n── ⑦ 月ビューは「やること・内容」だけ ─�
      '月ビューの札に _flMbInner 以外の字が足されている');
   ok('🔴 月ビューに貸出・仮押さえを出さない', !/fl-use/.test(month) && !/day\.lends/.test(month) && !/day\.holds/.test(month));
   ok('🔴 日と貸出は日ビューの仕事', /fl-use/.test(day) && /day\.lends/.test(day));
-  ok('自由イベントは4文字で切らない（名前ぜんぶ）', /fl-ev/.test(month) && !/slice\(0, 4\)/.test(month));
+  /* 🗑 v2.165.0（ゆうた指定 2026-10-11）自由イベントの札は窓ごと廃止。月の空いたマスはその月の日ビューへ */
+  ok('🗑 自由イベント（fl-ev）はもう描かない', !/fl-ev/.test(month) && !/fl-ev/.test(day));
+  ok('🔴 月の空いたマスを押すと日ビュー（古い窓を開かない）', /flZoomTo\(/.test(month) && !/flOpenEventModal/.test(month));
 }
 
 console.log('\n── ⑧ 列は固定幅（バーが何マスぶんか計算できる）──');
@@ -206,8 +208,7 @@ console.log('\n── ⑧-2 1マスに収まっているか（v2.71.1）──')
      /_w >= 2 \? '<b>/.test(day) && /_w >= 4 \?/.test(day) && /_w < 2 \? ' tiny'/.test(day));
   ok('1日だけの枠は四角を真ん中に置く', /\.fl-bar3\.tiny\{[^}]*justify-content:center/.test(calcss));
   /* ⚠ 予定か確定かは**色**が言っている（凡例に出してある）ので、字が消えても意味は落ちない */
-  ok('自由イベントの長い名前は2行まで折り返す',
-     /\.fl-ev span\{[^}]*line-clamp:2/.test(calcss) && /<span>' \+ _fleetEsc\(x\.label\)/.test(fleet));
+  ok('🗑 古い「＋ イベントを追加」の窓（flOpenEventModal）がもう無い', !/flOpenEventModal/.test(fleet));
 }
 
 console.log('\n── ⑨ 凡例（凡例に無い見た目は出さない、の受け皿）──');

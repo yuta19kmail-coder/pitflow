@@ -244,7 +244,8 @@ console.log('\n── ④ 仮押さえの窓（メモ必須・期間・重複し
   const c = boot([], { events:[{ id:'e1', vehicleId:'l1', type:'shaken', label:'車検入庫', fromDate:'2026-09-02', toDate:'2026-09-04' }],
                        form:{ 'lhd-lo':'l1', 'lhd-memo':'押さえ', 'lhd-from':'2026-09-01', 'lhd-to':'2026-09-03' } });
   c.loSaveHold('');
-  ok('🔴 代車自身の予定とぶつかったら聞く', c.asked.length === 1 && c.asked[0].code === 'PF-3043');
+  /* 🗑 v2.165.0（ゆうた指定 2026-10-11）古い代車の予定（fleetEvents）は窓ごと廃止＝もうぶつからない */
+  ok('🗑 古い代車の予定とはもうぶつからない（聞かない）', !c.asked.some(a => a.code === 'PF-3043'));
 }
 {
   /* 直し＝同じ1件を書き換える（増やさない） */
