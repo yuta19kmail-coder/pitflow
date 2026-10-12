@@ -5,7 +5,7 @@
      ① 次に出す日の前日に、洗車の段（今日）に出る／明後日に出すなら「明日」
      ② 前の貸出が戻っていない代車はグレー＋「未返却」＋完了が押せない
      ③ 前の予約が返車済み（自動返却）なら戻ったことになる＝グレーにしない
-     ④ 仮押さえ・キャンセルされた予約・引退した代車は出ない
+     ④ 仮押さえ・キャンセルされた予約・引退した代車は出ない／🔴 v2.180.0 今週の洗車予定には代車を出さない（今日・明日だけ）
      ⑤ 洗った印（washDone＝代車のid）で「完了済み」へ。代車を差し替えたら印は外れる
      ⑥ 担当は出す相手の予約の担当／出す相手の名前はカードに出さない（ホバーの文字だけ）
 
@@ -103,7 +103,8 @@ const cards = [
   { id:'N4', customer:'吉田 五郎', status:'reserved', reserveDate:dISO(2), frontStaff:'椎名' },
   { id:'N5', customer:'取消 六郎', status:'cancelled', reserveDate:dISO(1) },
   { id:'N7', customer:'洗済 七郎', status:'reserved', reserveDate:dISO(1) },
-  { id:'N8', customer:'差替 八郎', status:'reserved', reserveDate:dISO(1) }
+  { id:'N8', customer:'差替 八郎', status:'reserved', reserveDate:dISO(1) },
+  { id:'N9', customer:'週末 九郎', status:'reserved', reserveDate:dISO(3) }
 ];
 const A = (id, lo, cardId, f, t, x) => Object.assign({ id, loanerId:lo, cardId, fromDate:f, toDate:t }, x || {});
 const assigns = [
@@ -118,7 +119,8 @@ const assigns = [
   A('a5b','L5','N5',dISO(1),dISO(2)),                                  /* 予約キャンセル→出ない */
   A('a6', 'L6','N1',dISO(1),dISO(2)),                                  /* 引退→出ない */
   A('a7', 'L7','N7',dISO(1),dISO(2),{ washDone:'L7' }),                /* 洗った */
-  A('a8', 'L8','N8',dISO(1),dISO(2),{ loanerId:'L8', washDone:'L9' })  /* 差し替え前の印 */
+  A('a8', 'L8','N8',dISO(1),dISO(2),{ loanerId:'L8', washDone:'L9' }), /* 差し替え前の印 */
+  A('a9', 'L9','N9',dISO(3),dISO(5))                                   /* 🔴 v2.180.0 3日後に出す＝洗うのは明後日＝出さない */
 ];
 
 const { html, ctx } = boot(JSON.parse(JSON.stringify({ loaners, cards, loanerAssigns: assigns })));
@@ -147,6 +149,10 @@ ok('代車3はグレーにしない', i3 && !i3.gray && i3.canDone, i3);
 console.log('\n── ④ 出さないもの ──');
 ok('仮押さえ・キャンセルの代車5は出ない', !get('代車5'), items.map(x => x.name));
 ok('引退した代車6は出ない', !get('代車6'));
+
+console.log('\n── ④-2 今週の洗車予定には代車を出さない（v2.180.0） ──');
+ok('🔴 明後日以降に洗う代車9は、どの段にも出ない', !get('代車9'), items.map(x => x.name + '@' + x.sec.slice(0, 4)));
+ok('🔴 今週の洗車予定の段に代車が1台も無い', items.filter(x => x.sec.indexOf('今週') === 0).length === 0);
 
 console.log('\n── ⑤ 洗った印 ──');
 const i7 = get('代車7');
