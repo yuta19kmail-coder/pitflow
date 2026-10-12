@@ -112,6 +112,69 @@ ok('カンマ・引用符の入った値はくくる', /"（苗字不明） カ�
 ok('列の数がそろっている', T.rows.every((r) => r.length === H.length));
 ok('辞書に全部の列が載っている', H.every((h) => T.dict.indexOf('| ' + h + ' |') >= 0));
 
+console.log('\n── 🆕 v2 受付の列（予約受付日・予約担当・代車・取消） ──');
+{
+  st.cards = [
+    card({ id: 'u1', resNo: 'U1', customer: '鈴木 一郎', sei: '鈴木', car: 'プリウス', status: 'reserved', reserveDate: '2026-10-20',
+           bookedAt: '2026-10-01', reserveStaff: '箱崎', needLoaner: true }),
+    card({ id: 'u2', resNo: 'U2', customer: '鈴木 一郎', sei: '鈴木', car: 'プリウス', status: 'cancelled', cancelled: true, archived: true,
+           reserveDate: '2026-10-10', bookedAt: '2026-09-20', cancelledAt: '2026-10-03', cancelReason: '日程変更\nまた電話する' }),
+    card({ id: 'u3', resNo: 'U3', customer: '鈴木 一郎', sei: '鈴木', car: 'プリウス', status: 'cancelled', noShow: true, noShowAt: '2026-10-06',
+           reserveDate: '2026-10-05', cancelledAt: '2026-10-06', cancelReason: '' })
+  ];
+  const U = ctx.pitAnalyticsTable({ today: '2026-10-12' });
+  const UH = U.cols, uv = (id, col) => (U.rows.find((r) => r[1] === id) || [])[UH.indexOf(col)];
+  ok('🔴 前の列の並びは変えていない（入金日までが同じ位置）', UH.indexOf('入金日') === 40 && UH[0] === 'アプリ' && UH[1] === 'ID', UH.slice(38, 42));
+  ok('予約受付日と、受付から入庫までの日数', uv('u1', '予約受付日') === '2026-10-01' && uv('u1', '受付から入庫まで') === 19, [uv('u1', '予約受付日'), uv('u1', '受付から入庫まで')]);
+  ok('予約担当・代車', uv('u1', '予約担当') === '箱崎' && uv('u1', '代車') === 1);
+  ok('取り消していない予約は取消の列が空', uv('u1', '取消の種類') === '' && uv('u1', '取消日') === '');
+  ok('人が押したキャンセル＝キャンセル・日・理由（改行は1行に）', uv('u2', '取消の種類') === 'キャンセル' && uv('u2', '取消日') === '2026-10-03' && uv('u2', '取消理由') === '日程変更 また電話する', [uv('u2', '取消の種類'), uv('u2', '取消理由')]);
+  ok('🔴 来なかった＝来店なし（キャンセルと分ける）', uv('u3', '取消の種類') === '来店なし' && uv('u3', '取消日') === '2026-10-06', uv('u3', '取消の種類'));
+  ok('辞書に新しい列が載っている', ['予約受付日', '受付から入庫まで', '予約担当', '代車', '取消の種類', '取消日', '取消理由'].every((h) => U.dict.indexOf('| ' + h + ' |') >= 0));
+}
+
+console.log('\n── 🆕 v2 2枚目の表＝車検（1行＝1回の陸運局行き） ──');
+{
+  const shk = (o) => card(Object.assign({ workType: 'shaken', workTypes: ['shaken'], status: 'returned', car: 'タント', sei: '鈴木', customer: '鈴木 一郎', tel: '090-1111-2222', plate: '野田 300 あ 12-34' }, o));
+  st.cards = [
+    /* 不合格 → 不合格 → 再検で合格 */
+    shk({ id: 's1', resNo: 'S1', reserveDate: '2026-09-01', inspSchedule: { result: 'done', resultDate: '2026-09-10', resultSlot: 'pm', resultStaff: '椎名', officeName: '野田', round: 2,
+      history: [{ date: '2026-09-03', slot: 'am', result: 'recheck', staff: '箱崎', note: '光軸', officeName: '野田', round: 1 },
+                { date: '2026-09-05', slot: 'am', result: 'recheck', staff: '箱崎', staff2: '菅谷', staff2Note: '研修', why: 'サイドスリップ' }] } }),
+    /* 一発合格 */
+    shk({ id: 's2', resNo: 'S2', reserveDate: '2026-09-02', inspSchedule: { result: 'done', resultDate: '2026-09-04', resultStaff: '椎名', history: [] } }),
+    /* 再検合格（その場で直した） */
+    shk({ id: 's3', resNo: 'S3', reserveDate: '2026-09-02', inspSchedule: { result: 'done', resultDate: '2026-09-06', resultStaff: '椎名', repass: true, repassNote: 'ブーツ', history: [] } }),
+    /* マスター入力の合格の行（同じ日の done と重ねない） */
+    shk({ id: 's4', resNo: 'S4', reserveDate: '2026-09-02', inspSchedule: { result: 'done', resultDate: '2026-09-07', resultStaff: '椎名', history: [{ date: '2026-09-07', slot: 'am', result: 'pass', staff: '椎名' }] } }),
+    /* まだ行っていない予定だけ＝行に出ない */
+    shk({ id: 's5', resNo: 'S5', status: 'reserved', reserveDate: '2026-10-20', inspSchedule: { decided: '2026-10-22', history: [] } }),
+    /* 車検ではない入庫＝出ない */
+    card({ id: 's6', resNo: 'S6', status: 'returned', reserveDate: '2026-09-01', inspSchedule: { result: 'done', resultDate: '2026-09-02', history: [] } })
+  ];
+  ok('入口がある', typeof ctx.pitAnalyticsShakenTable === 'function');
+  const K = ctx.pitAnalyticsShakenTable({ today: '2026-10-12' });
+  const KH = K.cols, rowsOf = (id) => K.rows.filter((r) => r[1] === id), kv = (r, col) => r[KH.indexOf(col)];
+  ok('表の名前は pitflow.車検', K.name === 'pitflow.車検');
+  ok('🔴 先頭3列は全アプリ共通（アプリ・ID・書き出した日）', KH[0] === 'アプリ' && KH[1] === 'ID' && KH[2] === '書き出した日' && /^\uFEFFアプリ,ID,書き出した日/.test(K.csv));
+  const r1 = rowsOf('s1');
+  ok('不合格2回＋合格1回＝3行・日付順', r1.length === 3 && r1.map((r) => kv(r, '行った日')).join() === '2026-09-03,2026-09-05,2026-09-10', r1.map((r) => kv(r, '行った日')));
+  ok('結果の言葉（不合格・不合格・再検で合格）', r1.map((r) => kv(r, '結果')).join() === '不合格,不合格,再検で合格', r1.map((r) => kv(r, '結果')));
+  ok('それまでの不合格・何回目の行き', r1.map((r) => kv(r, 'それまでの不合格')).join() === '0,1,2' && r1.map((r) => kv(r, '何回目の行き')).join() === '1,2,3');
+  ok('落ちた理由（note も古い why も読む）', kv(r1[0], '落ちた理由') === '光軸' && kv(r1[1], '落ちた理由') === 'サイドスリップ', r1.map((r) => kv(r, '落ちた理由')));
+  ok('回送担当・2人目・2人目の理由・陸運局・R・時間帯', kv(r1[1], '回送担当') === '箱崎' && kv(r1[1], '2人目') === '菅谷' && kv(r1[1], '2人目の理由') === '研修'
+     && kv(r1[2], '陸運局') === '野田' && kv(r1[2], 'R') === 2 && kv(r1[2], '時間帯') === 'PM');
+  ok('一発合格', rowsOf('s2').length === 1 && kv(rowsOf('s2')[0], '結果') === '一発合格');
+  ok('再検合格（その場で直した）と落ちた所', kv(rowsOf('s3')[0], '結果') === '再検合格（その場で直した）' && kv(rowsOf('s3')[0], '落ちた理由') === 'ブーツ');
+  ok('🔴 マスター入力の合格の行と同じ日の合格は1行にする', rowsOf('s4').length === 1, rowsOf('s4').length);
+  ok('まだ行っていない予定・車検でない入庫は出ない', rowsOf('s5').length === 0 && rowsOf('s6').length === 0);
+  ok('🔴🔴 名前（下の名前）・電話・ナンバーは出ない', !/一郎|090-1111|12-34/.test(K.csv));
+  ok('数（行・台・不合格）', K.count.行 === 6 && K.count.台 === 4 && K.count.不合格 === 2, K.count);
+  ok('辞書に全部の列が載っている', KH.every((h) => K.dict.indexOf('| ' + h + ' |') >= 0));
+  const SRV2 = fs.readFileSync(path.join(process.cwd(), '..', '..', '_サーバー', 'functions', 'analytics.js'), 'utf8');
+  ok('🔴 サーバーが2枚目を置く（latest と月末）', /pitAnalyticsShakenTable/.test(SRV2) && /latest\/\$\{K\.name\}\.csv/.test(SRV2) && /monthly\/\$\{J\.month\}\/\$\{K\.name\}\.csv/.test(SRV2));
+}
+
 console.log('\n─────────────────────────────');
 console.log((fail ? '⚠ ' : '🎉 ') + pass + ' OK / ' + fail + ' NG');
 process.exit(fail ? 1 : 0);
