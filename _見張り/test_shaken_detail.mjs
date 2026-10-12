@@ -165,12 +165,12 @@ ok('再検にしても陸運局とRは残す（入れ直させない）', !!re.�
 /* ===== ⑦ v1.127.0 カード詳細はフルネーム／それ以外は通称＆苗字 ===== */
 const namae = await p.evaluate(async () => {
   /* 名簿を差し替えて「本名・呼び名・姓」がある人を作る */
-  const real = { id:'m1', name:'ゆうた', realName:'小林 雄太', dispName:'ゆうた', lastName:'小林', aliases:['小林 雄太','ゆうた'] };
+  const real = { id:'m1', name:'ゆうた', realName:'小林 裕太', dispName:'ゆうた', lastName:'小林', aliases:['小林 裕太','ゆうた'] };
   const noNick = { id:'m2', name:'山田 太郎', realName:'山田 太郎', dispName:'', lastName:'山田', aliases:['山田 太郎'] };
   const prev = window.pitStaffAny;
   window.pitStaffAny = (n) => {
     const k = String(n||'').replace(/\s/g,'');
-    if (['小林雄太','ゆうた'].includes(k)) return real;
+    if (['小林裕太','ゆうた'].includes(k)) return real;
     if (['山田太郎','山田'].includes(k)) return noNick;
     return null;
   };
@@ -212,15 +212,15 @@ const namae = await p.evaluate(async () => {
   return out;
 });
 console.log('\n■ 担当者の名前の出し方（v1.127.0）');
-ok('🔴 フルネーム＝本名が出る',                    namae.フル_呼び名あり === '小林 雄太', namae);
+ok('🔴 フルネーム＝本名が出る',                    namae.フル_呼び名あり === '小林 裕太', namae);
 ok('🔴 通称＆苗字＝呼び名があれば呼び名',          namae.通称_呼び名あり === 'ゆうた', namae);
 ok('呼び名が無ければ姓',                          namae.通称_呼び名なし === '山田', namae);
 ok('名簿にいない人はフルはそのまま',              namae.フル_名簿にない === '外部 次郎', namae);
 ok('名簿にいない人の通称＝苗字',                  namae.通称_名簿にない === '外部', namae);
 ok('自社は「コバモ」',                            namae.通称_自社 === 'コバモ', namae);
 ok('紙（表紙印刷）も同じ物差しを通る',            namae.紙も同じ物差し === 'ゆうた', namae);
-ok('🔴 カード詳細はフルネーム',                    /小林 雄太/.test(namae.カード詳細) && !/：ゆうた/.test(namae.カード詳細), namae.カード詳細);
-ok('🔴 再検の履歴もフルネーム',                    /小林 雄太/.test(namae.再検の行), namae.再検の行);
+ok('🔴 カード詳細はフルネーム',                    /小林 裕太/.test(namae.カード詳細) && !/：ゆうた/.test(namae.カード詳細), namae.カード詳細);
+ok('🔴 再検の履歴もフルネーム',                    /小林 裕太/.test(namae.再検の行), namae.再検の行);
 ok('🔴 車検予定のチップは通称＆苗字',              namae.車検予定のチップ === 'ゆうた', namae);
 ok('🔴 MHS・LINEが使う物差しも通称＆苗字',         namae.物差しの戻り === 'ゆうた', namae);
 console.log('\n■ 陸運局の省略（v1.129.0）');

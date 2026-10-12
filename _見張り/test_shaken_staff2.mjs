@@ -139,7 +139,7 @@ console.log('\n── ⑨ 画面の部品 ──');
   ok('閉じた状態で「＋ 担当者を追加」', /＋ 担当者を追加/.test(h) && !/class="shk-s2 on"/.test(h), h);
   const h2 = box.pitShkStaff2Html({ id: 'cv-sh', names: ['鈴木'], staff2: '退職者', note: '帰りのみ' });
   ok('2人目が入っていれば開いた状態・名簿にいない人も選ばれたまま', /class="shk-s2 on"/.test(h2) && /value="退職者" selected/.test(h2) && /value="帰りのみ"/.test(h2), h2);
-  ok('入力例に実在の人の名前を入れない', !/placeholder="[^"]*(小林|ゆうた|雄太)/.test(h));
+  ok('入力例に実在の人の名前を入れない', !/placeholder="[^"]*(小林|ゆうた|雄太|裕太)/.test(h));
   const CV = JS('card-view.js'), SH = JS('shaken.js'), MP = JS('master-pit.js');
   ok('予約詳細：記録する／不合格を直す／合格を直す の3つの窓に部品', (CV.match(/_cvS2Html\(/g) || []).length >= 4, (CV.match(/_cvS2Html\(/g) || []).length);
   ok('予約詳細：3つの保存で2人目を渡す', (CV.match(/staff2: *(_s2|s2)\.staff2/g) || []).length >= 3, (CV.match(/staff2: *(_s2|s2)\.staff2/g) || []).length);
