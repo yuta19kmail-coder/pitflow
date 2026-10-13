@@ -35,34 +35,34 @@ await p.waitForTimeout(600);
 console.log('\n── ① 返車カレンダーの中で 13日 → 16日（行き先は同じ） ──');
 {
   const r = await p.evaluate(() => {
-    const c = { id:'L1', status:'workDone', boardId:'default', dropType:'drop', reserveDate:'2026-10-08',
-                returnStage:'returnWait', returnDate:'2026-10-13', returnDateFinal:'2026-10-13', returnTime:'17:00', log:[] };
-    const res = pitReturnSetDateTime(c, '2026-10-16', undefined);
+    const c = { id:'L1', status:'workDone', boardId:'default', dropType:'drop', reserveDate:'2027-01-08',
+                returnStage:'returnWait', returnDate:'2027-01-13', returnDateFinal:'2027-01-13', returnTime:'17:00', log:[] };
+    const res = pitReturnSetDateTime(c, '2027-01-16', undefined);
     pitReturnCommit(c, res, { silent: true });
     return { moved: res.moved, log: c.log.map(l => l.label) };
   });
   ok('行き先は変わっていない（カレンダーのまま）', r.moved === false, r);
   ok('それでもフローに1行残る', r.log.length === 1, r.log);
-  ok('「13 17:00 → 16 17:00」と読める', /2026-10-13 17:00 → 2026-10-16 17:00/.test(r.log[0] || ''), r.log);
+  ok('「13 17:00 → 16 17:00」と読める', /2027-01-13 17:00 → 2027-01-16 17:00/.test(r.log[0] || ''), r.log);
 }
 
 console.log('\n── ② 時間だけ変える ──');
 {
   const r = await p.evaluate(() => {
-    const c = { id:'L2', status:'workDone', boardId:'default', dropType:'drop', reserveDate:'2026-10-08',
-                returnStage:'returnWait', returnDate:'2026-10-13', returnDateFinal:'2026-10-13', returnTime:'17:00', log:[] };
+    const c = { id:'L2', status:'workDone', boardId:'default', dropType:'drop', reserveDate:'2027-01-08',
+                returnStage:'returnWait', returnDate:'2027-01-13', returnDateFinal:'2027-01-13', returnTime:'17:00', log:[] };
     pitReturnCommit(c, pitReturnSetDateTime(c, undefined, '15:00'), { silent: true });
     return c.log.map(l => l.label);
   });
-  ok('時間だけでも残る', r.length === 1 && /17:00 → 2026-10-13 15:00/.test(r[0]), r);
+  ok('時間だけでも残る', r.length === 1 && /17:00 → 2027-01-13 15:00/.test(r[0]), r);
 }
 
 console.log('\n── ③ 何も変えない（同じ日・同じ時間を入れ直す） ──');
 {
   const r = await p.evaluate(() => {
-    const c = { id:'L3', status:'workDone', boardId:'default', dropType:'drop', reserveDate:'2026-10-08',
-                returnStage:'returnWait', returnDate:'2026-10-13', returnDateFinal:'2026-10-13', returnTime:'17:00', log:[] };
-    pitReturnCommit(c, pitReturnSetDateTime(c, '2026-10-13', '17:00'), { silent: true });
+    const c = { id:'L3', status:'workDone', boardId:'default', dropType:'drop', reserveDate:'2027-01-08',
+                returnStage:'returnWait', returnDate:'2027-01-13', returnDateFinal:'2027-01-13', returnTime:'17:00', log:[] };
+    pitReturnCommit(c, pitReturnSetDateTime(c, '2027-01-13', '17:00'), { silent: true });
     return c.log.length;
   });
   ok('何も変わっていなければ書かない', r === 0, r);
@@ -117,6 +117,57 @@ console.log('\n── ⑦ 実績カード：確定返車日 16 → 13（実績�
   });
   ok('確定返車日は13日になった', r.ret === '2026-10-13' && r.done === '2026-10-13', r);
   ok('フローに「16 → 13」が残る', r.log.some(t => /2026-10-16 → 2026-10-13/.test(t)), r.log);
+}
+
+console.log('\n── ⑧ v2.183.0 予約カレンダーのドラッグ（週の日時）＝入庫の予定が残る ──');
+{
+  const r = await p.evaluate(() => {
+    const c = { id:'I1', status:'reserved', boardId:'default', dropType:'drop', reserveDate:'2026-10-20', reserveTime:'10:00', log:[] };
+    state.cards.push(c);
+    window.pitIntakeGuard = null;   /* 休みの日の確認窓を出さない（試験用） */
+    applyCardDrop('I1', 'reserveDateTime', '2026-10-21|13:00');
+    return c.log.map(l => l.label);
+  });
+  ok('「入庫の予定を 2026-10-20 10:00 → 2026-10-21 13:00 に変更」', r.some(t => /入庫の予定を 2026-10-20 10:00 → 2026-10-21 13:00 に変更/.test(t)), r);
+}
+
+console.log('\n── ⑨ 状態のドラッグなど、入庫の日時が動かない時は書かない ──');
+{
+  const r = await p.evaluate(() => {
+    const c = { id:'I2', status:'check', boardId:'default', dropType:'drop', reserveDate:'2026-10-20', reserveTime:'10:00', log:[] };
+    state.cards.push(c);
+    applyCardDrop('I2', 'bay', 'b1');
+    return c.log.filter(l => /入庫の予定/.test(l.label || '')).length;
+  });
+  ok('入庫の予定の行は出ない', r === 0, r);
+}
+
+console.log('\n── ⑩ 代車の返却を確定＝フローに残る ──');
+{
+  const r = await p.evaluate(async () => {
+    const c = { id:'K1', status:'returned', boardId:'default', reserveDate:'2026-10-08', loanerId:'L1', loanerFrom:'2026-10-08', loanerTo:'2026-10-16', log:[] };
+    state.cards.push(c);
+    state.loanerAssigns = state.loanerAssigns || [];
+    state.loanerAssigns.push({ id:'A9', cardId:'K1', loanerId:'L1', fromDate:'2026-10-08', toDate:'2026-10-16' });
+    document.body.insertAdjacentHTML('beforeend', '<input type="date" id="lo-ret-date" value="2026-10-13">');
+    const keep = window.pitAsk; window.pitAsk = () => Promise.resolve(true);
+    loReturnConfirm('A9');
+    await new Promise(r => setTimeout(r, 50));
+    window.pitAsk = keep;
+    return { log: c.log.map(l => l.label), to: c.loanerTo };
+  });
+  ok('返却日と縮めた返却予定が残る', r.log.some(t => /代車の返却を確定した　返却日 2026-10-13／返却予定 2026-10-16 → 2026-10-13/.test(t)), r);
+}
+
+console.log('\n── ⑪ 共通の入口：同じ値なら書かない ──');
+{
+  const r = await p.evaluate(() => {
+    const c = { id:'X1', log:[] };
+    const a = pitLogDateChange(c, '売上日', '2026-10-12', '2026-10-12');
+    const b = pitLogDateChange(c, '売上日', '', '2026-10-12');
+    return { a, b, log: c.log.map(l => l.label) };
+  });
+  ok('同じ＝書かない／違う＝書く', r.a === false && r.b === true && r.log[0] === '売上日を 未定 → 2026-10-12 に変更', r);
 }
 
 ok('画面のエラーなし', errs.length === 0, errs);

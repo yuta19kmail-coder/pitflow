@@ -1,0 +1,29 @@
+<!doctype html><meta charset="utf-8"><body>
+<script>window.state={workTypes:[{id:'shaken',label:'車検'}],loanerConditions:[],loaners:[],staff:[]};</script>
+<script src="js/state.js"></script>
+<script src="js/cover-print.js"></script>
+<script>
+window.__make=function(card){
+  return fetch('images/様式_お客様情報.svg').then(function(r){return r.text();}).then(function(svg){
+    var html=window.pitBuildCoverDoc(card,{formSvg:svg,noPrint:true});
+    var f=document.getElementById('fr');
+    if(f) f.remove();
+    f=document.createElement('iframe');
+    f.id='fr'; f.style.cssText='width:1200px;height:850px;border:0';
+    document.body.appendChild(f);
+    f.contentDocument.open(); f.contentDocument.write(html); f.contentDocument.close();
+    return new Promise(function(res){ setTimeout(res,450); });
+  });
+};
+window.__memo=function(){
+  var d=document.getElementById('fr').contentDocument;
+  var g=d.getElementById('pcv-memo');
+  if(!g) return null;
+  return Array.from(g.querySelectorAll('text')).map(function(t){
+    var b=t.getBBox();
+    return { s:t.textContent, x:+t.getAttribute('x'), fs:+t.getAttribute('font-size'),
+             y:+t.getAttribute('y'), right:b.x+b.width, w:b.width };
+  });
+};
+window.__ready=1;
+</script></body>
