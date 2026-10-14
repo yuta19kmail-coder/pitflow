@@ -170,6 +170,54 @@ console.log('\n── ⑪ 共通の入口：同じ値なら書かない ──')
   ok('同じ＝書かない／違う＝書く', r.a === false && r.b === true && r.log[0] === '売上日を 未定 → 2026-10-12 に変更', r);
 }
 
+console.log('\n── ⑫ v2.184.0 古い記録の読めない字を、描く時だけ言葉にする（本番に残っていた実物） ──');
+{
+  const r = await p.evaluate(() => {
+    const A = '編集：車検の日取り {"mode":"manual","slots":{},"c → {"slots":{},"cutBefore":"","mo';
+    const B = '編集：車検の日取り・slots {"2026-09-01":["am","pm"]} → {"2026-09-01":["am","pm"],"202';
+    const C = '編集：整備チェック・チェック {"0":true,"1":true} → {"0":true,"1":true,"oil":true,';
+    const D = '編集：連絡先 3件 → 3件';
+    const E = '編集：連絡先 1件 → 1件（中身を変更）';
+    const F = '株式会社 X 様 / スマートフォーツー / 車検の日取り {"mode":"manual","slots":{},"c → {"slots":{},"cutBefore":"","mo、連絡先 3件 → 3件';
+    return { gone: [pitLogGone(A), pitLogGone(B), pitLogGone(D)],
+             B: pitLogReword(B), C: pitLogReword(C), D: pitLogReword(D), E: pitLogReword(E), F: pitLogReword(F) };
+  });
+  ok('丸ごとの行（並び順だけ）は隠す・本当に変わった行と連絡先は隠さない', r.gone[0] === true && r.gone[1] === false && r.gone[2] === false, r.gone);
+  ok('「車検の日取り・行ける日 を変更」', r.B === '編集：車検の日取り・行ける日 を変更', r.B);
+  ok('「整備チェック・チェック を変更」', r.C === '編集：整備チェック・チェック を変更', r.C);
+  ok('連絡先 3件 → 3件 は「変わったかは記録なし」', r.D === '編集：連絡先 3件（変わったかは記録なし）', r.D);
+  ok('新しい形（中身を変更）はそのまま', r.E === '編集：連絡先 1件 → 1件（中身を変更）', r.E);
+  ok('操作ログの中の一部：並び順だけの所は消え、連絡先は言い直す', r.F === '株式会社 X 様 / スマートフォーツー / 連絡先 3件（変わったかは記録なし）', r.F);
+}
+
+console.log('\n── ⑬ v2.184.0 これから書く行も {…} を出さない ──');
+{
+  const r = await p.evaluate(() => {
+    const a = { id:'D3', inspSchedule:{ mode:'manual', slots:{ '2026-09-01':['am','pm'] } }, maint:{ checks:{ '0':true, '1':true } } };
+    const b = { id:'D3', inspSchedule:{ mode:'manual', slots:{ '2026-09-01':['am','pm'], '2026-09-25':['am'] } }, maint:{ checks:{ '0':true, '1':true, oil:true } } };
+    return pitCardDiff(a, b).map(pitCardDiffText);
+  });
+  ok('車検の日取り・行ける日 9/1 午前・午後 → 9/1 午前・午後、9/25 午前', r.includes('車検の日取り・行ける日 9/1 午前・午後 → 9/1 午前・午後、9/25 午前'), r);
+  ok('整備チェック・チェック ✓ 2個 → ✓ 3個', r.includes('整備チェック・チェック ✓ 2個 → ✓ 3個'), r);
+  ok('{ が1つも無い', !r.some(t => /[{}]/.test(t)), r);
+}
+
+console.log('\n── ⑭ v2.184.0 隠した行があっても、✕ は正しい行を消す ──');
+{
+  const r = await p.evaluate(async () => {
+    const c = { id:'F1', status:'check', boardId:'default', reserveDate:'2027-01-08', log:[
+      { label:'編集：車検の日取り {"mode":"manual"} → {"mode":"manual"}', at: 1, staff:'A' },
+      { label:'手で足した記録', at: 2, staff:'A', manual:true },
+    ] };
+    state.cards.push(c);
+    openCard('F1');
+    await new Promise(r => setTimeout(r, 300));
+    const btn = [...document.querySelectorAll('.cv-fdel')].find(b => /pitFlowDel\('F1'/.test(b.getAttribute('onclick') || ''));
+    return btn ? btn.getAttribute('onclick') : null;
+  });
+  ok('✕ は元の並びの2番目（1）を指す', r === "pitFlowDel('F1',1)", r);
+}
+
 ok('画面のエラーなし', errs.length === 0, errs);
 console.log(`\n${pass} 通過 / ${fail} 失敗`);
 await b.close();
