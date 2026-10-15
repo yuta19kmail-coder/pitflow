@@ -10,6 +10,7 @@
      python -m http.server 8943      ← 別ウィンドウ
      node test_mhs_link.mjs                                                 */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -92,7 +93,7 @@ ${mhsFns}
 window.__render=function(c){ var s=_cfsMhsHtml(c); document.getElementById('out').innerHTML=s; if(window.icHydrate) icHydrate(document.getElementById('out')); return s; };
 window.__ready=1;
 <\/script>`;
-  fs.writeFileSync(path.join(dir, 'test-mhs.html'), page);
+  writePage('test-mhs.html', page);
 })();
 
 const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -104,7 +105,7 @@ const p = await b.newPage({ viewport: { width: 420, height: 900 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await p.goto('http://127.0.0.1:8943/test-mhs.html');
+await p.goto('http://127.0.0.1:8943/_tmp_mihari/test-mhs.html');
 await p.waitForFunction('window.__ready===1');
 
 const sched = (who, ds) => p.evaluate(([w, d]) => window.pitMhsSchedule(w, d), [who, ds]);
@@ -249,7 +250,7 @@ ok('mhs-pit.js は card-detail.js より後ろ', idx.indexOf('js/mhs-pit.js') > 
 /* ⚠ 版は上がっていくので数字は固定しない。3か所がそろっているかだけ見る。 */
 {
   const _m = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _t = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _t = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _a = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_m && _m === _t && _m === _a, [_m, _t, _a]);
 }
@@ -271,7 +272,7 @@ ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
 
 await html({ frontStaff: '小林 勇太', reserveDate: D1 });
 await p.waitForTimeout(120);
-await p.screenshot({ path: 'shot_mhs_link.png' });
+await p.screenshot({ path: SHOT('shot_mhs_link.png') });
 await b.close();
 console.log(`\n===== ${pass} OK / ${fail} NG =====`);
 process.exit(fail ? 1 : 0);

@@ -302,7 +302,7 @@ ok('🔴 画面がつまずいていない（赤いエラーが1つも出てい�
   const html = fs.readFileSync('index.html', 'utf8');
   const meta = (html.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   const login = (html.match(/class="login-ver">v([\d.]+)</) || [])[1] || '';
-  const ver = (html.match(/class="ver">v([\d.]+)</) || [])[1] || '';
+  const ver = (html.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] || '';
   ok('🔴 版が3か所そろっている', !!meta && meta === login && meta === ver, { meta, login, ver });
 }
 

@@ -369,7 +369,7 @@ console.log('\n── ソースの見張り ──');
         「ログイン画面・トップバー・app-version の3つがそろっているか」だけ見る（2026-08-05 の決めごと）。 */
   const vs = [ (ix.match(/app-version" content="([\d.]+)"/) || [])[1],
                (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-               (ix.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
   ok('cust-reg.js が読み込まれている', /js\/cust-reg\.js\?v=/.test(ix));
   ok('customers.js にキャッシュ番号が付いている', /js\/customers\.js\?v=\d+/.test(ix));

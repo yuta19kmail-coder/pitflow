@@ -48,7 +48,7 @@ console.log('\n── 🧭 置き方と物差し ──');
   /* 🔴 2026-09-17 版は決め打ちしない＝ app-version を読んで、画面の2か所とそろっているか */
   const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   const _lVer = (idx.match(/login-ver">v([\d.]+)</) || [])[1] || '';
-  const _tVer = (idx.match(/class="ver">v([\d.]+)</) || [])[1] || '';
+  const _tVer = (idx.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] || '';
   ok('版は 3か所ともそろっている（v' + _aVer + '）', !!_aVer && _aVer === _lVer && _aVer === _tVer, [_aVer, _lVer, _tVer]);
 }
 

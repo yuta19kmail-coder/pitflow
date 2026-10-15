@@ -132,7 +132,7 @@ console.log('\n── ソースの見張り ──');
   const ix = fs.readFileSync('index.html', 'utf8');
   const vs = [(ix.match(/app-version" content="([\d.]+)"/) || [])[1],
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-              (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
+              (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1]];
   const _num = x => String(x||'').split('.').map(Number);
   const _ge = (a, bb) => { const x=_num(a), y=_num(bb); for (let i=0;i<3;i++){ if ((x[i]||0)!==(y[i]||0)) return (x[i]||0)>(y[i]||0); } return true; };
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);

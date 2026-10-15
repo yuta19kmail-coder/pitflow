@@ -217,7 +217,7 @@ console.log('\n── ⑧ 各画面が reserveDate を直接見ていない ─�
   const ix = fs.readFileSync('index.html', 'utf8');
   const ver = (ix.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('版が3か所そろっている',
-     !!ver && ix.indexOf('<span class="ver">v' + ver + '</span>') >= 0
+     !!ver && new RegExp('<span class="ver"[^>]*>v' + ver.replace(/\./g, '\\.') + '</span>').test(ix)
            && ix.indexOf('<div class="login-ver">v' + ver + '</div>') >= 0, ver);
 }
 

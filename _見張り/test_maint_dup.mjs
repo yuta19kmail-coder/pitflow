@@ -206,8 +206,8 @@ console.log('── ④ ふつうの入庫の道が、全部この関門を通�
   ok('🔴 関門は maint-pit.js の1本（条件を写していない）',
      /w\.pitMaintIntakeGuard = function/.test(mp) &&
      !/pitCardMaint\(c\) && c\.status === 'reserved'/.test(td));
-  /* 🔴 status を 'check' にする所は3つだけ（当日ビュー・入庫中で保存・代車の入庫） */
-  const doors = ['today.js','card-detail.js','maint-pit.js'].filter(f => /status\s*=\s*'check'/.test(JS(f)));
+  /* 🔴 status を 'check' にする所は3つだけ（当日ビュー・入庫中で保存・代車の入庫）。v2.187.0 代車の入庫の中身は pit-share.js の pitMaintIntakePlan へ移った */
+  const doors = ['today.js','card-detail.js','pit-share.js'].filter(f => /status\s*=\s*'check'/.test(JS(f)));
   ok('🔴 点検待ちへ進める所は3か所のまま（増えていない）', doors.length === 3, doors);
 }
 

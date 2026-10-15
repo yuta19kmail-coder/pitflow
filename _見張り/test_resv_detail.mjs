@@ -714,7 +714,7 @@ console.log('\n── 版とキャッシュ番号 ──');
   const ix = fs.readFileSync('index.html', 'utf8');
   const vs = [(ix.match(/app-version" content="([\d.]+)"/) || [])[1],
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-              (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
+              (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1]];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
   /* 🔴 版は上がる一方なので、決め打ちで書かない（毎回テストが古くなるため）。
      **この節を書いた時の版（1.56.0）より下がっていないこと**だけを見る。 */

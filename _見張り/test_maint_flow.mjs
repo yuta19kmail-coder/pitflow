@@ -294,7 +294,8 @@ console.log('\n── ⑥⑦ 完TELを通った時 ──');
   /* 完TELの関門は1か所だけ＝ここに条件を書き写していない */
   const src = JS('intern-pit.js');
   ok('🔴 完TEL関門から1か所だけ呼んでいる',
-     (src.match(/if \(w\.pitMaintOnComplete\) w\.pitMaintOnComplete\(c\);/g) || []).length === 1);
+     /* v2.187.0 片付けは pit-share.js の pitMaintCompleteSpans 1本を、実績化の物差し（pitInternReturnPlan）から1か所だけ呼ぶ */
+     (src.match(/w\.pitMaintCompleteSpans\(c,/g) || []).length === 1);
   ok('関門の側に判断を書き写していない', !/groupId/.test(src));
 }
 

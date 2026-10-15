@@ -12,6 +12,7 @@
      python -m http.server 8950      ← 別ウィンドウ
      node test_time_views.mjs                                                */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -229,7 +230,7 @@ console.log('\n── ⑤ 当日ビュー：長い言葉は2段（見切れな�
 console.log('\n── ⑥ 画面のエラー ──');
 ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 
-await p.screenshot({ path: 'shot_time_views.png', fullPage: false });
+await p.screenshot({ path: SHOT('shot_time_views.png'), fullPage: false });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

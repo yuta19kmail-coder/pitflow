@@ -19,6 +19,7 @@
      python -m http.server 8957      ← 別ウィンドウ
      node test_search_layer.mjs                                              */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -125,13 +126,13 @@ console.log('\n── ⑥ 二度と落ちないように（配線チェック）
   ok('search.css の ?v= が上がっている', /css\/search\.css\?v=[6-9]|css\/search\.css\?v=\d\d/.test(idx));
   /* ⚠ 版は上がっていくので数字は固定しない。3か所がそろっているかだけ見る。 */
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _tVer = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 }
 
-await p.locator('#main').screenshot({ path: 'shot_search_layer.png' });
+await p.locator('#main').screenshot({ path: SHOT('shot_search_layer.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

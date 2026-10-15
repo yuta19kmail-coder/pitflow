@@ -9,6 +9,7 @@
      python -m http.server 8946      ← 別ウィンドウ
      node test_carname_place.mjs                                            */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -59,7 +60,7 @@ PitCarName.attach(document.querySelector('input[data-cn="maker2"]'), {
 });
 window.__ready=1;
 <\/script>`;
-  fs.writeFileSync(path.join(dir, 'test-carname-place.html'), page);
+  writePage('test-carname-place.html', page);
 })();
 
 const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -70,7 +71,7 @@ const b = await chromium.launch({ executablePath: cp });
 const p = await b.newPage({ viewport: { width: 1000, height: 760 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
-await p.goto('http://127.0.0.1:8946/test-carname-place.html');
+await p.goto('http://127.0.0.1:8946/_tmp_mihari/test-carname-place.html');
 await p.waitForFunction('window.__ready===1');
 
 /* ▼を押して開く → 入力欄と候補の箱の座標を返す */

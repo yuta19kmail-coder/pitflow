@@ -18,6 +18,7 @@
      python3 -m http.server 8996      ← 別ウィンドウ
      node test_disp3.mjs                                                 */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -230,7 +231,7 @@ console.log('\n── 🧭 まわりが壊れていないか ──');
   ok('見本データで各ビューを開いてもエラーなし', errs.length === 0, errs.slice(0,3).join(' | '));
 }
 
-await p.screenshot({ path:'shot_disp3.png' });
+await p.screenshot({ path: SHOT('shot_disp3.png') });
 await b.close();
 console.log('\n合計：' + pass + ' OK / ' + fail + ' NG');
 process.exit(fail ? 1 : 0);

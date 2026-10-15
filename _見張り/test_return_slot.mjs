@@ -298,7 +298,7 @@ console.log('\n── ⑩ ソースの見張り（写しを作っていないか
   ok('return-slot.js を読み込んでいる', /js\/return-slot\.js\?v=\d+/.test(ix));
   const vs = [(ix.match(/app-version" content="([\d.]+)"/) || [])[1],
               (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-              (ix.match(/class="ver">v([\d.]+)</) || [])[1]];
+              (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1]];
   const _num = x => String(x || '').split('.').map(Number);
   const _ge = (a, bb) => { const x = _num(a), y = _num(bb); for (let i = 0; i < 3; i++) { if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); } return true; };
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);

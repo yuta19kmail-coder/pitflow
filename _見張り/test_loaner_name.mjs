@@ -12,6 +12,7 @@
      python -m http.server 8958      ← 別ウィンドウ
      node test_loaner_name.mjs                                               */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -122,13 +123,13 @@ console.log('\n── ⑥ 呼び名も「車種（番号）」になっている
   const idx = fs.readFileSync('index.html', 'utf8');
   /* ⚠ 版は上がっていくので数字は固定しない。3か所がそろっているかだけ見る。 */
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _tVer = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 }
 
-await p.locator('#main').screenshot({ path: 'shot_loaner_name.png' });
+await p.locator('#main').screenshot({ path: SHOT('shot_loaner_name.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

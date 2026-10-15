@@ -9,6 +9,7 @@
      node test_save_menu.mjs
    ⚠ 書き出す test-save.html / _save-part.js は確認用。本番には含めない（.gitignore 済み）。 */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -44,7 +45,7 @@ import path from 'path';
   const vnEnd  = vSrc.indexOf('window.pitOpenNextReserveFrom = pitOpenNextReserveFrom;');
   if (vbFrom < 0 || vbTo < 0 || vnFrom < 0 || vnEnd < 0) throw new Error('views.js から「まっさらな1枚」と「この車でもう1件」を切り出せません（構成が変わった？）');
   const vPart = vSrc.slice(vbFrom, vbTo) + '\n' + vSrc.slice(vnFrom, vnEnd + 'window.pitOpenNextReserveFrom = pitOpenNextReserveFrom;'.length);
-  fs.writeFileSync(path.join(dir,'_save-part.js'),
+  writeTmp('_save-part.js',
     'let _cardBodyId = "md-body";\nlet _cardCheckOn = false;\n'
     + missSrc + '\n' + src.slice(gFrom,gTo) + '\n' + src.slice(from,to) + '\n' + vPart);
 
@@ -98,9 +99,9 @@ window.pitGenResNo=function(){ window.__resNoSeq++; return 'K0000'+window.__resN
 window.pitCurrentStaffName=function(){ return ''; };
 window.__next=function(){ return state.cards[1]; };
 </script>
-<script src="_save-part.js"></script>
+<script src="_tmp_mihari/_save-part.js"></script>
 <script>window.__ready=1;</script></body>`;
-  fs.writeFileSync(path.join(dir,'test-save.html'), page);
+  writePage('test-save.html', page);
 })();
 
 const cp=chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -113,7 +114,7 @@ const b=await chromium.launch({executablePath:cp});
 const p=await b.newPage({viewport:{width:1280,height:400}});
 const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 p.on('console',m=>{ if(m.type()==='error'&&!/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await p.goto('http://127.0.0.1:8940/test-save.html'); await p.waitForFunction('window.__ready===1');
+await p.goto('http://127.0.0.1:8940/_tmp_mihari/test-save.html'); await p.waitForFunction('window.__ready===1');
 
 console.log('\n── ① ボタンの並び（右から 印刷して保存／その他保存／入力チェック） ──');
 const btns=await p.evaluate(()=>Array.from(document.querySelectorAll('.view-header > button, .view-header > .vh-menu > button')).map(x=>x.textContent.replace(/\s+/g,' ').trim()));
@@ -322,7 +323,7 @@ ok('選んだらメニューが閉じる', await p.evaluate(()=>getComputedStyle
 ok('JSエラー0', errs.length===0, errs.slice(0,3));
 
 await p.click('#cs-menu-btn'); await p.waitForTimeout(150);
-await p.screenshot({path:'shot_save_menu.png'});
+await p.screenshot({ path: SHOT('shot_save_menu.png')});
 await b.close();
 console.log(`\n===== ${pass} OK / ${fail} NG =====`);
 process.exit(fail?1:0);

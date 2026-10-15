@@ -535,7 +535,7 @@ console.log('\n── ⑦ ソースの見張り ──');
   /* ⚠ 数字は上がり続けるので、**3か所が同じ**ことと **v2 以上**だけを見る */
   const _v = [ (idx.match(/app-version" content="([\d.]+)"/) || [])[1],
                (idx.match(/class="login-ver">v([\d.]+)</) || [])[1],
-               (idx.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (idx.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', !!_v[0] && _v[0] === _v[1] && _v[1] === _v[2], _v);
   ok('版が v2 以上', /^2\./.test(_v[0] || ''), _v[0]);
   ok('キャッシュ番号が付いている（quarter-fix.js）', /js\/quarter-fix\.js\?v=/.test(idx), '');

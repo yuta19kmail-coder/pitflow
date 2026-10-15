@@ -233,7 +233,7 @@ console.log('\n── 🧭 ⑥ 決めごと（ソースを見る） ──');
   const idx = fs.readFileSync('index.html', 'utf8');
   ok('🔴 index.html に `?v=` 付きで載っている', /js\/dup-find\.js\?v=\d+/.test(idx));
   const meta = (idx.match(/app-version" content="([\d.]+)"/)||[])[1];
-  const 画面 = (idx.match(/class="ver">v([\d.]+)</)||[])[1];
+  const 画面 = (idx.match(/class="ver"[^>]*>v([\d.]+)</)||[])[1];
   const ログ = (idx.match(/class="login-ver">v([\d.]+)</)||[])[1];
   ok('🔴 版が3か所そろっている', meta && meta === 画面 && meta === ログ, { meta, 画面, ログ });
 }

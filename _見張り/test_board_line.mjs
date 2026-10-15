@@ -14,6 +14,7 @@
      python -m http.server 8952      ← 別ウィンドウ
      node test_board_line.mjs                                                */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -473,7 +474,7 @@ console.log('\n── ⑨ 今までの操作が壊れていないこと ──')
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 }
 
-await p.locator('#kanban-cols-1').screenshot({ path: 'shot_board_line.png' });
+await p.locator('#kanban-cols-1').screenshot({ path: SHOT('shot_board_line.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

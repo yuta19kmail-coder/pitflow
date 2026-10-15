@@ -10,6 +10,7 @@
      python -m http.server 8945      ← 別ウィンドウ
      node test_carname.mjs                                                  */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -85,7 +86,7 @@ window.__mount=function(){
 window.__mount();
 window.__ready=1;
 <\/script>`;
-  fs.writeFileSync(path.join(dir, 'test-carname.html'), page);
+  writePage('test-carname.html', page);
 })();
 
 const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -98,7 +99,7 @@ const p = await b.newPage({ viewport: { width: 1000, height: 760 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await p.goto('http://127.0.0.1:8945/test-carname.html');
+await p.goto('http://127.0.0.1:8945/_tmp_mihari/test-carname.html');
 await p.waitForFunction('window.__ready===1');
 
 const MK = 'input[data-cn="maker"]', CR = 'input[data-cn="car"]';
@@ -261,7 +262,7 @@ ok('carname-pit.js は card-detail.js より後ろ', idx.indexOf('js/carname-pit
 /* ⚠ 版は上がっていくので数字は固定しない（v1.23.0 決め打ちだと毎回のリリースで落ちる）。
    「ログイン画面の版・トップバーの版・meta app-version の3つがそろっているか」だけ見る。 */
 const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+const _tVer = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
 const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
 ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
 ok('card-detail.js のメーカー欄に data-cn="maker" がある', /data-cn=\\?"maker\\?"/.test(cd));
@@ -273,7 +274,7 @@ ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
 
 await p.evaluate(() => { window.card.boardId = null; document.querySelector('input[data-cn="maker"]').value = ''; window.card.maker = ''; });
 await arrow(MK); await p.waitForTimeout(150);
-await p.screenshot({ path: 'shot_carname.png' });
+await p.screenshot({ path: SHOT('shot_carname.png') });
 await b.close();
 console.log(`\n===== ${pass} OK / ${fail} NG =====`);
 process.exit(fail ? 1 : 0);

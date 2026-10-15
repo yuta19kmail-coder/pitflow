@@ -8,6 +8,7 @@
      python -m http.server 8947      ← 別ウィンドウ
      node test_wc_sort.mjs                                                  */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -39,7 +40,7 @@ WorkContent.mountSettings();
 window.__cfg=function(){ return state.settings.workContent; };
 window.__ready=1;
 <\/script>`;
-  fs.writeFileSync(path.join(dir, 'test-wc-sort.html'), page);
+  writePage('test-wc-sort.html', page);
 })();
 
 const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -51,7 +52,7 @@ const b = await chromium.launch({ executablePath: cp });
 const p = await b.newPage({ viewport: { width: 1000, height: 1900 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
-await p.goto('http://127.0.0.1:8947/test-wc-sort.html');
+await p.goto('http://127.0.0.1:8947/_tmp_mihari/test-wc-sort.html');
 await p.waitForFunction('window.__ready===1');
 
 const parts = () => p.evaluate(() => window.__cfg().parts.slice());
@@ -232,7 +233,7 @@ ok('work-content.css に touch-action:none がある（タブレットでスク�
 ok('×ボタンだけは今までどおり押せる', /\.wc-s-chip button\{[^}]*touch-action:\s*auto/.test(css));
 {
   const _m = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _t = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _t = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _a = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_m && _m === _t && _m === _a, [_m, _t, _a]);
 }

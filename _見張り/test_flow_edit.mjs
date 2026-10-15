@@ -12,6 +12,7 @@
      python -m http.server 8955      ← 別ウィンドウ
      node test_flow_edit.mjs                                                 */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -276,7 +277,7 @@ console.log('\n── ⑤ 二度と落ちないように（配線チェック）
   /* ⚠ 版は上がっていくので数字は固定しない（決め打ちだと毎回のリリースで落ちる）。
      「ログイン画面の版・トップバーの版・meta app-version の3つがそろっているか」だけ見る。 */
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _tVer = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
@@ -313,7 +314,7 @@ await p.evaluate(id => window.openCardEditForm(id), CID);
 await p.waitForTimeout(450);
 await p.evaluate(() => switchCardTab('flow'));
 await p.waitForTimeout(400);
-await p.locator('#modal-detail').screenshot({ path: 'shot_flow_edit.png' });
+await p.locator('#modal-detail').screenshot({ path: SHOT('shot_flow_edit.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

@@ -13,6 +13,7 @@
      python -m http.server 8953      ← 別ウィンドウ
      node test_myonly.mjs                                                    */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -167,7 +168,7 @@ console.log('\n── ⑦ 今までの操作が壊れていないこと ──')
 
 await p.evaluate(() => document.querySelector('#view-course1 .kb-myonly').click());
 await p.waitForTimeout(400);
-await p.locator('#view-course1').screenshot({ path: 'shot_myonly.png' });
+await p.locator('#view-course1').screenshot({ path: SHOT('shot_myonly.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

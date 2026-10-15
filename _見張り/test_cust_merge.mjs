@@ -316,7 +316,7 @@ console.log('\n── 🧭 ⑦ 決めごと ──');
   const idx = fs.readFileSync('index.html', 'utf8');
   ok('🔴 index.html に `?v=` 付きで載っている', /js\/cust-merge\.js\?v=\d+/.test(idx));
   const meta = (idx.match(/app-version" content="([\d.]+)"/)||[])[1];
-  const 画面 = (idx.match(/class="ver">v([\d.]+)</)||[])[1];
+  const 画面 = (idx.match(/class="ver"[^>]*>v([\d.]+)</)||[])[1];
   const ログイン = (idx.match(/class="login-ver">v([\d.]+)</)||[])[1];
   ok('🔴 版が3か所そろっている', meta && meta === 画面 && meta === ログイン, { meta, 画面, ログイン });
   ['PF-6008','PF-6009','PF-6010'].forEach(function(c){

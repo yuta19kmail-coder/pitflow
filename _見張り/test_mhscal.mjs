@@ -17,6 +17,7 @@
      python -m http.server 8964      ← 別ウィンドウ
      node test_mhscal.mjs                                                  */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -63,7 +64,7 @@ window.__pushError  =function(){ if(!window.__sub) return false; window.__sub.ng
 <\/script>
 <script src="js/cal-pit.js"><\/script>
 <script>window.__ready=1;<\/script>`;
-  fs.writeFileSync(path.join(dir, 'test-mhscal.html'), page);
+  writePage('test-mhscal.html', page);
 })();
 
 /* ===== ① 配る側（MHS）が約束を守っているか＝ソースを直接見張る ===== */
@@ -116,7 +117,7 @@ const p = await ctx.newPage();
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
 p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await p.goto('http://127.0.0.1:8964/test-mhscal.html');
+await p.goto('http://127.0.0.1:8964/_tmp_mihari/test-mhscal.html');
 await p.evaluate(() => localStorage.clear());
 await p.reload();
 await p.waitForFunction('window.__ready===1');
@@ -300,6 +301,6 @@ console.log('\n── ⑭ JSエラー ──');
 ok('ページのJSエラーなし', errs.length === 0, errs.slice(0, 4));
 
 await b.close();
-try { fs.unlinkSync(path.join(dir, 'test-mhscal.html')); } catch (e) {}
+try { fs.unlinkSync(path.join(TMPDIR, 'test-mhscal.html')); } catch (e) {}
 console.log('\n' + pass + ' OK / ' + fail + ' NG\n');
 process.exit(fail ? 1 : 0);

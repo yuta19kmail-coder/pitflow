@@ -157,7 +157,7 @@ console.log('\n── 同じ死んだ変数を見ていた他の3か所も直っ
   const ix = fs.readFileSync('index.html', 'utf8');
   const vs = [ (ix.match(/app-version" content="([\d.]+)"/) || [])[1],
                (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-               (ix.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
   ok('直した4本にキャッシュ番号が付いている',
      /flow-pit\.js\?v=\d+/.test(ix) && /card-tabs\.js\?v=\d+/.test(ix) && /card-view\.js\?v=\d+/.test(ix) && /shaken\.js\?v=\d+/.test(ix));

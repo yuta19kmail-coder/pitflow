@@ -285,7 +285,7 @@ console.log('\n── ⑦ ソースの見張り ──');
      ここが見るのは **3か所がそろっていること** だけ。 */
   const ver = (ix.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('版が3か所そろっている',
-     !!ver && ix.indexOf('<span class="ver">v' + ver + '</span>') >= 0
+     !!ver && new RegExp('<span class="ver"[^>]*>v' + ver.replace(/\./g, '\\.') + '</span>').test(ix)
            && ix.indexOf('<div class="login-ver">v' + ver + '</div>') >= 0, ver);
   /* ⚠ 見張るのは**この回で直した2本**だけ。ほかのファイルの番号まで書くと、
      関係のない直しで落ちる（`errcode-pit.js` の番号を書いていて実際に落ちた）。 */

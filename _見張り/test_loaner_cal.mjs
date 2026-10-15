@@ -13,6 +13,7 @@
      python -m http.server 8951      ← 別ウィンドウ
      node test_loaner_cal.mjs                                                */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -251,7 +252,7 @@ console.log('\n── ⑦ 今までの操作が壊れていないこと ──')
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 }
 
-await p.locator('#cfs-lg-card').screenshot({ path: 'shot_loaner_cal.png' });
+await p.locator('#cfs-lg-card').screenshot({ path: SHOT('shot_loaner_cal.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

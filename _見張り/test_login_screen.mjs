@@ -17,6 +17,7 @@
      python -m http.server 8963      ← 別ウィンドウ
      node test_login_screen.mjs                                              */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 
@@ -115,13 +116,13 @@ console.log('\n── ⑤ 配線チェック ──');
   ok('印を付けるのはサンプルモードの入口だけ',
      /function initSampleMode\(\)[\s\S]{0,300}classList\.add\('pl-sample'\)/.test(a));
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _tVer = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));
 }
 
-await p.locator('#pit-login .login-box').screenshot({ path: 'shot_login.png' });
+await p.locator('#pit-login .login-box').screenshot({ path: SHOT('shot_login.png') });
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();
 process.exit(fail ? 1 : 0);

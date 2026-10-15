@@ -173,7 +173,7 @@ console.log('\n── ⑦ 二度と落ちないように（配線チェック）
   /* ⚠ 版は上がっていくので数字は固定しない（決め打ちだと毎回のリリースで落ちる）。
      「ログイン画面の版・トップバーの版・meta app-version の3つがそろっているか」だけ見る。 */
   const _mVer = (idx.match(/<div class="login-ver">v([\d.]+)<\/div>/) || [])[1] || '';
-  const _tVer = (idx.match(/<span class="ver">v([\d.]+)<\/span>/) || [])[1] || '';
+  const _tVer = (idx.match(/<span class="ver"[^>]*>v([\d.]+)<\/span>/) || [])[1] || '';
   const _aVer = (idx.match(/name="app-version" content="([\d.]+)"/) || [])[1] || '';
   ok('画面の版2か所と app-version がそろっている', !!_mVer && _mVer === _tVer && _mVer === _aVer, [_mVer, _tVer, _aVer]);
   ok('JSエラー0', errs.length === 0, errs.slice(0, 5));

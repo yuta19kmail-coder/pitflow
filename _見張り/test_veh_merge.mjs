@@ -260,7 +260,7 @@ console.log('\n── 🧭 ⑦ 決めごとを守っているか（ソースを�
   ok('🔴 index.html に `?v=` 付きで載っている', /js\/veh-merge\.js\?v=\d+/.test(idx));
   const vers = [...idx.matchAll(/v?(\d+\.\d+\.\d+)/g)].map(m => m[1]);
   const meta = (idx.match(/app-version" content="([\d.]+)"/) || [])[1];
-  const 画面 = (idx.match(/class="ver">v([\d.]+)</) || [])[1];
+  const 画面 = (idx.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1];
   const ログイン = (idx.match(/class="login-ver">v([\d.]+)</) || [])[1];
   ok('🔴 版が3か所そろっている（メタ・画面・ログイン）', meta && meta === 画面 && meta === ログイン, { meta, 画面, ログイン });
 

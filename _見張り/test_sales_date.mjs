@@ -647,7 +647,7 @@ console.log('\n── ⑧ ソースの見張り（写しを作っていないか
      （数字を書くと、版を上げるたびに見張りも直すことになり、意味が薄れる）。 */
   const _v = [ (idx.match(/app-version" content="([\d.]+)"/) || [])[1],
                (idx.match(/class="login-ver">v([\d.]+)</) || [])[1],
-               (idx.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (idx.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', !!_v[0] && _v[0] === _v[1] && _v[1] === _v[2], _v);
   ok('版が v2 以上（v1 に戻っていない）', /^2\./.test(_v[0] || ''), _v[0]);
   ['js/sales-date.js', 'js/return-slot.js', 'js/return-popup.js', 'js/card-view.js',

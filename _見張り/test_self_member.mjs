@@ -17,6 +17,7 @@
      python -m http.server 8974      ← 別ウィンドウ
      node test_self_member.mjs                                            */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -89,9 +90,9 @@ window.pitToast = function(){};
 <script src="js/coreflow-note-board.js"><\/script>
 <script src="js/board-notes.js"><\/script>
 <script>window.__ready = 1;<\/script>`;
-fs.writeFileSync(path.join(dir, 'test-self-member.html'), page);
+writePage('test-self-member.html', page);
 
-await p.goto('http://127.0.0.1:8974/test-self-member.html');
+await p.goto('http://127.0.0.1:8974/_tmp_mihari/test-self-member.html');
 await p.waitForFunction(() => window.__ready === 1);
 const ev = (fn, arg) => p.evaluate(fn, arg);
 
@@ -158,5 +159,5 @@ console.log('\n── ⑥ JSエラー ──');
 ok('ページのJSエラーなし', errs.length === 0, errs.slice(0, 4));
 
 await b.close();
-if (!process.env.KEEP_HTML) { try { fs.unlinkSync(path.join(dir, 'test-self-member.html')); } catch (e) {} }
+if (!process.env.KEEP_HTML) { try { fs.unlinkSync(path.join(TMPDIR, 'test-self-member.html')); } catch (e) {} }
 console.log('\n' + pass + ' OK / ' + fail + ' NG\n');

@@ -232,7 +232,7 @@ console.log('\n── ソースの見張り ──');
   /* ⚠ 版の数字はテストに書かない（2026-08-05 の決めごと）。3か所がそろっているかだけ見る */
   const vs = [ (ix.match(/app-version" content="([\d.]+)"/) || [])[1],
                (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-               (ix.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
   ok('直した3本にキャッシュ番号が付いている', /customers\.js\?v=\d+/.test(ix) && /cust-reg\.js\?v=\d+/.test(ix) && /archive-pit\.js\?v=\d+/.test(ix));
 }

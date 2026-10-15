@@ -203,7 +203,7 @@ console.log('\n── ⑤ ソースの見張り ──');
   const idx = src('index.html');
   const _v = [ (idx.match(/app-version" content="([\d.]+)"/) || [])[1],
                (idx.match(/class="login-ver">v([\d.]+)</) || [])[1],
-               (idx.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (idx.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', !!_v[0] && _v[0] === _v[1] && _v[1] === _v[2], _v);
   ok('版が v2 以上', /^2\./.test(_v[0] || ''), _v[0]);
   ok('キャッシュ番号が付いている（dnd.js）', /js\/dnd\.js\?v=\d+/.test(idx), '');

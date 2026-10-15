@@ -99,12 +99,13 @@ console.log('\n── ④ ソースの見張り（判定を書き写していな
   ok('🔴 カードを作る時に、お客様欄を `pitFleetCardName` から取っている', /pitFleetCardName\(vehId\)/.test(mp));
   ok('🔴 カードを作る時に、課を `pitFleetBoardOf` から取っている', /pitFleetBoardOf\(vehId\)/.test(mp));
   ok('🔴 入庫の時にも課をそろえ直している（あとから紐づけることがある）',
-     /pitFleetLinkBoard\(c\.maintVehId\)/.test(mp));
+     /* v2.187.0 入庫の中身は pit-share.js の pitMaintIntakePlan（MHS も同じ物を借りる）。maint-pit.js はそれを通す */
+     /pitFleetLinkBoardIn\(v, ctx\.customers\)/.test(JS('pit-share.js')) && /pitMaintIntakePlan\(c, _intakeCtx/.test(mp));
   ok('🔴🔴 入庫でお客様欄の名前を上書きしていない（ゆうた報告の正体）',
-     !/c\.customer\s*=\s*own\.cust\.name/.test(mp),
+     !/c\.customer\s*=\s*own\.cust\.name/.test(mp) && !/patch\.customer\s*=/.test(JS('pit-share.js')),
      (mp.match(/.{0,40}c\.customer\s*=.{0,40}/) || [''])[0]);
   ok('🟢 紐づけた相手は控えたまま（顧客ビュー・履歴への道を切っていない）',
-     /c\.customerId\s*=\s*own\.cust\.id/.test(mp));
+     /patch\.customerId\s*=\s*own\.cust\.id/.test(JS('pit-share.js')));
   ok('🔴 `boardId:.default.` の決め打ちが残っていない', !/boardId:\s*'default',\s*bayId/.test(mp),
      (mp.match(/.{0,30}boardId:\s*'default',\s*bayId.{0,20}/) || [''])[0]);
   const cv = JS('card-view.js');

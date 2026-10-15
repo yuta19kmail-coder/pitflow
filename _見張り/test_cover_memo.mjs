@@ -9,6 +9,7 @@
      python -m http.server 8948      ← 別ウィンドウ
      node test_cover_memo.mjs                                                */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -46,7 +47,7 @@ window.__memo=function(){
 };
 window.__ready=1;
 <\/script></body>`;
-  fs.writeFileSync(path.join(dir, 'test-cover-memo.html'), page);
+  writePage('test-cover-memo.html', page);
 })();
 
 const cp = chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -57,7 +58,7 @@ const b = await chromium.launch({ executablePath: cp });
 const p = await b.newPage({ viewport: { width: 1300, height: 900 } });
 const errs = [];
 p.on('pageerror', e => errs.push(String(e)));
-await p.goto('http://127.0.0.1:8948/test-cover-memo.html');
+await p.goto('http://127.0.0.1:8948/_tmp_mihari/test-cover-memo.html');
 await p.waitForFunction('window.__ready===1');
 
 /* 様式SVGの罫線の実寸（この値からはみ出したらNG） */
@@ -160,7 +161,7 @@ ok('JSエラー0', errs.length === 0, errs.slice(0, 3));
 
 await p.evaluate(c => window.__make(c), CARD);
 await p.waitForTimeout(200);
-await p.locator('#fr').screenshot({ path: 'shot_cover_memo.png' });
+await p.locator('#fr').screenshot({ path: SHOT('shot_cover_memo.png') });
 
 console.log('\n===== ' + pass + ' OK / ' + fail + ' NG =====');
 await b.close();

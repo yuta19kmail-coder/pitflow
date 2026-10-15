@@ -400,7 +400,7 @@ console.log('\n── ソースの見張り ──');
   ok('予約画面も同じ配線を通している', /_bindPlateGuide\(root\.querySelector\('\.cf-plate'\)/.test(cd));
   const vs = [ (ix.match(/app-version" content="([\d.]+)"/) || [])[1],
                (ix.match(/login-ver">v([\d.]+)</) || [])[1],
-               (ix.match(/class="ver">v([\d.]+)</) || [])[1] ];
+               (ix.match(/class="ver"[^>]*>v([\d.]+)</) || [])[1] ];
   ok('版が3か所そろっている', vs.every(Boolean) && new Set(vs).size === 1, vs);
   ok('直した3本にキャッシュ番号が付いている', /customers\.js\?v=\d+/.test(ix) && /cust-reg\.js\?v=\d+/.test(ix) && /card-detail\.js\?v=\d+/.test(ix));
   const cr = fs.readFileSync('js/cust-reg.js', 'utf8');

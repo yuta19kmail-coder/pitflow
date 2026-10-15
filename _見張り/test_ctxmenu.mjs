@@ -9,6 +9,7 @@
      python -m http.server 8942      ← 別ウィンドウ
      node test_ctxmenu.mjs                                                  */
 import { chromium } from 'playwright';
+import { writePage, writeTmp, TMPDIR, TMPURL, SHOT } from './_tmp_out.mjs';   /* v2.186.1 書き出しはプロジェクトの外か git に入らない所へ */
 import { chromePath } from './_chrome.mjs';
 import fs from 'fs';
 import path from 'path';
@@ -76,7 +77,7 @@ window.__reset=()=>{ window.__acts=[]; window.__toasts=[]; window.__opened=[]; w
 <script src="js/board-line.js"><\/script>
 <script src="js/ctxmenu-pit.js"><\/script>
 <script>window.__ready=1;<\/script>`;
-  fs.writeFileSync(path.join(dir,'test-ctx.html'), page);
+  writePage('test-ctx.html', page);
 })();
 
 const cp=chromePath();   /* 🧪 2026-09-13 場所は _chrome.mjs 1本（Windows でも走る） */
@@ -86,7 +87,7 @@ const b=await chromium.launch({executablePath:cp});
 const p=await b.newPage({viewport:{width:1200,height:900}});
 const errs=[]; p.on('pageerror',e=>errs.push(String(e)));
 p.on('console',m=>{ if(m.type()==='error'&&!/Failed to load resource/.test(m.text())) errs.push(m.text()); });
-await p.goto('http://127.0.0.1:8942/test-ctx.html'); await p.waitForFunction('window.__ready===1');
+await p.goto('http://127.0.0.1:8942/_tmp_mihari/test-ctx.html'); await p.waitForFunction('window.__ready===1');
 
 const rc=async(sel,mod)=>{ await p.evaluate(()=>{window.pitCtxClose&&window.pitCtxClose(); window.__reset();}); await p.click(sel,{button:'right',modifiers:mod||[]}); await p.waitForTimeout(90); };
 const menu=()=>p.evaluate(()=>{ const m=document.getElementById('pit-ctx'); if(!m) return null;
@@ -237,7 +238,7 @@ ok('JSエラー0', errs.length===0, errs.slice(0,3));
 
 await p.evaluate(()=>{ const d=document.querySelector('[data-card-id="c1"]'); d.style.cssText=''; });
 await p.click('[data-card-id="c2"]',{button:'right'}); await p.waitForTimeout(120);
-await p.screenshot({path:'shot_ctxmenu.png'});
+await p.screenshot({ path: SHOT('shot_ctxmenu.png')});
 await b.close();
 console.log(`\n===== ${pass} OK / ${fail} NG =====`);
 process.exit(fail?1:0);
