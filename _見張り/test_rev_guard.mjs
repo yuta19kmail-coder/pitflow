@@ -29,6 +29,7 @@
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
+import { mergeSet } from './_merge_set.mjs';
 
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => { if (c) { pass++; console.log('  ✅ ' + n); }
@@ -84,7 +85,7 @@ function makeCloud(opt) {
   }
 
   const db = { batch: () => { const ops = []; return {
-      set: (ref, body) => ops.push({ t: 'set', p: ref.__path, body }),
+      set: (ref, body, opt) => ops.push({ t: 'set', p: ref.__path, body, opt }),
       delete: (ref) => ops.push({ t: 'del', p: ref.__path }),
       commit: () => {
         for (const o of ops) {
@@ -99,13 +100,13 @@ function makeCloud(opt) {
         ops.forEach(o => { const i = o.p.indexOf('/'), col = o.p.slice(0, i), id = o.p.slice(i + 1);
           if (o.t === 'del') { log.del.push(o.p); if (data[col]) data[col] = data[col].filter(x => x.id !== id); return; }
           log.set.push(o.p);
-          if (data[col]) { const j = data[col].findIndex(x => x.id === id); const n = Object.assign({ id }, o.body); if (j >= 0) data[col][j] = n; else data[col].push(n); }
+          if (data[col]) { const j = data[col].findIndex(x => x.id === id); const n = Object.assign({ id }, mergeSet(j >= 0 ? data[col][j] : null, o.body, o.opt)); if (j >= 0) data[col][j] = n; else data[col].push(n); }
         });
         return Promise.resolve();
       } }; } };
 
   return {
-    fb: { ready: true, currentUser: { uid: 'u1' }, db, company: () => ({ collection }), serverTimestamp: () => 0 },
+    fb: { ready: true, currentUser: { uid: 'u1' }, db, company: () => ({ collection }), serverTimestamp: () => 0, FieldValue: { delete: () => '@del' } },
     log, data,
     よそが直す: (col, id, patch) => { const o = (data[col] || []).find(x => x.id === id); if (!o) return false;
       Object.assign(o, patch); if (o.rev !== undefined) o.rev = (o.rev || 0) + 1;
@@ -268,7 +269,10 @@ console.log('\n── 🔴🔴 ⑦カードに書いているアプリが、全�
 {
   const 相手 = [
     { 名: 'MHS',     道: ['../../MHS/index.html'] },
-    { 名: 'CarFlow', 道: ['../../CarFlow/carflow/js/pit-embed.js'] }
+    { 名: 'CarFlow', 道: ['../../CarFlow/carflow/js/pit-embed.js'] },
+    /* 🔴 v2.185.0 4つ目の書き手＝見る所3つ（FlowDesk・FlowGo・ダッシュボード）の共通部品。
+       2026-10-14 の棚卸しで「メモも見張りも3つと言い切っていた」と分かった（実害は無し） */
+    { 名: 'FlowDesk 系（_shared）', 道: ['../../_shared/coreflow-desk-pit.js'] }
   ];
   let 見た = 0;
   相手.forEach(a => {
@@ -285,7 +289,7 @@ console.log('\n── 🔴🔴 ⑦カードに書いているアプリが、全�
   });
   /* PitFlow 自身は上の①〜⑥で見ている */
   const 素 = JS('db-pit.js');
-  ok('🔴 PitFlow 自身も版番号を足している', /body\.rev\s*=/.test(素));
+  ok('🔴 PitFlow 自身も版番号を足している', /body\.rev\s*=|(full|part)\.rev\s*=\s*rev\b/.test(素));   /* v2.185.0 変えた欄だけ（part）／丸ごと（full） */
   if (見た === 0) console.log('  （隣のアプリが1つも無かった＝この場所では横断の見張りは効いていない）');
 }
 

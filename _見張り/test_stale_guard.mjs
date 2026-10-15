@@ -23,6 +23,7 @@
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
+import { mergeSet } from './_merge_set.mjs';
 
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => {
@@ -91,18 +92,18 @@ function makeCloud(opt) {
   });
 
   const db = { batch: () => { const ops = []; return {
-      set: (ref, body) => ops.push({ t: 'set', p: ref.__path, body }),
+      set: (ref, body, opt) => ops.push({ t: 'set', p: ref.__path, body, opt }),
       delete: (ref) => ops.push({ t: 'del', p: ref.__path }),
       commit: () => { if (!通信できる) return Promise.reject(new Error('offline'));
         ops.forEach(o => { const i = o.p.indexOf('/'), col = o.p.slice(0, i), id = o.p.slice(i + 1);
           if (o.t === 'del') { log.del.push(o.p); if (data[col]) data[col] = data[col].filter(x => x.id !== id); return; }
           log.set.push(o.p);
-          if (data[col]) { const j = data[col].findIndex(x => x.id === id); const n = Object.assign({ id }, o.body); if (j >= 0) data[col][j] = n; else data[col].push(n); }
+          if (data[col]) { const j = data[col].findIndex(x => x.id === id); const n = Object.assign({ id }, mergeSet(j >= 0 ? data[col][j] : null, o.body, o.opt)); if (j >= 0) data[col][j] = n; else data[col].push(n); }
         });
         log.commits++; return Promise.resolve(); } }; } };
 
   return {
-    fb: { ready: true, currentUser: { uid: 'u1' }, db, company: () => ({ collection }), serverTimestamp: () => 0 },
+    fb: { ready: true, currentUser: { uid: 'u1' }, db, company: () => ({ collection }), serverTimestamp: () => 0, FieldValue: { delete: () => '@del' } },
     log, data, watchers,
     止める: (col) => dead.add(col),
     /* 見張りが落ちた（エラーで死んだ）を起こす */

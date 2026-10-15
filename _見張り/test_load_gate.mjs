@@ -31,6 +31,7 @@
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
+import { mergeSet } from './_merge_set.mjs';
 
 let pass = 0, fail = 0;
 const ok = (n, c, x = '') => {
@@ -91,14 +92,14 @@ function makeCloud(opt) {
     batch: () => {
       const ops = [];
       return {
-        set: (ref, body) => ops.push({ t: 'set', p: ref.__path, body }),
+        set: (ref, body, opt) => ops.push({ t: 'set', p: ref.__path, body, opt }),
         delete: (ref) => ops.push({ t: 'del', p: ref.__path }),
         commit: () => {
           ops.forEach(o => {
             const [col, id] = [o.p.slice(0, o.p.indexOf('/')), o.p.slice(o.p.indexOf('/') + 1)];
             if (o.t === 'del') { log.del.push(o.p); if (data[col]) data[col] = data[col].filter(x => x.id !== id); return; }
             log.set.push(o.p);
-            if (data[col]) { const i = data[col].findIndex(x => x.id === id); const n = Object.assign({ id }, o.body); if (i >= 0) data[col][i] = n; else data[col].push(n); }
+            if (data[col]) { const i = data[col].findIndex(x => x.id === id); const n = Object.assign({ id }, mergeSet(i >= 0 ? data[col][i] : null, o.body, o.opt)); if (i >= 0) data[col][i] = n; else data[col].push(n); }
           });
           log.commits++;
           return Promise.resolve();
@@ -238,9 +239,13 @@ console.log('\n── ④読み終わったあとは、ふつうに足せる・�
   ok('消しには行っていない', cloud.log.del.length === 0, cloud.log.del);
 
   cloud.log.set.length = 0;
-  S.cards = S.cards.filter(c => c.id !== 'c1');
+  /* 🔴 v2.185.0 消すのは「消す操作」（PitDB.keep／PitDB.removed）を通った物だけ。
+     手元の一覧から抜けただけの物には delete を送らない（控えから戻す） */
+  S.cards = S.cards.filter(c => c.id !== 'c9');                 /* 消す操作を通らずに抜けた */
+  D.keep('cards', c => c.id !== 'c1');                           /* 消す操作 */
   D.save(true); await tick(); await tick();
   ok('消した1件だけが消える', cloud.log.del.length === 1 && cloud.log.del[0] === 'pitCards/c1', cloud.log.del);
+  ok('🔴 消す操作を通らずに手元から抜けた物は消さない（戻す）', !cloud.log.del.includes('pitCards/c9') && S.cards.some(c => c.id === 'c9'), { del: cloud.log.del, ids: S.cards.map(c => c.id) });
   ok('🔴 顧客は巻き添えで消えない', !cloud.log.del.some(p => p.indexOf('pitCustomers/') === 0), cloud.log.del);
 }
 

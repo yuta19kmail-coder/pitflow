@@ -160,13 +160,14 @@ console.log('\n── 記録を消した時も起点が改まる ──');
       { type: 'phase', from: 'work',  to: 'estim', at: now -  2 * D }
     ], phaseAt: now - 2 * D });
     const before = Math.floor((Date.now() - pitPhaseStartMs(state.cards.find(x=>x.id==='PH2'))) / D) + 1;
-    PitFlowLog.del('PH2', 2);            /* 最後の「作業中→見積もり中」を消す */
+    /* 🔴 v2.185.0（S-25）工程の記録は管理の人でも消せない（⑧の記録を跡形なく消せる道だった） */
+    const 消せた = PitFlowLog.del('PH2', 2);
     const c = state.cards.find(x => x.id === 'PH2');
-    return { before: before, after: Math.floor((Date.now() - pitPhaseStartMs(c)) / D) + 1, phaseAt: c.phaseAt };
+    return { before: before, after: Math.floor((Date.now() - pitPhaseStartMs(c)) / D) + 1, phaseAt: c.phaseAt, 消せた: 消せた, n: c.log.length };
   });
   ok('消す前は3日目', r.before === 3, r);
-  ok('🔴 消したら1つ前の記録が起点になる（13日目）', r.after === 13, r);
-  ok('写しも書き直される', typeof r.phaseAt === 'number', r);
+  ok('🔴 工程の記録は消せない（起点は変わらない）', r.消せた === false && r.after === 3 && r.n === 3, r);
+  ok('写しは数のまま', typeof r.phaseAt === 'number', r);
 }
 
 console.log('\n── ソースの見張り（写しを直接見ている所が残っていないか） ──');

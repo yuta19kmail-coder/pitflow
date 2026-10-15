@@ -19,7 +19,10 @@
       "_*.js",
       "_*.html",
       "モック_*.html",
-      "*.md"
+      "*.md",
+      "js/sample-patterns.js",
+      "shot_*.png",
+      "notes_*.png"
     ],
     "headers": [
       {

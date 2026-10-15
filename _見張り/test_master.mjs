@@ -157,7 +157,7 @@ console.log('\n── ⑥ ソースの見張り（写しを作っていない・
      (code.match(/.{0,40}urgent.{0,40}/) || [''])[0]);
   ok('🔴 「急ぎを置かないこと」と書き置きがある（次に触る人のため）', /急ぎ/.test(s));
   ok('🔴 予約番号は手で打てない（振り直しだけ）', /pitMasterResNo/.test(s) && /disabled/.test(s));
-  ok('🔴 変えた欄の記録は `pitLogCardEdit` を借りている', /pitLogCardEdit\(live, BEFORE\)/.test(s));
+  ok('🔴 変えた欄の記録は `pitLogCardEdit` を借りている', /pitLogCardEdit\(live, (BEFORE|liveBefore)\)/.test(s));   /* v2.185.0 写す直前の本物と比べる（S-02） */
   ok('🔴 顧客控え・代車カレンダーはふつうの道を呼ぶだけ',
      /upsertCustomerFromCard\(live\)/.test(s) && /pitSyncLoanerAssigns\(\)/.test(s));
   ok('🔴 管理者以上だけ（物差しは pitIsAdmin 1本）', /w\.pitIsAdmin && w\.pitIsAdmin\(\)/.test(s));

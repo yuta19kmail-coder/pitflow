@@ -44,7 +44,10 @@ function makeWorld(){
   box.document = { addEventListener(){}, hidden: false };
   box.showToast = (msg, code) => toasts.push(code || msg);
   box.pitAlert = () => {};
-  const ref = (col, id) => ({ path: col + '/' + id });
+  /* v2.185.0 弾かれた時はサーバーの今の姿を1件読む（3者比較）＝本物と同じく get を持たせる */
+  const ref = (col, id) => ({ path: col + '/' + id,
+    get: () => Promise.resolve({ exists: !!server[col + '/' + id],
+      data: () => server[col + '/' + id] ? Object.assign({}, server[col + '/' + id].body, { rev: server[col + '/' + id].rev }) : null }) });
   box.fb = {
     company: () => ({ collection: (col) => ({ doc: (id) => ref(col, id) }) }),
     db: {

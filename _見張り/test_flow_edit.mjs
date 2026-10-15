@@ -209,12 +209,18 @@ await p.waitForTimeout(350);
   }, CID));
 
   /* 消す */
+  /* 🔴 v2.185.0（S-25）消すは「確認の1行 → 打ち消し線で残す」。行の数は変わらない */
   const n0 = await p.evaluate(id => state.cards.find(c => c.id === id).log.length, CID);
   await p.evaluate(() => document.querySelector('.pf-ferow[data-i="2"] .pf-fedel').click());
+  await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = document.getElementById('uid-ok'); if (b) b.click(); });
   await p.waitForTimeout(350);
-  ok('🔴 記録を消せる', (await p.evaluate(id => state.cards.find(c => c.id === id).log.length, CID)) === n0 - 1);
-  ok('消えたのは狙った1件だけ',
-     (await p.evaluate(id => state.cards.find(c => c.id === id).log.some(e => (e.label || '') === '電話した'), CID)) === false);
+  ok('🔴 記録を消せる（打ち消し線で残る＝行の数は同じ）', await p.evaluate(([id, n]) => {
+    const l = state.cards.find(c => c.id === id).log; return l.length === n && l[2].deleted === true; }, [CID, n0]));
+  ok('打ち消したのは狙った1件だけ',
+     (await p.evaluate(id => state.cards.find(c => c.id === id).log.filter(e => e.deleted).length, CID)) === 1);
+  ok('🔴 自動の記録には消すボタンが無い',
+     (await p.evaluate(() => !document.querySelector('.pf-ferow[data-i="1"] .pf-fedel[onclick*="pitFlowDel"]'))));
 }
 
 /* ============================================================ */
@@ -288,11 +294,17 @@ console.log('\n── ⑥ 打ち間違いは詳細からその場で消せる（
   await p.waitForTimeout(300);
   const n = await p.evaluate(id => state.cards.find(c => c.id === id).log.length, CID);
   const dels = await p.evaluate(() => document.querySelectorAll('#cv-p-flow .cv-fdel').length);
-  const man = await p.evaluate(id => state.cards.find(c => c.id === id).log.filter(e => e.manual).length, CID);
-  ok('🔴 ✕ が出るのは手で足した記録だけ', dels === man, { dels, man });
+  const man = await p.evaluate(id => state.cards.find(c => c.id === id).log.filter(e => e.manual && !e.deleted).length, CID);
+  ok('🔴 ✕ が出るのは手で足した記録だけ（打ち消し済みは「戻す」）', dels === man, { dels, man });
+  const g0 = await p.evaluate(id => state.cards.find(c => c.id === id).log.filter(e => e.deleted).length, CID);
   await p.evaluate(() => document.querySelector('#cv-p-flow .cv-fdel').click());
+  await p.waitForTimeout(250);
+  await p.evaluate(() => { const b = document.getElementById('uid-ok'); if (b) b.click(); });
   await p.waitForTimeout(350);
-  ok('詳細から消せる', (await p.evaluate(id => state.cards.find(c => c.id === id).log.length, CID)) === n - 1);
+  ok('詳細から消せる（打ち消し線で残る）', await p.evaluate(([id, nn, g]) => {
+    const l = state.cards.find(c => c.id === id).log; return l.length === nn && l.filter(e => e.deleted).length === g + 1; }, [CID, n, g0]));
+  ok('🔴 打ち消した記録は線を引いて残り、「戻す」が出る',
+     (await p.evaluate(() => document.querySelectorAll('#cv-p-flow .cv-fgone').length > 0 && !!document.querySelector('#cv-p-flow .cv-fundel'))));
   ok('🔴 工程の記録は見出しが空にならない',
      (await p.evaluate(() => Array.from(document.querySelectorAll('#cv-p-flow .cv-ft')).every(e => e.textContent.trim().length > 0))));
 }
