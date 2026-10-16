@@ -129,9 +129,11 @@ console.log('\n── 🔴 A-05 前 → 後が残らない道 ──');
 console.log('\n── 🔴 A-06 カードの消去：消す前の中身を操作ログに ──');
 {
   const cv = 素(JS('card-view.js'));
-  const m = cv.match(/window\.cvDeleteCard = function\(\)\{[\s\S]*?\n  \};/);
+  /* 🗑 v2.189.0 消去＝ゴミ箱へ（先にゴミ箱へ写す cvDeleteCard → 入ったら cvDeleteCardNow が今までどおり消す） */
+  const m = cv.match(/function cvDeleteCardNow\(_c\)\{[\s\S]*?\n  \}/);
   const s = m ? m[0] : '';
-  ok('🔴 操作ログに cardId', /pitLog\('予約カードを消去', \{[^}]*cardId: _c\.id/.test(s), s.slice(0, 200));
+  ok('🔴 操作ログに cardId', /pitLog\([^,]*'予約カードを消去[^']*'[^,]*, \{[^}]*cardId: _c\.id/.test(s), s.slice(0, 200));
+  ok('🗑 消去は先にゴミ箱へ写し、入ってから消す（入らなければ消さない PF-0065）', /cvTrashCopy\(c0\)\.then\(function\(\)\{ cvDeleteCardNow\(c0\); \}\)/.test(cv) && /PF-0065/.test(cv) && /CFTrash\.put\(b, co, \{ app:'pitflow', col:'pitCards'/.test(cv));
   ok('🔴 実績日・確定金額・売上日も', /実績日/.test(s) && /確定金額/.test(s) && /売上日/.test(s));
 }
 
