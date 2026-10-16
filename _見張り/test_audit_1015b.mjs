@@ -133,7 +133,10 @@ console.log('\n── 🔴 A-06 カードの消去：消す前の中身を操作
   const m = cv.match(/function cvDeleteCardNow\(_c\)\{[\s\S]*?\n  \}/);
   const s = m ? m[0] : '';
   ok('🔴 操作ログに cardId', /pitLog\([^,]*'予約カードを消去[^']*'[^,]*, \{[^}]*cardId: _c\.id/.test(s), s.slice(0, 200));
-  ok('🗑 消去は先にゴミ箱へ写し、入ってから消す（入らなければ消さない PF-0065）', /cvTrashCopy\(c0\)\.then\(function\(\)\{ cvDeleteCardNow\(c0\); \}\)/.test(cv) && /PF-0065/.test(cv) && /CFTrash\.put\(b, co, \{ app:'pitflow', col:'pitCards'/.test(cv));
+  ok('🗑 消去は先にゴミ箱へ写し、入ってから消す（入らなければ消さない PF-0065）', /cvTrashCopy\(c0\)\.then\(function\(\)\{ cvDeleteCardNow\(c0\); \}\)/.test(cv) && /PF-0065/.test(cv) && /CFTrash\.put\(b, co, \{ app:'pitflow', col: col/.test(cv) && /return window\.pitTrashCopy\('pitCards', c, nm, 'カードの消去'\)/.test(cv));
+  /* 🗑 v2.189.2 整備予定の取り下げ・代車／社用車の削除も、先にゴミ箱へ（写せなければ消さない） */
+  const mp = 素(JS('maint-pit.js')), fl = 素(JS('fleet.js'));
+  ok('🗑 整備予定の取り下げ・代車／社用車の削除も先にゴミ箱へ（PF-0065）', /pitTrashCopy\('pitCards', c,/.test(mp) && /maintDropNow\(c, lb\)/.test(mp) && /pitTrashCopy\(col, f\.v,/.test(fl) && /fleetDeleteNow\(f, isLoaner, id\)/.test(fl) && /PF-0065/.test(mp) && /PF-0065/.test(fl));
   ok('🔴 実績日・確定金額・売上日も', /実績日/.test(s) && /確定金額/.test(s) && /売上日/.test(s));
 }
 
