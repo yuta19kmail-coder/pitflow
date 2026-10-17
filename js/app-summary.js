@@ -495,7 +495,11 @@
   }
   window._pitflowSummaryBuild = build;   // 見張り・確認用（書き込みはしない）
 
+  /* 🏭 v2.193.0（棚卸し C-08 第4段 4b・ゆうた「変わった時＋1時間ごと」）**概況はサーバーが作る**（summary-server.js がこの build を借りる）。
+     前は開いている端末が10分ごとに書いていた＝誰も開かないと古い・開いた端末の版で揺れる。端末からは書かない */
+  var SERVER_OWNS = true;
   function publish() {
+    if (SERVER_OWNS) return;
     if (!(window.fb && window.fb.db && window.fb.currentUser) || window.PIT_CLOUD !== true) return;
     try {
       var doc = build(); if (!doc) return;

@@ -298,8 +298,8 @@ const G = await p.evaluate(async () => {
   return { demoCalls, calls };
 });
 ok('🔴 見本・デモ（PIT_CLOUD=false）では書かない', G.demoCalls === 0, G);
-ok('本番なら appSummaries/pitflow に1回書く', G.calls.length === 1 && G.calls[0].id === 'pitflow', G.calls);
-ok('書く時は 更新時刻つき・まるごと（merge:false）', G.calls[0] && G.calls[0].hasTs && G.calls[0].o && G.calls[0].o.merge === false, G.calls[0]);
+/* 🏭 v2.193.0（棚卸し C-08 第4段 4b）概況はサーバーが作る（summary-server.js がこの build を借りる）＝本番でも端末からは書かない */
+ok('🔴 本番でも端末からは appSummaries/pitflow に書かない（サーバーが作る・SERVER_OWNS）', G.calls.length === 0, G.calls);
 
 console.log('\n── 🤝 CoreFlow の dash.js と鍵がそろっているか ──');
 {

@@ -162,7 +162,10 @@
   window._pitFeedFactsBuild = build;   // 見張り・確認用（書き込みはしない）
 
   var lastJson = '', lastAt = 0;
+  /* 🏭 v2.193.0（棚卸し C-08 第4段 4b）**通知のもとはサーバーが作る**（summary-server.js がこの build を借りる）。端末からは書かない */
+  var SERVER_OWNS = true;
   function publish(force) {
+    if (SERVER_OWNS) return;
     if (!(window.fb && window.fb.db && window.fb.currentUser && window.fb.currentMember && window.fb.currentMember.id) || window.PIT_CLOUD !== true) return;
     try {
       var doc = build(); if (!doc) return;
