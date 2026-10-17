@@ -412,14 +412,18 @@ function _csInLabel(c){
 /* 完了／戻す */
 window.csDone = function(id, task){
   const c = (state.cards||[]).find(x=>x.id===id); if (!c) return;
-  const f = CS_DONEFLAG[task]; if (!f) return;
-  c[f] = true;
-  /* 📝 v2.186.0（⑧）フローと操作ログの両方へ（前は英字の task 名のフローだけ） */
-  _csDoneLog(c, task, '車販作業 完了（' + (CS_TASK_W[task] || task) + '・未 → 済）');
+  _csApply(c, task, true);
+};
+/* 🔗 2026-10-17（棚卸し C-07 第2段）完了／戻すの中身と言葉は pit-share.js の pitCarSalesPlan 1本（CarFlow・見る所3つも借りる） */
+function _csApply(c, task, on){
+  const pl = window.pitCarSalesPlan ? pitCarSalesPlan(c, task, on) : null;
+  if (!pl || !pl.ok) return;
+  Object.keys(pl.patch).forEach(function(k){ c[k] = pl.patch[k]; });
+  _csDoneLog(c, task, pl.flow);
   if (window.PitDB) PitDB.save();
   renderCarSales();
-  if (window.pitToast) pitToast('✓ 完了にしました');
-};
+  if (on && window.pitToast) pitToast(pl.toast);
+}
 /* 🚙 v2.173.0 代車の洗車 完了／戻す（印は札の側。値＝洗った代車のid） */
 window.csLoDone = function(aid){
   const a = (state.loanerAssigns||[]).find(x=>x.id===aid); if (!a) return;
@@ -459,12 +463,5 @@ function _csDoneLog(c, task, txt){
 }
 window.csUndo = function(id, task){
   const c = (state.cards||[]).find(x=>x.id===id); if (!c) return;
-  const f = CS_DONEFLAG[task]; if (!f) return;
-  const fs = (task === 'coating' || task === 'salesReq') ? ['coatingDone', 'salesReqDone'] : [f];
-  const 外した = fs.filter(function(k){ return !!c[k]; });
-  fs.forEach(function(k){ c[k] = false; });
-  _csDoneLog(c, task, '車販作業を戻した（' + (CS_TASK_W[task] || task) + '・済 → 未'
-    + (外した.length ? '・外した印 ' + 外した.join('／') : '') + '）');
-  if (window.PitDB) PitDB.save();
-  renderCarSales();
+  _csApply(c, task, false);
 };
