@@ -300,6 +300,25 @@ const G = await p.evaluate(async () => {
 ok('🔴 見本・デモ（PIT_CLOUD=false）では書かない', G.demoCalls === 0, G);
 /* 🏭 v2.193.0（棚卸し C-08 第4段 4b）概況はサーバーが作る（summary-server.js がこの build を借りる）＝本番でも端末からは書かない */
 ok('🔴 本番でも端末からは appSummaries/pitflow に書かない（サーバーが作る・SERVER_OWNS）', G.calls.length === 0, G.calls);
+/* 🛟 v2.193.1 保険：サーバーの印が40分より古い時だけ、端末が書く */
+const H = await p.evaluate(async () => {
+  const run = async (serverAt) => {
+    const calls = [];
+    const docObj = { get: () => Promise.resolve({ exists: true, data: () => ({ server: { at: serverAt, checkedAt: serverAt } }) }),
+                     set: (d, o) => { calls.push({ o }); return Promise.resolve(); } };
+    const fakeDb = { collection: () => ({ doc: () => ({ collection: () => ({ doc: () => docObj }) }) }) };
+    const saveFb = window.fb, saveCloud = window.PIT_CLOUD;
+    window.fb = Object.assign({}, saveFb || {}, { db: fakeDb, currentUser: { uid: 'u1' }, serverTimestamp: () => 'TS' });
+    window.PIT_CLOUD = true; window._pitflowSummaryPublish();
+    await new Promise(r => setTimeout(r, 50));
+    window.fb = saveFb; window.PIT_CLOUD = saveCloud;
+    return calls.length;
+  };
+  return { fresh: await run(Date.now() - 5 * 60000), stale: await run(Date.now() - 60 * 60000) };
+});
+ok('🛟 サーバーの印が新しい（5分前）なら端末は書かない', H.fresh === 0, H);
+ok('🛟 サーバーの印が古い（1時間前）＝サーバーが止まっている時だけ、端末が書く（概況が止まらない）', H.stale === 1, H);
+
 
 console.log('\n── 🤝 CoreFlow の dash.js と鍵がそろっているか ──');
 {
