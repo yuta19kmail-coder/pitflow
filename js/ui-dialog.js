@@ -209,7 +209,7 @@
       var x=document.createElement('button'); x.type='button'; x.className='uid-tx'; x.setAttribute('aria-label','閉じる'); x.textContent='×';
       el.appendChild(x);
       el.addEventListener('click',function(){ tdrop(el); });   /* 番号を押した時はコピーだけ（coreflow-errcode.js が先に受けて止める） */
-      var errs=box.querySelectorAll('.uid-t.err'); if(errs.length>=3)tdrop(errs[0]);
+      var errs=box.querySelectorAll('.uid-t.err:not(.out)'); if(errs.length>=3)tdrop(errs[0]);
       box.appendChild(el);
     } else {
       if(TNORM)tdrop(TNORM);

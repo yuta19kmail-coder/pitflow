@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="2.193.2"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="2.193.3"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -134,7 +134,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v2.193.2</div>
+    <div class="login-ver">v2.193.3</div>
   </div>
 </div>
 
@@ -148,7 +148,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver" data-cf-ver>v2.193.2</span>
+    <span class="ver" data-cf-ver>v2.193.3</span>
     <!-- 🔴 2026-10-03 AAA（文字サイズ3つ）は無くした＝見やすさ（CoreFlow でチェックした人だけ）に置き換え -->
     <span id="cf-a11y-slot"></span><!-- 👓 見やすさ（くっきり／大きさ／拡大鏡）。CoreFlow のメンバー管理でチェックがある人だけ出る（coreflow-a11y.js） -->
     <!-- テーマ4パターン循環（ダーク→ライト→ダーク・リキッド→ライト・リキッド） -->
@@ -801,9 +801,9 @@
 <script src="js/sample-reservations.js?v=33"></script>
 <script src="js/dashboard.js?v=23"></script>
 <script src="js/parking.js?v=9"></script>
-<script src="js/coreflow-note-reply.js?v=70700abc"></script><!-- 📝 付箋の返信（全アプリ共通・_shared から配布）。board-notes.js より **前** に読むこと -->
-<script src="js/coreflow-note-all.js?v=d326fe4b"></script><!-- 📎 付箋のまとめて表示（全アプリ共通・_shared から配布）。board-notes.js より **前** に読むこと -->
-<script src="js/coreflow-note-board.js?v=5832f157"></script><!-- 📌 付箋ボード本体（全アプリ共通・_shared から配布）。board-notes.js より **前** に読む -->
+<script src="js/coreflow-note-reply.js?v=94e92236"></script><!-- 📝 付箋の返信（全アプリ共通・_shared から配布）。board-notes.js より **前** に読むこと -->
+<script src="js/coreflow-note-all.js?v=91650578"></script><!-- 📎 付箋のまとめて表示（全アプリ共通・_shared から配布）。board-notes.js より **前** に読むこと -->
+<script src="js/coreflow-note-board.js?v=208487c8"></script><!-- 📌 付箋ボード本体（全アプリ共通・_shared から配布）。board-notes.js より **前** に読む -->
 <script src="js/board-notes.js?v=18"></script>
 <script src="js/search.js?v=21"></script>
 <script src="js/insurance-pit.js?v=1"></script><!-- 🛡 v2.9.0 保険＝入金日で実績に乗せる物差し1本。**sales-count.js より前**に読む -->
@@ -881,7 +881,7 @@
   <script src="js/coreflow-en.js?v=2fa30ac1" data-dict="js/coreflow-en-dict.js?v=5b96ada2"></script><!-- 🌐 2026-10-12 英語表示（メンバー管理の「英語表示」の人だけ。バージョンのバッジ／F2 で英語）。見やすさの後 -->
 
 
-<script src="js/ui-dialog.js?v=ba59545c"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
+<script src="js/ui-dialog.js?v=7ee165b6"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
 <script src="js/ask-pit.js?v=5"></script><!-- 🔵 v1.75.0 「聞く・知らせる」の入口1本（pitAlert / pitAsk / pitAskText）。ブラウザ純正の alert・confirm・prompt はここ以外で使わない -->
 <script src="js/blank-cards.js?v=8"></script><!-- 空の予約カードを残さない（settings.js / views.js / card-detail.js より後ろ） -->
 <script src="js/reset-pit.js?v=5"></script><!-- 本番データの初期化／デモ版の「まっさらにする」（settings.js より後ろ） -->
