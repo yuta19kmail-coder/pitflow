@@ -133,15 +133,15 @@
       /* 「決めた人だけ更新」の名簿一覧（2026-08-29） */
       '.cf-power-find{width:calc(100% - 8px);margin:4px;padding:7px 10px;border-radius:9px;font-family:inherit;font-size:12.5px;',
       '  border:1px solid var(--border,#2a2f3a);background:var(--bg3,#1f232c);color:var(--text,#e7eaf0)}',
-      '.cf-power-find:focus{outline:none;border-color:var(--accent,#3b82f6)}',
+      '.cf-power-find:focus{outline:none;border-color:var(--cf-app,var(--accent,#3b82f6))}',
       '.cf-power-list{max-height:min(46vh,320px);overflow:auto;overscroll-behavior:contain}',
       '.cf-power-empty{padding:12px 11px;font-size:12px;color:var(--text3,#79839a);font-weight:700}',
       '.cf-power-av{width:22px;height:22px;flex:0 0 22px;border-radius:50%;overflow:hidden;display:inline-flex;',
       '  align-items:center;justify-content:center;font-size:10.5px;font-weight:800;color:#0e1117;background:#26314a}',
       '.cf-power-av img{width:100%;height:100%;object-fit:cover;display:block}',
       '.cf-power-note{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:100000;',
-      '  background:var(--bg2,#171a21);color:var(--text,#e7eaf0);border:1px solid var(--border2,var(--border,#2a2f3a));',
-      '  border-left:3px solid var(--red,#ef4444);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:700;',
+      '  background:#15181e;color:#eef1f5;border:1px solid rgba(255,255,255,.10);',
+      '  border-left:4px solid var(--cf-app,#94a3b8);border-radius:10px;padding:11px 16px;font-size:13px;font-weight:700;',
       '  box-shadow:0 14px 40px rgba(0,0,0,.5);max-width:min(92vw,460px)}'
     ].join('');
     (d.head || d.documentElement).appendChild(s);

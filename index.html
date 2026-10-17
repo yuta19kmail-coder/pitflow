@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="2.193.1"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="2.193.2"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
 <link rel="manifest" href="manifest.json?v=1">
 <meta name="theme-color" content="#1f7a4d">
-<link rel="stylesheet" href="css/coreflow-ui.css?v=756022d3"><!-- 見た目の基準（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
+<link rel="stylesheet" href="css/coreflow-ui.css?v=f17ef997"><!-- 見た目の基準（全アプリ共通・_shared から配られたコピー。他より先に読む） -->
 <link rel="stylesheet" href="css/base.css?v=12">
 <link rel="stylesheet" href="css/layout.css?v=12">
 <link rel="stylesheet" href="css/views.css?v=64">
@@ -110,6 +110,7 @@
 <script src="js/coreflow-auth-gate.js?v=a5cec0e0"></script>
 <!-- 🔴 「Google でログイン」ボタンの見た目（全アプリ共通・本体は _shared）。色はボタンの data-cf-login で決まる -->
 <script src="js/coreflow-login-btn.js?v=1ee736d7"></script>
+<style>/* 🎨 2026-10-17 このアプリの色＝共通部品（トースト・確認の窓・見やすさ・強制更新・チェック箱）は全部これを見る（棚卸し C-10・ゆうた「トーストの色を全部そろえて」）。PitFlow＝緑（テーマで濃さが変わる） */:root{--cf-app:var(--acc);--cf-app-d:var(--accd);}</style>
 </head>
 <body>
 
@@ -133,7 +134,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v2.193.1</div>
+    <div class="login-ver">v2.193.2</div>
   </div>
 </div>
 
@@ -147,7 +148,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver" data-cf-ver>v2.193.1</span>
+    <span class="ver" data-cf-ver>v2.193.2</span>
     <!-- 🔴 2026-10-03 AAA（文字サイズ3つ）は無くした＝見やすさ（CoreFlow でチェックした人だけ）に置き換え -->
     <span id="cf-a11y-slot"></span><!-- 👓 見やすさ（くっきり／大きさ／拡大鏡）。CoreFlow のメンバー管理でチェックがある人だけ出る（coreflow-a11y.js） -->
     <!-- テーマ4パターン循環（ダーク→ライト→ダーク・リキッド→ライト・リキッド） -->
@@ -873,14 +874,14 @@
 <script src="js/app-summary.js?v=8"></script><!-- v2.124.0 課の目標は pitSalesDivTarget を借りる／📡 v2.108.0 CoreFlow のダッシュボードへ概況を配る（mydash.js の物差しを借りる＝mydash.js より後ろ）／v2.121.0 最短入庫日の日付と3週間の空き（FlowDesk 用）／v2.123.0 売上ボード（salesBoard・自分のフロント成績） -->
 <script src="js/feed-facts.js?v=6"></script><!-- 🔔 v2.111.0 FlowDesk の通知のもと（入庫・返車の時間過ぎ・長期預かり・売上）をサーバーだけが読む所へ置く（mydash.js の物差しを借りる＝mydash.js より後ろ） -->
 <script src="js/main.js?v=12"></script>
-<script src="js/auto-update.js?v=34a26e2b"></script>
+<script src="js/auto-update.js?v=482a9c57"></script>
   <script src="js/coreflow-user.js?v=4e5e1ce2"></script><!-- 👤 ヘッダー右の自分（写真＋フルネーム・全アプリ共通・_shared が本体） -->
-  <script src="js/coreflow-power.js?v=757b3fde"></script><!-- ⏻ 電源ボタン（全アプリ共通・_shared が本体） -->
-  <script src="js/coreflow-a11y.js?v=b89ccbcb"></script><!-- 👓 見やすさ（全アプリ共通・_shared から配布）。電源の後 -->
+  <script src="js/coreflow-power.js?v=ec3a54c0"></script><!-- ⏻ 電源ボタン（全アプリ共通・_shared が本体） -->
+  <script src="js/coreflow-a11y.js?v=e74e8e37"></script><!-- 👓 見やすさ（全アプリ共通・_shared から配布）。電源の後 -->
   <script src="js/coreflow-en.js?v=2fa30ac1" data-dict="js/coreflow-en-dict.js?v=5b96ada2"></script><!-- 🌐 2026-10-12 英語表示（メンバー管理の「英語表示」の人だけ。バージョンのバッジ／F2 で英語）。見やすさの後 -->
 
 
-<script src="js/ui-dialog.js?v=6c36e00e"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
+<script src="js/ui-dialog.js?v=ba59545c"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->
 <script src="js/ask-pit.js?v=5"></script><!-- 🔵 v1.75.0 「聞く・知らせる」の入口1本（pitAlert / pitAsk / pitAskText）。ブラウザ純正の alert・confirm・prompt はここ以外で使わない -->
 <script src="js/blank-cards.js?v=8"></script><!-- 空の予約カードを残さない（settings.js / views.js / card-detail.js より後ろ） -->
 <script src="js/reset-pit.js?v=5"></script><!-- 本番データの初期化／デモ版の「まっさらにする」（settings.js より後ろ） -->

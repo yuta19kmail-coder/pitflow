@@ -111,8 +111,11 @@
       reloading = true;
       var t = document.createElement('div');
       t.textContent = '🆕 最新版に更新します…';
-      t.style.cssText = 'position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483647;'
-        + 'background:#7c3aed;color:#fff;padding:10px 18px;border-radius:999px;'
+      /* 🎨 2026-10-17 前は紫（StockFlow の色）の決め打ちで、全アプリで紫が出ていた（ゆうた指摘・棚卸し C-10）。
+         いまは共通のトースト（ui-dialog.js UI.toast）と同じ＝黒地＋左にアプリの色（--cf-app）の縦線 */
+      t.style.cssText = 'position:fixed;left:50%;bottom:var(--cf-toast-bottom,24px);transform:translateX(-50%);z-index:2147483647;'
+        + 'background:#15181e;color:#eef1f5;padding:9px 14px 9px 13px;border-radius:10px;'
+        + 'border:1px solid rgba(255,255,255,.10);border-left:4px solid var(--cf-app,#94a3b8);'
         + 'font:600 14px -apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic Medium","Meiryo",sans-serif;'
         + 'box-shadow:0 6px 20px rgba(0,0,0,.28)';
       (document.body || document.documentElement).appendChild(t);
