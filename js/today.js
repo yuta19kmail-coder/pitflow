@@ -414,7 +414,7 @@ window.pitTodayCancel = function(id, isReturn){
   const _pl = isReturn
     ? (window.pitReturnCancelPlan ? pitReturnCancelPlan(c) : null)
     : (window.pitNoShowCancelPlan ? pitNoShowCancelPlan(c, { today: ymd(new Date()), loaner: _lo }) : null);
-  if (!_pl || !_pl.ok){ if (window.pitToast) pitToast((_pl && _pl.why) || 'キャンセルの決めごとが読めませんでした（画面を開き直してください）'); return; }
+  if (!_pl || !_pl.ok){ if (window.pitToast) pitToast((_pl && _pl.why) || 'キャンセルの決めごとが読めませんでした（画面を開き直してください）', 'PF-1091'); return; }
   pitAsk(_pl.ask.msg, { danger:true, ok:_pl.ask.ok, detail:_pl.ask.detail || undefined })
     .then(function(yes){ if (yes) _go(); });
 
@@ -459,7 +459,7 @@ window.pitTodayCheckIn = function(id){
 function _pitTodayCheckInGo(c){
   /* 🔗 2026-10-17（C-07 第2段）書く中身は pit-share.js の pitCheckInPlan 1本（MHS・見る所3つも借りる） */
   const pl = window.pitCheckInPlan ? pitCheckInPlan(c, { today: ymd(new Date()) }) : null;
-  if (!pl || !pl.ok){ if (window.pitToast) pitToast((pl && pl.why) || '入庫の決めごとが読めませんでした（画面を開き直してください）'); return; }
+  if (!pl || !pl.ok){ if (window.pitToast) pitToast((pl && pl.why) || '入庫の決めごとが読めませんでした（画面を開き直してください）', 'PF-1092'); return; }
   Object.keys(pl.patch).forEach(function(k){ c[k] = pl.patch[k]; });
   if (window.logFlow) logFlow(c, pl.flow);
   if (window.PitDB) PitDB.save();
