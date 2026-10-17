@@ -424,13 +424,25 @@ window.csDone = function(id, task){
 window.csLoDone = function(aid){
   const a = (state.loanerAssigns||[]).find(x=>x.id===aid); if (!a) return;
   a.washDone = a.loanerId;
+  _csLoLog(a, true);
   if (window.PitDB) PitDB.save();
   renderCarSales();
   if (window.pitToast) pitToast('✓ 完了にしました');
 };
+/* 📝 2026-10-17（棚卸し C-07・CarFlow の setLoDone と同じ形）代車の洗車も記録に残す。前は PitFlow 本体だけどこにも残らなかった。
+   札にはフローが無いので、出す相手の予約カードのフローに1行＋操作ログ */
+function _csLoLog(a, on){
+  const nm = (window.pitLoanerModel && pitLoanerModel(a.loanerId)) || '代車';
+  const txt = '代車の洗車 ' + (on ? '完了' : '戻す') + '（' + nm + '）';
+  const c = a.cardId ? (state.cards || []).find(x => x.id === a.cardId) : null;
+  if (c && window.logFlow) logFlow(c, txt);
+  try { if (window.pitLog) pitLog(txt, { cardId: a.cardId || '', kind: 'loaner',
+    label: c ? (((window.pitCustName ? pitCustName(c) : c.customer) || '') + ' 様' + (c.car ? ' / ' + c.car : '')) : nm }); } catch (e) {}
+}
 window.csLoUndo = function(aid){
   const a = (state.loanerAssigns||[]).find(x=>x.id===aid); if (!a) return;
   delete a.washDone;
+  _csLoLog(a, false);
   if (window.PitDB) PitDB.save();
   renderCarSales();
 };

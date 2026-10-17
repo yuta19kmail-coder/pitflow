@@ -402,48 +402,26 @@ window.pitTodayCancel = function(id, isReturn){
      ⚠ 30日たって自動でアーカイブされる時には、一緒に消える（そこまで来たらもう戻らない）。
      ⚠ v1.154.0 はここで自動で外していた。**わざと戻した。** */
   const _lo = (!isReturn && window.pitLoanerPlanOf) ? pitLoanerPlanOf(c.id) : { n: 0, text: '' };
-  const ask = isReturn
-    ? pitAsk('返車予定をキャンセルして「返車・未定」へ戻しますか？', { danger:true, ok:'戻す' })
-    : pitAsk('この入庫予約をキャンセルしますか？', { danger:true, ok:'キャンセルする',
-              detail:'「未入庫」リストに残り、1ヶ月後に自動でアーカイブされます。'
-                     + (_lo.n ? '\n※ 代車の予定（' + _lo.text + '）は**そのまま残ります**。'
-                              + '外すときは未入庫の一覧の「代車予定クリア」から' : '') });
-  ask.then(function(yes){ if (yes) _go(); });
+  /* 🔗 2026-10-17（棚卸し C-07）何を書くかは pit-share.js の計画（pitReturnCancelPlan／pitNoShowCancelPlan）1本。
+     MHS・FlowDesk 系も同じ計画を借りる＝PitFlow がマスター（ゆうた決定）。ここは「聞く・当てる・残す」だけ */
+  const _pl = isReturn
+    ? (window.pitReturnCancelPlan ? pitReturnCancelPlan(c) : null)
+    : (window.pitNoShowCancelPlan ? pitNoShowCancelPlan(c, { today: ymd(new Date()), loaner: _lo }) : null);
+  if (!_pl || !_pl.ok){ if (window.pitToast) pitToast((_pl && _pl.why) || 'キャンセルの決めごとが読めませんでした（画面を開き直してください）'); return; }
+  pitAsk(_pl.ask.msg, { danger:true, ok:_pl.ask.ok, detail:_pl.ask.detail || undefined })
+    .then(function(yes){ if (yes) _go(); });
 
   function _go(){
-  if (isReturn){
-    /* 🔴 v1.65.0 `returnTbd` は v1.60.0 で廃止した旧フラグ。日付を空にすれば「返車日未定」に戻る。
-       書き込みは唯一の入口（pitReturnSetDateTime）を通す。 */
-    const _ret0 = window.pitDtText ? pitDtText(c.returnDate, c.returnTime) : '';   /* 📝 v2.183.0 消した日を残す */
-    let _rs = null;
-    if (window.pitReturnSetDateTime) _rs = pitReturnSetDateTime(c, '', '');   /* v2.186.0 確定返車日も入口で空になる（A-03） */
-    else { c.returnDate = ''; c.returnTime = ''; c.returnDateFinal = null; }
-    const _tx = '返車予定キャンセル（未定へ）' + (_ret0 ? '　元は ' + _ret0 : '')
-              + ((_rs && _rs.fFrom) ? '・確定返車日 ' + _rs.fFrom + ' → なし' : '');
-    if (window.logFlow) logFlow(c, _tx);
-    /* 📝 v2.186.0（⑧）フローだけでなく操作ログにも */
-    if (window.pitLog) pitLog('返車予定をキャンセル', { cardId: c.id, kind: 'out',
-      label: ((window.pitCustName ? pitCustName(c) : c.customer) || '') + ' 様' + (c.car ? ' / ' + c.car : '') + '　' + _tx });
-  } else {
-    c.status = 'cancelled';
-    /* 🔴 v1.139.0（ゆうた確定）**自動の未入庫と同じ印を立てる。**
-       ◎なにが起きていた
-         自動（入庫日を過ぎた）は `noShow=true` を立てるのに、**ここだけ立てていなかった**。
-         同じ「未入庫」BOXに並ぶのに印が違う＝**手で押したのか自動なのか、あとから見分けられない**。
-       🔴 意味はどちらも「**来なかった**」で同じ（窓にも「未入庫リストに残る」と書いてある）。
-          人が決めた「予約キャンセル」（`cancelled=true`）とは**別物**なので、そちらとは混ぜない。 */
-    c.noShow = true;
-    c.noShowAt = c.noShowAt || ymd(new Date());
-    c.cancelledAt = ymd(new Date());
-    /* 🔄 v1.155.0 代車の予定は**外さない**（人が未入庫の一覧で決める）。何が残っているかはフローに書く。 */
-    if (window.logFlow) logFlow(c, 'キャンセル（来店なし）'
-      + (_lo.n ? '（代車の予定はそのまま：' + _lo.text + '）' : ''));
-  }
+  /* 計画の欄を当てる（null＝空にする）。⚠ 返車の欄は計画の中で唯一の入口（pitReturnSetDateTime）を通してある */
+  Object.keys(_pl.patch).forEach(function(k){ c[k] = _pl.patch[k]; });
+  if (window.logFlow) logFlow(c, _pl.flow);
+  /* 📝 v2.186.0（⑧）返車キャンセルは前から操作ログあり。🔴 2026-10-17 来店なしキャンセルも残す（前は PitFlow 本体だけ残していなかった） */
+  if (window.pitLog) pitLog(_pl.audit.action, { cardId: c.id, kind: _pl.audit.kind,
+    label: ((window.pitCustName ? pitCustName(c) : c.customer) || '') + ' 様' + (c.car ? ' / ' + c.car : '') + '　' + _pl.audit.detail });
   if (window.PitDB) PitDB.save();
   pitTodayActionClose();
   renderToday();
-  if (window.pitToast) pitToast(isReturn ? '返車・未定へ戻しました'
-    : ('未入庫へ移しました' + (_lo.n ? '（代車の予定はそのまま）' : '')));
+  if (window.pitToast) pitToast(_pl.toast);
   }
 };
 window.pitTodayActionClose = function(){

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="app-version" content="2.190.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
+<meta name="app-version" content="2.191.0"><!-- 自動更新の基準（auto-update.js が参照）。リリース毎に上げる -->
 <title>PitFlow - 整備入庫管理システム</title>
 <link rel="icon" type="image/png" href="favicon.png?v=1">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=1">
@@ -133,7 +133,7 @@
     </button>
     <div class="pl-error" id="pl-error" style="display:none"></div>
     <div class="pl-note pl-note-sample">※ この端末だけで動くサンプルです（保存もこの端末の中だけ）</div>
-    <div class="login-ver">v2.190.0</div>
+    <div class="login-ver">v2.191.0</div>
   </div>
 </div>
 
@@ -147,7 +147,7 @@
       <img class="tb-logo-img logo-dark" src="images/pitflow-logo-dark.png" alt="PitFlow">
       <img class="tb-logo-img logo-light" src="images/pitflow-logo-light.png" alt="PitFlow">
     </div>
-    <span class="ver" data-cf-ver>v2.190.0</span>
+    <span class="ver" data-cf-ver>v2.191.0</span>
     <!-- 🔴 2026-10-03 AAA（文字サイズ3つ）は無くした＝見やすさ（CoreFlow でチェックした人だけ）に置き換え -->
     <span id="cf-a11y-slot"></span><!-- 👓 見やすさ（くっきり／大きさ／拡大鏡）。CoreFlow のメンバー管理でチェックがある人だけ出る（coreflow-a11y.js） -->
     <!-- テーマ4パターン循環（ダーク→ライト→ダーク・リキッド→ライト・リキッド） -->
@@ -746,7 +746,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="js/coreflow-trace.js?v=2d78b18e"></script><!-- 🔎 調査の記録（CFTrace・全アプリ共通・_shared から配布）。firestore の直後・アプリの js より前に読む。画面には何も出さない。練習モード（PIT_CLOUD=false）では送らない -->
 <script src="js/coreflow-date.js?v=1a84d23c"></script><!-- 📅 CFDate＝日本時間の日付（C-02・_shared が本体） -->
-<script src="js/coreflow-member.js?v=78be8d1b"></script><!-- 👤 CFMember＝使えるか・役の判定（C-03・_shared が本体） -->
+<script src="js/coreflow-member.js?v=a8134197"></script><!-- 👤 CFMember＝使えるか・役の判定（C-03・_shared が本体） -->
 <script src="js/coreflow-log.js?v=28e4156c"></script><!-- 📝 CFLog＝操作ログの共通の形（C-04・_shared が本体） -->
 <script src="js/coreflow-trash.js?v=47ad6c27"></script><!-- 🗑 CFTrash＝全アプリ共通のゴミ箱（C-05・_shared が本体） -->
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script><!-- 📎 v2.110.0 付箋の画像・PDF をファイル置き場へ（共通部品 coreflow-note-board.js が使う） -->
@@ -877,7 +877,7 @@
   <script src="js/coreflow-user.js?v=4e5e1ce2"></script><!-- 👤 ヘッダー右の自分（写真＋フルネーム・全アプリ共通・_shared が本体） -->
   <script src="js/coreflow-power.js?v=757b3fde"></script><!-- ⏻ 電源ボタン（全アプリ共通・_shared が本体） -->
   <script src="js/coreflow-a11y.js?v=b89ccbcb"></script><!-- 👓 見やすさ（全アプリ共通・_shared から配布）。電源の後 -->
-  <script src="js/coreflow-en.js?v=2fa30ac1" data-dict="js/coreflow-en-dict.js?v=b17b1f26"></script><!-- 🌐 2026-10-12 英語表示（メンバー管理の「英語表示」の人だけ。バージョンのバッジ／F2 で英語）。見やすさの後 -->
+  <script src="js/coreflow-en.js?v=2fa30ac1" data-dict="js/coreflow-en-dict.js?v=9cf0f9bf"></script><!-- 🌐 2026-10-12 英語表示（メンバー管理の「英語表示」の人だけ。バージョンのバッジ／F2 で英語）。見やすさの後 -->
 
 
 <script src="js/ui-dialog.js?v=6c36e00e"></script><!-- アプリ内ダイアログ（全アプリ共通・_shared から配布）。配られていたのに読み込みが抜けていた -->

@@ -2406,5 +2406,86 @@ w.pitDivisionColor = pitDivisionColor;
   w.pitTodayNoteAutoLike = pitTodayNoteAutoLike;
   w.pitTodayNoteToSave   = pitTodayNoteToSave;
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     🔗 2026-10-17（棚卸し C-07 連携の型・ゆうた決定「挙動は PitFlow をマスターとして PitFlow に揃えて」）
+     **カードを動かす操作の「計画」＝何も書かない関数。** PitFlow 本体・MHS・見る所3つ（desk-pit）が同じ物を借りる。
+       返す物 { ok, code, why, ask:{title,msg,detail,ok}, patch, flow, audit:{action,kind,detail}, guard(cur)→止める理由|'', toast }
+       ・patch … カードに書く欄（null＝空にする）。書き手は「変えた欄だけ」書く
+       ・flow  … カードのフローに足す1行（書き手が「／MHS」などの出どころを足す）
+       ・audit … 操作ログ（action＝何をした・kind・detail＝中身。お客様名は書き手が前に付ける）
+       ・guard … サーバーの今のカードを渡すと、動かしてはいけない時だけ理由を返す（書き手は transaction の中で呼ぶ）
+     🔴 前は同じ操作を3か所が別々に書き、中身がずれていた（返車キャンセルで確定返車日が残る・来店なしでベイを空ける／空けない・
+        日付の残し方が逆・PitFlow 本体だけ操作ログが無い）。直すのはここ1か所
+     ⚠ 未完（タスクボードのまま確定返車日だけ入っている車）を止めるのは各画面の pitIsPend の関門（ボタンも出さない）
+     ══════════════════════════════════════════════════════════════════════════ */
+  function _todayYmd(){ var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function _dtText(d, t){ d = _tx(d); t = _tx(t); return d ? (d + (t ? ' ' + t : '')) : (t ? '日付未定 ' + t : ''); }
+  var _STOP_MOVED = '（ほかの所で先に動かされています。画面を最新にしてから、もう一度確かめてください）';
+  var _ST_JA = { reserved: '入庫予約', returned: '返車済み', scrap: '廃車', cancelled: 'キャンセル（未入庫）' };
+  function _stJa(s){ return _ST_JA[s] || (w.PIT_STATUS_JA && w.PIT_STATUS_JA[s]) || s || '不明'; }
+
+  /* 返車キャンセル（返車予定を外して「返車・未定」へ）。日時の入口 pitReturnSetDateTime を写しのカードに当てて、変わった欄だけ返す
+     ＝確定返車日（returnDateFinal）も空になる（A-03）。⚠ return-slot.js が無い時だけ同じ決めごとの最小限 */
+  var _RET_KEYS = ['returnDate', 'returnTime', 'returnDateFinal', 'returnStage', 'returnTbd'];
+  function pitReturnCancelPlan(c){
+    if (!c) return { ok: false, code: '', why: 'このカードが見つかりません' };
+    var ret0 = _dtText(c.returnDate, c.returnTime), patch = {}, fFrom = '';
+    if (typeof w.pitReturnSetDateTime === 'function'){
+      var cp = JSON.parse(JSON.stringify(c)), keepLog = w.logFlow;
+      w.logFlow = null;
+      try { fFrom = (w.pitReturnSetDateTime(cp, '', '') || {}).fFrom || ''; } finally { w.logFlow = keepLog; }
+      _RET_KEYS.forEach(function (k) {
+        var a = (c[k] == null ? '' : c[k]), b = (cp[k] == null ? '' : cp[k]);
+        if (a !== b) patch[k] = (cp[k] === undefined ? null : cp[k]);
+      });
+      patch.returnDate = ''; patch.returnTime = '';
+    } else {
+      patch = { returnDate: '', returnTime: '', returnTbd: false };
+      if (c.status !== 'returned' && c.returnDateFinal){ fFrom = String(c.returnDateFinal); patch.returnDateFinal = null; }
+    }
+    var flow = '返車予定キャンセル（未定へ）' + (ret0 ? '　元は ' + ret0 : '') + (fFrom ? '・確定返車日 ' + fFrom + ' → なし' : '');
+    return {
+      ok: true, code: '', why: '',
+      ask: { title: '返車キャンセル', msg: '返車予定をキャンセルして「返車・未定」へ戻しますか？', ok: '戻す', detail: '' },
+      patch: patch, flow: flow,
+      audit: { action: '返車予定をキャンセル', kind: 'out', detail: flow },
+      guard: function (cur) {
+        if (!cur) return 'このカードは見つかりません（消されたか、アーカイブされた可能性があります）';
+        if (cur.status === 'returned' || cur.status === 'scrap' || cur.status === 'cancelled') return 'このカードはもう「' + _stJa(cur.status) + '」です' + _STOP_MOVED;
+        if (_tx(cur.returnDate) !== _tx(c.returnDate) || _tx(cur.returnTime) !== _tx(c.returnTime)) return '返車の予定がほかの所で変わっています' + _STOP_MOVED;
+        return '';
+      },
+      toast: '返車・未定へ戻しました'
+    };
+  }
+  w.pitReturnCancelPlan = pitReturnCancelPlan;
+
+  /* 来店なしキャンセル（入庫予約 → 未入庫）。自動の未入庫（overdue-pit.js）と同じ印 noShow を立てる。
+     🔴 v1.155.0 代車の予定は外さない（人が未入庫の一覧の「代車予定クリア」で決める）。ベイも触らない（PitFlow 本体の形）
+     ctx = { today:'YYYY-MM-DD'（省くと端末の今日）, loaner:{ n:件数, text:'中身' }（代車の予定・省いてよい） } */
+  function pitNoShowCancelPlan(c, ctx){
+    ctx = ctx || {};
+    if (!c) return { ok: false, code: '', why: 'このカードが見つかりません' };
+    var td = /^\d{4}-\d{2}-\d{2}$/.test(_tx(ctx.today)) ? _tx(ctx.today) : _todayYmd();
+    var lo = ctx.loaner || { n: 0, text: '' };
+    var flow = 'キャンセル（来店なし）' + (lo.n ? '（代車の予定はそのまま：' + lo.text + '）' : '');
+    return {
+      ok: true, code: '', why: '',
+      ask: { title: 'キャンセル（来店なし）', msg: 'この入庫予約をキャンセルしますか？', ok: 'キャンセルする',
+             detail: '「未入庫」リストに残り、1ヶ月後に自動でアーカイブされます。'
+                   + (lo.n ? '\n※ 代車の予定（' + lo.text + '）はそのまま残ります。外すときは未入庫の一覧の「代車予定クリア」から' : '') },
+      patch: { status: 'cancelled', noShow: true, noShowAt: c.noShowAt || td, cancelledAt: td },
+      flow: flow,
+      audit: { action: '入庫予約をキャンセル（来店なし）', kind: 'in', detail: flow },
+      guard: function (cur) {
+        if (!cur) return 'このカードは見つかりません（消されたか、アーカイブされた可能性があります）';
+        if (cur.status !== 'reserved') return 'このカードはもう入庫前ではありません（今は「' + _stJa(cur.status) + '」）。キャンセルにしません' + _STOP_MOVED;
+        return '';
+      },
+      toast: '未入庫へ移しました' + (lo.n ? '（代車の予定はそのまま）' : '')
+    };
+  }
+  w.pitNoShowCancelPlan = pitNoShowCancelPlan;
+
   console.log('[pit-share] ready（PitFlow と MHS が一緒に使う物差し）');
 })(window);
